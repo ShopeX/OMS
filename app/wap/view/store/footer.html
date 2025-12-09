@@ -11,6 +11,13 @@
         <a href="<{$delivery_link.desktop}>" class="item <{if empty($action)}>active<{/if}>"><i class="icon-panel"></i><label>工作台</label></a>
         <a href="<{$delivery_link.mine}>" class="item <{if in_array($action, array('mine', 'user', 'passwd', 'info'))}>active<{/if}>"><i class="icon-user"></i><label>个人中心</label></a>
     </nav>
+<!-- If you remove or alter Shopex brand identifiers, you must obtain a branding removal license from Shopex.  Contact us at:  http://www.shopex.cn to purchase a branding removal license. -->
+    <div class="text-center" style="padding:6px 0;font-size:12px;color:#999;">
+        Powered by
+        <a href="https://shopex.cn" target="_blank" style="color:#999;text-decoration:none;">
+            <img src="<{$env.CONF.ROOT_DIR}>/app/desktop/statics/mini-logo.png" alt="oneX OMS Logo" style="height:16px;vertical-align:middle;">
+        </a>
+    </div>
 </footer>
 <script src="<{$env.app.res_url}>/js/libs.min.js"></script>
 <script src="<{$env.app.res_url}>/js/mobile.min.js"></script>

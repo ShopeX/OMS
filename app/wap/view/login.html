@@ -2,7 +2,7 @@
   Copyright © ShopeX （http://www.shopex.cn）. All rights reserved.
   See LICENSE file for license details.
 -->
-
+  
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -14,435 +14,197 @@
   <meta name="keywords" content="keywords">
   <meta name="description" content="description">
   <title>门店自提管理</title>
-
+  <link rel="stylesheet" href="<{$env.app.res_url}>/css/mobile.min.css">
+  <link rel="stylesheet" href="<{$env.app.res_url}>/css/main.min.css">
   <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        html, body {
-            height: 100%;
-            position: relative;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            overflow-x: hidden;
-        }
-        body {
-            background: #f5f7fa;
-            background-image: url('<{$desktop_res_url}>/perfect/login-bg.jpg');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
-        }
-        /* 登录容器样式 - 居中布局，优化移动端 */
-        .signup-contant {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-            width: 100%;
-            position: relative;
-            box-sizing: border-box;
-        }
-        .signup-middle {
-            width: 100%;
-            max-width: 480px;
-            margin: 0 auto;
-        }
-        .signup-contant-main {
-            background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-            padding: 40px 35px;
-            width: 100%;
-            position: relative;
-        }
-        /* Logo 样式 - 居中显示 */
-        .login-log {
-            max-width: 280px;
-            width: auto;
-            height: auto;
-            margin: 0 auto 28px auto;
-            display: block;
-            object-fit: contain;
-        }
-        /* 表单样式 */
-        .signup {
-            margin-top: 0;
-            width: 100%;
-        }
-        .signip-main {
-            width: 100%;
-        }
-        .window {
-            width: 100%;
-            margin: 0;
-        }
-        .passport-bd {
-            width: 100%;
-            text-align: left;
-            margin: 0;
-            padding: 0;
-        }
-        /* 确保表单左对齐 */
-        .passport-bd form {
-            text-align: left;
-            width: 100%;
-        }
-        /* 移动端表单样式调整 - 参考桌面版样式 */
-        .login-layer {
-            width: 100%;
-        }
-        .login-layer .form {
-            width: 100%;
-            margin: 0;
-            text-align: left;
-        }
-        .login-layer .no-bullet {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-            width: 100%;
-        }
-        .login-layer .form-row {
-            margin-bottom: 20px !important;
-            width: 100% !important;
-            text-align: left !important;
-            display: block !important;
-            clear: both !important;
-        }
-        .login-layer .form-row:last-child {
-            margin-bottom: 0 !important;
-        }
-        /* 按钮行特殊处理 */
-        .login-layer .form-row:has(.but_login) {
-            margin-top: 24px !important;
-        }
-        .login-layer .grid-1,
-        .login-layer .grid-3 {
-            width: 100%;
-            margin-bottom: 0;
-            padding: 0;
-        }
-        /* 标签样式 - 参考桌面版 */
-        .login-layer label {
-            display: block !important;
-            margin-bottom: 8px !important;
-            color: #333 !important;
-            font-size: 13px !important;
-            font-weight: 500 !important;
-            text-align: left !important;
-            width: 100% !important;
-            line-height: 1.5 !important;
-        }
-        /* 输入框样式 - 参考桌面版，优化移动端触摸 */
-        .login-layer input[type="text"],
-        .login-layer input[type="password"],
-        .login-layer input[type="text"].inputstyle-short-out {
-            width: 100% !important;
-            padding: 10px 12px !important;
-            border: 1px solid #e0e0e0 !important;
-            border-radius: 6px !important;
-            font-size: 14px !important;
-            transition: all 0.2s ease !important;
-            background: #fff !important;
-            color: #333 !important;
-            box-sizing: border-box !important;
-            margin: 0 !important;
-            display: block !important;
-            text-align: left !important;
-            line-height: 1.5 !important;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
-            -webkit-appearance: none; /* 移除iOS默认样式 */
-            appearance: none;
-            min-height: 40px; /* 确保触摸目标足够大 */
-        }
-        .login-layer input[type="text"]:focus,
-        .login-layer input[type="password"]:focus,
-        .login-layer input[type="text"].inputstyle-short-out:focus {
-            outline: none !important;
-            border-color: #999 !important;
-            box-shadow: none !important;
-        }
-        .login-layer input[type="text"]:hover,
-        .login-layer input[type="password"]:hover {
-            border-color: #ccc !important;
-        }
-        .login-layer input::placeholder {
-            color: #999;
-        }
-        /* 图标样式 - 隐藏图标 */
-        .login-layer .icon-user,
-        .login-layer .icon-lock {
-            display: none !important;
-        }
-        /* 按钮样式 - 参考桌面版（黑色按钮），优化移动端触摸 */
-        .login-layer .but_login {
-            width: 100% !important;
-            padding: 10px 20px !important;
-            background: #333 !important;
-            color: #fff !important;
-            border: none !important;
-            border-radius: 6px !important;
-            font-size: 14px !important;
-            font-weight: 500 !important;
-            cursor: pointer !important;
-            margin-top: 0 !important;
-            transition: background-color 0.2s ease !important;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
-            letter-spacing: 0.5px;
-            min-height: 40px; /* 确保触摸目标足够大 */
-            -webkit-tap-highlight-color: transparent; /* 移除移动端点击高亮 */
-            touch-action: manipulation; /* 优化触摸响应 */
-        }
-        .login-layer .but_login:hover {
-            background: #1a1a1a !important;
-        }
-        .login-layer .but_login:active {
-            background: #000 !important;
-        }
-        /* 错误提示样式 - 默认隐藏，只在验证失败时显示 */
-        .login-layer .alert-box {
-            display: none;
-            color: #f56c6c;
-            font-size: 12px;
-            margin-top: 8px;
-            line-height: 1.5;
-        }
-        .login-layer .alert-box.error {
-            color: #f56c6c;
-        }
-        /* 当表单验证失败时显示错误提示 */
-        .login-layer .form-row.has-error .alert-box {
-            display: block;
-        }
-        /* 验证码样式 */
-        .login-layer .verifycodeimg {
-            height: 40px;
-            vertical-align: middle;
-            border-radius: 6px;
-            border: 1px solid #e0e0e0;
-            cursor: pointer;
-        }
-        .login-layer .grid-3 {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .login-layer .grid-3[style*="width:25%"] {
-            width: 25% !important;
-            flex: 0 0 25%;
-        }
-        .login-layer .grid-3[style*="width:70%"] {
-            width: 70% !important;
-            flex: 0 0 70%;
-            padding-left: 0 !important;
-        }
-        .login-layer .grid-3 label {
-            display: none !important;
-        }
-        /* Footer */
-        .login-footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            text-align: center;
-            padding: 15px 0;
-            padding-bottom: env(safe-area-inset-bottom, 15px); /* 适配iPhone等有安全区域的设备 */
-            z-index: 1; /* 降低z-index，避免遮挡内容 */
-            background: transparent;
-            pointer-events: none; /* 允许点击穿透 */
-            transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease; /* 添加过渡效果 */
-            opacity: 1; /* 默认显示 */
-            visibility: visible; /* 默认可见 */
-            transform: translateY(0); /* 默认位置 */
-        }
-        .login-footer-text {
-            pointer-events: auto; /* 恢复文字区域的点击 */
-        }
-        /* 当表单内有输入框获得焦点时，隐藏footer（纯CSS方案） */
-        body:has(.login-layer form:focus-within) .login-footer {
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(100%); /* 向下移动，完全隐藏 */
-        }
-        /* 当输入框获得焦点时，在小屏设备上调整布局（纯CSS方案） */
-        @media (max-height: 600px) {
-            body:has(.login-layer form:focus-within) .signup-contant {
-                align-items: flex-start;
-                padding-top: 20px;
-            }
-        }
-        .login-footer-text {
-            color: #999;
-            font-size: 12px;
-            font-family: Arial, Helvetica, sans-serif;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .login-footer-text img {
-            height: 16px;
-            vertical-align: middle;
-        }
-        .login-footer-text a {
-            color: #999;
-            text-decoration: none;
-        }
-        .login-footer-text a:hover {
-            opacity: 0.8;
-        }
-        /* 覆盖移动端CSS中的样式 */
-        .login-layer .form-row .grid-1 {
-            padding: 0 !important;
-            margin: 0 !important;
-        }
-        .login-layer .form-row .grid-1 input {
-            margin: 0 !important;
-        }
-        /* 移动端响应式调整 - 手机端 */
-        @media (max-width: 480px) {
-            .signup-contant {
-                padding: 15px;
-            }
-            .signup-contant-main {
-                padding: 30px 25px;
-            }
-            .login-log {
-                max-width: 220px;
-                margin-bottom: 24px !important;
-            }
-            .login-layer label {
-                font-size: 13px !important;
-                margin-bottom: 6px !important;
-            }
-            .login-layer input[type="text"],
-            .login-layer input[type="password"],
-            .login-layer input[type="text"].inputstyle-short-out {
-                padding: 12px 14px !important;
-                font-size: 16px !important; /* 移动端使用16px避免自动缩放 */
-            }
-            .login-layer .but_login {
-                padding: 12px 20px !important;
-                font-size: 16px !important;
-                min-height: 44px; /* 触摸目标至少44px */
-            }
-            .login-layer .form-row {
-                margin-bottom: 20px !important;
-            }
-            .login-layer .form-row:has(.but_login) {
-                margin-top: 24px !important;
-            }
-        }
-        /* 矮屏适配 */
-        @media (max-height: 700px) {
-            .signup-contant {
-                padding: 15px;
-            }
-            .signup-contant-main {
-                padding: 30px 30px;
-            }
-            .login-log {
-                max-width: 240px;
-                margin-bottom: 24px !important;
-            }
-        }
-        @media (max-height: 600px) {
-            .signup-contant-main {
-                padding: 25px 22px;
-            }
-            .login-log {
-                max-width: 200px;
-                margin-bottom: 20px !important;
-            }
-        }
-        @media (max-height: 500px) {
-            .signup-contant-main {
-                padding: 22px 18px;
-            }
-            .login-log {
-                max-width: 180px;
-                margin-bottom: 16px !important;
-            }
-        }
-        /* Pad端响应式调整 */
-        @media (min-width: 481px) and (max-width: 768px) {
-            .signup-contant-main {
-                padding: 40px 35px;
-            }
-            .login-log {
-                max-width: 260px;
-                margin-bottom: 28px !important;
-            }
-            .login-layer input[type="text"],
-            .login-layer input[type="password"],
-            .login-layer input[type="text"].inputstyle-short-out {
-                padding: 11px 13px !important;
-            }
-            .login-layer .but_login {
-                padding: 11px 20px !important;
-                min-height: 44px;
-            }
-        }
-    </style>
+    * { box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f5f7fa;
+      color: #303133;
+      overflow: hidden;
+    }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      position: relative;
+      background: #f5f7fa url('<{$env.CONF.ROOT_DIR}>/app/desktop/statics/perfect/login-bg.jpg') center / cover no-repeat fixed;
+    }
+    #main.login-layer {
+      width: 100%;
+      max-width: 480px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      padding: 40px 35px;
+    }
+    .logo {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .logo img {
+      display: block;
+      margin: 0 auto !important;
+      max-width: 280px;
+      height: auto;
+    }
+    .form {
+      width: 100%;
+    }
+    .form .no-bullet {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .form-row { margin-bottom: 20px; }
+    .grid-1, .grid-3 { width: 100%; }
+    .form-row i { display: none; }
+    input[type="text"],
+    input[type="password"],
+    .inputstyle-short-out {
+      width: 100%;
+      height: 42px;
+      padding: 0 14px;
+      border: 1px solid #e8e8e8;
+      border-radius: 6px;
+      font-size: 14px;
+      background: #fff;
+      color: #303133;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    input[type="text"]:focus,
+    input[type="password"]:focus,
+    .inputstyle-short-out:focus {
+      outline: none;
+      border-color: #157FE3;
+      box-shadow: 0 0 0 2px rgba(21,127,227,0.12);
+    }
+    .inputstyle-short-out { padding-left: 10px; }
+    /* 强制覆盖 mobile.css/main.css 中的 .btn.primary/button.primary */
+    .but_login,
+    .btn.primary.but_login,
+    button.primary.but_login {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: auto;
+      min-width: 140px;
+      height: auto;
+      padding: 14px 40px;
+      background: #000 !important;
+      color: #fff !important;
+      border: none !important;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      letter-spacing: 1px;
+      line-height: 1.5;
+      margin: 0 0 0 auto;
+      box-shadow: none !important;
+    }
+    .but_login:hover,
+    .btn.primary.but_login:hover,
+    button.primary.but_login:hover { background: #333 !important; }
+    .but_login:active,
+    .btn.primary.but_login:active,
+    button.primary.but_login:active { background: #000 !important; transform: translateY(1px); }
+    .form-row .grid-1 {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+    }
+    .alert-box { display: none; font-size: 12px; color: #f56c6c; margin-top: 6px; }
+    .form-row.has-error .alert-box { display: block; }
+    .verifycodeimg {
+      height: 44px;
+      border: 1px solid #dcdfe6;
+      border-radius: 6px;
+      vertical-align: middle;
+    }
+    .form-row .grid-3 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .form-row .grid-3:first-child { max-width: 120px; }
+    .form-row .grid-3:last-child { flex: 1; }
+    .form-row .grid-3 a {
+      color: #157FE3;
+      text-decoration: none;
+      font-size: 13px;
+    }
+    .form-row .grid-3 a:hover { opacity: 0.85; }
+    .footer {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      text-align: center;
+      padding: 14px 0;
+      color: #999;
+      font-size: 12px;
+      background: transparent;
+      pointer-events: none;
+    }
+    .footer .footer-text {
+      pointer-events: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .footer img { height: 16px; vertical-align: middle; }
+  </style>
 </head>
 <body>
-<div class="signup-contant clearfix">
-    <div class="signup-middle">
-        <div class="signup-contant-main">
-            <img class="login-log" src="<{if $siteInfo.logoUrl}><{$siteInfo.logoUrl}><{else}><{$desktop_res_url}>/logo.png<{/if}>" alt="">
-            <div class="signup">
-                <div class="signip-main">
-                    <div class="window">
-                        <div class="passport-bd">
-                            <main id="main" class="login-layer">
-                                <form action="<{$redirect_url}>" method="post" class="form" data-validator="ajax">
-                                    <ul class="no-bullet">
-                                        <li class="form-row">
-                                            <div class="grid-1">
-                                                <label for="uname">用户名</label>
-                                                <input type="text" name="uname" id="uname" required placeholder="请输入用户名">
-                                            </div>
-                                        </li>
-                                        <li class="form-row">
-                                            <div class="grid-1">
-                                                <label for="password">密码</label>
-                                                <input type="password" name="password" id="password" required placeholder="请输入密码">
-                                            </div>
-                                        </li>
-                                        
-                                        <{if $show_varycode}>
-                                        <li class="form-row">
-                                            <label for="verifycode">验证码：</label>
-                                            <div class="grid-3" style="width:25%;"><input maxlength="4" autocomplete="off" class="inputstyle-short-out" name="verifycode" id="verifycode" value="" style="padding-left:0px;" placeholder="验证码" /></div>
-                                            <div class="grid-3" style="width:70%; padding-left:0;"><img id="shopadminvocde" src="<{$desktop_url}>index.php?app=wap&ctl=passport&act=gen_vcode&<{$smarty.now}>" class="verifycodeimg" style="height:40px;"><a href="javascript:changeimg('shopadminvocde')" style="padding-left:8px;font-size:13px;color:#666;text-decoration:none;"><{t}>点击刷新<{/t}></a></div>
-                                        </li>
-                                        <{/if }>
-                                        
-                                        <li class="form-row">
-                                            <div class="grid-1"><button type="submit" class="primary expand but_login">登录</button></div>
-                                        </li>
-                                    </ul>
-                                </form>
-                            </main>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<main id="main" class="login-layer">
+  <div class="logo"><img src="<{$env.CONF.ROOT_DIR}>/app/desktop/statics/logo.png" alt=""></div>
+  <form action="<{$redirect_url}>" method="post" class="form" data-validator="ajax">
+    <ul class="no-bullet">
+      <li class="form-row">
+        <div class="grid-1">
+          <i class="icon-user"></i>
+          <input type="text" name="uname" id="uname" required placeholder="请输入用户名">
+          <span class="alert-box error">用户名必填</span>
         </div>
-    </div>
-</div>
+      </li>
+      <li class="form-row">
+        <div class="grid-1">
+          <i class="icon-lock"></i>
+          <input type="password" name="password" id="password" required placeholder="请输入密码">
+          <span class="alert-box error">密码必填</span>
+        </div>
+      </li>
+      
+      <{if $show_varycode}>
+      <li class="form-row">
+         <div class="grid-3" style="width:25%;"><input maxlength="4" autocomplete="off" class="inputstyle-short-out" name="verifycode" id="verifycode" value="" style="padding-left:0px;"  /></div>
+         <div class="grid-3" style="width:70%; padding-left:10px;"><img id="shopadminvocde" src="<{$desktop_url}>index.php?app=wap&ctl=passport&act=gen_vcode&<{$smarty.now}>" class="verifycodeimg" style="height:40px;margin-top:3px;"><a href="javascript:changeimg('shopadminvocode')" style="padding-left:5px;font-size:14px;"><{t}>点击刷新<{/t}></a></div>
+      </li>
+      <{/if }>
+      
+      <li class="form-row">
+        <div class="grid-1"><button type="submit" class="primary expand but_login">登录</button></div>
+        <div class="grid-1"></div>
+      </li>
+    </ul>
+  </form>
+</main>
 
+<footer id="footer" class="footer fixed bottom text-center">
 <!-- If you remove or alter Shopex brand identifiers, you must obtain a branding removal license from Shopex.  Contact us at:  http://www.shopex.cn to purchase a branding removal license. -->
-<div class="login-footer">
-    <div class="login-footer-text">
-        Powered by
-        <a href="https://shopex.cn" target="_blank"><img src="<{$desktop_res_url}>/mini-logo.png" alt="oneX OMS Logo" /></a>
-    </div>
-</div>
+  <span class="footer-text">
+    Powered by
+    <a href="https://shopex.cn" target="_blank"><img src="<{$env.CONF.ROOT_DIR}>/app/desktop/statics/mini-logo.png" alt="oneX OMS Logo" /></a>
+  </span>
+</footer>
 
 <script src="<{$env.app.res_url}>/js/libs.min.js"></script>
 <script src="<{$env.app.res_url}>/js/mobile.min.js"></script>
@@ -499,19 +261,20 @@ $(function() {
     $('.but_login').on('click', function(e) {
         var autologin = document.getElementById('autologin');
         
-        if(autologin && autologin.checked){
+        if(autologin.checked){
             cukie.w('autologin', 30*1440);
         }else{
             cukie.d('autologin');
         }
     });
     
-    <{if $show_varycode}>
-    changeimg = function(id){
-        var timestamp = Date.parse(new Date());
-        document.getElementById('shopadminvocde').src='<{$desktop_url}>index.php?app=wap&ctl=passport&act=gen_vcode#'+timestamp;
+    var showVarycode = '<{$show_varycode|default:"false"}>' === 'true';
+    if (showVarycode) {
+        changeimg = function(id){
+            var timestamp = Date.parse(new Date());
+            document.getElementById('shopadminvocde').src='<{$desktop_url}>index.php?app=wap&ctl=passport&act=gen_vcode#'+timestamp;
+        };
     }
-    <{/if}>
 });
 </script>
 
