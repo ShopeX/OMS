@@ -62,8 +62,7 @@ class erpapi_unionpay_config extends erpapi_config
             $url = $row[0]['node_url'].$row[0]['node_api'];
 
             if ($method == SHOP_LOGISTICS_BIND){
-                //$url = 'http://sws.ex-sandbox.com/api.php';
-                $url = 'http://www.matrix.ecos.shopex.cn/api.php';
+                $url = rtrim(MATRIX_RELATION_URL, '/').'/api.php';
             } elseif ($realtime==true) {
                 $url .= 'sync';
             }

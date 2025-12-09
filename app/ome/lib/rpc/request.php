@@ -140,8 +140,6 @@ class ome_rpc_request {
      * @param String $http_method HTTP请求方式,POST或GET
      * @return RPC响应结果
      */
-	 //http://rpc.ex-sandbox.com/sync
-	 //http://matrix.ecos.shopex.cn
     public function rpc_request($method,$params,$callback,$time_out=5,$write_log=array(),$center=false,$http_method='POST'){
 
         if($center===false){

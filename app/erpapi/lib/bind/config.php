@@ -29,8 +29,7 @@ class erpapi_bind_config extends erpapi_config
      * @return mixed 返回结果
      */
     public function get_url($method, $params, $realtime){
-//        $url = 'https://iframe.uc.ex-sandbox.com/api.php'; #沙箱
-        $url = 'http://www.matrix.ecos.shopex.cn/api.php'; #矩阵
+        $url = rtrim(MATRIX_RELATION_URL, '/').'/api.php'; #矩阵
         return $url;
     }
 
