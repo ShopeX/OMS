@@ -1,6 +1,7 @@
 {
     "description": "ONEX OMS 订单管理系统 - 由商派 ShopeX 开发并开源的企业级订单管理系统",
     "version": "8.0.0",
+    "license": "Apache-2.0",
     "require": {
         "php": ">=8.0",
         "aliyuncs/oss-sdk-php": "^2.6",
