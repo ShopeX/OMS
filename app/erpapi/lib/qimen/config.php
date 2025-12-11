@@ -60,10 +60,13 @@ class erpapi_qimen_config extends erpapi_config
      */
     public function get_query_params($method, $params)
     {
+        // 实现方appKey(矩阵appKey)
+        $target_app_key = defined('TOP_APP_KEY') ? TOP_APP_KEY : '';
+        
         $systemParam = array (
             'method'            => $method,
             'app_key'           => $this->__channelObj->channel['app_key'], // 调用方appKey(OMS系统)
-            'target_app_key'    => $this->__channelObj->channel['target_app_key'], // 实现方appKey(矩阵系统)
+            'target_app_key'    => $target_app_key, // 实现方appKey(矩阵系统)
             'timestamp'         => date('Y-m-d H:i:s', time()),
             'v'                 => '2.0',
             'sign_method'       => 'md5',

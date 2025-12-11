@@ -279,6 +279,9 @@ class base_db_connections extends base_db_abstract implements base_interface_db
 
             ome_branch_product::delRedisBranchFlow();
             material_basic_material_stock::delRedisMaterialFlow();
+
+            ome_branch_product::initRedisBranch();
+            material_basic_material_stock::initRedisMaterialStock();
             return true;
         }else{
             return false;

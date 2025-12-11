@@ -22,8 +22,15 @@ local function check(sku_id, quantity, store_quantity, log_type)
     -- 如果传入了 store_quantity，则进行库存充足性检查，
     -- php的redis回滚不会传store_quantity，需无脑回滚
     if store_quantity ~= nil then
+        -- 检查冻结数量是否为有效数字，确保math.abs不会报错
+        -- math.abs为取绝对值，应对store_freeze为负的情况
+        local freeze_quantity = tonumber(data[2])
+        if freeze_quantity == nil then
+            return {100, 'INVALID_FREEZE_TYPE', sku_id}
+        end
+        
         -- 库存数用mysql的进行对比，并且log_type不等于negative_stock的时候
-        if ((tonumber(store_quantity) - tonumber(data[2])) < math.abs(quantity)) and log_type ~= 'negative_stock' then
+        if ((tonumber(store_quantity) - math.abs(freeze_quantity)) < math.abs(quantity)) and log_type ~= 'negative_stock' then
             return {200, 'INSUFFICIENT_STOCK', sku_id}
         end
     end

@@ -2110,18 +2110,26 @@ class erpapi_shop_response_process_aftersalev2 {
         $labelLib = kernel::single('ome_bill_label');
         
         $err = '';
+
+        //增加事务避免并发导致订单为部分退款状态
+        $trans = kernel::database()->beginTransaction();
+        //先更新订单主信息， 避免行明细更新导致死锁
+        $update_sql = "UPDATE sdb_ome_orders SET createtime=`createtime` WHERE order_id=". $order_id;
+        $orderItemObj->db->exec($update_sql);
         
         //order
         $orderInfo = app::get('ome')->model('orders')->db_dump($order_id, 'order_bn,shop_id,process_status,status');
         
         //订单已经是取消状态
         if($orderInfo['process_status'] == 'cancel' || $orderInfo['status'] == 'dead'){
+            kernel::database()->rollBack();
             return false;
         }
         
         //获取CRM赠品
         $items = $orderItemObj->getList('item_id,obj_id,product_id,bn,nums as quantity,split_num', ['order_id'=>$order_id, 'shop_goods_id'=>'-1', 'item_type'=>'gift', 'delete'=>'false']);
         if(empty($items)) {
+            kernel::database()->rollBack();
             return false;
         }
 
@@ -2140,6 +2148,7 @@ class erpapi_shop_response_process_aftersalev2 {
                 $labelLib->markBillLabel($order_id, '', 'deleteordergift', 'order', $error_msg);
                 
                 //logs
+                kernel::database()->rollBack();
                 $operLogObj->write_log('order_preprocess@ome', $order_id, '赠品：'. $value['bn'] .' 删除失败，已经生成发货单不能删除;');
                 return false;
             }
@@ -2171,11 +2180,22 @@ class erpapi_shop_response_process_aftersalev2 {
                 'num'       =>  $quantity,
             ];
         }
-        //释放赠品冻结
-        $basicMStockFreezeLib->unfreezeBatch($branchBatchList, __CLASS__.'::'.__FUNCTION__, $err);
         
         //删除CRM相关记录记录(shop_goods_id=-1是， CRM赠品类型)
         $orderItemObj->delete(array('item_id'=>$item_ids));
+        $affectRow = $orderItemObj->db->affect_row();
+        
+        //只有当删除有影响行数时，才释放赠品冻结，避免并发时重复释放
+        if($affectRow > 0) {
+            //释放赠品冻结
+            $rs = $basicMStockFreezeLib->unfreezeBatch($branchBatchList, __CLASS__.'::'.__FUNCTION__, $err);
+            if(!$rs) {
+                kernel::database()->rollBack();
+                $operLogObj->write_log('order_preprocess@ome', $order_id, '赠品冻结释放失败：'.$err);
+                return false;
+            }
+        }
+        
         $orderObjectObj->delete(array('obj_id'=>$obj_ids));
         $Obj_preprocess->delete(array('preprocess_order_id'=>$order_id, 'preprocess_type'=>'crm'));
         
@@ -2195,6 +2215,7 @@ class erpapi_shop_response_process_aftersalev2 {
         $msg = '';
         kernel::single('ome_preprocess_crm')->process($order_id,$msg,1);
         
+        kernel::database()->commit($trans);
         return true;
     }
     
