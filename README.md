@@ -99,9 +99,25 @@ ONEX OMS 是由 [商派 ShopeX](https://www.shopex.cn) 开发并开源的企业�
 ---
 
 ## 🚀 安装快速入口
+
+**Docker 一键安装**（需已安装 Docker 与 Docker Compose >= 2.0）：
+
+**Linux / macOS：**
+```bash
+curl -fsSL https://oss.shopex.cn/oms/install.sh | sudo bash -s -- -s --auto-install --admin-pass MyPass123
+```
+
+**Windows（在 PowerShell 中执行）：**
+```powershell
+wsl -d Ubuntu -e bash -c "curl -fsSL https://oss.shopex.cn/oms/install.sh | sudo bash -s -- -s --auto-install --admin-pass MyPass123"
+```
+> **注意**：Windows 必须启用 WSL2，详见[部署指南](https://doc.shopex.cn/oms/200.install-deploy/deployment-guide.html)
+
+将 `MyPass123` 改为你的管理员密码。安装后访问 http://opensource-oms.local（需在 `/etc/hosts` 添加 `127.0.0.1 opensource-oms.local`）。
+
 - 浏览器安装（最快）：[部署指南 - 浏览器安装](https://doc.shopex.cn/oms/200.install-deploy/deployment-guide.html#production-deployment)
 - 命令行安装（可脚本化）：[部署指南 - 命令行](https://doc.shopex.cn/oms/200.install-deploy/deployment-guide.html#production-deployment)
-- Docker（生产推荐用 env，免挂载 config.php）：[部署指南 - Docker](https://doc.shopex.cn/oms/200.install-deploy/deployment-guide.html#docker-deployment)
+- Docker 手动部署：[部署指南 - Docker](https://doc.shopex.cn/oms/200.install-deploy/deployment-guide.html#docker-deployment)
 
 更多细节：
 - 完整部署步骤：[部署指南](https://doc.shopex.cn/oms/200.install-deploy/deployment-guide.html)
@@ -123,7 +139,7 @@ ONEX OMS 是由 [商派 ShopeX](https://www.shopex.cn) 开发并开源的企业�
 
 ## 📞 支持
 + **文档中心**：[https://doc.shopex.cn/oms/100.rule/1.code.html](https://doc.shopex.cn/oms/100.rule/1.code.html)
-+ **问题反馈**：[GitHub Issues](https://github.com/ShopeX/ONEX-OMS/issues)
++ **问题反馈**：[GitHub Issues](https://github.com/ShopeX/OMS/issues)
 + **开发指南**：[PHP编码规范](https://doc.shopex.cn/oms/100.rule/1.code.html)
 
 ---
@@ -133,6 +149,6 @@ ONEX OMS 是由 [商派 ShopeX](https://www.shopex.cn) 开发并开源的企业�
 
 ----
 
-**最后更新**：2025年12月  
+**最后更新**：2026年3月  
 **版本**：8.0.0
 
