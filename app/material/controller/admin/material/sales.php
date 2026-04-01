@@ -959,7 +959,7 @@ EOF;
         $priceField = $priceConfig['price_field'];
 
         $rows  = array();
-        $items = $salesBasicMaterialObj->getList('bm_id,sm_id,number,rate', array('sm_id' => $sm_id), 0, -1);
+        $items = $salesBasicMaterialObj->getList('bm_id,sm_id,number,rate,fixed_price', array('sm_id' => $sm_id), 0, -1);
         if (!empty($items)) {
             foreach ($items as $k => $item) {
                 $basicMaterialInfo = $basicMaterialObj->dump(array('bm_id' => $item['bm_id']), 'material_bn,material_name,cat_id,cat_path');

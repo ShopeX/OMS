@@ -32,7 +32,7 @@ class omevirtualwms_mdl_stockout extends dbeav_model{
          }
          $purchase_sql = "select count(*) as _count from sdb_purchase_returned_purchase where return_status not in('2','3') and check_status='2' and ".$this->_filter($filter).$sqlstr;
 
-         $allocate_sql = "select count(*) as _count from sdb_taoguaniostockorder_iso where iso_status not in('3','4') and check_status='2' and type_id in('40','5','7','100','300') and ".$this->_filter($filter).' ';
+         $allocate_sql = "select count(*) as _count from sdb_taoguaniostockorder_iso where iso_status not in('3','4') and check_status='2' and type_id in('40','5','7','100','300','700') and ".$this->_filter($filter).' ';
          $sql = sprintf('select sum(c._count) as _count from (%s UNION ALL %s) as c',$purchase_sql,$allocate_sql);
 
          $row = $this->db->selectrow($sql);
@@ -48,7 +48,7 @@ class omevirtualwms_mdl_stockout extends dbeav_model{
          }
         $purchase_sql = "select rp_bn AS bn,operator,returned_time AS create_time,'purchase_return' AS i_type from sdb_purchase_returned_purchase where return_status not in('2','3') and check_status='2' and ".$this->_filter($filter).$sqlstr;
 
-        $allocate_sql = "select iso_bn AS bn,operator,create_time,'stockout' AS i_type from sdb_taoguaniostockorder_iso where iso_status not in('3','4') and check_status='2' and type_id in('40','5','7','100','300') and ".$this->_filter($filter).$sqlstr;
+        $allocate_sql = "select iso_bn AS bn,operator,create_time,'stockout' AS i_type from sdb_taoguaniostockorder_iso where iso_status not in('3','4') and check_status='2' and type_id in('40','5','7','100','300','700') and ".$this->_filter($filter).$sqlstr;
 
         $sql = sprintf('%s UNION ALL %s order by create_time desc',$purchase_sql,$allocate_sql);
 

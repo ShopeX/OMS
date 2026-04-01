@@ -29,7 +29,7 @@ class logisticsmanager_waybill_douyin
             'template_name' => '抖音',
             'shop_name' => '抖音',
             'print_url' => 'https://logistics.douyinec.com/davinci/CloudPrintClient',
-            'template_url' => '',
+            'template_url' => 'https://cloudprint.douyinec.com/login',
             'shop_type' => 'luban',
             'control_type' => 'douyin',
             'request_again' => true

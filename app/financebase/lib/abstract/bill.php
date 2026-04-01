@@ -23,6 +23,7 @@ abstract class financebase_abstract_bill{
     public $fee_item_rules = array();//单据类型
     public $shop_list = array();//店铺信息列表
     public $order_bn_date = array();//订单时间
+    public static $ar_verify_rules = array();//AR核对规则缓存
 
 	abstract public function getTitle();// 获取导入文件标题
     abstract public function getBillCategory($params);// 获取具体类别
@@ -93,6 +94,7 @@ abstract class financebase_abstract_bill{
                     $tmp['bill_category']   = $bill_category;
                     $tmp['disabled']        = $tmp['bill_category'] ? 'false' : 'true';
                     $tmp['order_create_date'] = $this->getOrderBnDate($tmp['order_bn']);
+                    $tmp['ar_verify_status'] = $this->getArVerifyStatus($tmp['bill_category']);
                  
                     $sdf[$tmp['unique_id']] = $tmp;
 
@@ -106,9 +108,6 @@ abstract class financebase_abstract_bill{
                 
                 $offset ++;
             }
-
-            
- 
         }
         unset($data);
 
@@ -129,11 +128,17 @@ abstract class financebase_abstract_bill{
                 $arr_sql = array();
                 $arr_basic_sql = array();
                 $arr_unique_id = array();
+                $arr_ar_verify_status = array();
                 foreach ($row as $v) {
                     // $v = array_map('trim',$v);
                     $arr_sql[] = sprintf("('%s')",implode("','", array_values($v)));
                     $arr_basic_sql[] = sprintf("('%s')",implode("','", array_values($basic_sdf[$v['unique_id']])));
                     $arr_unique_id[$v['unique_id']] = $v['bill_category'];
+                    
+                    // ar_verify_status是3的，汇总出来，数据丢给统一app处理
+                    if($v['ar_verify_status'] == 3){
+                        $arr_ar_verify_status[] = $v['unique_id'];
+                    }
                 }
                 // 插入bill表
                 $sql = $insert_sql.implode(',', $arr_sql);
@@ -148,6 +153,16 @@ abstract class financebase_abstract_bill{
                         // 同步bill
                         $this->syncToBill($basic_sdf[$unique_id],$bill_category);
                     }
+
+                    if($arr_ar_verify_status){
+                        $servicelist = kernel::servicelist('financebase.service.financebase_abstract_bill.process.after');
+                        foreach ($servicelist as $instance) {
+                            if (method_exists($instance, 'handleNoArVerify')){
+                                $instance->handleNoArVerify($arr_ar_verify_status);
+                            }
+                        }
+                    }
+            
                 }
                 else{
                     $errmsg[] = '支付单对账单-处理任务-插入SQL错误'.$sql;
@@ -205,7 +220,7 @@ abstract class financebase_abstract_bill{
 
                     if($bill_category)
                     {
-                        $old = $mdlBill->db_dump(['shop_id'=>$shop_id,'unique_id'=>$v['unique_id']], 'id,bill_category');
+                        $old = $mdlBill->db_dump(['shop_id'=>$shop_id,'unique_id'=>$v['unique_id']], 'id,bill_category,ar_verify_status');
                         $upData = [];
                         if($bill_category != $old['bill_category']) {
                             $upData = ['disabled'=>'false','split_status'=>'0','bill_category'=>$bill_category];
@@ -213,6 +228,8 @@ abstract class financebase_abstract_bill{
                         if($orderBn) {
                             $upData['order_bn'] = $orderBn;
                         }
+                        $upData['ar_verify_status'] = $this->getArVerifyStatus($bill_category);
+
                         if($upData){
                             $mdlBill->update($upData,['id'=>$old['id']]);
                         }
@@ -221,6 +238,16 @@ abstract class financebase_abstract_bill{
 
                         if (!$mdlFinanceBill->count(['channel_id'=>$shop_id,'unique_id'=>$v['unique_id']])) {
                             $this->syncToBill($v, $bill_category);
+                        }
+                        
+                        // ar_verify_status是3的，汇总出来，数据丢给统一app处理
+                        if($upData['ar_verify_status'] == 3 && $old['ar_verify_status'] == 2){
+                            $servicelist = kernel::servicelist('financebase.service.financebase_abstract_bill.process.after');
+                            foreach ($servicelist as $instance) {
+                                if (method_exists($instance, 'handleNoArVerify')){
+                                    $instance->handleNoArVerify(array($v['unique_id']));
+                                }
+                            }
                         }
                     } else {
                         $errmsg = '未匹配到具体类别:'.json_encode($data, JSON_UNESCAPED_UNICODE);
@@ -422,10 +449,12 @@ abstract class financebase_abstract_bill{
     {
     	switch ($mode) {
     		case 'contain':
-    			if(preg_match("/$search/", $content)) return true;
+    			// 使用 strpos 进行字符串包含检查，避免正则表达式特殊字符问题
+    			if(strpos($content, $search) !== false) return true;
     			break;
     		case 'nocontain':
-    			if(!preg_match("/$search/", $content)) return true;
+    			// 使用 strpos 进行字符串不包含检查，避免正则表达式特殊字符问题
+    			if(strpos($content, $search) === false) return true;
     			break;
     		default:
     			return $content == $search;
@@ -559,5 +588,36 @@ abstract class financebase_abstract_bill{
         }
 
         return $this->order_bn_date[$order_bn];
+    }
+
+    /**
+     * 获取AR核对状态
+     * @param string $bill_category 具体类别
+     * @return int 返回状态值：1-已核对AR，2-需核对AR，3-无需核对AR
+     */
+    public function getArVerifyStatus($bill_category = '')
+    {
+        // 如果bill_category为空，返回2（需核对AR）
+        if(empty($bill_category)) {
+            return 2;
+        }
+
+        // 如果静态缓存为空，一次性查询所有规则
+        if(empty(self::$ar_verify_rules)) {
+            $mdlRules = app::get('financebase')->model('bill_category_rules');
+            $rules = $mdlRules->getList('bill_category,need_ar_verify', array('disabled' => 'false'));
+            
+            self::$ar_verify_rules = array_column($rules, 'need_ar_verify', 'bill_category');
+        }
+
+        // 根据bill_category查找对应的need_ar_verify值
+        $need_ar_verify = isset(self::$ar_verify_rules[$bill_category]) ? self::$ar_verify_rules[$bill_category] : 1;
+
+        // 根据need_ar_verify值返回对应的状态
+        if($need_ar_verify == 0) {
+            return 3; // 无需核对AR
+        } else {
+            return 2; // 需核对AR
+        }
     }
 }

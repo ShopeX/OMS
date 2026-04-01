@@ -78,9 +78,26 @@ abstract class financebase_abstract_io{
             $excel    = new \Vtiful\Kernel\Excel($config);
 
             // 读取测试文件
-            $excel->openFile($path['basename'])
-                ->openSheet();
+            $excel->openFile($path['basename']);
+            
+            // 支持按工作表名称或索引打开工作表
+            if (is_string($sheet) && $sheet !== '0') {
+                // 按工作表名称打开
+                $excel->openSheet($sheet);
+            } elseif (is_numeric($sheet) && $sheet > 0) {
+                // 按工作表索引打开（从0开始）
+                $excel->openSheet(null, \Vtiful\Kernel\Excel::SKIP_NONE);
+                // Vtiful 不直接支持索引，需要通过名称
+                // 如果需要支持索引，需要先获取所有工作表名称
+            } else {
+                // 默认打开第一个工作表
+                $excel->openSheet();
+            }
+            
             $row = $excel->nextRow();
+			if(empty($row)) {
+				throw new \Exception('文件没有数据!');
+			}
             $type = array_pad([], count($row), \Vtiful\Kernel\Excel::TYPE_STRING);
             foreach($this->column_date_cnt as $k => $v) {
                 $type[$v-1] = \Vtiful\Kernel\Excel::TYPE_TIMESTAMP;

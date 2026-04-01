@@ -14,10 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class console_finder_delivery{
     var $detail_basic = "发货单详情";
-    var $detail_item = "货品详情";
+    var $detail_item = "基础物料详情";
     var $detail_delivery = "物流单列表";
     
     private $write = '1';
@@ -255,12 +254,6 @@ class console_finder_delivery{
         return $ret;
     }
 
-    /**
-     * 获取ViewPanel
-     * @param mixed $caption caption
-     * @param mixed $color color
-     * @return mixed 返回结果
-     */
     public function getViewPanel($caption, $color) {
         if ($color == '#eeeeee')
             $caption .= '未打印';
@@ -298,11 +291,6 @@ class console_finder_delivery{
     var $column_beartime = "成单时间";
     var $column_beartime_width = '140';
     var $column_beartime_order_field= 'order_createtime';
-    /**
-     * column_beartime
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_beartime($row) {
         return $row[$this->col_prefix . 'order_createtime'] ? date('Y-m-d H:i:s',$row[$this->col_prefix . 'order_createtime']) : '-';
     }
@@ -746,11 +734,6 @@ EOF;
     
     var $column_delivery = '配送方式';
     var $column_delivery_width = 90;
-    /**
-     * column_delivery
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_delivery($row)
     {
         $delivery_mode = $row[$this->col_prefix . 'delivery'];
@@ -765,10 +748,10 @@ EOF;
 
     /**
      * 查询仓库
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     private function _getBranch($branch_id, $list)
     {
         static $branchList;
@@ -818,12 +801,6 @@ EOF;
     public $column_order_label = '标记';
     public $column_order_label_width = 160;
     public $column_order_label_order = 30;
-    /**
-     * column_order_label
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_order_label($row, $list)
     {
         $delivery_id = $row['delivery_id'];

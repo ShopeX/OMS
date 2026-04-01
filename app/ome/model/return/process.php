@@ -236,6 +236,7 @@ class ome_mdl_return_process extends dbeav_model{
         //branch
         $ret=array();
         foreach($reship_items as $k=>$v){
+            $reship_items[$k]['branch_id'] = $v['branch_id'] = (int)$v['branch_id'];
             if(!isset($ret[$v['branch_id']])){
                 $ret[$v['branch_id']] = $v;
             }
@@ -301,7 +302,7 @@ class ome_mdl_return_process extends dbeav_model{
             $process_items['branch_id'] = (int)$v['branch_id'];
             $process_items['op_id'] = (int)$v['op_id'];
             $process_items['acttime'] = time();
-            $process_items['por_id'] = $code_pro_array[$v['branch_id']];
+            $process_items['por_id'] = $code_pro_array[(int)$v['branch_id']];
             $process_items['num'] = $v['num'];
             $Oprocess_items->insert($process_items);
         }

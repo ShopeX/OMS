@@ -71,20 +71,6 @@ class erpapi_shop_matrix_tmall_response_aftersalev2 extends erpapi_shop_response
             $tagList = serialize($tagList);
         }
 
-        //识别如果是已完成的售后，转成退款单更新的逻辑
-        if($params['refund_type'] == 'return' && $params['status'] == 'success'){
-            $refundOriginalObj = app::get('ome')->model('return_product');
-            $refundOriginalInfo = $refundOriginalObj->getList('return_id', array('return_bn'=>$sdf['refund_bn'],'status' =>'4') , 0 , 1);
-            if($refundOriginalInfo){
-                $refundApplyObj = app::get('ome')->model('refund_apply');
-                $refundApplyInfo = $refundApplyObj->getList('refund_apply_bn', array('return_id'=>$refundOriginalInfo[0]['return_id'],'status' =>array('0','1','2','5','6')) , 0 , 1);
-                if($refundApplyInfo){
-                    $sdf['refund_bn'] = $refundApplyInfo[0]['refund_apply_bn'];
-                    $sdf['tmall_has_finished_return_product'] = true;
-                }
-            }
-        }
-
         $tmallSdf = array(
             'oid'               => $params['oid'] ? $params['oid'] : $item['oid'],
             'tmall_refund_type' => $params['refund_type'],
@@ -183,15 +169,75 @@ class erpapi_shop_matrix_tmall_response_aftersalev2 extends erpapi_shop_response
         if ($params['trade_from'] && $params['trade_from'] == 'miaozhu') {
             $sdf['order_source'] = $params['trade_from'];
         }
+        
+        // 百补退款处理
+        // 判断：ypds_refund_type = 1 视为百补退款
+        // 退款字段只从 extend_field 中获取
+        $extendField = null;
+        if (!empty($params['extend_field'])) {
+            $extendField = is_string($params['extend_field']) ? json_decode($params['extend_field'], true) : $params['extend_field'];
+        }
+        
+        // 从 extend_field 中获取 ypds_refund_type
+        $ypdsRefundType = '';
+        if (is_array($extendField) && isset($extendField['ypds_refund_type'])) {
+            $ypdsRefundType = $extendField['ypds_refund_type'];
+        }
+        
+        if ($ypdsRefundType == '1' || $ypdsRefundType == 1) {
+            // 理由：取 ypds_refund_reason（从 extend_field）
+            $ypdsRefundReason = '';
+            if (is_array($extendField) && isset($extendField['ypds_refund_reason'])) {
+                $ypdsRefundReason = $extendField['ypds_refund_reason'];
+            }
+            if (!empty($ypdsRefundReason)) {
+                $sdf['reason'] = $ypdsRefundReason;
+            }
+            
+            // 金额：取 ypds_refund_supply_fee（供货价口径，从 extend_field）
+            $ypdsRefundSupplyFee = 0;
+            if (is_array($extendField) && isset($extendField['ypds_refund_supply_fee'])) {
+                $ypdsRefundSupplyFee = floatval($extendField['ypds_refund_supply_fee']);
+            }
+            if ($ypdsRefundSupplyFee > 0) {
+                $sdf['refund_fee'] = sprintf('%.2f', $ypdsRefundSupplyFee);
+            }
+        }
+        
+        // 产地优选（超链）退款处理
+        // 判断：superlink_refund_id 有值视为产地优选退款
+        // 退款字段只从 extend_field 中获取
+        $superlinkRefundId = '';
+        if (is_array($extendField) && isset($extendField['superlink_refund_id'])) {
+            $superlinkRefundId = $extendField['superlink_refund_id'];
+        }
+        
+        if (!empty($superlinkRefundId)) {
+            // 理由：取 superlink_refund_reason（从 extend_field）
+            $superlinkRefundReason = '';
+            if (is_array($extendField) && isset($extendField['superlink_refund_reason'])) {
+                $superlinkRefundReason = $extendField['superlink_refund_reason'];
+            }
+            if (!empty($superlinkRefundReason)) {
+                $sdf['reason'] = $superlinkRefundReason;
+            }
+            
+            // 金额：取 superlink_refund_supply_fee（供货价口径，从 extend_field）
+            $superlinkRefundSupplyFee = 0;
+            if (is_array($extendField) && isset($extendField['superlink_refund_supply_fee'])) {
+                $superlinkRefundSupplyFee = floatval($extendField['superlink_refund_supply_fee']);
+            }
+            if ($superlinkRefundSupplyFee > 0) {
+                $sdf['refund_fee'] = sprintf('%.2f', $superlinkRefundSupplyFee);
+            }
+        }
+        
         return array_merge($sdf, $tmallSdf);
     }
 
     protected function _getAddType($sdf) {
         if ($sdf['refund_type'] == 'return') {
             if (in_array($sdf['order']['ship_status'],array('0'))) {
-                #退款单
-                return 'refund';
-            }elseif(in_array($sdf['order']['ship_status'],array('3','4')) && $sdf['tmall_has_finished_return_product']){
                 #退款单
                 return 'refund';
             }else{
@@ -280,6 +326,9 @@ class erpapi_shop_matrix_tmall_response_aftersalev2 extends erpapi_shop_response
             $sdf['refund_type'] = 'apply';
         }
         $sdf = parent::_refundAddSdf($sdf);
+        if($sdf['cs_status'] == '6' && $sdf['response_bill_type'] != 'refund_apply') {
+            $sdf['tag_type'] = '8';
+        }
         /*
         if($sdf['refund_apply']) {
             $oRefundTmall = app::get('ome')->model('refund_apply_tmall');

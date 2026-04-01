@@ -1,0 +1,45 @@
+<{capture name="header"}>
+<link href="../app/ome/statics/ome.css" rel="stylesheet" type="text/css">
+<{/capture}>
+
+<div class="tableform" id="nodeinfo">
+  <h4>基本信息</h4>
+  <div class="division">
+    <table border="0" cellspacing="0" cellpadding="0">
+      <tr>
+        <th>所属模板ID：</th>
+        <td><{$data.template_id}></td>
+        <th>节点名称：</th>
+        <td><{$data.node_name}></td>
+        <th>创建时间：</th>
+        <td><{$data.at_time}></td>
+      </tr>
+      <tr>
+        <th>节点类型：</th>
+        <td>
+          <{if $data.node_type == 'start'}>开始<{/if}>
+          <{if $data.node_type == 'approval'}>审批<{/if}>
+          <{if $data.node_type == 'end'}>结束<{/if}>
+        </td>
+        <th>节点顺序：</th>
+        <td><{$data.step_order}></td>
+        <th>更新时间：</th>
+        <td><{$data.up_time}></td>
+      </tr>
+      <{if $data.node_type == 'approval'}>
+      <tr>
+        <th>审批人类型：</th>
+        <td>
+          <{if $data.assignee_type == 'user'}>用户<{/if}>
+          <{if $data.assignee_type == 'role'}>角色<{/if}>
+          <{if $data.assignee_type == 'dept'}>部门<{/if}>
+        </td>
+        <th>审批人ID：</th>
+        <td><{$data.assignee_id}></td>
+        <th>审批人姓名：</th>
+        <td><{$data.assignee_name}></td>
+      </tr>
+      <{/if}>
+    </table>
+  </div>
+</div> 

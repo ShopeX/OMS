@@ -18,6 +18,19 @@
 /**
  * Class erpapi_shop_matrix_weimobv_request_product
  */
-class erpapi_shop_matrix_weimobr_request_product extends erpapi_shop_request_product {
-
+class erpapi_shop_matrix_weimobr_request_product extends erpapi_shop_request_product
+{
+    /**
+     * 查询店铺缓存商品
+     * @todo：微盟平台没有缓存商品接口，如果不添加此方法，定时任务请求会报错：没有绑定
+     *
+     * @param $sdf
+     * @return array
+     */
+    public function queryCacheProduct($sdf = [])
+    {
+        $result = $this->succ('微盟没有店铺缓存商品接口，直接返回成功');
+        
+        return $result;
+    }
 }

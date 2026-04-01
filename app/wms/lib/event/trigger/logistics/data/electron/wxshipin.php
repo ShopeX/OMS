@@ -87,6 +87,7 @@ class wms_event_trigger_logistics_data_electron_wxshipin extends wms_event_trigg
         }
 
         $dlyCorp = app::get('ome')->model('dly_corp')->dump(array('corp_id' => $delivery['logi_id']));
+        app::get('ome')->model('dly_corp_channel')->getChannel($dlyCorp, array($delivery));
 
         $prt_tmpl_id = $dlyCorp['prt_tmpl_id'];
 

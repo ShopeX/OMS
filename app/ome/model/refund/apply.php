@@ -125,6 +125,7 @@ class ome_mdl_refund_apply extends dbeav_model{
         return parent::_filter($filter,$tableAlias,$baseWhere).$where;
     }
 
+
     function refund_apply_detail($refapply_id){
     	$refapply_detail = $this->dump($refapply_id);
         $product_data = $refapply_detail['product_data'];
@@ -261,11 +262,6 @@ class ome_mdl_refund_apply extends dbeav_model{
         }
     }
 
-    /**
-     * modifier_apply_op_id
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_apply_op_id($row){
         switch ($row) {
             case 16777215:
@@ -278,6 +274,23 @@ class ome_mdl_refund_apply extends dbeav_model{
         return $ret;
     }
 
+    public function modifier_cs_status($col){
+        $status_map = array(
+            1 => '不需客服介入',
+            2 => '需要客服介入',
+            3 => '客服已经介入',
+            4 => '客服初审完成',
+            5 => '客服主管复审失败',
+            6 => '客服处理完成',
+            7 => '系统撤销（B2B使用）||  维权撤销（集市使用）',
+            8 => '支持买家',
+            9 => '支持卖家',
+            10 => '举证中',
+            11 => '开放申诉'
+        );
+        
+        return isset($status_map[$col]) ? $status_map[$col] : '-';
+    }
     /**
      * 获取用户名
      * @param Integer $gid

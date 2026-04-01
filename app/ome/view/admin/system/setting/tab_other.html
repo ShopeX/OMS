@@ -114,7 +114,7 @@
                 <input id="ome_delivery_retry_push_off" name="set[ome.delivery.retry_push]" <{if $setData['ome_delivery_retry_push'] != 'on'}>checked<{/if}> type="radio" value="off">
                 <label for="ome_delivery_retry_push_off" >关闭</label>
             </div>
-            <span class="form-remark">启用&nbsp;&nbsp;只针对【京东云交易】无货时,每3小时自动重试推送【商品无货】的发货单</span>
+            <span class="form-remark">启用：系统每小时会自动重试请求WMS超时的发货单</span>
         </div>
     </div>
 </div>

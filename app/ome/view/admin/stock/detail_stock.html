@@ -41,6 +41,7 @@
     <th>仓库名称</th>
     <th>库存量</th>
     <th>冻结库存</th>
+    <th>可售库存</th>
     <th>在途库存</th>
     <th style="display:none">相关货位</th>
     <th>安全库存</th>
@@ -54,6 +55,7 @@
     <td><{$product.branch_name}></td>
     <td><{ if (is_array($branch_ids) && in_array($product.branch_id,$branch_ids)) || !isset($branch_ids)}><{$product.store}><{else}>-<{/if}></td>
     <td><{ if (is_array($branch_ids) && in_array($product.branch_id,$branch_ids)) || !isset($branch_ids)}><{$product.store_freeze}><{else}>-<{/if}></td>
+    <td><{ if (is_array($branch_ids) && in_array($product.branch_id,$branch_ids)) || !isset($branch_ids)}><{$product.available_store}><{else}>-<{/if}></td>
     <td><{ if (is_array($branch_ids) && in_array($product.branch_id,$branch_ids)) || !isset($branch_ids)}><{$product.arrive_store}><{else}>-<{/if}></td>
     <td style="display:none"><{$product.store_position|default:'-'}></td>
     <td>

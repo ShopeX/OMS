@@ -231,17 +231,28 @@ class ome_order_refund {
     }
 
     public function lanjieDelivery($refundApplyId) {
-        $refundApply = app::get('ome')->model('refund_apply')->db_dump( array('apply_id' => $refundApplyId, 'status' => '4', 'refund_refer'=>'0'), 'apply_id,refund_apply_bn,order_id,bool_type,product_data');
+        $refundApply = app::get('ome')->model('refund_apply')->db_dump( array('apply_id' => $refundApplyId, 'status' => '4', 'refund_refer'=>'0'), '*');
         if (!$refundApply) {
             return [false, ['msg'=>'售前完成的退款申请不存在']];
         }
         if($refundApply['bool_type'] & ome_refund_bool_type::__PROTECTED_CODE) {
             return [false, ['msg'=>'退款单为价保退款']];
         }
+        if($refundApply['bool_type'] & ome_refund_bool_type::__ONLY_REFUND) {
+            return [false, ['msg'=>'退款单为仅退款']];
+        }
+        $tgOrder = app::get('ome')->model('orders')->db_dump(['order_id'=>$refundApply['order_id']], 'pay_status,order_bn');
+        if($refundApply['tag_type'] == '8') {
+            kernel::single('monitor_event_notify')->addNotify('order_refund_apply_force_refund', [
+                'refund_apply_bn'=>$refundApply['refund_apply_bn'],
+                'order_bn'=>$tgOrder['order_bn'],
+                'refund_fee'=>$refundApply['money'],
+            ]);
+            return kernel::single('console_reship')->qzRefundToLJRK($refundApply);
+        }
         $filter = array('order_id'=>$refundApply['order_id']);
         $arrProduct = unserialize($refundApply['product_data']);
         if(!is_array($arrProduct)) {
-            $tgOrder = app::get('ome')->model('orders')->db_dump(['order_id'=>$refundApply['order_id']], 'pay_status');
             if($tgOrder['pay_status'] != '5') {
                 return [false, ['msg'=>'订单未全额退款,退款单缺少明细']];
             }

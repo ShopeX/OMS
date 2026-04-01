@@ -136,6 +136,7 @@ class ome_finder_extend_filter_reship
                             ome_reship_const::__ZERO_INTERCEPT => '零秒退拦截',
                             ome_reship_const::__LANJIE_RUKU => '拦截入库',
                             ome_reship_const::__RESHIP_DIFF => '差异入库',
+                            ome_reship_const::__RETURN_LOGI_DUP => '物流重复',
                         ),
                         'label' => '标识',
                         'editable' => false,
@@ -155,6 +156,16 @@ class ome_finder_extend_filter_reship
                     'default_in_list' => true,
                     'filtertype' => 'normal',
                     'filterdefault' => true,
+                ),
+                'product_bn' => array (
+                    'type' => 'varchar(30)',
+                    'label' => '基础物料编码',
+                    'width' => 85,
+                    'filtertype' => 'textarea',
+                    'filterdefault' => true,
+                    'editable' => false,
+                    'in_list' => true,
+                    'default_in_list' => true,
                 ),
             )
         );

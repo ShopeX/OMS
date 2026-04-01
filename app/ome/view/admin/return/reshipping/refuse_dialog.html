@@ -1,0 +1,157 @@
+<div class="tableform">
+    <div class="division">
+        <h4>
+            <{t}>补寄申请单信息<{/t}>
+        </h4>
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+            <tr>
+                <th>
+                    <{t}>补寄申请单号：<{/t}>
+                </th>
+                <td>
+                    <{$reshipping.reshipping_bn}>
+                </td>
+                <th>
+                    <{t}>关联订单号：<{/t}>
+                </th>
+                <td><{$reshipping.order_bn|default:'-'}></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="division">
+        <form method="post" action="index.php?app=ome&ctl=admin_return_reshipping&act=doRefuse"
+            id="refuse_form" enctype="multipart/form-data">
+            <input type="hidden" name="reshipping_id" value="<{$reshipping.reshipping_id}>">
+            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                    <th width="120">
+                        <{t}>拒绝原因：<{/t}><span style="color:red;">*</span>
+                    </th>
+                    <td>
+                        <select name="refuse_reason_id" id="refuse_reason_id" style="width:300px;" required>
+                            <option value="">请选择拒绝原因</option>
+                            <{foreach from=$refuse_reasons item=reason}>
+                            <option value="<{$reason.reason_id}>" data-reason="<{$reason.reason_text}>">
+                                <{$reason.reason_text}>
+                            </option>
+                            <{/foreach}>
+                        </select>
+                        <input type="hidden" name="refuse_reason" id="refuse_reason">
+                    </td>
+                </tr>
+
+                <tr>
+                    <th>
+                        <{t}>凭证图片：<{/t}><span style="color:red;">*</span>
+                    </th>
+                    <td>
+                        <input type="file" name="leave_message_pics" accept="image/*">
+                        <div style="color:#999;margin-top:5px;">只能上传一张图片</div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th>
+                        <{t}>拒绝留言：<{/t}><span style="color:red;">*</span>
+                    </th>
+                    <td>
+                        <textarea name="leave_message" rows="5" cols="50" style="width:400px;" required
+                            placeholder="请输入拒绝留言"></textarea>
+                    </td>
+                </tr>
+            </table>
+        </form>
+    </div>
+</div>
+
+<{area inject=".mainFoot" }>
+    <div class="table-action">
+        <table width="100%" cellspacing="0" cellpadding="0">
+            <tbody>
+                <tr>
+                    <td>
+                        <{button type="button" id='submit_btn' class="btn-primary" label='确认拒绝' }>
+                            <{button type="button" id='close_btn' class="btn-secondary" label='关闭'
+                                isCloseDialogBtn="true" }>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+<{/area}>
+
+<script type="text/javascript">
+    (function () {
+        var _form = $('refuse_form');
+        var btn = $('submit_btn');
+        var finder = window.opener.finderGroup['<{$env.get.finder_id}>'];
+        var refuseReasonSelect = $('refuse_reason_id');
+        var refuseReasonHidden = $('refuse_reason');
+
+        if (!_form || !btn) {
+            return;
+        }
+
+        // 拒绝原因选择变化事件
+        if (refuseReasonSelect && refuseReasonHidden) {
+            refuseReasonSelect.addEvent('change', function () {
+                var selected = this.options[this.selectedIndex];
+                refuseReasonHidden.value = selected.getAttribute('data-reason') || '';
+            });
+        }
+
+        // 表单提交配置
+        _form.store('target', {
+            onRequest: function () {
+                btn.setAttribute('disabled', 'disabled');
+            },
+            onComplete: function (response) {
+                btn.removeAttribute('disabled');
+                var hash_res_obj = JSON.decode(response);
+                if (hash_res_obj.rsp == 'succ') {
+                    MessageBox.success(hash_res_obj.msg || '拒绝补寄申请成功');
+                    try {
+                        var _dialogIns = btn.getParent('.dialog').retrieve('instance');
+                    } catch (e) { }
+
+                    if (_dialogIns) {
+                        setTimeout(finder.refresh(),30000);
+                        _dialogIns.close();
+                        window.close();
+                    }
+                } else {
+                    MessageBox.error(hash_res_obj.msg || '拒绝补寄申请失败');
+                }
+            }
+        });
+
+        // 按钮点击事件
+        btn.addEvent('click', function () {
+            // 验证表单
+            if (!refuseReasonSelect || !refuseReasonSelect.value) {
+                alert('请选择拒绝原因');
+                return;
+            }
+
+            var leaveMessage = _form.getElement('textarea[name="leave_message"]');
+            if (!leaveMessage || !leaveMessage.value.trim()) {
+                alert('拒绝留言不能为空');
+                return;
+            }
+
+            var fileInput = _form.getElement('input[name="leave_message_pics"]');
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                alert('请上传凭证图片');
+                return;
+            }
+
+            if (fileInput.files.length > 1) {
+                alert('只能上传一张图片');
+                return;
+            }
+
+            _form.fireEvent('submit', { stop: $empty });
+        });
+    })();
+</script>

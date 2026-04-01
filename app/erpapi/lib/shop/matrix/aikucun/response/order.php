@@ -53,6 +53,40 @@ class erpapi_shop_matrix_aikucun_response_order extends erpapi_shop_response_ord
         if ($this->_ordersdf['shipping']['shipping_name'] == '98') {
             $this->_ordersdf['shipping']['shipping_name'] = '';
         }
+
+        // 如果 cost_item 为 0 或空，根据 order_objects 的 amount 重新计算
+        // 如果 pmt_goods 为 0 或空，根据 order_objects 的 pmt_price 重新计算
+        $need_recalc_cost_item = empty($this->_ordersdf['cost_item']) || (float)$this->_ordersdf['cost_item'] == 0;
+        $need_recalc_pmt_goods = empty($this->_ordersdf['pmt_goods']) || (float)$this->_ordersdf['pmt_goods'] == 0;
+        
+        if ($need_recalc_cost_item || $need_recalc_pmt_goods) {
+            $cost_item = 0;
+            $pmt_goods = 0;
+            if (!empty($this->_ordersdf['order_objects']) && is_array($this->_ordersdf['order_objects'])) {
+                foreach ($this->_ordersdf['order_objects'] as $object) {
+                    // 跳过 status == 'close' 的对象（与基础验证逻辑一致）
+                    if (isset($object['status']) && $object['status'] == 'close') {
+                        continue;
+                    }
+                    // 累加每个对象的 amount 字段（用于计算 cost_item）
+                    if ($need_recalc_cost_item && isset($object['amount'])) {
+                        $cost_item = bcadd($cost_item, (float)$object['amount'], 3);
+                    }
+                    // 累加每个对象的 pmt_price 字段（用于计算 pmt_goods）
+                    if ($need_recalc_pmt_goods && isset($object['pmt_price'])) {
+                        $pmt_goods = bcadd($pmt_goods, (float)$object['pmt_price'], 3);
+                    }
+                }
+            }
+            // 如果计算出的 cost_item > 0，则更新
+            if ($need_recalc_cost_item && $cost_item > 0) {
+                $this->_ordersdf['cost_item'] = $cost_item;
+            }
+            // 如果计算出的 pmt_goods > 0，则更新
+            if ($need_recalc_pmt_goods && $pmt_goods > 0) {
+                $this->_ordersdf['pmt_goods'] = $pmt_goods;
+            }
+        }
     }
 
     /**

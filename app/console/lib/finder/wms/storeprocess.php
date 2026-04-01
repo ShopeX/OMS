@@ -25,7 +25,7 @@
  */
 class console_finder_wms_storeprocess {
 
-    public $detail_item = "货品详情";
+    public $detail_item = "基础物料详情";
     public function detail_item($id){
         $render = app::get('console')->render();
         $materialItems = app::get('console')->model('wms_storeprocess_materialitems')->getList('*', ['wsp_id'=>$id]);

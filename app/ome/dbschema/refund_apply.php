@@ -224,6 +224,15 @@ $db['refund_apply'] = array(
             'in_list' => true,
             'default_in_list' => false,
         ),
+        'cs_status' => array(
+            'type' => 'varchar(50)',
+            'default'=>'',
+            'editable' => false,
+            'label' => '客服介入状态',
+            'width' =>65,
+            'in_list' => true,
+            'default_in_list' => true,
+        ),
         'product_data' => array(
             'type'     => 'longtext',
             'editable' => false,
@@ -293,7 +302,7 @@ $db['refund_apply'] = array(
             'filterdefault' => true,
         ),
         'bn'               => array(
-            'type'     => 'varchar(255)',
+            'type'     => 'varchar(755)',
             'editable' => false,
             'label'    => '货号',
             'in_list'       => true,
@@ -329,6 +338,7 @@ $db['refund_apply'] = array(
                 '5' => '极速退款',
                 '6' => '售后仅退款',
                 '7' => '发货前退款',
+                '8' => '强制退款',
             ),
             'default' => '0',
             'editable' => false,

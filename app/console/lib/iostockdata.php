@@ -72,6 +72,15 @@ class console_iostockdata{
             'business_bn'=>$Iso['business_bn'],
         );
         $iostock_type = $iostockObj->getIoByType($Iso['type_id']);
+        
+        // 查询仓库扩展属性-活动号（不区分出库/入库，只要查询到就组装，便于后续扩展）
+        $arr_props = app::get('ome')->model('branch_props')->getPropsByBranchId($Iso['branch_id']);
+        foreach ($arr_props as $k => $v) {
+            if ($k == 'activity_no' && $v) {
+                $data['activity_no'] = $v;
+            }
+        }
+        
         $extrabranch_id = $Iso['extrabranch_id'];
         if (in_array($Iso['type_id'],array('4','40'))) {
             $extrabranch_id = $Iso['branch_id'];

@@ -245,6 +245,7 @@ class wms_delivery_process{
      */
     function consignDelivery($dly_id, $type='') {
         $deliveryObj = app::get('wms')->model('delivery');
+        $opinfo = array();
 
         $delivery_time = time();
         $filter['delivery_id'] = $dly_id;
@@ -256,7 +257,7 @@ class wms_delivery_process{
         if(!is_numeric($affect_row) || $affect_row <= 0){
             return false;
         }else{
-            $deliveryInfo = $deliveryObj->dump($dly_id,'delivery_bn,outer_delivery_bn,branch_id,weight,delivery_cost_actual');
+            $deliveryInfo = $deliveryObj->dump($dly_id, '*');
 
             //如果发货成功，处理保质期批次的变化:冻结释放，实际数量扣减，单据转正
             $storageLifeReceiptLib = kernel::single('material_receipt_storagelife');
@@ -304,6 +305,9 @@ class wms_delivery_process{
             $deliveryBillItemMdl = app::get('wms')->model('delivery_bill_items');
 
             $bill_list = $billObj->getList('*',array('delivery_id'=>$dly_id, 'status'=>'1'));
+            
+            // 获取主单运单号
+            $primary_bill = $billObj->dump(array('delivery_id'=>$dly_id, 'type'=>'1', 'status'=>'1'), '*');
 
             $other_list_0 = array(); $packages = [];
             foreach ($bill_list as $bill) {
@@ -320,6 +324,16 @@ class wms_delivery_process{
                     'delivery_time' => $bill['delivery_time'],
                     'items'         => $billItemList,
                 );
+            }
+
+            // logi_id
+            if ($deliveryInfo['logi_id']) {
+                $data['logistics'] = $deliveryInfo['logi_id'];
+            }
+            
+            // logi_no
+            if (isset($primary_bill['logi_no']) && $primary_bill['logi_no']) {
+                $data['logi_no'] = $primary_bill['logi_no'];
             }
 
             $data['other_list_0'] = json_encode($other_list_0);
@@ -361,6 +375,12 @@ class wms_delivery_process{
             }
             
             $res = kernel::single('wms_event_trigger_delivery')->consign($wms_id, $data, true);
+            if ($res === false || (is_array($res) && $res['rsp'] == 'fail')) {
+                $msg = is_array($res) && $res['msg'] ? '通知OMS发货失败：' . $res['msg'] : '通知OMS发货失败';
+                $opObj->write_log('delivery_process@wms', $dly_id, $msg,'',$opinfo);
+                
+                return false;
+            }
 
             return true;
         }

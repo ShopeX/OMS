@@ -186,6 +186,26 @@ $db['order_items']=array(
           'label' => '优惠分摊',
           'comment' => '订单优惠分摊,采用子单part_mjz_discount按价格贡献比分摊',
     ),
+    'platform_amount' => array(
+        'type'    => 'money',
+        'default' => '0',
+        'label'   => '平台承担金额（不包含支付优惠）',
+    ),
+    'settlement_amount' => array(
+        'type'    => 'money',
+        'default' => '0',
+        'label'   => '结算金额',//客户实付 + 平台支付总额
+    ),
+    'actually_amount' => array(
+        'type'    => 'money',
+        'default' => '0',
+        'label'   => '客户实付',// 已支付金额 减去平台支付优惠，加平台支付总额
+    ),
+    'platform_pay_amount' => array(
+        'type'    => 'money',
+        'default' => '0',
+        'label'   => '支付优惠金额',
+    ),
     'protect_price' => array(
           'type' => 'money',
           'editable' => false,

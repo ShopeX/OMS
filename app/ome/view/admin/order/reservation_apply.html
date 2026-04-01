@@ -1,0 +1,215 @@
+<div class="tableform">
+    <div class="division">
+        <form method="post" action="index.php?app=ome&ctl=admin_order_reservation&act=save&finder_id=<{$env.get.finder_id}>" id="submit_form">
+            <input type="hidden" name="order_id" value="<{$reservationInfo.order_id}>">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tbody>
+                <tr>
+                    <th><em class="c-red" style="height: 40px; line-height: 40px;">*</em> 订单号：</th>
+                    <td style="height: 40px; line-height: 40px;"><{$orderInfo.order_bn}></td>
+                </tr>
+                <tr>
+                    <th><em class="c-red">*</em> 预约时间：</th>
+                    <td><{input type='date' id='reserved_time' name='reserved_time' value=$reservationInfo.custom_reserved_time }>
+                     <{help}><{t}>请选择预约时间<{/t}><{/help}></td>
+                </tr>
+                <tr>
+                    <th style=" white-space:nowrap;"><em class="c-red">*</em> 收货人姓名：</th>
+                    <td>
+                        <input id="custom_reserved_name" name="custom_reserved_name" type="text" vtype="required" size="15" value="<{$reservationInfo.custom_reserved_name}>" />
+                        <{if $is_encrypt}>
+                        <a style="margin:5px;padding:10px;background:url('../app/desktop/statics/bundle/afresh.gif') no-repeat scroll center center;" href="javascript:void(0);" id="decryption_order_receiver" title="解密收货人信息"></a>
+                        <{/if}>
+                    </td>
+                </tr>
+                <tr>
+                    <th><em class="c-red">*</em> 预约手机：</th>
+                    <td>
+                        <input type="text" id="custom_reserved_mobile" name="custom_reserved_mobile" vtype="required" value="<{$reservationInfo.custom_reserved_mobile}>">
+                    </td>
+                </tr>
+                <tr>
+                    <th><em class="c-red">*</em> 收货地区：</th>
+                    <td colspan="3"><{input type='region' app='eccommon' name="custom_reserved_area" vtype="area" value=$reservationInfo.custom_reserved_area }></td>
+                </tr>
+                <tr>
+                    <th><em class="c-red">*</em> 收货地址：</th>
+                    <td colspan="3"><input id="custom_reserved_address" name="custom_reserved_address" type="text"  vtype="required" size="32" value="<{$reservationInfo.custom_reserved_address}>" /></td>
+                </tr>
+                <tr>
+                    <th><em class="c-red">*</em> 销售人员：</th>
+                    <td>
+                        <select class="form-input" placeholder="请选择" id="seller_id" name="seller_id">
+                            <option value="0">--请选择销售人员--</option>
+                            <{foreach from=$sellerList item=sellerInfo}>
+                            <option value="<{$sellerInfo.id}>" <{if $sellerInfo.id == $reservationInfo.seller_id }>selected="selected"<{/if}> ><{$sellerInfo.seller_name}></option>
+                            <{/foreach}>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th><em class="c-red">*</em> 整单发货：</th>
+                    <td>
+                        <input type="radio" name='is_whole' value='true' <{if $reservationInfo.is_whole != 'false'}> checked<{/if}>> 是&nbsp;&nbsp;
+                        <input type="radio" name='is_whole' value='false' <{if $reservationInfo.is_whole == 'false'}> checked<{/if}>> 否
+                    </td>
+                </tr>
+            </tbody>
+            </table>
+
+            <{if in_array($reservationInfo.custom_reserved_status, array('1','2','3'))}>
+            <{if $orderObjectList}>
+            <br />
+            <div class="form-layout-block" id="promotion_items" >
+                <h4>订单明细</h4>
+                <div class="form-layout-fields form-layout-fields-column">
+                    <table class="gridlist" id="material_table"  style="margin:4px 0;">
+                        <thead>
+                            <tr>
+                                <th>&nbsp;基础物料编码</th>
+                                <th>&nbsp;基础物料名称</th>
+                                <th>&nbsp;销售物料编码</th>
+                                <th>&nbsp;预约数量</th>
+                                <th>&nbsp;预约时间</th>
+                                <th> SAP预约时间</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataNode">
+                        <{foreach from=$orderObjectList item=objInfo}>
+                        <{foreach from=$objInfo.order_items item=itemInfo}>
+                            <tr>
+                                <td style="padding:0;">&nbsp;<{$itemInfo.bn}></td>
+                                <td style="padding:0;">&nbsp;<span style="display: inline-block;width:230px; height:23px;overflow:hidden;text-overflow: ellipsis;white-space: nowrap;"><{$itemInfo.name}></span></td>
+                                <td style="padding:0;">&nbsp;<{$objInfo.bn}></td>
+                                <td style="padding:0;">
+                                    &nbsp;<{$itemInfo.item_quantity}>
+                                    <input type="hidden" name="order_item_ids[]" value="<{$itemInfo.item_id}>">
+                                    <input type="hidden" name="order_item_products[]" value="<{$itemInfo.bn}>">
+                                </td>
+                                <td style="padding:0;">&nbsp;<{input type='date' name='item_reserved_time[]' value=$itemInfo.item_reserved_time }></td>
+                                <td style="padding:0;">&nbsp;<{if $itemInfo.sap_reserved_times}><{$itemInfo.sap_reserved_times}><{/if}></td>
+                            </tr>
+                        <{/foreach}>
+                        <{/foreach}>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <br />
+            <{/if}>
+            <{/if}>
+
+            <div class="table-action">
+                <{button type="submit" class="btn-primary" label="确定" id="submitGropItemForm"}>
+                <{button label="关闭" onclick="javascript:void(window.close());" class="btn-secondary" type="button" isCloseDialogBtn="true"}>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+var order_id = "<{$orderInfo.order_id}>";
+(function(){
+    $('submitGropItemForm').addEvent("click",function(e){
+        var reserved_time = $('reserved_time').value.trim();
+        var custom_reserved_mobile = $('custom_reserved_mobile').value.trim();
+        var seller_id = $('seller_id').getElement('option:selected').value;
+
+        if(!reserved_time){
+            MessageBox.error('请选择预约时间');
+            e.stop();
+            return false;
+        }
+
+        if(!custom_reserved_mobile){
+            MessageBox.error('请填写有效的手机号码');
+            e.stop();
+            return false;
+        }
+
+        if (is_mobile(custom_reserved_mobile) === false){
+            MessageBox.error('请输入正确的手机号码');
+            $('custom_reserved_mobile').focus();
+            e.stop();
+            return false;
+        }
+
+        if (custom_reserved_mobile[0] == '0'){
+            MessageBox.error('手机号码前请不要加0');
+            $('custom_reserved_mobile').focus();
+            e.stop();
+            return false;
+        }
+
+        if(!seller_id || seller_id == '0'){
+            MessageBox.error('请选择销售人员');
+            $('custom_reserved_mobile').focus();
+            e.stop();
+            return false;
+        }
+
+        $('submit_form').fireEvent('submit',new Event(event));
+    });
+
+    $('submit_form').store('target',{
+        onRequest:function(){
+           $('submitGropItemForm').set('disabled', 'true');
+        },
+        onComplete:function(jsontext){
+           var json = Json.evaluate(jsontext);
+           if (typeof(json.error) != 'undefined'){
+               $('submitGropItemForm').set('disabled', '');
+           }else{
+               $('submitGropItemForm').set('disabled', 'true');
+
+               $('submit_form').getParent('.dialog').retrieve('instance').close();
+
+               finderGroup['<{$env.get.finder_id}>'].refresh();
+           }
+        }
+    });
+
+    // 解密收货人信息
+    $('decryption_order_receiver').addEvent('click',function(event){
+        var ship_info = '';
+        new Request(
+            {
+                url: "index.php?app=ome&ctl=admin_order&act=ajaxShowSensitiveData&p[0]=" + order_id,
+                async:false,
+                method:'post',
+                data:{order_id:order_id},
+                onComplete: function(json)
+                {
+                    result = JSON.decode(json);
+                    if(result.rsp == 'succ'){
+                        if(result.error_msg){
+                            alert("解密收货人信息错误：" + result.error_msg);
+                            return false;
+                        }else{
+                            ship_name = result.ship_name;
+                            ship_mobile = result.ship_mobile;
+                            ship_addr = result.ship_addr;
+
+                            $("custom_reserved_name").value = ship_name;
+                            $("custom_reserved_mobile").value = ship_mobile;
+                            $("custom_reserved_address").value = ship_addr;
+                        }
+                    } else{
+                        alert("解密收货人信息失败：" + result.error_msg);
+                        return false;
+                    }
+                }
+            }).send();
+    });
+})();
+
+function is_mobile(str)
+{
+    var partten = /^\d{8,15}$/;
+    if(partten.test(str)){
+        return true;
+    }else{
+        return false;
+    }
+}
+</script>

@@ -40,7 +40,7 @@ class dealer_finder_bs
         $finder_id = $_GET['_finder']['finder_id'];
         // $bsId     = $row[$this->col_prefix . 'bs_id'];
         $bsId   = $row['bs_id'];
-        $button = '<a href="index.php?app=dealer&ctl=admin_bs&act=edit&p[0]=' . $bsId . '&finder_id=' . $finder_id . '" target="dialog::{width:760,height:635,title:\'编辑经销商\'}">编辑</a>';
+        $button = '<a href="index.php?app=dealer&ctl=admin_bs&act=edit&p[0]=' . $bsId . '&finder_id=' . $finder_id . '" target="dialog::{width:780,height:635,title:\'编辑经销商\'}">编辑</a>';
         return $button;
     }
 

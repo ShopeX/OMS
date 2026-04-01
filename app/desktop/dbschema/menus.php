@@ -14,8 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
 $db['menus']=array (
   'columns' => 
   array (
@@ -78,7 +76,7 @@ $db['menus']=array (
     	'comment'=>'额外信息',
     ),
     'target'=>array(
-        'type'=>'varchar(10)',
+        'type'=>'varchar(255)',
         'default'=>'',
     	'comment'=>'跳转'
     ),

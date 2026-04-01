@@ -78,7 +78,8 @@ class ome_shop_type{
             // 'website'        => '官网V1',
             'website_d1m'       => '第一秒小程序',
             'wxshipin'          => '微信视频号',
-            'website_v2'        => '自建官网',
+            'website_v2'        => '官网',
+            'b2b'              => 'B2B',
         );
         return $shop_type;
     }
@@ -115,7 +116,7 @@ class ome_shop_type{
     }
 
     static function shop_refund_list() {
-        $shop = array('congminggou','pinduoduo','luban','xhs','meituan4medicine', 'website','ecos.ecshopx','website_v2');
+        $shop = array('congminggou','pinduoduo','luban','xhs','meituan4medicine', 'website','ecos.ecshopx','website_v2','b2b');
         return $shop;
     }
     /**
@@ -170,6 +171,7 @@ class ome_shop_type{
             'yunji4fx' => 'off',
             'alibaba4ascp' => 'off',
             'website' => 'off',
+            'b2b' => 'off',
         );
         return $store_config;
     }
@@ -306,6 +308,7 @@ class ome_shop_type{
             'yunji4pop' => 'on',
             'huawei' => 'on',
             'website' => 'on',
+            'b2b' => 'on',
             'meituan4bulkpurchasing' => 'on',
         );
 

@@ -29,12 +29,13 @@ class ome_autotask_task_combine
         $this->app = $app;
         $this->db = kernel::database();
     }
-
+    
     /**
-     * @description 执行批量自动审单
-     * @access public
-     * @param void
-     * @return void
+     * 执行批量自动审单
+     *
+     * @param $params
+     * @param $error_msg
+     * @return bool
      */
     public function process($params, &$error_msg='') 
     {
@@ -45,36 +46,33 @@ class ome_autotask_task_combine
         }
         
         set_time_limit(240);
-        //set_error_handler(array($this,'combine_error_handler'),E_USER_ERROR | E_ERROR);
         
         $this->exec_combine($params['log_id'], $params['log_text']);
+        
         return  true;
     }
-
+    
     /**
-     * @description
-     * @access public
-     * @param void
-     * @return void
+     * 系统自动审单订单
+     *
+     * @param $log_id
+     * @param $logiNoList
+     * @param $loginfo
+     * @return array|false|int[]|mixed|null
      */
     public function exec_combine($log_id, $logiNoList, $loginfo = array()) 
     {
-        if (empty($logiNoList) || !is_array($logiNoList) || !$log_id)
-        {
+        if (empty($logiNoList) || !is_array($logiNoList) || !$log_id){
             return false;
         }
-        $logiNoList = array_filter($logiNoList);
         
+        $logiNoList = array_filter($logiNoList);
         
         //[批量日志]处理中
         $deliBatchLog = $this->app->model('batch_log');
         $deliBatchLog->update(array('status'=>'2'),array('log_id'=>$log_id));
         
-        
-        /*------------------------------------------------------ */
-        //-- 系统自动审单处理
-        /*------------------------------------------------------ */
-        #数据参数处理
+        //数据参数处理
         $params    = array();
         foreach ($logiNoList as $key => $val)
         {
@@ -82,9 +80,8 @@ class ome_autotask_task_combine
             
             //[获取所有可操作的订单组]合并识别号_合并索引号[order_combine_hash、order_combine_idx]
             $row = app::get('ome')->model('orders')->db_dump(array('order_id'=>$order_id),'order_id,process_status,shop_type,is_fail,order_combine_hash,order_combine_idx,op_id,group_id');
-
             
-            #只处理未确认订单 && 失败订单不处理
+            //只处理未确认订单 && 失败订单不处理
             if(!$row ||
                 !in_array($row['process_status'], array('unconfirmed','confirmed','splitting')) ||
                 $row['is_fail'] == 'true' || 
@@ -101,6 +98,15 @@ class ome_autotask_task_combine
                 return array(false, '订单状态不对' . var_export($row, 1));
             }
             
+            //是否允许审核
+            if($row['is_not_combine'] > 0){
+                //[批量日志]已处理
+                $fail = 1;
+                $deliBatchLog->update(array('status'=>'1','fail_number'=>$fail), array('log_id'=>$log_id));
+                
+                return array(false, '订单已被标记：不允许审核。' . var_export($row, 1));
+            }
+            
             $params[]['orders'][]    = $order_id;
         }
         
@@ -111,7 +117,6 @@ class ome_autotask_task_combine
         //开始自动确认
         $orderAuto = new omeauto_auto_combine('combine');
         $result = $orderAuto->process($params);
-
         
         //[批量日志]已处理
         $deliBatchLog->update(array('status'=>'1','fail_number'=>$result['fail'],'succ_number' => $result['succ']),array('log_id'=>$log_id));

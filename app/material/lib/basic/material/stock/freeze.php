@@ -258,11 +258,18 @@ class material_basic_material_stock_freeze{
             $obj_bn = $freezeData['obj_bn'] ? : '';
             $sub_bill_type = $freezeData['sub_bill_type'] ? : '';
             $log_type = $freezeData['log_type'] ? $freezeData['log_type'] : '';
+            
+            // check
             if(empty($bm_id) || empty($obj_type) || empty($bmsq_id)){
                 $error_msg = '冻结基础数据缺失';
                 return false;
             }
-
+            
+            // 基础物料不管控库存，则跳过
+            if (isset($freezeData['is_product_ctrl_store']) && $freezeData['is_product_ctrl_store'] === false) {
+                continue;
+            }
+            
             $num = intval($num);
 
             // 是否增加基础物料的冻结
@@ -442,6 +449,12 @@ class material_basic_material_stock_freeze{
         $obj_id = $obj_type = $bill_type = '';
         $obj_type_arr = $obj_id_arr = [];
         foreach ($items as $item) {
+            
+            // 基础物料不管控库存，则跳过
+            if (isset($item['is_product_ctrl_store']) && $item['is_product_ctrl_store'] === false) {
+                continue;
+            }
+            
             $bm_id      = $item['bm_id'];
             $obj_type   = $item['obj_type'];
             $bill_type  = $item['bill_type'] ? $item['bill_type'] : 0; 

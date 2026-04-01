@@ -25,7 +25,7 @@ class console_finder_branch_product_extend
     
     public $_basicMStockFreezeLib = null;
     
-    //货品信息列表
+    //基础物料信息列表
     static $_productList = null;
     
     //仓库信息列表
@@ -76,7 +76,7 @@ class console_finder_branch_product_extend
         return $render->fetch('admin/branch/product/extend_detail_logs.html');
     }
     
-    var $column_bn = '货号';
+    var $column_bn = '基础物料编码';
     var $column_bn_width = 200;
     var $column_bn_order = 10;
     function column_bn($row, $list)
@@ -135,7 +135,7 @@ class console_finder_branch_product_extend
         return self::$_productList[$product_id]['material_bn'];
     }
     
-    var $column_product_name = '货品名称';
+    var $column_product_name = '基础物料名称';
     var $column_product_name_width = 300;
     var $column_product_name_order = 20;
     function column_product_name($row)

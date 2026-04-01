@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class sales_mdl_sales extends dbeav_model{
 
     //是否有导出配置
@@ -33,11 +32,6 @@ class sales_mdl_sales extends dbeav_model{
         parent::__construct(app::get('ome'));
     }
 
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
     public function table_name($real=false){
         $table_name = "sales";
         if($real){
@@ -51,7 +45,7 @@ class sales_mdl_sales extends dbeav_model{
         $parentOptions = parent::searchOptions();
         $childOptions = array(
             'order_bn'=>app::get('base')->_('订单号'),
-            'bn'=>app::get('base')->_('商品货号'),
+            'bn'=>app::get('base')->_('基础物料编码'),
         );
         return $Options = array_merge($childOptions,$parentOptions);
      }
@@ -79,7 +73,7 @@ class sales_mdl_sales extends dbeav_model{
         }
 
 
-        //货号查询
+        //基础物料编码查询
         if(isset($filter['bn'])){
 
             $sql = 'SELECT sale_id FROM sdb_ome_sales_items WHERE bn like \''.$filter['bn'].'\'';
@@ -181,12 +175,12 @@ class sales_mdl_sales extends dbeav_model{
                 $this->oSchema['csv']['sales_items'] = array(
                     '*:销售单号'   => '',
                     '*:订单号'     => '',
-                    '*:货号'       => '',
+                    '*:基础物料编码'       => '',
                     '*:商品名称'   => '',
-                    '*:商品规格'   => '',
+                    '*:基础物料规格'   => '',
                     '*:吊牌价'   => '',
                     '*:数量'   => '',
-                    '*:货品优惠'   => '',
+                    '*:基础物料优惠'   => '',
                     '*:销售总价'   => '',
                     '*:平摊优惠'   => '',
                     '*:销售金额'   => '',
@@ -445,12 +439,12 @@ class sales_mdl_sales extends dbeav_model{
                         $orderObjRow = array();
                         $orderObjRow['*:销售单号']   ="=\"\"".$aOrder['sale_bn']."\"\"";
                         $orderObjRow['*:订单号']     = "=\"\"".$order_bn."\"\"";
-                        $orderObjRow['*:货号']       = $obj['bn'];
+                        $orderObjRow['*:基础物料编码']       = $obj['bn'];
                         $orderObjRow['*:商品名称']   = str_replace([',', "\n"], '', $obj['name']);
-                        $orderObjRow['*:商品规格']   = str_replace([',', "\n"], '', $obj['spec_name']);
+                        $orderObjRow['*:基础物料规格']   = str_replace([',', "\n"], '', $obj['spec_name']);
                         $orderObjRow['*:吊牌价']   = $obj['price'];
                         $orderObjRow['*:数量']   = $obj['nums'];
-                        $orderObjRow['*:货品优惠']   = $obj['pmt_price'];
+                        $orderObjRow['*:基础物料优惠']   = $obj['pmt_price'];
                         $orderObjRow['*:数量']   = $obj['nums'];
                         $orderObjRow['*:销售总价']   = $obj['sale_price'];
                         $orderObjRow['*:平摊优惠']   = $obj['apportion_pmt'];
@@ -472,11 +466,6 @@ class sales_mdl_sales extends dbeav_model{
         echo implode("\n",$output);
     }
 
-    /**
-     * modifier_order_check_id
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_order_check_id($row){
 
         switch($row){
@@ -650,7 +639,7 @@ class sales_mdl_sales extends dbeav_model{
                         $temp_item_data['name']         = $ordItem['name'];
                         $temp_item_data['price']        = $ordItem['price'];
                         $temp_item_data['nums']         = $ordItem['nums'];
-                        $temp_item_data['pmt_price']    = $ordItem['pmt_price'];//取item层货品优惠,默认都是0
+                        $temp_item_data['pmt_price']    = $ordItem['pmt_price'];//取item层基础物料优惠,默认都是0
 
                         $temp_item_data['sale_price']   = $ordItem['sale_price'];
                         $temp_item_data['sales_amount'] = $ordItem['amount'];
@@ -763,9 +752,9 @@ class sales_mdl_sales extends dbeav_model{
                 '*:关联销售物料编码',
                 '*:关联销售物料名称',
 
-                '*:商品规格',
+                '*:基础物料规格',
                 '*:吊牌价',
-                '*:货品优惠',
+                '*:基础物料优惠',
                 '*:数量',
                 '*:销售总价',
                 '*:平摊优惠',
@@ -875,13 +864,6 @@ class sales_mdl_sales extends dbeav_model{
         return $row;
     }
 
-    /**
-     * modifier_member_id
-     * @param mixed $member_id ID
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_member_id($member_id,$list,$row)
     {
         static $get_from_db,$order_list;
@@ -994,11 +976,6 @@ HTML;
         return $data;
     }
     
-    /**
-     * 获取CustomExportTitle
-     * @param mixed $main_title main_title
-     * @return mixed 返回结果
-     */
     public function getCustomExportTitle($main_title)
     {
         $main_title = array_keys($main_title);
@@ -1008,10 +985,6 @@ HTML;
     }
     
     
-    /**
-     * salesItemsExportTitle
-     * @return mixed 返回值
-     */
     public function salesItemsExportTitle()
     {
         $items_title = array(
@@ -1020,9 +993,9 @@ HTML;
             '详情销售物料类型'   => 'type_name',
             '详情关联销售物料编码' => 'sales_material_bn',
             '详情关联销售物料名称' => 'sales_material_name',
-            '详情商品规格'     => 'spec_name',
+            '详情基础物料规格'     => 'spec_name',
             '详情吊牌价'      => 'price',
-            '详情货品优惠'     => 'pmt_price',
+            '详情基础物料优惠'     => 'pmt_price',
             '详情数量'       => 'nums',
             '详情销售总价'     => 'sale_price',
             '详情平摊优惠'     => 'apportion_pmt',
@@ -1066,13 +1039,6 @@ HTML;
         }
     }
 
-    /**
-     * modifier_shop_id
-     * @param mixed $shop_id ID
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_shop_id($shop_id,$list,$row){
         static $shopList;
 
@@ -1087,13 +1053,6 @@ HTML;
         return $shopList[$shop_id];
     }
 
-    /**
-     * modifier_org_id
-     * @param mixed $org_id ID
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_org_id($org_id,$list,$row){
         static $orgList;
 

@@ -26,6 +26,12 @@ class console_inventory_apply {
     public function confirm($apply_id, $diff_confirm = false) {
         $objInAp = app::get('console')->model('inventory_apply');
         $main = $objInAp->db_dump(['inventory_apply_id'=>$apply_id], '*');
+        if (empty($main)) {
+            return [false, ['msg'=>'盘点单不存在']];
+        }
+        if ($main['status'] == 'confirmed') {
+            return [true, ['msg'=>'已确认']];
+        }
         if($main['negative_branch_id']) {
             list($rs, $rsData) = $this->confirmZP($main);
             if(!$rs) {
@@ -67,9 +73,9 @@ class console_inventory_apply {
         $objInAp->update(['status'=>'confirming','process_date'=>time()], ['inventory_apply_id'=>$main['inventory_apply_id'], 'status'=>['unconfirmed','confirming']]);
         $items = app::get('console')->model('inventory_apply_items')->getList('item_id,bm_id,material_bn,wms_stores,oms_stores,diff_stores,m_type,batch',['inventory_apply_id'=>$main['inventory_apply_id'], 'is_confirm'=>'0', 'm_type'=>'zp']);
         if(empty($items)) {
-            kernel::database()->commit();
-            app::get('ome')->model('operation_log')->write_log('inventory_apply@console',$main['inventory_apply_id'],"良品确认成功");
-            return [true, ['msg'=>'良品确认完成']];
+            kernel::database()->rollBack();
+            app::get('ome')->model('operation_log')->write_log('inventory_apply@console',$main['inventory_apply_id'],"良品暂无待确认明细");
+            return [true, ['msg'=>'良品暂无待确认明细']];
         }
         $data = [
             'task_id' => $main['inventory_apply_id'],
@@ -110,9 +116,9 @@ class console_inventory_apply {
         $objInAp->update(['status'=>'confirming','process_date'=>time()], ['inventory_apply_id'=>$main['inventory_apply_id'], 'status'=>['unconfirmed','confirming']]);
         $items = app::get('console')->model('inventory_apply_items')->getList('item_id,bm_id,material_bn,wms_stores,oms_stores,diff_stores,m_type,batch',['inventory_apply_id'=>$main['inventory_apply_id'], 'is_confirm'=>'0', 'm_type'=>'cc']);
         if(empty($items)) {
-            kernel::database()->commit();
-            app::get('ome')->model('operation_log')->write_log('inventory_apply@console',$main['inventory_apply_id'],"残品确认成功");
-            return [true, ['msg'=>'良品确认完成']];
+            kernel::database()->rollBack();
+            app::get('ome')->model('operation_log')->write_log('inventory_apply@console',$main['inventory_apply_id'],"残品暂无待确认明细");
+            return [true, ['msg'=>'残品暂无待确认明细']];
         }
         $data = [
             'task_id' => $main['inventory_apply_id'],

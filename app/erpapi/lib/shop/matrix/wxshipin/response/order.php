@@ -50,7 +50,84 @@ class erpapi_shop_matrix_wxshipin_response_order extends erpapi_shop_response_or
         }
 
         // 处理平台优惠券（coupon_type=3）
-        $this->_processPlatformCoupons();
+        if($this->_ordersdf['extend_field']['version'] >= 3) {
+            $this->_processV3ObjectAmounts();
+        }else{
+            $this->_processPlatformCoupons();
+        }
+    }
+
+    /**
+     * v3 金额处理：
+     * - settlement_amount = divi_fee + coupon_field.pmt_info(coupon_type=1)汇总(按oid)
+     * - actually_amount   = coupon_field.calcActuallyPay(按oid)
+     */
+    protected function _processV3ObjectAmounts()
+    {
+        if (empty($this->_ordersdf['order_objects']) || !is_array($this->_ordersdf['order_objects'])) {
+            return;
+        }
+
+        $oidCouponType1Map = array();
+        $oidActuallyPayMap = array();
+        $couponField = array();
+
+        if (!empty($this->_ordersdf['coupon_field']) && is_array($this->_ordersdf['coupon_field'])) {
+            $couponField = $this->_ordersdf['coupon_field'];
+        }
+
+        foreach ($couponField as $couponRow) {
+            if (!is_array($couponRow) || empty($couponRow['oid'])) {
+                continue;
+            }
+
+            $oid = (string)$couponRow['oid'];
+
+            if (isset($couponRow['calcActuallyPay']) && is_numeric($couponRow['calcActuallyPay'])) {
+                $oidActuallyPayMap[$oid] = bcadd(
+                    isset($oidActuallyPayMap[$oid]) ? (string)$oidActuallyPayMap[$oid] : '0',
+                    (string)$couponRow['calcActuallyPay'],
+                    3
+                );
+            }
+
+            if (!empty($couponRow['pmt_info']) && is_array($couponRow['pmt_info'])) {
+                foreach ($couponRow['pmt_info'] as $pmtInfo) {
+                    if (!is_array($pmtInfo)) {
+                        continue;
+                    }
+                    if (!isset($pmtInfo['coupon_type']) || (string)$pmtInfo['coupon_type'] !== '1') {
+                        continue;
+                    }
+
+                    $pmtAmount = isset($pmtInfo['pmt_amount']) && is_numeric($pmtInfo['pmt_amount']) ? (string)$pmtInfo['pmt_amount'] : '0';
+                    $oidCouponType1Map[$oid] = bcadd(
+                        isset($oidCouponType1Map[$oid]) ? (string)$oidCouponType1Map[$oid] : '0',
+                        $pmtAmount,
+                        3
+                    );
+                }
+            }
+        }
+
+        foreach ($this->_ordersdf['order_objects'] as $objectKey => $object) {
+            if (!is_array($object) || empty($object['oid'])) {
+                continue;
+            }
+
+            $oid = (string)$object['oid'];
+            $diviFee = isset($object['divide_order_fee']) && is_numeric($object['divide_order_fee']) ? (string)$object['divide_order_fee'] : '0';
+
+            $couponType1Amount = isset($oidCouponType1Map[$oid]) ? (string)$oidCouponType1Map[$oid] : '0';
+            $settlementAmount = bcadd($diviFee, $couponType1Amount, 3);
+            $this->_ordersdf['order_objects'][$objectKey]['settlement_amount'] = $settlementAmount;
+
+            if (isset($oidActuallyPayMap[$oid])) {
+                $this->_ordersdf['order_objects'][$objectKey]['actually_amount'] = (string)$oidActuallyPayMap[$oid];
+            } else {
+                $this->_ordersdf['order_objects'][$objectKey]['actually_amount'] = $diviFee;
+            }
+        }
     }
     
     /**

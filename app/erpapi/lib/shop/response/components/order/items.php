@@ -79,12 +79,14 @@ class erpapi_shop_response_components_order_items extends erpapi_shop_response_c
         $abnormalList = [];
         $is_fail_order = false;
         $shop_id       = $this->_platform->__channelObj->channel['shop_id'];
+        
         $presaleNum = 0;
         foreach ($this->_platform->_ordersdf['order_objects'] as $object)
         {
             $order_oid = $object['oid'];
             $goods_bn = $object['bn'];
             $obj_status = $object['status'];
+            $is_setmapping = false; // 是否SET商品映射
             
             //子单纬度的择仓、择配
             $logisObjInfo = $logisObjects[$order_oid];
@@ -104,11 +106,11 @@ class erpapi_shop_response_components_order_items extends erpapi_shop_response_c
             $quantity   = $object['quantity'] ? $object['quantity'] : 1;
             $obj_amount = $object['amount'] ? $object['amount'] : bcmul($quantity, $object['price'], 3);
 
-            $obj_sale_price = (isset($object['sale_price']) && is_numeric($object['sale_price']) && -1 != bccomp($object['sale_price'], 0, 3)) ? $object['sale_price'] : bcsub($obj_amount, $object['pmt_price'], 3);
+            $pmt_price = (isset($object['pmt_price']) && is_numeric($object['pmt_price'])) ? (string)$object['pmt_price'] : '0';
+            $obj_sale_price = (isset($object['sale_price']) && is_numeric($object['sale_price']) && -1 != bccomp($object['sale_price'], 0, 3)) ? $object['sale_price'] : bcsub($obj_amount, $pmt_price, 3);
             $obj_type       = 'goods';
-
-            //检查货品是否存在销售物料中
-            //@todo：下面方法会过滤bn为空,天猫平台订单有商品编码为空的情况;
+            
+            // 根据来源店铺及销售物料货号获取销售物料信息
             $salesMInfo = $salesMLib->getSalesMByBn($shop_id, $object['bn']);
             if (!$salesMInfo) {
                 if($is_custom_order && $obj_status == 'close'){
@@ -150,6 +152,11 @@ class erpapi_shop_response_components_order_items extends erpapi_shop_response_c
                     //sales_material_type
                     if ($salesMInfo['sales_material_type'] == 2){
                         $obj_type = 'pkg';
+                        
+                        // SET商品打标记
+                        // @todo：只要销售物料是PKG组合类型，都需要按SET商品价格计算；
+                        $is_setmapping = true;
+                        
                     }elseif ($salesMInfo['sales_material_type'] == 3) {
                         $obj_type = 'gift';
                     }
@@ -250,8 +257,8 @@ class erpapi_shop_response_components_order_items extends erpapi_shop_response_c
                         } else {
                             $cost              = (float) $object['cost'] ? $object['cost'] : $basicMInfo['cost'];
                             $price             = (float) $object['price'];
-                            $pmt_price         = (float) $object['pmt_price'];
-                            $sale_price        = (isset($object['sale_price']) && is_numeric($object['sale_price']) && -1 != bccomp($object['sale_price'], 0, 3)) ? $object['sale_price'] : bcsub($obj_amount, (float) $object['pmt_price'], 3);
+                            $pmt_price         = (isset($object['pmt_price']) && is_numeric($object['pmt_price'])) ? (string)$object['pmt_price'] : '0';
+                            $sale_price        = (isset($object['sale_price']) && is_numeric($object['sale_price']) && -1 != bccomp($object['sale_price'], 0, 3)) ? $object['sale_price'] : bcsub($obj_amount, $pmt_price, 3);
                             $amount            = $obj_amount;
                             $weight            = (float) $object['weight'] ? $object['weight'] : ($basicMInfo['weight'] ? $basicMInfo['weight'] : 0.00);
                             $item_type         = $obj_type == 'goods' ? 'product' : $obj_type;
@@ -347,6 +354,8 @@ class erpapi_shop_response_components_order_items extends erpapi_shop_response_c
                 'promotion_id'      => $object['promotion_id'],
                 'divide_order_fee'  => $object['divide_order_fee'],
                 'part_mjz_discount' => $object['part_mjz_discount'],
+                'settlement_amount' => $object['settlement_amount'],
+                'actually_amount'   => $object['actually_amount'],
                 'sku_uuid'          => $object['sku_uuid'],
                 'store_code'        => $this->_platform->__channelObj->channel['config']['clear_plate_branch'] == 'true' ? '' : ($storeCode ? : $object['store_code']), //预选仓库编码
                 'estimate_con_time' => $estimateConTimeOne > 0 ? $estimateConTimeOne : null,
@@ -367,6 +376,7 @@ class erpapi_shop_response_components_order_items extends erpapi_shop_response_c
                 'object_bool_type' => $objectBoolType,
                 'addon'             => is_array($object['addon']) ? json_encode($object['addon']) : $object['addon'], //扩展信息
                 'customization' => $object['customization'], //商品定制信息
+                'is_sales_material_setmapping' => $is_setmapping, // 是否SET商品映射
             );
             
             unset($order_items);
@@ -466,25 +476,27 @@ class erpapi_shop_response_components_order_items extends erpapi_shop_response_c
             foreach ((array) $ordersdf['order_objects'] as $object)
             {
                 $order_oid = $object['oid'];
+                $is_setmapping = false; // 是否SET商品映射
                 
                 //子单纬度的择仓、择配
                 $logisObjInfo = $logisObjects[$order_oid];
+                
                 //check
                 if($object['is_update'] === 'false') continue;
                 
                 //obj基础数据格式化
-
                 $obj_amount     = $object['amount'] ? $object['amount'] : bcmul($object['quantity'], $object['price'], 3);
-                $obj_sale_price = (isset($object['sale_price']) && is_numeric($object['sale_price']) && -1 != bccomp($object['sale_price'], 0, 3)) ? $object['sale_price'] : bcsub($obj_amount, $object['pmt_price'], 3);
+                $pmt_price = (isset($object['pmt_price']) && is_numeric($object['pmt_price'])) ? (string)$object['pmt_price'] : '0';
+                $obj_sale_price = (isset($object['sale_price']) && is_numeric($object['sale_price']) && -1 != bccomp($object['sale_price'], 0, 3)) ? $object['sale_price'] : bcsub($obj_amount, $pmt_price, 3);
                 $obj_type       = $object['obj_type'] ? $object['obj_type'] : 'goods';
-
-                $goods       = array();
                 $order_items = array();
-
+                
+                // 根据来源店铺及销售物料货号获取销售物料信息
                 $salesMInfo = $salesMLib->getSalesMByBn($this->_platform->__channelObj->channel['shop_id'], $object['bn']);
                 if (!$salesMInfo) {
                     $sky_ordersdf_is_fail_order = true;
                 }
+                
                 if ($salesMInfo) {
                     $basicMInfos = array();
                     if ($salesMInfo['sales_material_type'] == 5) {
@@ -507,8 +519,15 @@ class erpapi_shop_response_components_order_items extends erpapi_shop_response_c
                         
                         //unset
                         unset($luckybagParams, $fdResult);
-                    } else {
+                    }else {
                         $basicMInfos = $salesMLib->getBasicMBySalesMId($salesMInfo['sm_id']);
+                        
+                        // sales_material_type
+                        if ($salesMInfo['sales_material_type'] == 2) {
+                            // SET商品打标记
+                            // @todo：只要销售物料是PKG组合类型，都需要按SET商品价格计算；
+                            $is_setmapping = true;
+                        }
                     }
                     
                     if (!$basicMInfos) {
@@ -548,7 +567,7 @@ class erpapi_shop_response_components_order_items extends erpapi_shop_response_c
                             
                             $cost              = (float) $object['cost'] ? $object['cost'] : $basicMInfo['cost'];
                             $price             = (float) $object['price'];
-                            $pmt_price         = (float) $object['pmt_price'];
+                            $pmt_price         = (isset($object['pmt_price']) && is_numeric($object['pmt_price'])) ? (string)$object['pmt_price'] : '0';
                             $sale_price        = $obj_sale_price;
                             $amount            = $obj_amount;
                             $weight            = (float) $object['weight'] ? $object['weight'] : ($basicMInfo['weight'] ? $basicMInfo['weight'] : 0.00);
@@ -651,12 +670,15 @@ class erpapi_shop_response_components_order_items extends erpapi_shop_response_c
                     'delete'            => ($object['status'] == 'close') ? 'true' : 'false',
                     'divide_order_fee'  => $object['divide_order_fee'],
                     'part_mjz_discount' => $object['part_mjz_discount'],
+                    'settlement_amount' => $object['settlement_amount'],
+                    'actually_amount'   => $object['actually_amount'],
                     'sku_uuid'          => $object['sku_uuid'],
                     'promised_collect_time' => ($logisObjInfo['promise_collect_time'] ? $logisObjInfo['promise_collect_time'] : 0), //承诺-最晚揽收时间
                     'promise_outbound_time' => ($logisObjInfo['promise_outbound_time'] ? $logisObjInfo['promise_outbound_time'] : 0), //承诺-最晚出库时间
                     'biz_sd_type' => ($logisObjInfo['biz_sd_type'] ? $logisObjInfo['biz_sd_type'] : 0), //建议仓类型
                     'biz_delivery_type' => ($logisObjInfo['biz_delivery_type'] ? $logisObjInfo['biz_delivery_type'] : 0), //择配建议
                     //'customization' => $object['customization'], //商品定制信息
+                    'is_sales_material_setmapping' => $is_setmapping, // 是否SET商品映射
                 );
                 
                 //store_code
@@ -692,9 +714,9 @@ class erpapi_shop_response_components_order_items extends erpapi_shop_response_c
             ];
             kernel::single('ome_order')->create_divide_pay($doti);
             $ordersdf_object = $doti['order_objects'];
+            
             // 判断ITEM有没有
             $need_del_info = array();
-
             $branchBatchList = [];
             foreach ($tgOrder_object as $objkey => $object) {
                 $has_old_item_del = false;
@@ -753,6 +775,8 @@ class erpapi_shop_response_components_order_items extends erpapi_shop_response_c
             $basicMStockFreezeLib->unfreezeBatch($branchBatchList, __CLASS__.'::'.__FUNCTION__, $err);
 
             $branchBatchList = [];
+            $actually_amount_diff = 0;
+            $settlement_amount_diff = 0;
             // 字段比较
             foreach ($ordersdf_object as $objkey => $object) {
                 $obj_id      = $tgOrder_object[$objkey]['obj_id'];
@@ -769,8 +793,16 @@ class erpapi_shop_response_components_order_items extends erpapi_shop_response_c
                     if($this->_platform->_newOrder['order_objects'][$objkey]['delete'] == 'true' && $ordersdf['old_obj_id'] && in_array($obj_id, $ordersdf['old_obj_id'])) {
                         $this->_platform->_newOrder['order_objects'][$objkey]['pay_status'] = '5';
                     }
-                }
+                    if($diff_obj['delete'] == 'true') {
+                        $actually_amount_diff += 0 - $tgOrder_object[$objkey]['actually_amount'];
+                        $settlement_amount_diff += 0 - $tgOrder_object[$objkey]['settlement_amount'];
+                    } else {
+                        $actually_amount_diff += $object['actually_amount'] - $tgOrder_object[$objkey]['actually_amount'];
+                        $settlement_amount_diff += $object['settlement_amount'] - $tgOrder_object[$objkey]['settlement_amount'];
+                    }
 
+                }
+                
                 foreach ($order_items as $itemkey => $item) {
                     $item = array_filter($item, array($this, 'filter_null'));
                     if(isset($item['porth_field'])) {
@@ -868,7 +900,12 @@ class erpapi_shop_response_components_order_items extends erpapi_shop_response_c
             if ($branchBatchList['-']) {
                 $basicMStockFreezeLib->unfreezeBatch($branchBatchList['-'], __CLASS__.'::'.__FUNCTION__, $err);
             }
-
+            if ($actually_amount_diff != 0) {
+                $this->_platform->_newOrder['actually_amount'] = $this->_platform->_tgOrder['actually_amount'] + $actually_amount_diff;
+            }
+            if ($settlement_amount_diff != 0) {
+                $this->_platform->_newOrder['settlement_amount'] = $this->_platform->_tgOrder['settlement_amount'] + $settlement_amount_diff;
+            }
             if ($sky_ordersdf_is_fail_order) {
                 $this->_platform->_newOrder['is_fail']     = 'true';
                 $this->_platform->_newOrder['edit_status'] = 'true';

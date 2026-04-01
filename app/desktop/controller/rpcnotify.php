@@ -35,10 +35,17 @@ class desktop_ctl_rpcnotify extends desktop_controller{
     }//End Function
 
     function index(){
+        // 清除三个月前的通知，直接用SQL执行
+        $threeMonthsAgo = strtotime('-3 months');
+        $db = kernel::database();
+        $table = app::get('base')->model('rpcnotify')->table_name(true);
+        $sql = "DELETE FROM {$table} WHERE notifytime < {$threeMonthsAgo}";
+        $db->exec($sql);
 
         $this->finder('base_mdl_rpcnotify',array(
             'title'=>app::get('desktop')->_('消息通知'),
             'actions'=>array(
+                            array('label'=>app::get('desktop')->_('标记为未读'), 'id'=>'id-rpcynotify-submit', 'submit'=>'index.php?ctl=rpcnotify&act=unread'),
                             array('label'=>app::get('desktop')->_('标记为已读'), 'id'=>'id-rpcynotify-submit', 'submit'=>'index.php?ctl=rpcnotify&act=read'),
                         ),
             'use_buildin_recycle' => false,
@@ -80,12 +87,45 @@ class desktop_ctl_rpcnotify extends desktop_controller{
                    $cacheInfo[$infoKey]['status'] = 'true';
                     cachecore::store('system_notice_data', $cacheInfo, 1800);
                 }
-                $data = array('status'=>'true','id'=>$val);
+                $data = array('status'=>'true','id'=>$val,'read_user'=>kernel::single('desktop_user')->get_login_name());
                 $flag = app::get('base')->model('rpcnotify')->save( $data );
                 if( $flag == false ) break;
             }
         }else {
-            $data = array('status'=>'true');
+            $data = array('status'=>'true','read_user'=>kernel::single('desktop_user')->get_login_name());
+            $filter = array();
+            $flag = app::get('base')->model('rpcnotify')->update( $data, $filter );
+        }
+        $this->end( $flag, ($flag ? app::get('desktop')->_('操作成功') : app::get('desktop')->_('操作失败')) );
+    }
+    
+    public function unread() {
+        if (!$_POST['from']) {
+            $this->begin( kernel::router()->gen_url( array('app'=>'desktop','ctl'=>'rpcnotify','act'=>'index') ) );
+        }else{
+            $this->begin( kernel::router()->gen_url( array('app'=>'desktop','ctl'=>'dashboard','act'=>'index') ) );
+        }
+        
+        $id = $_POST['id'];
+        $is_selected_all = $_POST['isSelectedAll'];
+
+        if( !$id && !$is_selected_all) 
+            $this->end( false, app::get('desktop')->_('操作失败') );
+        if ($id) {
+            //桌面消息缓存
+            $cacheInfo = cachecore::fetch('system_notice_data');
+            foreach( (array)$id as $val ) {
+                if ($cacheInfo) {
+                   $infoKey = array_search($val, array_column($cacheInfo, 'id'));
+                   $cacheInfo[$infoKey]['status'] = 'false';
+                    cachecore::store('system_notice_data', $cacheInfo, 1800);
+                }
+                $data = array('status'=>'false','id'=>$val,'read_user'=>'');
+                $flag = app::get('base')->model('rpcnotify')->save( $data );
+                if( $flag == false ) break;
+            }
+        }else {
+            $data = array('status'=>'false','read_user'=>'');
             $filter = array();
             $flag = app::get('base')->model('rpcnotify')->update( $data, $filter );
         }

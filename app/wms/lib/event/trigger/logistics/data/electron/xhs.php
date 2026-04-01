@@ -164,6 +164,7 @@ class wms_event_trigger_logistics_data_electron_xhs extends wms_event_trigger_lo
         }
 
         $dlyCorp = app::get('ome')->model('dly_corp')->dump(array('corp_id' => $delivery['logi_id']));
+        app::get('ome')->model('dly_corp_channel')->getChannel($dlyCorp, array($delivery));
 
         $sdf                  = parent::getDirectSdf($arrDelivery, $arrBill, $shop);
         $sdf['primary_bn']    = $delivery['delivery_bn'];

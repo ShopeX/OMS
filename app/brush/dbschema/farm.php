@@ -83,7 +83,7 @@ $db['farm']=array(
         ),
         'condition'=>array(
             'type'=>array(
-                '' => '',
+                // '' => '',
                 'eq'=>'等于',
                 'gt'=>'大于',
                 'lt'=>'小于',

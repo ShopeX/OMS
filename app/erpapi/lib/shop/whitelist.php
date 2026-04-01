@@ -113,6 +113,7 @@ class erpapi_shop_whitelist {
             'wxshipin'          => $this->wxshipin,
             'zkh'               => $this->zkh,
             'website_v2'        => $this->website,
+            'xiaomi'            => $this->xiaomi,
         );
     }
 
@@ -354,6 +355,7 @@ class erpapi_shop_whitelist {
         SHOP_SUPPLIER_ORDER_REJECT_APPLY,
         SHOP_SUPPLIER_ORDER_CANCEL_BACK,
         SHOP_SUPPLIER_RETURN_GOOD_CONFIRM,
+        SHOP_SUPPLIER_RETURN_GOOD_INSTORAGE_RESULT,
         SHOP_REFUND_DETAIL_GET,
         SHOP_REFUND_INTERCEPT,
         SHOP_REFUND_NEGOTIATERETURN_RENDER,
@@ -377,11 +379,20 @@ class erpapi_shop_whitelist {
         SHOP_AOXIANG_LOGISTICS_QUERY, //翱象黑白名单快递接口
         SHOP_EXCHANGE_CONFIRMCONSIGN, //卖家确认收货&&卖家发货
         SHOP_FX_JZ_LOGISTICS_OFFLINE_SEND, //喵住发货回写
+        SHOP_GET_TRADE_INVOICE_SUMMARY,
         STORE_LOGISTICS_PACKAGE_EXCEPTION_QUERY, //物流包裹异常查询接口
         STORE_LOGISTICS_PACKAGE_EXCEPTION_CONFIG_QUERY, //物流包裹异常配置查询接口
         SHOP_REFUND_NEGOTIATION_GET, // 获取协商退货退款渲染数据
         SHOP_REFUND_NEGOTIATE_CANAPPLY_GET, // 查询是否可发起协商
         SHOP_REFUND_NEGOTIATION_CREATE, //协商退货退款接口
+        SHOP_RESHIPPING_GET, //查询补寄详情
+        SHOP_RESHIPPING_MESSAGES_GET, //查询补寄留言列表
+        SHOP_RESHIPPING_MESSAGE_ADD, //创建补寄留言
+        SHOP_RESHIPPING_AGREE, //同意补寄申请
+        SHOP_RESHIPPING_REFUSE, //拒绝补寄申请
+        SHOP_RESHIPPING_CONSIGNGOODS, //补寄发货
+        SHOP_RESHIPPING_REFUSEREASON_GET, //查询拒绝原因列表
+        STORE_VIRTUAL_NUMBER_GROUP_UPDATE,
     );
 
     /**
@@ -471,6 +482,7 @@ class erpapi_shop_whitelist {
         SHOP_SERIALNUMBER_UPDATE,
         SHOP_BILL_PAYABLE_SETTLEMENT_QUERY,
         SHOP_LOGISTICS_CONSIGN_RESEND,
+        STORE_VIRTUAL_NUMBER_GROUP_UPDATE,
     );
 
     /**
@@ -521,6 +533,7 @@ class erpapi_shop_whitelist {
         SHOP_ITEM_I_GET,
         SHOP_GET_ITEMS_ALL_RPC,
         //SHOP_ITEM_SKU_GET, //单拉商品SKU(矩阵不支持)
+        SHOP_LOGISTICS_OFFICIAL_PICKUP,
     );
 
     /**
@@ -883,11 +896,19 @@ class erpapi_shop_whitelist {
 
     //微盟零售
     private $weimobr = array(
-        SHOP_UPDATE_ITEMS_QUANTITY_LIST_RPC,
-        SHOP_LOGISTICS_OFFLINE_SEND,
-        SHOP_AGREE_RETURN_GOOD,
+        SHOP_TRADE_FULLINFO_RPC, // 获取订单详情
+        SHOP_UPDATE_ITEMS_QUANTITY_LIST_RPC, // 覆盖/增量更新库存
+        SHOP_LOGISTICS_OFFLINE_SEND, // 商家配送发货(线下物流)
+        SHOP_LOGISTICS_CONSIGN_RESEND, // 修改配送信息
+        SHOP_AGREE_RETURN_GOOD, // 同意售后单
         SHOP_REFUSE_RETURN_GOOD,
-        SHOP_RETURN_GOOD_CONFIRM
+        SHOP_TRADE_REFUND_GET, // 查询售后单详情
+        SHOP_RETURN_GOOD_CONFIRM,
+        SHOP_GET_ITEMS_ALL_RPC, // 获取所有商品
+        SHOP_ITEM_GET, // 查询在售商品
+        SHOP_GET_INVENTORY_QUERY, // 批量查询商品库存
+        STORE_O2O_STORES_GET, // 获取门店信息
+        STORE_KS_SUB_RETURNINFO, // 根据售后单号填写退货物流
     );
     
     // 环球捕手 by mxc
@@ -1009,7 +1030,14 @@ class erpapi_shop_whitelist {
         STORE_AG_SENDGOODS_CANCEL,
         SHOP_INVOICE_QUERY, //获取发票信息
         SHOP_UPLOAD_ORDER_RECORD, // 订单链路监控接口
-        SHOP_INVOICE_STATUS_UPDATE//发票上传
+        SHOP_INVOICE_STATUS_UPDATE, //发票上传
+        SHOP_RESHIPPING_GET, //查询补寄详情
+        SHOP_RESHIPPING_MESSAGES_GET, //查询补寄留言列表
+        SHOP_RESHIPPING_MESSAGE_ADD, //创建补寄留言
+        SHOP_RESHIPPING_AGREE, //同意补寄申请
+        SHOP_RESHIPPING_REFUSE, //拒绝补寄申请
+        SHOP_RESHIPPING_CONSIGNGOODS, //补寄发货
+        SHOP_RESHIPPING_REFUSEREASON_GET, //查询拒绝原因列表
     );
     
     private $yangsc = array(
@@ -1230,5 +1258,11 @@ class erpapi_shop_whitelist {
         ZKH_OPEN_DELIVERY_CONFIRM_POST,//采购单发货确认
         ZKH_OPEN_GET_DELIVERY_POST,
         ZKH_OPEN_GET_DELIVERY_DETAIL,
+    );
+
+    // 小米有品
+    private $xiaomi = array(
+        SHOP_LOGISTICS_OFFLINE_SEND,
+        //SHOP_UPDATE_TRADE_SHIPPING_ADDRESS_RPC,
     );
 }

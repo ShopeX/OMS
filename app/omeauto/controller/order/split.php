@@ -38,7 +38,7 @@ class omeauto_ctl_order_split extends omeauto_controller
         );
 
         $params['actions'] = array(
-            array('label' => '新建', 'icon' => '', 'href' => 'index.php?app=omeauto&ctl=order_split&act=add', 'target' => 'dialog::{width:760,height:480,title:\'新建拆单规则\'}'),
+            array('label' => '新建', 'icon' => '', 'href' => 'index.php?app=omeauto&ctl=order_split&act=add', 'target' => 'dialog::{width:760,height:530,title:\'新建拆单规则\'}'),
         );
 
         $this->finder('omeauto_mdl_order_split', $params);

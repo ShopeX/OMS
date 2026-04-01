@@ -90,16 +90,71 @@ class ome_mdl_return_product extends dbeav_model
             unset($filter['member_uname']);
         }
         if (isset($filter['product_bn'])){
-            $returnItemObj = $this->app->model("return_product_items");
-            $rows = $returnItemObj->getList('return_id',array('bn'=>$filter['product_bn']));
+            $returnId = array();
             $returnId[] = 0;
-            foreach($rows as $row){
-                $returnId[] = $row['return_id'];
+
+            //多基础物料查询
+            if($filter['product_bn'] && is_string($filter['product_bn']) && strpos($filter['product_bn'], "\n") !== false){
+                $filter['product_bn'] = array_unique(array_map('trim', array_filter(explode("\n", $filter['product_bn']))));
             }
-            $where .= '  AND return_id IN ('.implode(',', $returnId).')';
+
+            //按基础物料查询相关售后单
+            $rows = $this->getReturnIdByFilterbnEq($filter);
+            if($rows){
+                foreach($rows as $row){
+                    $temp_return_id = $row['return_id'];
+                    $returnId[$temp_return_id] = $temp_return_id;
+                }
+            }
+
+            $where .= '  AND return_id IN ("'.implode('","', $returnId).'")';
             unset($filter['product_bn']);
         }
         return parent::_filter($filter,$tableAlias,$baseWhere).$where;
+    }
+
+    /**
+     * 根据基础物料编码获取售后单ID（支持大数据量分批查询）
+     * @param array $filter 筛选条件，包含 product_bn
+     * @return array 返回 return_id 列表
+     */
+    public function getReturnIdByFilterbnEq($filter)
+    {
+        $product_bn = $filter['product_bn'];
+
+        $where = 1;
+        if (is_array($product_bn)) {
+            $where = 'in (\'' . implode('\',\'', $product_bn) . '\')';
+        } else {
+            $where = '= \'' . $product_bn . '\'';
+        }
+        unset($filter['product_bn']);
+        $return_filter = $this->_filter($filter);
+        $return_filter = str_replace('`sdb_ome_return_product`', 'r', $return_filter);
+        // 使用正则替换，排除已经带 r. 前缀的字段
+        $return_filter = preg_replace('/(?<!r\.)return_id/', 'r.return_id', $return_filter);
+        $return_filter = preg_replace('/(?<!r\.)delivery_mode/', 'r.delivery_mode', $return_filter);
+        $sql = 'SELECT count(1) as _c FROM sdb_ome_return_product_items as i LEFT JOIN sdb_ome_return_product as r ON i.return_id=r.return_id WHERE i.bn ' . $where . ' AND ' . $return_filter;
+        $count = $this->db->selectrow($sql);
+        if ($count['_c'] >= 10000) {
+            $offset = 0;
+            $limit  = 9000;
+            $list   = array();
+            $sql    = 'SELECT i.return_id FROM sdb_ome_return_product_items as i LEFT JOIN sdb_ome_return_product as r ON i.return_id=r.return_id WHERE i.bn ' . $where . ' AND ' . $return_filter;
+            $total  = floor($count['_c'] / $limit);
+            for ($i = $total; $i >= 0; $i--) {
+                $rows = $this->db->selectlimit($sql, $limit, $i * $limit);
+                if ($rows) {
+                    $list = array_merge_recursive($list, $rows);
+                }
+            }
+            return $list;
+        }
+
+        $sql  = 'SELECT i.return_id FROM sdb_ome_return_product_items as i LEFT JOIN sdb_ome_return_product as r ON i.return_id=r.return_id WHERE i.bn ' . $where . ' AND ' . $return_filter;
+        $rows = $this->db->select($sql);
+
+        return $rows;
     }
 
     /* create_return_product 添加售后申请
@@ -286,7 +341,7 @@ class ome_mdl_return_product extends dbeav_model
             //define('FRST_OPER_NAME','');
             define('FRST_TRIGGER_OBJECT_TYPE','订单：售后申请换货生成新订单');
             define('FRST_TRIGGER_ACTION_TYPE','ome_mdl_return_product：saveinfo');
-           $new_order_id=$this->create_order($Order_data,$oProduct_detail['order_id']);
+           $new_order_id=$this->create_order($Order_data,$oProduct_detail['order_id'], $return_id);
            $order_memo = '，订单号为:'.$new_order_id;
            $order_num++;
         }
@@ -1017,7 +1072,7 @@ class ome_mdl_return_product extends dbeav_model
     *
     * return $new_order_id
     */
-   function create_order($adata,$order_id)
+   function create_order($adata,$order_id, $return_id='')
    {
         $oOrder = $this->app->model('orders');
         $oitem = $this->app->model('order_items');
@@ -1106,6 +1161,29 @@ class ome_mdl_return_product extends dbeav_model
 
              }
        $oOrder->create_order($order_sdf);
+       
+       //小红书平台：根据return_id查询换货收货地址表中的encrypt_source_data，提取openAddressId到extend_field，openAddressId用于获取电子面单取号
+       if($order_sdf['order_id']){
+           $extendObj = app::get('ome')->model('order_extend');
+           
+           if($return_id && $Order_detail['shop_type'] == 'xhs'){
+               $returnExchangeReceiverObj = app::get('ome')->model('return_exchange_receiver');
+               $exchangeReceiverInfo = $returnExchangeReceiverObj->dump(array('return_id'=>$return_id), 'encrypt_source_data');
+               
+               if($exchangeReceiverInfo && !empty($exchangeReceiverInfo['encrypt_source_data'])){
+                   $encryptSourceData = unserialize($exchangeReceiverInfo['encrypt_source_data']);
+                   
+                   if($encryptSourceData && is_array($encryptSourceData) && isset($encryptSourceData['openAddressId']) && !empty($encryptSourceData['openAddressId'])){
+                       //追加openAddressId到extend_field
+                       $extend_data = array(
+                           'order_id' => $order_sdf['order_id'],
+                           'extend_field' => json_encode(array('openAddressId' => $encryptSourceData['openAddressId']), JSON_UNESCAPED_UNICODE)
+                       );
+                       $extendObj->save($extend_data);
+                   }
+               }
+           }
+       }
 
        return  $order_sdf['order_bn'];
    }
@@ -1451,7 +1529,26 @@ class ome_mdl_return_product extends dbeav_model
     }
     
     /**
+     * CSV字段转义函数
+     * 直接替换掉可能导致CSV错行的特殊字符
+     *
+     * @param string $field 需要转义的字段值
+     * @return string 转义后的字段值
+     */
+    private function escapeCsvField($field)
+    {
+        // 将字段转换为字符串
+        $field = (string)$field;
+        
+        // 直接替换掉可能导致CSV错行的特殊字符
+        $field = str_replace(array(',', '"', "\n", "\r", "\t"), '', $field);
+        
+        return $field;
+    }
+
+    /**
      * 导出售后申请单明细数据
+     * 返回按 return_id 分组的数据结构，供 getExportDataByCustom 使用
      *
      * @param $fields
      * @param $filter
@@ -1467,68 +1564,177 @@ class ome_mdl_return_product extends dbeav_model
         
         $data = array();
         
-        //title
-        if($has_title){
-            $itemTitle = array(
-                '*:退货记录流水号',
-                '*:商品货号',
-                '*:商品名称',
-                '*:申请数量',
-                '*:价格',
-                '*:仓库',
-            );
-            
-            foreach ($itemTitle as $key => $value)
-            {
-                $itemTitle[$key] = mb_convert_encoding($value, 'GBK', 'UTF-8');
-            }
-            
-            $data[0] = implode(',', $itemTitle);
+        // 获取售后申请单ID列表
+        if (isset($filter['return_id'])) {
+            $return_ids = is_array($filter['return_id']) ? $filter['return_id'] : array($filter['return_id']);
+        } else {
+            $return_ids = array();
         }
         
-        //售后申请单列表
-        $returnList = $this->getList('return_id,return_bn', array('return_id'=>$filter['return_id']));
-        if(empty($returnList)){
+        // 如果 return_id 为空，直接返回空数组
+        if (empty($return_ids)) {
             return $data;
         }
-        $returnList = array_column($returnList, null, 'return_id');
         
-        //售后明细列表
-        $itemList = $returnItemObj->getList('*', array('return_id'=>$filter['return_id']), 0, -1, 'return_id DESC');
+        // 售后明细列表
+        $itemList = $returnItemObj->getList('*', array('return_id|in'=>$return_ids), 0, -1, 'return_id DESC');
         if(empty($itemList)){
             return $data;
         }
         
-        //仓库列表
+        // 仓库列表
         $branchList = array();
         $tempList = $branchObj->getList('branch_id,name', array());
         foreach($tempList as $val)
         {
             $branch_id = $val['branch_id'];
-            
-            $branchList[$branch_id] = $val;
+            $branchList[$branch_id] = $val['name'];
         }
         unset($tempList);
         
-        //data
-        $line_i = 0;
+        // 按 return_id 分组返回数据
         foreach($itemList as $key => $item)
         {
-            $line_i++;
-            
             $return_id = $item['return_id'];
             $branch_id = $item['branch_id'];
             
-            $itemData = array(
-                '*:退货记录流水号' => $returnList[$return_id]['return_bn'],
-                '*:商品货号' => mb_convert_encoding($item['bn'], 'GBK', 'UTF-8'),
-                '*:商品名称' => mb_convert_encoding($item['name'], 'GBK', 'UTF-8'),
-                '*:申请数量' => $item['num'],
-                '*:价格' => $item['price'],
-                '*:仓库' => mb_convert_encoding($branchList[$branch_id]['name'], 'GBK', 'UTF-8'),
+            $itemRow = array(
+                'bn' => $item['bn'],
+                'name' => $item['name'],
+                'num' => $item['num'],
+                'price' => $item['price'],
+                'branch_name' => isset($branchList[$branch_id]) ? $branchList[$branch_id] : '-',
             );
             
-            $data[$line_i] = implode(',', $itemData);
+            $data[$return_id][] = $itemRow;
+        }
+        
+        return $data;
+    }
+    
+    /**
+     * 售后申请单明细字段标题定义
+     * 只包含主表没有的字段，避免重复
+     *
+     * @return array 明细字段标题映射（中文标题 => 字段名）
+     */
+    public function returnProductItemsExportTitle()
+    {
+        $items_title = array(
+            '商品货号' => 'bn',
+            '商品名称' => 'name',
+            '申请数量' => 'num',
+            '价格' => 'price',
+            '仓库' => 'branch_name',
+        );
+        return $items_title;
+    }
+    
+    /**
+     * 获取自定义导出标题（主表+明细）
+     *
+     * @param array $main_title 主表标题数组
+     * @return string GBK编码的标题行
+     */
+    public function getCustomExportTitle($main_title)
+    {
+        $main_title = array_keys($main_title);
+        $items_title = array_keys($this->returnProductItemsExportTitle());
+        $title = array_merge($main_title, $items_title);
+        return mb_convert_encoding(implode(',', $title), 'GBK', 'UTF-8');
+    }
+    
+    /**
+     * 根据查询条件获取导出数据（主表+明细合并）
+     * 参考 reship.php 的实现方式
+     *
+     * @param array $fields 导出字段
+     * @param array $filter 筛选条件
+     * @param bool $has_detail 是否包含明细
+     * @param int $curr_sheet 当前sheet页
+     * @param int $start 起始位置
+     * @param int $end 结束位置
+     * @param int $op_id 操作员ID
+     * @return array|false 导出数据
+     */
+    public function getExportDataByCustom($fields, $filter, $has_detail, $curr_sheet, $start, $end, $op_id)
+    {
+        $params = [
+            'fields'     => $fields,
+            'filter'     => $filter,
+            'has_detail' => $has_detail,
+            'curr_sheet' => $curr_sheet,
+            'op_id'      => $op_id,
+        ];
+        
+        $returnListData = kernel::single('ome_func')->exportDataMain(__CLASS__, $params);
+        if (!$returnListData || !isset($returnListData['content']) || !isset($returnListData['title'])) {
+            return false;
+        }
+        
+        $data = array();
+        $data['content'] = array();
+        $data['content']['main'] = array();
+        
+        // 根据选择的字段定义导出的第一行标题
+        if ($curr_sheet == 1) {
+            $data['content']['main'][] = $this->getCustomExportTitle($returnListData['title']);
+        }
+        
+        $items_columns = array_values($this->returnProductItemsExportTitle());
+        
+        $returnList = isset($returnListData['content']) ? $returnListData['content'] : array();
+        $return_ids = !empty($returnList) ? array_column($returnList, 'return_id') : array();
+        $main_columns = array_values($returnListData['title']);
+        
+        // 如果没有主表数据，只返回标题行（如果是第一页）
+        if (empty($returnList)) {
+            return $data;
+        }
+        
+        // 获取所有的明细数据
+        $return_items = array();
+        if (!empty($return_ids)) {
+            $return_items = $this->getexportdetail('*', array('return_id' => $return_ids));
+        }
+        
+        foreach ($returnList as $returnRow) {
+            $objects = isset($return_items[$returnRow['return_id']]) ? $return_items[$returnRow['return_id']] : array();
+            $items_fields = implode(',', $items_columns);
+            $all_fields = implode(',', $main_columns) . ',' . $items_fields;
+            
+            // 如果没有明细数据，直接输出主表信息
+            if (empty($objects)) {
+                $returnDataRow = $returnRow;
+                $exptmp_data = array();
+                foreach (explode(',', $all_fields) as $key => $col) {
+                    if (isset($returnDataRow[$col])) {
+                        $returnDataRow[$col] = mb_convert_encoding($returnDataRow[$col], 'GBK', 'UTF-8');
+                        $exptmp_data[] = $this->escapeCsvField($returnDataRow[$col]);
+                    } else {
+                        $exptmp_data[] = '';
+                    }
+                }
+                $data['content']['main'][] = implode(',', $exptmp_data);
+                continue;
+            }
+            
+            // 合并主表和明细数据
+            if ($objects) {
+                foreach ($objects as $obj) {
+                    $returnDataRow = array_merge($returnRow, $obj);
+                    $exptmp_data = [];
+                    foreach (explode(',', $all_fields) as $key => $col) {
+                        if (isset($returnDataRow[$col])) {
+                            $returnDataRow[$col] = mb_convert_encoding($returnDataRow[$col], 'GBK', 'UTF-8');
+                            $exptmp_data[] = $this->escapeCsvField($returnDataRow[$col]);
+                        } else {
+                            $exptmp_data[] = '';
+                        }
+                    }
+                    $data['content']['main'][] = implode(',', $exptmp_data);
+                }
+            }
         }
         
         return $data;

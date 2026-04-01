@@ -19,9 +19,9 @@ class openapi_data_original_transfer{
 
     /**
      * 出入库类型映射关系
-     * 
+     *
      * @var string
-     * */
+     **/
     private $_io_type = array(
         'E' => '70',
         'A' => '7',
@@ -41,9 +41,9 @@ class openapi_data_original_transfer{
 
     /**
      * 出入库单类型
-     * 
+     *
      * @var string
-     * */
+     **/
     private $_io_status = array(
         'FINISH'     => '3',
         'PARTFINISH' => '2',
@@ -51,11 +51,6 @@ class openapi_data_original_transfer{
         'NEW'        => '1',
     );
 
-        /**
-     * 添加
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function add($data){
         $result = array('rsp'=>'succ');
         
@@ -150,7 +145,7 @@ class openapi_data_original_transfer{
                         'product_id'   => $product[0]['bm_id'],
                         'name'         => $v['name'],
                         'price'        => $v['price'],
-                        'bn'           => $batch['bn'],
+                        'bn'           => $batch['bn'] ?? $v['bn'],
                         'nums'         => $batch['nums'],
                         'batch_code'   => $batch['batch_code'],
                         'product_date' => $batch['product_date'],
@@ -245,19 +240,6 @@ class openapi_data_original_transfer{
         return $result;
     }
     
-    /**
-     * 获取List
-     * @param mixed $start_time start_time
-     * @param mixed $end_time end_time
-     * @param mixed $original_bn original_bn
-     * @param mixed $supplier_bn supplier_bn
-     * @param mixed $branch_bn branch_bn
-     * @param mixed $t_type t_type
-     * @param mixed $is_source is_source
-     * @param mixed $offset offset
-     * @param mixed $limit limit
-     * @return mixed 返回结果
-     */
     public function getList($start_time,$end_time,$original_bn='',$supplier_bn='',$branch_bn='',$t_type='', $is_source=0, $offset=0,$limit=100){
         if(empty($start_time) || empty($end_time)){
             return false;
@@ -367,13 +349,6 @@ class openapi_data_original_transfer{
         }
         
     }
-    /**
-     * 获取IsoList
-     * @param mixed $params 参数
-     * @param mixed $offset offset
-     * @param mixed $limit limit
-     * @return mixed 返回结果
-     */
     public function getIsoList($params, $offset, $limit)
     {
         $filter = array(

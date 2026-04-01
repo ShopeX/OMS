@@ -14,8 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
+/**
+	* ShopEx licence
+	*
+	* @copyright  Copyright (c) 2005-2012 ShopEx Technologies Inc. (http://www.shopex.cn)
+	* @license  http://ecos.shopex.cn/ ShopEx License
+	* @date 2012-08-22
+	* 商品销售退货明细类
+*/
 class sales_mdl_reship extends dbeav_model{
 	var $export_name = '商品销售退货明细';
 	
@@ -23,26 +29,17 @@ class sales_mdl_reship extends dbeav_model{
         parent::__construct(app::get('ome'));
     }
 
-    /**
-     * 搜索Options
-     * @return mixed 返回值
-     */
     public function searchOptions(){
 
         $Options = array(
            'return_bn'=>'售后申请单号',
            'order_bn'=>'订单号',           
            'reship_bn'=>'退换货单号',
-           'bn'=>'货号',
+           'bn'=>'基础物料编码',
         );
         return $Options;
      }
 
-    /**
-     * io_title
-     * @param mixed $ioType ioType
-     * @return mixed 返回值
-     */
     public function io_title( $ioType='csv' ){
 		switch( $ioType ){
             case 'csv':
@@ -52,14 +49,14 @@ class sales_mdl_reship extends dbeav_model{
 					'*:售后申请单号'=>'return_bn',
 					'*:申请时间'=>'add_time',
 					'*:订单号'=>'order_id',					
-					'*:货号'=>'bn',
+					'*:基础物料编码'=>'bn',
 					'*:数量'=>'num',
 					'*:售后类型'=>'return_type',
 					'*:退款金额'=>'refundmoney',
 					'*:商品名称'=>'name',
 					'*:退换货单号'=>'reship_id',
-					'*:商品品牌'=>'brand_id',
-					'*:商品类型'=>'type_id',
+					'*:基础物料品牌'=>'brand_id',
+					'*:基础物料类型'=>'type_id',
 					'*:收货时间'=>'reship_time',
 					'*:收货仓库'=>'branch_id',
 	           );
@@ -69,14 +66,6 @@ class sales_mdl_reship extends dbeav_model{
 	    return $this->ioTitle[$ioType]['reship'];
     }
 
-    /**
-     * fgetlist_csv
-     * @param mixed $data 数据
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $exportType exportType
-     * @return mixed 返回值
-     */
     public function fgetlist_csv( &$data,$filter,$offset,$exportType = 1 ){
 
         if( !$data['title'] ){
@@ -142,11 +131,6 @@ class sales_mdl_reship extends dbeav_model{
         return true;
     }
 
-    /**
-     * count
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function count( $filter = null ){
 
         return count($this->getList($filter));
@@ -185,13 +169,6 @@ class sales_mdl_reship extends dbeav_model{
 	       return $data;
     }
     
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter,$tableAlias=null,$baseWhere=null){
 
        $where = '1 ';

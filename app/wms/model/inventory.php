@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class wms_mdl_inventory extends dbeav_model{
     var $export_name = '盘点表';
 
@@ -41,7 +40,7 @@ class wms_mdl_inventory extends dbeav_model{
     }
 
    /*
-     * 获取货品
+     * 获取基础物料
      */
     function getBranchProduct($branch_id, $barcode)
     {
@@ -179,7 +178,7 @@ class wms_mdl_inventory extends dbeav_model{
         return $arr;
     }
     /*
-    * 获取货品信息
+    * 获取基础物料信息
     */
     function getProduct($data=null, $lim=0, $limit=1, $type='search'){
         
@@ -855,7 +854,7 @@ class wms_mdl_inventory extends dbeav_model{
             return $titleRs;
         }else{
             if( $row[0] ){
-                # 盘点货品处理
+                # 盘点基础物料处理
                 if( array_key_exists( '*:商品名称',$title ) ) 
                 {
                     $product     = $basicMaterialObj->dump(array('material_bn'=>trim($row[1])), 'bm_id');
@@ -1020,7 +1019,7 @@ class wms_mdl_inventory extends dbeav_model{
     }
 
      /*
-     * 根据条码获取货品
+     * 根据条码获取基础物料
      */
     function getProductbybarcode($branch_id, $barcode)
     {
@@ -1045,7 +1044,7 @@ class wms_mdl_inventory extends dbeav_model{
     }
 
 /*
-     * 根据货号获取货品
+     * 根据基础物料编码获取基础物料
      */
     function getProductbybn($branch_id, $bn)
     {

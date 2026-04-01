@@ -39,6 +39,10 @@ class financebase_mdl_bill_category_rules extends dbeav_model
     public function modifier_business_type($col) {
         return $col == 'cainiao' ? '菜鸟' : '';
     }
+
+    public function modifier_need_ar_verify($col) {
+        return $col == 1 ? '是' : '否';
+    }
 	public function delete($filter,$subSdf = 'delete'){
         if(parent::delete($filter)){
             foreach(kernel::servicelist('bill_category_rules_set') as $name=>$object){

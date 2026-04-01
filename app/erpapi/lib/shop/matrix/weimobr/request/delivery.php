@@ -24,6 +24,8 @@ class erpapi_shop_matrix_weimobr_request_delivery extends erpapi_shop_request_de
 {
     /**
      * 发货请求参数
+     * 平台接口名：weimob_shop/fulfill/logistics/update
+     * 平台接口地址：https://doc.weimobcloud.com/detail?menuId=19&childMenuId=1&tag=2452&id=3310&isold=2
      *
      * @return void
      * @author
@@ -32,6 +34,7 @@ class erpapi_shop_matrix_weimobr_request_delivery extends erpapi_shop_request_de
     public function get_confirm_params($sdf)
     {
         $param = parent::get_confirm_params($sdf);
+        
         //订单需要拆单
         if($sdf['is_split']==1 && !empty($sdf['oid_list'])){
             $goods = array();
@@ -45,6 +48,19 @@ class erpapi_shop_matrix_weimobr_request_delivery extends erpapi_shop_request_de
             $param['is_split'] = 1;
             $param['goods'] = json_encode($goods);
         }
+        
+        // 履约细分类型：fulfillMethod，此字段必传;如果OMS系统未传值，矩阵默认为：1
+        //@todo：当订单配送方式为 1（商家配送）时，履约细分类型 fulfillMethod 支持：1-快递物流、2-无需物流
+        if($sdf['logi_type'] == 'virtual_delivery'){
+            // 虚拟物流为：2
+            $param['fulfillMethod'] = 2; // 官方平台字段名
+            $param['fulfill_method'] = 2; // 矩阵字段名
+        }else{
+            // 默认为：1
+            $param['fulfillMethod'] = 1; // 官方平台字段名
+            $param['fulfill_method'] = 1; // 矩阵字段名
+        }
+        
         return $param;
     }
 

@@ -36,7 +36,7 @@ return array (
     '采购订单' => 'Purchase Order',
     '采购退货单' => 'Purchase Return Form',
     '供应商' => 'Supplier',
-    '供应商货品' => 'Supplier Product',
+    '供应商货品' => 'Supplier Basic Material',
     '采购结算统计' => 'Purchase Settlement Statistics',
     '现购单' => 'Cash Purchase Order',
     '赊购单' => 'Credit Purchase Order',

@@ -166,7 +166,7 @@ class ome_entity_branch_product
             return array();
         }
         //判断是否是主仓
-        $branchInfo = $branchMdl->db_dump($branchId, 'branch_id,parent_id,type');
+        $branchInfo = $branchMdl->db_dump(['branch_id' => $branchId, 'check_permission' => 'false'], 'branch_id,parent_id,type');
         if ($branchInfo['type'] != 'main' && $branchInfo['parent_id'] != 0) {
             $branchInfo      = $branchMdl->db_dump($branchInfo['parent_id'], 'branch_id,parent_id,type');
             $branchChildInfo = $branchMdl->getList('branch_id', array('parent_id' => $branchInfo['branch_id']));

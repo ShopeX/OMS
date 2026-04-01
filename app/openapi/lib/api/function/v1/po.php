@@ -18,13 +18,6 @@
 class openapi_api_function_v1_po extends openapi_api_function_abstract implements openapi_api_function_interface{
 
 
-    /**
-     * 添加
-     * @param mixed $params 参数
-     * @param mixed $code code
-     * @param mixed $sub_msg sub_msg
-     * @return mixed 返回值
-     */
     public function add($params,&$code,&$sub_msg){
         $data = array();
 
@@ -40,6 +33,7 @@ class openapi_api_function_v1_po extends openapi_api_function_abstract implement
         $data['operator'] = $params['operator'];
         $data['memo'] = $params['memo'];
         $data['confirm'] = $params['confirm'];
+        $data['props'] = $params['props'];
         $data['items'] = json_decode($params['items'],true);
 
         $rs = kernel::single('openapi_data_original_po')->add($data);
@@ -47,13 +41,6 @@ class openapi_api_function_v1_po extends openapi_api_function_abstract implement
         return $rs;
     }
     
-    /**
-     * 获取List
-     * @param mixed $params 参数
-     * @param mixed $code code
-     * @param mixed $sub_msg sub_msg
-     * @return mixed 返回结果
-     */
     public function getList ($params,&$code,&$sub_msg)
     {
     	$offset = intval($params['page_no']) > 0 ? intval($params['page_no']) : 1;
@@ -95,6 +82,19 @@ class openapi_api_function_v1_po extends openapi_api_function_abstract implement
     
     
     	return $result;
+    }
+
+    public function cancel($params, &$code, &$sub_msg)
+    {
+        $data = array();
+        
+        $data['po_bn'] = $params['po_bn'];
+        $data['operator'] = isset($params['operator']) ? $params['operator'] : '';
+        $data['memo'] = isset($params['memo']) ? $params['memo'] : '';
+        
+        $rs = kernel::single('openapi_data_original_po')->cancel($data);
+        
+        return $rs;
     }
     
  

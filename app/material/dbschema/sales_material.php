@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * 销售物料数据结构
  *
@@ -49,7 +48,7 @@ $db['sales_material']=array(
         array(
             'type' => 'varchar(200)',
             'label' => '销售物料编码',
-            'width' => 120,
+            'width' => 230,
             'editable' => false,
             'in_list' => true,
             'default_in_list' => true,
@@ -95,8 +94,8 @@ $db['sales_material']=array(
         'type' => 'table:customer_classify@material',
         'default' => 0,
         'editable' => false,
-        'label' => '客户分类ID',
-        'width' => 130,
+        'label' => '客户分类',
+        'width' => 160,
         'in_list' => true,
         'default_in_list' => true,
     ),
@@ -111,6 +110,8 @@ $db['sales_material']=array(
         'label' => '创建时间',
         'in_list' => true,
         'default_in_list' => true,
+        'filtertype' => 'time',
+        'filterdefault' => true,
         'default' => 0,
     ),
     'last_modify' => array(
@@ -118,6 +119,8 @@ $db['sales_material']=array(
           'label' => '最后更新时间',
           'in_list' => true,
           'default_in_list' => true,
+          'filtertype' => 'time',
+          'filterdefault' => true,
           'order' => 11,
       ),
     'disabled' =>
@@ -187,6 +190,15 @@ $db['sales_material']=array(
             'filtertype' => 'yes',
             'filterdefault' => true,
         ),
+    'source' => array(
+        'type'     => 'varchar(50)',
+        'required' => true,
+        'label'    => '数据来源',
+        'default'  => 'local',
+        // 'default_in_list' => true,
+        'in_list' => true,
+        'comment' => '数据来源,可选值:local(本地),api(接口)',
+    ),
   ),
   'comment' => '销售物料表,用于匹配销售平台订单商品编码',
   'index' =>
@@ -206,13 +218,16 @@ $db['sales_material']=array(
                     0 => 'visibled',
                 ),
         ),
-    'last_modify' =>
-    array (
-        'columns' =>
-            array (
+      'last_modify' => array (
+        'columns' => array (
                 0 => 'last_modify',
             ),
-    ),
+      ),
+      'create_time' => array (
+          'columns' => array (
+              0 => 'create_time',
+          ),
+      ),
   ),
   'engine' => 'innodb',
   'version' => '$Rev:  $',

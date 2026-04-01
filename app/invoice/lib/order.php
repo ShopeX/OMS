@@ -460,6 +460,10 @@ class invoice_order
         if ($params["ship_tax"]) {
             $updateInvoiceData['ship_tax'] = $params["ship_tax"];
         }
+        // 更新发票抬头
+        if (isset($params['title'])) {
+            $updateInvoiceData['title'] = trim($params['title']);
+        }
         if ($params['invoice_amount']) {
             $updateInvoiceData['amount'] = $params['invoice_amount'];
             $updateInvoiceData['cost_tax'] = array_sum(array_column($invoice_order_items,'cost_tax'));

@@ -57,7 +57,7 @@ class financebase_autotask_task_type_billJdWalletAssign extends financebase_auto
         $getfile_res = $storageLib->get($remote_url, $local_file);
         
         if (!$getfile_res) {
-            $error_msg = '文件下载失败';
+            $error_msg = serialize('文件下载失败');
             $this->oFunc->writelog('京东钱包导入分派任务-文件下载失败', 'settlement', '任务ID:' . $task_info['queue_id']);
             return false;
         }
@@ -70,7 +70,7 @@ class financebase_autotask_task_type_billJdWalletAssign extends financebase_auto
             list($status, $errmsg) = $oTask->_spliteJdWalletData($local_file, $file_type, $shop_id, $task_info);
             
             if (!$status) {
-                $error_msg = $errmsg;
+                $error_msg = serialize($errmsg);
                 $this->oFunc->writelog('京东钱包导入分派任务-分片失败', 'settlement', '任务ID:' . $task_info['queue_id'] . ', 错误:' . $errmsg);
                 return false;
             }
@@ -82,7 +82,7 @@ class financebase_autotask_task_type_billJdWalletAssign extends financebase_auto
             $this->oFunc->writelog('京东钱包导入分派任务-完成', 'settlement', '任务ID:' . $task_info['queue_id']);
 
         } catch (Exception $e) {
-            $error_msg = '分派任务异常：' . $e->getMessage();
+            $error_msg = serialize('分派任务异常：' . $e->getMessage());
             $this->oFunc->writelog('京东钱包导入分派任务-异常', 'settlement', '任务ID:' . $task_info['queue_id'] . ', 错误:' . $e->getMessage());
             return false;
         } finally {

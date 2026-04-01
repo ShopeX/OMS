@@ -43,11 +43,10 @@ class erpapi_wms_request_stockin extends erpapi_wms_request_abstract
 
     /**
      * 入库单创建
-     * 
+     *
      * @return void
      * @author
-     * */
-
+     **/
     public function stockin_create($sdf){
         $stockin_bn = $sdf['io_bn'];
 
@@ -90,6 +89,12 @@ class erpapi_wms_request_stockin extends erpapi_wms_request_abstract
             $params['item_total_num']   = $total;
             $params['line_total_count'] = $total;
 
+            // 增加service
+            foreach(kernel::servicelist('erpapi.service.wms.stockin.create.params') as $service){
+                if(method_exists($service, 'format_stockin_create_params')){
+                    $params = $service->format_stockin_create_params($sdf, $params);
+                }
+            }
 
             $callback = array(
                 'class'  => get_class($this),
@@ -109,12 +114,6 @@ class erpapi_wms_request_stockin extends erpapi_wms_request_abstract
         } while (true);
     }
 
-        /**
-     * stockin_create_callback
-     * @param mixed $response response
-     * @param mixed $callback_params 参数
-     * @return mixed 返回值
-     */
     public function stockin_create_callback($response, $callback_params)
     {
         // 更新外部编码
@@ -244,7 +243,14 @@ class erpapi_wms_request_stockin extends erpapi_wms_request_abstract
 
         $params = $this->_format_stockin_cancel_params($sdf);
 
-        return $this->__caller->call(WMS_INORDER_CANCEL, $params, null, $title, 10, $stockin_bn);
+        // 增加service
+        foreach(kernel::servicelist('erpapi.service.wms.stockin.cancel.params') as $service){
+            if(method_exists($service, 'format_stockin_cancel_params')){
+                $params = $service->format_stockin_cancel_params($sdf, $params);
+            }
+        }
+
+        return $this->__caller->call(WMS_ORDER_CANCEL, $params, null, $title, 10, $stockin_bn);
     }
 
     protected function _format_stockin_cancel_params($sdf)

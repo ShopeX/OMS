@@ -89,6 +89,10 @@ class brush_ctl_admin_condition extends desktop_controller{
         $opInfo = kernel::single('ome_func')->getDesktopUser();
         $_POST['op_id'] = $opInfo['op_id'];
         $_POST['op_name'] = $opInfo['op_name'];
+        // 如果 condition 是空字符串，移除该字段，让数据库使用默认值或 NULL
+        if (isset($_POST['condition']) && $_POST['condition'] === '') {
+            unset($_POST['condition']);
+        }
         $flag = $farm_obj->save($_POST);
         if($flag){
             $opObj  = app::get('ome')->model('operation_log');

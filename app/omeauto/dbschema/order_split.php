@@ -54,7 +54,7 @@ $db['order_split'] = array(
                 ),
             'split_type' =>
                 array(
-                    'type' => 'varchar(12)',
+                    'type' => 'varchar(20)',
                     'default' => 0,
                     'editable' => false,
                     'in_list' => true,

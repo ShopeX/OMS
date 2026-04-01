@@ -35,8 +35,8 @@
 
         <label><{t}>时间段:<{/t}></label>
         <{if $report != "month"}>
-            <{input type="date" vtype="date" name="time_from" style="width:66px; font-family:arial;" value=$time_from install_time=$install_time }><{t}>至<{/t}>
-            <{input type="date" vtype="date" name="time_to" style="width:66px; font-family:arial;" value=$time_to}>
+            <{input type="date" vtype="date" name="time_from" style="width:96px; font-family:arial;" value=$time_from install_time=$install_time }><{t}>至<{/t}>
+            <{input type="date" vtype="date" name="time_to" style="width:96px; font-family:arial;" value=$time_to}>
         <{/if}>
         <{button class="filterBtn btn-thirdly" label=$___eccommon="确定"|t:'eccommon'}>&nbsp;
       </td>

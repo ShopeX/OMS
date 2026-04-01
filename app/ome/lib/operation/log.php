@@ -44,6 +44,8 @@ class ome_operation_log{
            'reship' =>array('name'=>'售后服务修改','type' => 'reship@ome'),
            'reship_getlist' =>array('name'=>'售后信息获取','type' => 'reship@ome'),
            'reship_print' =>array('name'=>'售后信息打印','type' => 'reship@ome'),
+           //补寄
+           'return_reshipping' =>array('name'=> '补寄申请单','type' => 'return_reshipping@ome'),
            //退款
            'refund_apply' => array('name'=> '退款申请','type' => 'refund_apply@ome'),
            'refund_accept' => array('name'=> '退款成功','type' => 'refunds@ome'),
@@ -116,6 +118,10 @@ class ome_operation_log{
             //库存扩展信息
             'branch_product_extend' => array('name'=>'库存扩展信息', 'type'=>'branch_product_extend@ome'),
             
+            // 订单预约时间
+            'order_reserved_create' => array('name'=>'创建待预约', 'type'=>'order_reservation@ome'),
+            'order_reserved_edit' => array('name'=>'编辑待预约', 'type'=>'order_reservation@ome'),
+            'order_reserved_modify' => array('name'=>'修改待预约', 'type'=>'order_reservation@ome'),
         );
         return array('ome'=>$operations);
     }
@@ -292,6 +298,12 @@ class ome_operation_log{
 
             //调拨单
             'taoguanallocate_appropriation_addtransfer_allocation' => array('name'=> '仓库-调拨管理-调拨单-新建', 'type' => 'allocation@taoguanallocate', 'operation' => '8001@tgstockcost', 'obj_id' => '100000008001', 'obj_name' => '100000008001-8001'),
+            
+            //地区映射管理
+            'region_mapping_create' => array('name'=> '新建地区映射','type' => 'region_mapping@miele'),
+            'region_mapping_update' => array('name'=> '编辑地区映射','type' => 'region_mapping@miele'),
+            'region_mapping_delete' => array('name'=> '删除地区映射','type' => 'region_mapping@miele'),
+            
             'none' => array('name' => '未知类型', 'type' => 'none', 'operation' => 'none', 'obj_id' => '100000009001', 'obj_name' => '100000009001-9001'),
         );
         $item = array();
@@ -366,6 +378,7 @@ class ome_operation_log{
             'order@invoice' => '发票',
             'allocation@taoguanallocate' => '调拨单',
             'account@pam' => '登陆',
+            'region_mapping@miele' => '地区映射',
             
             'basic_material_storage_life@material' => '调整保质期',
         );
@@ -389,6 +402,7 @@ class ome_operation_log{
             'order@invoice' => array('order@invoice'),
             'allocation@taoguanallocate' => array('allocation@taoguanallocate'),
             'account@pam' => array('account@pam'),
+            'region_mapping@miele' => array('region_mapping@miele'),
             
             'basic_material_storage_life@material' => array('basic_material_storage_life@material'),
         );

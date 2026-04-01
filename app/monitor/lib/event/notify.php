@@ -48,7 +48,7 @@ class monitor_event_notify
                 $notifyData['template_id']      = $templateInfo['template_id'];
                 $notifyData['event_type']       = $eventType;
                 $notifyData['original_content'] = $templateInfo['content'];
-                $notifyData['send_content']     = '**域名:'.kernel::base_url(1)."**\n".$this->getNotifyParams($templateInfo, $params);
+                $notifyData['send_content']     = ($templateInfo['send_type'] == 'workwx' ? '**域名:'.kernel::base_url(1)."**\n" : '').$this->getNotifyParams($templateInfo, $params);
                 $notifyData['send_type']        = $templateInfo['send_type'];
                 $notifyData['params']           = json_encode($params);
                 $notifyData['file_path']        = json_encode($params['file_path'],JSON_UNESCAPED_SLASHES);
@@ -78,7 +78,10 @@ class monitor_event_notify
                 //同步发送
                 if ($is_sync) {
                     //调用发送方法
-                    $this->sendNotify($result);
+                    if($params['receiver']) {
+                        $notifyData['receiver'] = $params['receiver'];
+                    }
+                    $this->sendNotify($result, $notifyData);
                 }
             }
             return true;
@@ -213,14 +216,22 @@ class monitor_event_notify
      * 每天检测将超过30天的发送数据清除
      */
     public function clean($clean_time = 30){
+        $db = kernel::database();
         
         $time = time();
         
         $where = " WHERE `at_time`<'".date('Y-m-d',$time-$clean_time*24*60*60).' 00:00:00'."' ";
-       
-        $del_sql = " DELETE FROM `sdb_monitor_event_notify` $where ";
         
-        kernel::database()->exec($del_sql);
+//        // 只查询一条数据，判断是否有数据
+//        $select_sql = "SELECT notify_id FROM sdb_monitor_event_notify ". $where ." LIMIT 0, 1";
+//        $dataList = $db->select($select_sql);
+//        if(empty($dataList)){
+//            return true;
+//        }
+        
+        // 删除数据
+        $del_sql = " DELETE FROM `sdb_monitor_event_notify` $where ";
+        $db->exec($del_sql);
         
         return true;
     }

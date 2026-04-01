@@ -14,14 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
 class image_task 
 {
     function post_install() 
     {
         kernel::log('Initial image');
-        kernel::single('base_initial', 'image')->init();
+        //kernel::single('base_initial', 'image')->init();
         $conf = app::get('image')->getConf('image.default.set');
         app::get('image')->setConf('image.set',$conf);
         $obj_image = app::get('image')->model('image');

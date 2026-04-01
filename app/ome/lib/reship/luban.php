@@ -112,7 +112,12 @@ class ome_reship_luban
             //释放冻结库存
             kernel::single('console_reship')->releaseChangeFreeze($reshipInfo['reship_id']);
         }
-        
+        // 退货单取消后的service扩展点
+        foreach(kernel::servicelist('console.service.reship.cancel.after') as $object) {
+            if(method_exists($object, 'cancel_reship_after')) {
+                $object->cancel_reship_after($reshipInfo['reship_id']);
+            }
+        }
         //log
         $operateLog->write_log('reship@ome', $reshipInfo['reship_id'], '[平台更换售后类型]并再次申请,自动拒绝退换货单：'.$reshipInfo['reship_bn']);
         

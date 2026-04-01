@@ -226,6 +226,7 @@ define('STORE_CN_SMARTDELIVERY_PRICEOFFERQUERY', 'store.smartdelivery.priceoffer
 define('SHOP_ORDER_SPLIT','store.order.split');                     // 主动拆单
 define('SHOP_LOGISTICS_ONLINE_SEND','store.logistics.online.send');                     // 线上物流
 define('SHOP_LOGISTICS_OFFLINE_SEND','store.logistics.offline.send');                   // 线下物流
+define('SHOP_LOGISTICS_OFFICIAL_PICKUP','store.logistics.official.pickup');             // 官方物流提货
 define('SHOP_LOGISTICS_RECOMMEND', 'store.logistics.available.company.recommend'); // 推荐物流
 define('SHOP_TRADE_SHIPPING_ADD','store.trade.shipping.add');                           // 添加发货单
 define('SHOP_TRADE_SHIPPING_STATUS_UPDATE','store.trade.shipping.status.update');       // 更新发货单状态
@@ -250,6 +251,7 @@ define('SHOP_REFUND_NEGOTIATION_CREATE', 'store.refund.negotiation.create');    
 define('SHOP_REFUND_NOTIFY_GET','store.tmc.refundcreated.get');                         // 退款消息
 define('SHOP_REFUND_STATUS_GET','store.refund.status.get');                             // 退款状态查询
 define('SHOP_COMPENSATE_REFUND_GET','store.special.refunds.receive.get');               // 赔付单获取
+define('SHOP_TRADE_REFUND_GET', 'store.trade.refund.get');                             // 查询售后单详情
 
 define('SHOP_LOGISTICS_SUBSCRIBE','store.trade.pub.appreciation');                                    // 增强版华强宝订阅（订单分发的信息：分给了的网点，业务员的信息）
 define('SHOP_LOGISTICS_BIND','erp.logistics.bind');                                     // ERP自己定义的
@@ -330,11 +332,13 @@ define('SHOP_AGREE_REFUND_I_TMALL','store.tmall.trade.refund.i.examine');       
 define("SHOP_GET_ITEMS_CUSTOM", 'store.items.custom.get');                              //获取商品信息
 define("SHOP_GET_CLOUD_STACK_PRINT_TAG","store.wlb.waybill.i.distributeinfo");          //获取云栈大头笔
 define('SHOP_GET_ORDER_STATUS', 'store.trade.status.get');                              //获取订单状态
+define('SHOP_GET_TRADE_INVOICE_SUMMARY', 'store.trade.invoice.summary.get');            //获取订单发票汇总信息
 define('SHOP_SUPPLIER_ORDER_CONFIRM', 'store.supplier.consignorder.notify.received');   //接单回传
 define('SHOP_SUPPLIER_ORDER_LACK_APPLY', 'store.supplier.consignorder.outofstock.callback');   //缺货申请
 define('SHOP_SUPPLIER_ORDER_REJECT_APPLY', 'store.supplier.reverseorder.create');   //拒收创建
 define('SHOP_SUPPLIER_ORDER_CANCEL_BACK', 'store.supplier.consignorder.cancel.feedback');   //取消回传
 define('SHOP_SUPPLIER_RETURN_GOOD_CONFIRM', 'store.supplier.reverseorder.instorage.feedback');   //确认收货
+define('SHOP_SUPPLIER_RETURN_GOOD_INSTORAGE_RESULT', 'store.supplier.reverseorder.instorage.result');   //逆向订单入库结果
 define('SHOP_EXCHANGE_NOTIFY','store.exchange.result.notify');//PUBLICB2C售后更新
 define('SHOP_COMMONS_VOP_JIT', 'store.commons.jit.send');                               //唯品会JIT通用接口
 define('SHOP_VOP_DOWNLOAD', 'store.jit.download');                               //唯品会JIT下载文件
@@ -361,7 +365,7 @@ define('SHOP_SET_WAREHOUSE_PRIORITY','store.warehouse.priority.set');//地址下
 define('SHOP_ITEM_STOCK_GET','store.item.stock.get');
 define('SHOP_REFUND_LIST_SEARCH', 'store.refund.list.search');
 
-               //菜鸟电子面单取消接口
+//菜鸟电子面单取消接口
 define('STORE_CN_WAYBILL_II_SEARCH', 'store.cn.waybill.ii.search');
 define('STORE_CAINIAO_WAYBILL_I_GET', 'store.cn.waybill.ii.get');                      //菜鸟获取电子面单
 define('STORE_CAINIAO_WAYBILL_CANCEL', 'store.cn.waybill.ii.cancel');                  //菜鸟电子面单取消接口
@@ -453,6 +457,15 @@ define('SHOP_EXCHANGE_RETURNGOODS_AGREE','store.exchange.returngoods.agree');//�
 define('SHOP_EXCHANGE_RETURNGOODS_REFUSE','store.exchange.returngoods.refuse');//卖家拒绝确认收货
 define('SHOP_EXCHANGE_REFUSEREASON_GET','store.exchange.refusereason.get');//获取拒绝换货原因列表
 define('SHOP_EXCHANGE_GET','store.exchange.get');
+
+// 补寄相关接口
+define('SHOP_RESHIPPING_GET','store.reshipping.get');//查询补寄详情
+define('SHOP_RESHIPPING_MESSAGES_GET','store.reshipping.message.get');//查询补寄留言列表
+define('SHOP_RESHIPPING_MESSAGE_ADD','store.reshipping.message.add');//创建补寄留言
+define('SHOP_RESHIPPING_AGREE','store.reshipping.agree');//同意补寄申请
+define('SHOP_RESHIPPING_REFUSE','store.reshipping.refuse');//拒绝补寄申请
+define('SHOP_RESHIPPING_CONSIGNGOODS','store.reshipping.consigngoods');//补寄发货
+define('SHOP_RESHIPPING_REFUSEREASON_GET','store.reshipping.refusereason.get');//查询拒绝原因列表
 
 define('STORE_LOGISTICS_JDALPHA_WAYBILL_RECEIVE','store.trade.waybill.receive');        //京东接单接口
 define('STORE_LOGISTICS_JDALPHA_WAYBILL_UNBIND','store.trade.waybill.unbind');          //京东解除绑定关系接口
@@ -645,7 +658,13 @@ define("YLY_OAUTH_AUTHORIZE", '/oauth/authorize'); // 开放型应用（OAuth2.0
 define("YLY_EXPRESSPRINT_INDEX", '/expressprint/index'); // 面单生成并打印
 define('YLY_PICTUREPRINT_INDEX', '/pictureprint/index'); // 打印面单图片
 
+// o2o门店
+define('STORE_O2O_STORES_GET', 'store.item.o2o.stores.get');
+
 //物流包裹异常查询接口
 define('STORE_LOGISTICS_PACKAGE_EXCEPTION_QUERY', 'store.logistics.package.exception.query'); //物流包裹异常查询接口
 //物流包裹异常配置查询接口
 define('STORE_LOGISTICS_PACKAGE_EXCEPTION_CONFIG_QUERY', 'store.logistics.package.exception.config.query'); //物流包裹异常配置查询接口
+
+// 隐私号G组更新(700虚拟号)
+define('STORE_VIRTUAL_NUMBER_GROUP_UPDATE', 'store.virtual.number.group.update');

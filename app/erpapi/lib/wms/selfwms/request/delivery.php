@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * 发货单推送
  *
@@ -25,4 +24,5 @@
  */
 class erpapi_wms_selfwms_request_delivery extends erpapi_wms_selfwms_request_abstract
 {
+
 }

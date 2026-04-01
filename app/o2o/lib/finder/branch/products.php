@@ -26,9 +26,9 @@ class o2o_finder_branch_products extends console_finder_branch_product
     }
     
     /**
-     * 货品重量字段
+     * 基础物料重量字段
      */
-    var $column_weight = '货品重量(g)';
+    var $column_weight = '基础物料重量(g)';
     var $column_weight_width = 100;
     var $column_weight_order = 35;
     function column_weight($row, $list)

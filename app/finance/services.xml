@@ -35,6 +35,10 @@
         <class>finance_finder_bill_confirm</class>
     </service>
 
+    <service id="desktop_finder.finance_mdl_gaptype">
+        <class>finance_finder_gaptype</class>
+    </service>
+
     <service id="delivery_finish_all_over">
         <class>finance_iostocksales</class>
     </service>

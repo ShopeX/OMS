@@ -258,6 +258,16 @@ $db['ar'] = array(
             'default_in_list' => true,
             'order'           => 13,
         ),
+        'platform_amount' => array(
+            'type'    => 'money',
+            'default' => '0',
+            'label'   => '平台承担金额',
+            'width'           => 65,
+            'editable'        => false,
+            'in_list'         => true,
+            'default_in_list' => true,
+            'comment' => '平台承担金额（不包含支付优惠）',
+        ),
         'addon'                 => array(
             'type'     => 'serialize',
             'comment'  => '附加字段Serialize(array(‘sale_money’=>’商品成交金额’,’fee_money’=>’运费收入’))',

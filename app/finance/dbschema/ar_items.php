@@ -33,12 +33,12 @@ $db['ar_items'] = array(
             'type'     => 'varchar(255)',
             'editable' => false,
             'is_title' => true,
-            'comment'  => '货品编码',
+            'comment'  => '销售物料编码',
         ),
         'name'    => array(
             'type'     => 'varchar(200)',
             'editable' => false,
-            'comment'  => '货品名称',
+            'comment'  => '销售物料名称',
         ),
         'num'     => array(
             'type'     => 'number',
@@ -64,6 +64,16 @@ $db['ar_items'] = array(
             'in_list'         => true,
             'default_in_list' => true,
             'order'           => 13,
+        ),
+        'platform_amount' => array(
+            'type'    => 'money',
+            'default' => '0',
+            'label'   => '平台承担金额',
+            'width'           => 65,
+            'editable'        => false,
+            'in_list'         => true,
+            'default_in_list' => true,
+            'comment' => '平台承担金额（不包含支付优惠）',
         ),
     ),
     'index' => array (

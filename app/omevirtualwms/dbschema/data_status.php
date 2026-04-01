@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /*
 
 */
@@ -47,6 +46,20 @@ $db['data_status'] = array(
             'required' => true,
             'label' => '单据状态',
             'editable' => false,
+        ),
+        'op_id' => array(
+            'type' => 'table:account@pam',
+            'label' => '操作员ID',
+            'editable' => false,
+            'in_list' => false,
+            'default_in_list' => false,
+        ),
+        'op_name' => array (
+            'type' => 'varchar(30)',
+            'label' => '操作员名称',
+            'editable' => false,
+            'in_list' => false,
+            'default_in_list' => false,
         ),
         'create_time' => array(
             'type' => 'time',

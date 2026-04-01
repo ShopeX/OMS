@@ -27,6 +27,6 @@ class monitor_task
     public function post_install()
     {
         kernel::log('Initial monitor');
-        kernel::single('base_initial', 'monitor')->init();
+        //kernel::single('base_initial', 'monitor')->init();
     }
 }

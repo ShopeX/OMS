@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * WMS 发货单
  *
@@ -40,7 +39,7 @@ class erpapi_wms_response_delivery extends erpapi_wms_response_abstract
         $batch_logi_no = array_filter(explode(';', $batch_logi_no));
         $logi_no       = array_pop($batch_logi_no);
 
-        if ($this->__channelObj->wms['adapter'] != 'selfwms' && $params['status'] == 'DELIVERY' && !$logi_no) {
+        if ($this->__channelObj->wms['adapter'] != 'selfwms' && $params['status'] == 'DELIVERY' && $params['logistics'] && !$logi_no) {
             $this->__apilog['result']['msg'] = '缺少运单号';
             return false;
         }

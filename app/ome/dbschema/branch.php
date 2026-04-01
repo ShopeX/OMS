@@ -49,6 +49,12 @@ $db['branch']=array (
       'default_in_list' => true,
       'label' => '库内存放点编号',
     ),
+    'warehouse_code'        => array(
+        'type'            => 'varchar(64)',
+        'label'           => 'WAREHOUSE CODE',
+        'default_in_list' => true,
+        'in_list'         => true,
+    ),
     'name' =>
     array (
       'type' => 'varchar(200)',
@@ -137,6 +143,14 @@ $db['branch']=array (
       'label' => '联系人手机',
       'in_list' => true,
       'default_in_list' => true,
+    ),
+    'email' =>
+    array (
+      'type' => 'text',
+      'editable' => false,
+      'label' => '仓库邮箱',
+      'in_list' => true,
+      'default_in_list' => false,
     ),
     'sex' =>
     array (

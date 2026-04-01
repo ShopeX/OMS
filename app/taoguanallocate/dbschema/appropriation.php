@@ -121,6 +121,9 @@ $db['appropriation'] = array(
         'memo'             => array(
             'type'     => 'longtext',
             'editable' => false,
+            'label'           => '备注',
+            'in_list'         => true,
+            'default_in_list' => false,
         ),
         'corp_id'          => array(
             'type'     => 'number',

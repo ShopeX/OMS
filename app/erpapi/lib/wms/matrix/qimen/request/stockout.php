@@ -17,19 +17,13 @@
 /**
  * 出库单推送
  *
- * @category
- * @package
+ * @category 
+ * @package 
  * @author chenping<chenping@shopex.cn>
  * @version $Id: Z
  */
 class erpapi_wms_matrix_qimen_request_stockout extends erpapi_wms_request_stockout
 {
-    /**
-     * stockout_cancel
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
-
     public function stockout_cancel($sdf){
         $stockout_bn = $sdf['io_bn'];
 
@@ -210,7 +204,14 @@ class erpapi_wms_matrix_qimen_request_stockout extends erpapi_wms_request_stocko
         //     $params['extendProps'] = $extendProps;
 
         }
-
+        // 仓库自定义字段-活动号
+        $extend_props = [];
+        if (isset($sdf['activity_no'])) {
+            $extend_props['activity_no'] = $sdf['activity_no'];
+        }
+        if ($extend_props) {
+            $params['extendProps'] = json_encode($extend_props);
+        }
 
         return $params;
     }

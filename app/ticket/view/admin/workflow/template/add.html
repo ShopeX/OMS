@@ -1,0 +1,121 @@
+<{capture name="header"}>
+<{css app="ome" src="ome.css"}>
+<{css app="ome" src="style.css"}>
+<{script src="coms/modedialog.js" app="desktop"}>
+<{script src="coms/autocompleter.js" app="desktop"}>
+<{/capture}>
+<div class="form-layout">
+  <form method="post" id="submit_form" action="index.php?app=ticket&ctl=admin_workflow_template&act=save">
+    <input type="hidden" id="id" name="id" value="<{$data.id}>" />
+    <div class="form-layout-block">
+      <h3>审批流模板</h3>
+      <div class="form-layout-fields form-layout-fields-column">
+        <{if $data.id}>
+        <div class="form-field">
+          <span class="form-field-label">模板编号：</span>
+          <span><input type="hidden" id="template_bn" name="template_bn" value="<{$data.template_bn}>" /><{$data.template_bn}></span>
+        </div>
+        <{else}>
+        <div class="form-field">
+          <span class="form-field-label">模板编号：</span>
+          <input id="template_bn" name="template_bn" type="text" class="form-input" onkeyup="value=value.replace(/[^A-Za-z0-9_#\/-]/ig,'')" size="30" maxlength="30" placeholder="请输入模板编号" value="<{$data.template_bn}>" vtype="required" /><span style="color:red;">*</span>
+        </div>
+        <{/if}>
+        
+        <div class="form-field">
+          <span class="form-field-label">模板名称：</span>
+          <input id="template_name" name="template_name" type="text" class="form-input" size="50" maxlength="100" placeholder="请输入模板名称" vtype="required" value="<{$data.template_name}>" /><span style="color:red;">*</span>
+        </div>
+        
+        <div class="form-field">
+          <span class="form-field-label">审批场景类型：</span>
+          <select id="scene_type" name="scene_type" class="form-select" vtype="required">
+            <option value="">请选审批场景类型</option>
+            <option value="add_gift" <{if $data.scene_type == 'add_gift'}>selected<{/if}>>加赠</option>
+          </select><span style="color:red;">*</span>
+        </div>
+        
+        <div class="form-field">
+          <span class="form-field-label">审批流程描述：</span>
+          <textarea id="description" name="description" class="form-textarea" rows="10" cols="80" placeholder="请输入审批流配置JSON格式" vtype="required" style="width: 550px; height: 200px;"><{$data.description}></textarea>
+        </div>
+        
+        <div class="form-field">
+          <span class="form-field-label">是否开启：</span>
+          <select id="is_enabled" name="is_enabled" class="form-select">
+            <option value="true" <{if $data.is_enabled != 'false'}>selected<{/if}>>启用</option>
+            <option value="false" <{if $data.is_enabled == 'false'}>selected<{/if}>>禁用</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-action">
+      <{button type="button" id="save_button" label="保 存"}> &nbsp;
+      <{button type="button" class="btn-secondary" id="return-btn" label="返 回" onclick="location.href=window.frameElement.src;"}>
+    </div>
+  </form>
+</div>
+<script>
+  //setting
+  var template_id = '<{$data.id}>';
+
+  (function(){
+    window.addEvent('domready', function() {
+      $('save_button').addEvent('click',function(e)
+      {
+        var _this = this;
+        var form = this.getParent('form');
+
+        var template_bn = $('template_bn').value.trim();
+        var template_name = $('template_name').value.trim();
+        var scene_type = $('scene_type').value.trim();
+        var description = $('description').value.trim();
+
+        if(!template_bn){
+          MessageBox.error('请填写模板编号');
+          e.stop();
+          return false;
+        }
+        
+        if(!template_name){
+          MessageBox.error('请填写模板名称');
+          e.stop();
+          return false;
+        }
+        
+        if(!scene_type){
+          MessageBox.error('请选择审批场景类型');
+          e.stop();
+          return false;
+        }
+
+        if(!description){
+          MessageBox.error('请填写审批流程描述');
+          e.stop();
+          return false;
+        }
+
+        form.store('target',{
+          onRequest:function(){
+            _this.disabled=true;
+          },
+          onComplete:function(jsontext){
+            try{
+              var json = JSON.decode(jsontext);
+              if (typeof(json.error)!='undefined'){
+                _this.disabled=false;
+              }else{
+                _this.disabled=true;
+                if(opener.finderGroup['<{$env.get.finder_id}>']) opener.finderGroup['<{$env.get.finder_id}>'].refresh.delay(100,opener.finderGroup['<{$env.get.finder_id}>']);
+                setTimeout('window.close()',200);
+              }
+            }catch(e){}
+          }
+        });
+
+        form.fireEvent('submit',e);
+      });
+    });
+  })();
+</script> 

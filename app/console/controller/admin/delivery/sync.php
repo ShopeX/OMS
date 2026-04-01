@@ -14,14 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class console_ctl_admin_delivery_sync extends desktop_controller {
 
     var $name = "通知仓库取消列表";
     var $workground = "console_center";
 
     /**
-     * 
+     *
      * 发货单列表
      */
     function index(){
@@ -130,14 +129,34 @@ class console_ctl_admin_delivery_sync extends desktop_controller {
             {
                 $delivery_id = $delivery['delivery_id'];
                 
-                $data = array(
-                    'status'=>'cancel',
-                    'memo'=>'发货单请求第三方仓储取消失败,强制取消!',
-                    'delivery_bn'=>$delivery['delivery_bn'],
-                );
-                kernel::single('ome_event_receive_delivery')->update($data);
+                // 开启事务
+                $transaction = kernel::database()->beginTransaction();
+                try {
+                    $data = array(
+                        'status'=>'cancel',
+                        'memo'=>'发货单请求第三方仓储取消失败,强制取消!',
+                        'delivery_bn'=>$delivery['delivery_bn'],
+                    );
+                    $rs = kernel::single('ome_event_receive_delivery')->update($data);
+                    if ($rs['rsp'] != 'succ') {
+                        throw new Exception('发货单状态更新失败');
+                    }
+                    
+                    // 完成订单明细处理：如果拆分数量为0且支付状态为全额退款，则更新为已删除并更新主表金额
+                    list($result, $msg) = kernel::single('console_delivery_cancel')->afterForce($delivery_id);
+                    if (!$result) {
+                        throw new Exception('订单明细处理失败：' . $msg['msg']);
+                    }
+                    $oOperation_log->write_log('delivery_back@ome', $delivery_id, '手工强制取消发货单成功');
+                    
+                    // 提交事务
+                    kernel::database()->commit($transaction);
+                } catch (Exception $e) {
+                    // 回滚事务
+                    kernel::database()->rollBack();
+                    $oOperation_log->write_log('delivery_back@ome', $delivery_id, '发货单强制取消失败：' . $e->getMessage());
+                }
                 
-                $oOperation_log->write_log('delivery_back@ome', $delivery_id, '手工强制取消发货单');
             }
         }
         $this->splash('success', $this->url, '命令已经被成功发送！！');

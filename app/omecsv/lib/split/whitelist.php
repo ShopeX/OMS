@@ -50,13 +50,13 @@ class omecsv_split_whitelist
             'name'  =>  '导入任务',
             'class' => 'material_sales_material_importAddV2',//销售物料导入
         ],
-        'region_relation_import' => [
-            'name'  => '地区关联导入任务',
-            'class' => 'tongyioil_region_relation_to_import',
-        ],
         'goods_price' => [
             'name'  => '经销商品价格导入任务',
             'class' => 'dealer_goods_price_importV2',
+        ],
+        'finance_gap_type_import' => [
+            'name'  => '差异类型导入任务',
+            'class' => 'finance_monthly_report_items_import',
         ],
     ];
     

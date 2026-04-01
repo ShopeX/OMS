@@ -17,7 +17,7 @@
 
 class wms_finder_delivery{
     var $detail_basic = "发货单详情";
-    var $detail_item = "货品详情";
+    var $detail_item = "基础物料详情";
     var $detail_delivery = "物流单列表";
     var $detail_serial = "唯一码详情";
     var $detail_storagelife = "保质期批次详情";
@@ -170,7 +170,7 @@ class wms_finder_delivery{
         $content = $row[$this->col_prefix . 'bnsContent'];
 
         $cnts = unserialize($content);
-        $cnt = sprintf("共有 %d 种商品，总共数量为 %d 件， 具体 SKU 为： %s", $skuNum, $itemNum, @implode(', ', $cnts));
+        $cnt = sprintf("共有 %d 种基础物料，总共数量为 %d 件， 具体 SKU 为： %s", $skuNum, $itemNum, @implode(', ', $cnts));
 
         @reset($cnts);
         $content = $cnts[@key($cnts)];
@@ -181,7 +181,7 @@ class wms_finder_delivery{
     }
     
     
-    var $column_product_name = "货品名称";
+    var $column_product_name = "基础物料名称";
     var $column_product_name_width = "160";
     
     function column_product_name($row,$list) {
@@ -196,7 +196,7 @@ class wms_finder_delivery{
         foreach ($product_id as $pid) {
             $names[] = $productName[$pid];
         }
-        $cnt = sprintf("共有 %d 种商品，总共数量为 %d 件， 具体 名称 为： %s", $skuNum, $itemNum, @implode(', ', $names));
+        $cnt = sprintf("共有 %d 种基础物料，总共数量为 %d 件， 具体 名称 为： %s", $skuNum, $itemNum, @implode(', ', $names));
         
         @reset($names);
         $content = $names[@key($names)];

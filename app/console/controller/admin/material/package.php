@@ -252,6 +252,17 @@ class console_ctl_admin_material_package extends desktop_controller
         $storeManageLib = kernel::single('ome_store_manage');
         $storeManageLib->loadBranch(array('branch_id' => $main['branch_id']));
 
+        // 校验物料同步状态
+        // 同时获取主商品和子商品进行校验
+        $mainItems = app::get('console')->model('material_package_items')->getList('*', ['mp_id' => $id]);
+        $detailItems = app::get('console')->model('material_package_items_detail')->getList('*', ['mp_id' => $id]);
+        
+        // 调用封装的校验方法
+        list($validateRs, $validateMsg) = $mpObj->_validateMaterialSyncStatus($main['branch_id'], $mainItems, $detailItems);
+        if (!$validateRs) {
+            $this->end(false, $validateMsg);
+        }
+
         $params              = array();
         $params['main']      = $main;
         $params['items']     = $itemsDetail;

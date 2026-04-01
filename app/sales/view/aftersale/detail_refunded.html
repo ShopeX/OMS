@@ -72,6 +72,11 @@
                     <th><{t}>申请退款金额<{/t}></th>
                     <th><{t}>已退款金额<{/t}></th>
                     <th><{t}>销售金额<{/t}></th>
+                    <th><{t}>平台承担<{/t}></th>
+                    <th><{t}>结算金额<{/t}></th>
+                    <th><{t}>客户实付<{/t}></th>
+                    <th><{t}>支付优惠金额<{/t}></th>
+                    <th><{t}>子订单号<{/t}></th>
                     <th><{t}>仓库<{/t}></th>
                     <th><{t}>平台商品ID<{/t}></th>
                     <th><{t}>平台SkuID<{/t}></th>
@@ -88,6 +93,11 @@
                     <td><{$aProduct.money|default:$total_price}></td>
                     <td><{$aProduct.refunded|default:$total_price}></td>
                     <td><{$aProduct.saleprice|default:'0'}></td>
+                    <td><{$aProduct.platform_amount|cur}></td>
+                    <td><{$aProduct.settlement_amount|cur}></td>
+                    <td><{$aProduct.actually_amount|cur}></td>
+                    <td><{$aProduct.platform_pay_amount|cur}></td>
+                    <td><{$aProduct.oid|default:'-'}></td>
                     <td><{$aProduct.branch_id}></td>
                     <td><{$aProduct.shop_goods_id}></td>
                     <td><{$aProduct.shop_product_id}></td>

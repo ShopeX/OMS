@@ -425,4 +425,30 @@ class material_basic_material{
         }
         return $smIds;
     }
+    
+    /**
+     * 获取指定不需要管控库存的基础物料
+     *
+     * @param $bmIds
+     * @return void
+     */
+    public function getNotCtrlStoreProducts($bmIds)
+    {
+        $basicMaterialObj = app::get('material')->model('basic_material');
+        
+        // check
+        if(empty($bmIds)){
+            return [];
+        }
+        
+        // 不需要管控库存的基础物料
+        $materialList = $basicMaterialObj->getList('bm_id,material_bn,type,is_ctrl_store', array('bm_id'=>$bmIds, 'is_ctrl_store'=>2));
+        if(empty($materialList)){
+            return [];
+        }
+        
+        $materialList = array_column($materialList, null, 'bm_id');
+        
+        return $materialList;
+    }
 }

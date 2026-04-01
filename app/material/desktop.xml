@@ -13,6 +13,7 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
+
 <desktop>
     <permissions>
         <permission id="basic_material">基础物料</permission>
@@ -46,6 +47,7 @@
         <permission id="material_fukubukuro_delete">福袋组合删除</permission>
         <permission id="material_fukubukuro_import">福袋组合导入</permission>
         <permission id="material_fukubukuro_export">福袋组合导出</permission>
+        <permission id="material_seller">销售人员</permission>
         <permission id="material_customer_classify">客户分类</permission>
     </permissions>
 
@@ -83,15 +85,14 @@
         <menugroup name="渠道管理" en="channel-management">
             <menu controller='admin_material_channel' action='index' permission='material_channel' display='true' order='1000202'>渠道商品列表</menu>
         </menugroup>
-        <!--
-        <menugroup name="条码管理">
-            <menu controller='admin_barcode' action='index' permission='barcode_manage' display='true' order='1000300'>条码</menu>
-        </menugroup>
-        -->
         <menugroup name="基础物料配置" en="basic-material-config">
             <menu controller='admin_material_cat' action='index' permission='material_cat' display='true' order='1000100'>基础物料分类</menu>
+        </menugroup>
+        <menugroup name="销售物料配置" en="sales-material-config">
             <menu controller='admin_customer_classify' action='index' permission='material_customer_classify' display='true' order='3000100'>客户分类</menu>
         </menugroup>
-
+        <menugroup name="销售人员" en="basic-material-seller">
+            <menu controller='admin_seller' action='index' permission='material_seller' display='true' order='1000500'>销售人员</menu>
+        </menugroup>
     </workground>
 </desktop>

@@ -246,8 +246,8 @@ class ome_event_receive_delivery extends ome_event_response
         $this->__formatParams['delivery_cost_actual'] = isset($this->__inputParams['delivery_cost_actual']) ? $this->__inputParams['delivery_cost_actual'] : 0.00;
 
         //第三方回写发货要更新物流相关信息
+        $dlyCorpObj = app::get('ome')->model('dly_corp');
         if (isset($this->__inputParams['logi_id']) && isset($this->__inputParams['logi_no'])) {
-            $dlyCorpObj = app::get('ome')->model('dly_corp');
             $dlyInfo    = $dlyCorpObj->dump(array('type' => $this->__inputParams['logi_id']), 'corp_id,name');
 
             //物流公司是否发生变化，不变化已原来的为准
@@ -259,6 +259,16 @@ class ome_event_receive_delivery extends ome_event_response
 
             $this->__formatParams['logi_no'] = $this->__inputParams['logi_no'];
             $this->__isThirdParty            = true;
+        }
+
+        if(empty($this->__inputParams['logi_id']) && empty($this->__inputParams['logi_no'])) {
+            // 大件发货没有运单号使用发货单号作为运单号
+            $logiId = $this->__formatParams['logi_id'] ? : $this->__currDlyInfo['logi_id'];
+            $erpdlyInfo = $dlyCorpObj->db_dump(array('corp_id' => $logiId), 'corp_model');
+            if ($erpdlyInfo['corp_model'] == 'heavy') {
+                $this->__formatParams['logi_no'] = $this->__currDlyInfo['delivery_bn'];
+                $this->__isThirdParty            = true;
+            }
         }
 
         if ($this->__inputParams['bill_logi_weight']) {
@@ -337,13 +347,7 @@ class ome_event_receive_delivery extends ome_event_response
 
         //发货后续处理
         $this->_after_consign();
-
-        foreach(kernel::servicelist('ome.service.delivery.after.consign') as $service) {
-            if(method_exists($service,'after_consign')) {
-                $service->after_consign($this->__currDlyId);
-            }
-        }
-
+        
         return $this->send_succ('发货成功');
     }
 
@@ -452,6 +456,9 @@ class ome_event_receive_delivery extends ome_event_response
                 if(empty($v['delivery_time'])) {
                     $package[$k]['delivery_time'] = time();
                 }
+                if(empty($v['logi_no'])) {
+                    $v['logi_no'] = $this->__formatParams['logi_no'] ? : $this->__currDlyInfo['logi_no'];
+                }
             }
         } else {
             if($this->__formatParams['logi_id']) {
@@ -495,6 +502,7 @@ class ome_event_receive_delivery extends ome_event_response
         $orderObj    = app::get('ome')->model('orders');
         $basicMStockFreezeLib = kernel::single('material_basic_material_stock_freeze');
         $delivery_sync = app::get('ome')->model('delivery_sync');
+        $reservationMdl = app::get('ome')->model('order_reservation');
         
         $err_msg = '';
         $opinfo = [];
@@ -605,7 +613,11 @@ class ome_event_receive_delivery extends ome_event_response
                     $msg      = '订单状态更新失败!';
                     return false;
                 }
-
+                
+                // 预约订单状态
+                $custom_reserved_status = ($orderdata['ship_status'] == '2' ? '6' : '5');
+                $reservationMdl->update(['ship_status'=>$orderdata['ship_status'], 'custom_reserved_status'=>$custom_reserved_status], array('order_id'=>$ord_id));
+                
                 //标记当前门店履约订单已发货
                 if ($this->__isStoreBranch) {
                     kernel::single('ome_o2o_performance_orders')->updateProcessStatus($ord_id, 'consign');
@@ -794,7 +806,11 @@ class ome_event_receive_delivery extends ome_event_response
                 $msg      = '订单状态更新失败!';
                 return false;
             }
-
+            
+            // 预约订单状态
+            $custom_reserved_status = ($orderdata['ship_status'] == '2' ? '6' : '5');
+            $reservationMdl->update(['ship_status'=>$orderdata['ship_status'], 'custom_reserved_status'=>$custom_reserved_status], array('order_id'=>$ord_id));
+            
             //标记当前门店履约订单已发货
             if ($this->__isStoreBranch) {
                 kernel::single('ome_o2o_performance_orders')->updateProcessStatus($ord_id, 'consign');
@@ -888,13 +904,11 @@ class ome_event_receive_delivery extends ome_event_response
             return false;
         }
 
-        // } else {
-        //     $save_sales = $soldSalesLib->create(array('delivery_id' => $this->__currDlyId, 'iostock' => $iostock_data), $msg);
-        //     if (!$save_sales) {
-        //         $msg = '销售单生成失败!';
-        //         return false;
-        //     }
-        // }
+        // 发货销售单生成
+        $rs = kernel::single('ome_sales_delivery')->process($this->__currDlyId, $msg);
+        if (!$rs) {
+            return false;
+        }
 
         return true;
     }
@@ -914,8 +928,6 @@ class ome_event_receive_delivery extends ome_event_response
                 app::get('ome')->model('operation_log')->write_log('wms_delivery@console',$wdRow['id'], '发货单完成');
             }
         }
-        // 发货销售单生成
-        kernel::single('ome_sales_delivery')->process($this->__currDlyId);
 
         //平台自发仓加判断不处理
         if ($this->__currDlyInfo['bool_type'] & ome_delivery_bool_type::__PLATFORM_CODE) {
@@ -953,6 +965,9 @@ class ome_event_receive_delivery extends ome_event_response
         if (!in_array($channel_type, array('unionpay'))) {
             $this->_after_consign_hqepay();
         }
+        
+        // 补寄发货处理
+        $this->_after_consign_reshipping();
 
         //淘宝全链路
         $this->_after_consign_tmc();
@@ -968,16 +983,33 @@ class ome_event_receive_delivery extends ome_event_response
 
         //订单全额退款包裹拦截
         kernel::single('console_reship')->orderRefundToLJRK($this->__currDlyId);
-
+        
+        // order_ids
+        $orderIds = array_column($this->__currDlyInfo['delivery_order'], 'order_id');
+        
         //更新经销商订单(检查是否安装dealer应用)
         if($this->__currDlyInfo['betc_id'] && app::get('dealer')->is_installed()){
             $jxOrderLib = kernel::single('dealer_platform_orders');
             
-            //order_id
-            $orderIds = array_column($this->__currDlyInfo['delivery_order'], 'order_id');
-            
             //update
             $jxOrderLib->updateDlyOrders($orderIds);
+        }
+        
+        // [更新]预约订单的发货状态
+        kernel::single('ome_order_reservation')->updateReservationByOrderIds($orderIds);
+        
+        // 发货单发货完成后，service扩展触发其他服务
+        foreach(kernel::servicelist('ome.service.delivery.after.consign') as $service) {
+            if(method_exists($service,'after_consign')) {
+                $service->after_consign($this->__currDlyId);
+            }
+        }
+        
+        // 订单发货完成后，service扩展触发其他服务
+        foreach(kernel::servicelist('ome.service.order.finish.after') as $service) {
+            if(method_exists($service, 'after_order_finish')) {
+                $service->after_order_finish($orderIds);
+            }
         }
     }
 
@@ -1159,6 +1191,20 @@ class ome_event_receive_delivery extends ome_event_response
 
         #订阅物流信息
         kernel::single('ome_event_trigger_shop_hqepay')->hqepay_pub($this->__currDlyId);
+        return true;
+    }
+    
+    /**
+     * 补寄发货处理
+     *
+     * @return void
+     * @author
+     **/
+    private function _after_consign_reshipping()
+    {
+        // 补寄发货处理
+        $reshippingTrigger = kernel::single('ome_event_trigger_reshipping_delivery');
+        $reshippingTrigger->afterDelivery($this->__currDlyId);
         return true;
     }
 
@@ -1579,6 +1625,7 @@ class ome_event_receive_delivery extends ome_event_response
         }
 
         //单个发货单的对应订单号
+        $validOrderIdsForDelete = array(); // 收集pay_status != 5的订单ID，用于后续删除明细
         foreach ($this->__currDlyInfo['delivery_order'] as $dly_order) {
             $orderInfo = $orderObj->dump($dly_order['order_id'], 'order_id,order_bn,order_combine_idx,order_combine_hash,pay_status,ship_status,payed,process_status');
             $pay_status = $orderInfo['pay_status'];
@@ -1591,6 +1638,9 @@ class ome_event_receive_delivery extends ome_event_response
                 
                 //发货单打回，更新订单状态
                 kernel::single('ome_order')->resumeOrdStatus($orderInfo);
+                
+                // 收集pay_status != 5的订单ID
+                $validOrderIdsForDelete[] = $dly_order['order_id'];
             }
             
             $this->__operationLogObj->write_log('order_back@ome', $dly_order['order_id'], '发货单' . $this->__currDlyBn . $logi_info . '打回+' . '备注:' . $tmp['memo'] . $memo);
@@ -1598,6 +1648,30 @@ class ome_event_receive_delivery extends ome_event_response
             //标记当前门店履约订单已拒绝
             if ($this->__isStoreBranch) {
                 kernel::single('ome_o2o_performance_orders')->updateProcessStatus($dly_order['order_id'], 'refuse');
+            }
+        }
+
+        // 处理发货单关联的订单明细：订单主结构pay_status != 5时，删除明细并扣除金额
+        if (!empty($validOrderIdsForDelete)) {
+            $deliveryItemsDetail = app::get('ome')->model('delivery_items_detail')->getList('order_obj_id', 
+                array('delivery_id' => $this->__currDlyId, 'order_id' => $validOrderIdsForDelete));
+            
+            if (!empty($deliveryItemsDetail)) {
+                $orderObjIds = array_unique(array_column($deliveryItemsDetail, 'order_obj_id'));
+                
+                // 批量查询符合条件的order_objects（pay_status=5且delete=false）
+                $orderObjectsObj = app::get('ome')->model('order_objects');
+                $orderObjects = $orderObjectsObj->getList('obj_id', 
+                    array('obj_id' => $orderObjIds, 'order_id' => $validOrderIdsForDelete, 'pay_status' => '5', 'delete' => 'false'));
+                
+                if (!empty($orderObjects)) {
+                    $ordersObj = app::get('ome')->model('orders');
+                    
+                    // 对每个符合条件的obj_id调用封装的方法
+                    foreach ($orderObjects as $obj) {
+                        $ordersObj->deleteRefundObject($obj['obj_id'], '发货单撤销');
+                    }
+                }
             }
         }
 
@@ -1629,7 +1703,7 @@ class ome_event_receive_delivery extends ome_event_response
         }
 
         //加入事务机制
-        kernel::database()->beginTransaction();
+        $transaction = kernel::database()->beginTransaction();
 
 
         //具体打回发货单的详细处理逻辑
@@ -1641,8 +1715,13 @@ class ome_event_receive_delivery extends ome_event_response
         }
 
         // 事务提交
-        kernel::database()->commit();
-
+        kernel::database()->commit($transaction);
+        // 发货单取消后的service扩展点
+        foreach(kernel::servicelist('ome.service.delivery.cancel.after') as $object) {
+            if(method_exists($object, 'cancel_delivery_after')) {
+                $object->cancel_delivery_after($this->__currDlyId);
+            }
+        }
         return $this->send_succ();
     }
 

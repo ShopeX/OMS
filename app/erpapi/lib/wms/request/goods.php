@@ -17,8 +17,8 @@
 /**
  * 商品分配推送
  *
- * @category
- * @package
+ * @category 
+ * @package 
  * @author chenping<chenping@shopex.cn>
  * @version $Id: Z
  */
@@ -27,11 +27,10 @@ class erpapi_wms_request_goods extends erpapi_wms_request_abstract
 
     /**
      * 商品添加
-     * 
+     *
      * @return void
      * @author 
-     * */
-
+     **/
     public function goods_add($sdf){
         $title = $this->__channelObj->wms['channel_name'] . '商品添加';
 
@@ -57,12 +56,6 @@ class erpapi_wms_request_goods extends erpapi_wms_request_abstract
         return $this->__caller->call(WMS_ITEM_ADD, $params, $callback, $title,10);
     }
 
-        /**
-     * goods_callback
-     * @param mixed $response response
-     * @param mixed $callback_params 参数
-     * @return mixed 返回值
-     */
     public function goods_callback($response, $callback_params)
     {
         $rsp     = $response['rsp'];
@@ -143,10 +136,10 @@ class erpapi_wms_request_goods extends erpapi_wms_request_abstract
 
     /**
      * 商品编辑
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function goods_update($sdf){
         $title = $this->__channelObj->wms['channel_name'] . '商品编辑';
 
@@ -223,27 +216,17 @@ class erpapi_wms_request_goods extends erpapi_wms_request_abstract
         return $params;
     }
 
-        /**
-     * goods_addCombination
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function goods_addCombination($sdf) {
         return $this->error('没有该接口');
     }
 
-    /**
-     * goods_syncMap
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function goods_syncMap($sdf) {
         return $this->error('没有该接口');
     }
 
     /**
      * 同步库存
-     * 
+     *
      * @return void
      * @author 
      */
@@ -287,9 +270,16 @@ class erpapi_wms_request_goods extends erpapi_wms_request_abstract
         $rs = $this->__caller->call(WMS_STOCK_QUERY, $params, [],$title,10,$sdf['wms_branch_bn']);
         if(isset($rs['data'])) {
             $data = @json_decode($rs['data'], 1);
-            $rs['total_count'] = $data['succ'][0]['total_count'];
-            $data = $data['succ'][0]['item_list'] ? : [];
+            
+            // total_count
+            $rs['total_count'] = isset($data['succ'][0]['total_count']) ? intval($data['succ'][0]['total_count']) : 0;
+            $data = isset($data['succ'][0]['item_list']) ? $data['succ'][0]['item_list'] : [];
             $rs['data'] = [];
+            
+            // check
+            if(empty($data)){
+                return $rs;
+            }
 
             foreach ($data as $v) {
                 $rs['data'][] = [

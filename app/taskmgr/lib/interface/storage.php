@@ -37,8 +37,8 @@ class taskmgr_interface_storage{
 	}
 
     //存储数据成文件
-    public function save($source_file, $task_id, &$url){
-        return self::$__storageObj->save($source_file, $task_id, $url);
+    public function save($source_file, $task_id, &$url, $extName = ''){
+        return self::$__storageObj->save($source_file, $task_id, $url, $extName);
     }
 
     //读取文件获取数据

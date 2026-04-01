@@ -1415,20 +1415,21 @@ class console_delivery
     }
     
     /**
-     * 重试推送失败的发货单
-     * @todo：每3个小时自动推送失败的发货单，检索"商品无货"关键字；
+     * 重试推送请求WMS失败的发货单
      * 
      * @return bool
      */
     public function auto_retry_wms_delivery()
     {
-        $apiFailModel = app::get('erpapi')->model('api_fail');
+        $orderMdl = app::get('ome')->model('orders');
         $deliveryMdl = app::get('ome')->model('delivery');
+        $deliveryOrderMdl = app::get('ome')->model('delivery_order');
+        $apiFailModel = app::get('erpapi')->model('api_fail');
         
-        //config
+        // 是否开启配置项：发货单推送失败
         $retryConfig = app::get('ome')->getConf('ome.delivery.retry_push');
         if($retryConfig != 'on'){
-            return false; //未开启重新推送配置
+            return false;
         }
         
         //filter
@@ -1440,73 +1441,86 @@ class console_delivery
                 'timed out', //请求超时
         );
         
-        //每3小时自动推送
-        $endTime = time() - (10 * 60);
-        
-        //查询近3天内的失败(只查前500条数据)
+        //查找时间范围：1天前 ~ 10分钟之前请求WMS失败的发货单
+        $start_time = strtotime('-1 days');
+        $end_time = time() - (10 * 60);
         $filter  = array(
-                'last_modify|sthan' => $endTime, //小于等于10分钟
-                'last_modify|than'  => strtotime('-1 days'), //大于3天之前
-                'obj_type' => $objType,
-                'fail_times|lthan' => '15', //失败次数
-                'status' => 'fail',
-                'filter_sql' => ' err_msg REGEXP "' . implode('|', $retryError) . '"',
+            'create_time|between' => [$start_time, $end_time],
+            'obj_type' => $objType,
+            'fail_times|lthan' => 5, //失败次数
+            'status' => 'fail',
+            'filter_sql' => ' err_msg REGEXP "' . implode('|', $retryError) . '"',
         );
-        
-        $dataList = $apiFailModel->getList('*', $filter, 0, 500, 'last_modify DESC,fail_times ASC');
+        $dataList = $apiFailModel->getList('id,obj_bn,err_code,err_msg,fail_times', $filter, 0, 50, 'create_time DESC,fail_times ASC');
         if(empty($dataList)){
             return false;
         }
         
-        //发货单列表
-        $deliveryBns = array_column($dataList, 'obj_bn');
-        $deliveryList = $deliveryMdl->getList('delivery_id,delivery_bn,status,pause,process,sync_status', array('delivery_bn'=>$deliveryBns));
-        $deliveryList = array_column($deliveryList, null, 'delivery_bn');
-        
-        //查订单list 判断订单状态 已支付 未发货
-        $orderIdList = app::get('ome')->model('delivery_order')->getList('order_id,delivery_id',['delivery_id'=>array_column($deliveryList,'delivery_id')]);
-        $orderIds = array_column($orderIdList,'order_id');
-        $deliveryOrderIds = [];
-        foreach($orderIdList as $val){
-            $deliveryOrderIds[$val['delivery_id']][] = $val['order_id'];
-        }
-    
-        $orderList = app::get('ome')->model('orders')->getList('order_id,pay_status,ship_status',['order_id'=>$orderIds]);
-        $orderList = array_column($orderList,null,'order_id');
-    
         //list
         foreach ($dataList as $key => $value)
         {
-            //推送发货单无法使用$apiFailModel->retry()方法
-            //@todo：ome_delivery_notice::create($delivery_id)是静态方法;
-            //$apiFailModel->retry($value);
-            
-            $id = $value['id'];
+            $fail_id = $value['id'];
             $obj_bn = $value['obj_bn'];
             
-            //发货单信息
-            $deliveryInfo = $deliveryList[$obj_bn];
-            
-            //execute
-            if(in_array($deliveryInfo['status'], array('succ','cancel','back','return_back'))){
+            // 查询发货单状态
+            //@todo：必须实时查询发货单状态，防止发货单状态已经变化；
+            $deliveryInfo = $deliveryMdl->dump(array('delivery_bn'=>$obj_bn), 'delivery_id,delivery_bn,status,pause,process,sync_status');
+            if(empty($deliveryInfo)){
                 //删除此记录
-                $apiFailModel->delete(array('id'=>$id));
+                $apiFailModel->delete(array('id'=>$fail_id));
+                
                 continue;
-            }elseif(in_array($deliveryInfo['status'], array('progress','ready')) && $deliveryInfo['pause'] == 'false' && $deliveryInfo['process'] == 'false' && in_array($deliveryInfo['sync_status'],['2'])){
-                $orderIdList = $deliveryOrderIds[$deliveryInfo['delivery_id']] ?? [];
-                if ($orderIdList) {
-                    $is_push = true;
-                    foreach ($orderIdList as $order_id) {
-                        $order = $orderList[$order_id];
-                        //已支付 未发货
-                        if (!$order || $order['pay_status'] != 1 || $order['ship_status'] != 0) {
-                            $is_push = false;
-                        }
+            }elseif(!in_array($deliveryInfo['status'], array('progress','ready'))){
+                //删除此记录
+                $apiFailModel->delete(array('id'=>$fail_id));
+                
+                continue;
+            }
+            
+            // exec
+            if($deliveryInfo['pause'] == 'false' && $deliveryInfo['process'] == 'false' && in_array($deliveryInfo['sync_status'], ['0','1','2','11'])){
+                // 查询发货单关联的订单ID
+                $orderIdList = $deliveryOrderMdl->getList('order_id,delivery_id', array('delivery_id'=>$deliveryInfo['delivery_id']));
+                $orderIds = array_column($orderIdList,'order_id');
+                
+                // 查询订单状态
+                //@todo：必须实时查询订单状态，防止订单状态已经变化；
+                $orderList = $orderMdl->getList('order_id,status,process_status,pay_status,ship_status', array('order_id'=>$orderIds));
+                if(empty($orderList)){
+                    continue;
+                }
+                
+                // 订单状态判断
+                $is_push = true;
+                foreach ($orderList as $orderKey => $orderInfo)
+                {
+                    // 订单已作废 or 已发货 or 全额退款
+                    if ($orderInfo['status'] == 'dead' || $orderInfo['ship_status'] == '1' || in_array($orderInfo['pay_status'], ['5'])) {
+                        //删除此记录
+                        $apiFailModel->delete(array('id'=>$fail_id));
+                        
+                        // flag
+                        $is_push = false;
+                        
+                        continue 2;
                     }
-                    if ($is_push) {
-                        //发货单通知单推送仓库
-                        ome_delivery_notice::create($deliveryInfo['delivery_id']);
+                    
+                    // 退款申请中 or 退款中
+                    if (in_array($orderInfo['pay_status'], ['6', '7'])) {
+                        // 失败次数+1
+                        $update_sql = "UPDATE sdb_erpapi_api_fail SET fail_times=fail_times+1, last_modify=". time()." WHERE id=". $fail_id;
+                        $apiFailModel->db->exec($update_sql);
+                        
+                        // flag
+                        $is_push = false;
+                        
+                        continue 2;
                     }
+                }
+                
+                // 发货单通知单推送仓库
+                if ($is_push) {
+                    ome_delivery_notice::create($deliveryInfo['delivery_id']);
                 }
             }
         }

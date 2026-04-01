@@ -1,0 +1,27 @@
+<div class="division">
+    <h4>操作记录</h4>
+    <table cellspacing="0" class="gridlist" cellpadding="0" border="0" style="width:100%">
+        <thead>
+            <tr>
+                <th>操作时间</th>
+                <th>操作人</th>
+                <th>行为</th>
+                <th>操作内容</th>
+            </tr>
+        </thead>
+        <tbody>
+            <{if $logs}>
+            <{foreach from=$logs item=log}>
+            <tr>
+                <td><{$log.operate_time}></td>
+                <td><{$log.op_name}></td>
+                <td><{$log.operation}></td>
+                <td><{$log.memo}></td>
+            </tr>
+            <{/foreach}>
+            <{else}>
+            <tr><td colspan='4' style='padding:0;'><div class='note' style='margin:0;text-align:center;'>暂无操作记录</div></td></tr>
+            <{/if}>
+        </tbody>
+    </table>
+</div>

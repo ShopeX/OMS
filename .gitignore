@@ -21,4 +21,9 @@ composer.lock
 .devcontainer
 .htaccess
 .cursor
+.cursorrules
 
+.opencode
+.sisyphus
+AGENTS.md
+/tools

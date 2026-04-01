@@ -1,0 +1,167 @@
+<{capture name="header"}>
+<{css app="ome" src="ome.css"}>
+<{css app="ome" src="style.css"}>
+<{script src="coms/modedialog.js" app="desktop"}>
+<{script src="coms/autocompleter.js" app="desktop"}>
+<{/capture}>
+<div class="form-layout">
+  <form method="post" id="submit_form" action="index.php?app=ticket&ctl=admin_workflow_node&act=save">
+    <input type="hidden" id="id" name="id" value="<{$data.id}>" />
+    <div class="form-layout-block">
+      <h3>审批流节点</h3>
+      <div class="form-layout-fields form-layout-fields-column">
+        <div class="form-field">
+          <span class="form-field-label">所属模板：</span>
+          <select id="template_id" name="template_id" class="form-select" vtype="required">
+            <option value="">请选择所属模板</option>
+            <{foreach from=$templateList item=item}>
+            <option value="<{$item.id}>" <{if $item.id == $data.template_id}>selected<{/if}> ><{$item.template_name}></option>
+            <{/foreach}>
+          </select>
+          <span style="color:red;">*</span>
+        </div>
+
+        <div class="form-field">
+          <span class="form-field-label">节点名称：</span>
+          <input id="node_name" name="node_name" type="text" class="form-input" size="50" maxlength="100" placeholder="请输入节点名称" vtype="required" value="<{$data.node_name}>" /><span style="color:red;">*</span>
+        </div>
+
+        <div class="form-field">
+          <span class="form-field-label">节点类型：</span>
+          <select id="node_type" name="node_type" class="form-select" vtype="required">
+            <option value="">请选择节点类型</option>
+            <{foreach from=$noteTypeList key=note_type item=note_name}>
+            <option value="<{$note_type}>" <{if $note_type == $data.node_type}>selected<{/if}> ><{$note_name}></option>
+            <{/foreach}>
+          </select><span style="color:red;">*</span>
+        </div>
+
+        <div class="form-field" style="display: none;">
+          <span class="form-field-label">节点顺序：</span>
+          <input id="step_order" name="step_order" type="number" class="form-input" size="10" placeholder="请输入节点顺序" vtype="required" value="<{$data.step_order}>" /><span style="color:red;">*</span>
+        </div>
+
+        <div class="form-field assignee-field" id="assignee_type_field">
+          <span class="form-field-label">审批人类型：</span>
+          <select id="assignee_type" name="assignee_type" class="form-select" vtype="required">
+            <option value="">请选择审批人类型</option>
+            <{foreach from=$assigneeTypeList key=assignee_type item=assignee_name}>
+            <option value="<{$assignee_type}>" <{if $assignee_type == $data.assignee_type}>selected<{/if}> ><{$assignee_name}></option>
+            <{/foreach}>
+          </select>
+        </div>
+
+        <div class="form-field assignee-field" id="assignee_name_field">
+          <span class="form-field-label">审批人：</span>
+          <select id="assignee_id" name="assignee_id" class="form-select" vtype="required">
+            <option value="">请选择审批人</option>
+            <{foreach from=$userList item=item}>
+            <option value="<{$item.user_id}>" <{if $item.user_id == $data.assignee_id}>selected<{/if}> ><{$item.name}></option>
+            <{/foreach}>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-action">
+      <{button type="button" id="save_button" label="保 存"}> &nbsp;
+      <{button type="button" class="btn-secondary" id="return-btn" label="返 回" onclick="location.href=window.frameElement.src;"}>
+    </div>
+  </form>
+</div>
+<script>
+  //setting
+  var node_id = '<{$data.id}>';
+
+  // 切换审批人字段显示
+  function toggleAssigneeFields() {
+    var nodeType = $('node_type').value;
+    var assigneeFields = document.querySelectorAll('.assignee-field');
+    
+    if(nodeType == 'approval') {
+      assigneeFields.forEach(function(field) {
+        field.style.display = 'block';
+      });
+    } else {
+      assigneeFields.forEach(function(field) {
+        field.style.display = 'none';
+      });
+    }
+  }
+
+  // 页面加载时初始化
+  window.addEvent('domready', function() {
+    //toggleAssigneeFields();
+    
+    $('save_button').addEvent('click',function(e)
+    {
+      var _this = this;
+      var form = this.getParent('form');
+
+      var template_id = $('template_id').value.trim();
+      var node_name = $('node_name').value.trim();
+      var node_type = $('node_type').value.trim();
+      //var step_order = $('step_order').value.trim();
+      var assignee_type = $('assignee_type').value.trim();
+      var assignee_id = $('assignee_id').value.trim();
+
+      if(!template_id){
+        MessageBox.error('请选择所属模板');
+        e.stop();
+        return false;
+      }
+      
+      if(!node_name){
+        MessageBox.error('请填写节点名称');
+        e.stop();
+        return false;
+      }
+      
+      if(!node_type){
+        MessageBox.error('请选择节点类型');
+        e.stop();
+        return false;
+      }
+
+      /***
+      if(!step_order){
+        MessageBox.error('请填写节点顺序');
+        e.stop();
+        return false;
+      }
+       ***/
+
+      if(!assignee_type){
+        MessageBox.error('请选择审批人类型');
+        e.stop();
+        return false;
+      }
+
+      if(!assignee_id){
+        MessageBox.error('请填写审批人ID');
+        e.stop();
+        return false;
+      }
+
+      form.store('target',{
+        onRequest:function(){
+          _this.disabled=true;
+        },
+        onComplete:function(jsontext){
+          try{
+            var json = JSON.decode(jsontext);
+            if (typeof(json.error)!='undefined'){
+              _this.disabled=false;
+            }else{
+              _this.disabled=true;
+              if(opener.finderGroup['<{$env.get.finder_id}>']) opener.finderGroup['<{$env.get.finder_id}>'].refresh.delay(100,opener.finderGroup['<{$env.get.finder_id}>']);
+              setTimeout('window.close()',200);
+            }
+          }catch(e){}
+        }
+      });
+
+      form.fireEvent('submit',e);
+    });
+  });
+</script> 

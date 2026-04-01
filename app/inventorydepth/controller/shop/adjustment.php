@@ -302,7 +302,7 @@ class inventorydepth_ctl_shop_adjustment extends desktop_controller {
             $_POST['id'] = $id;
 
             # 发布库存超出可售库存提示
-            $sku = $this->app->model('shop_adjustment')->select()->columns('shop_product_bn,shop_id,shop_bn,release_stock')
+            $sku = $this->app->model('shop_adjustment')->select()->columns('shop_product_bn,shop_id,shop_bn,release_stock,shop_sku_id,shop_iid')
                     ->where('id=?',$id)->instance()->fetch_row();
             
             $delivery_mode = app::get('ome')->model('shop')->db_dump(['shop_id'=>$sku['shop_id']], 'delivery_mode')['delivery_mode'];
@@ -373,6 +373,7 @@ class inventorydepth_ctl_shop_adjustment extends desktop_controller {
             'sku_id' => $sku['shop_sku_id'],
             'num_iid' => $sku['shop_iid'],
             'barcode' => $sku['shop_sku_id'],
+            'shop_sku_id' => $sku['shop_sku_id'] ? $sku['shop_sku_id'] : $sku['shop_iid'],
         );
 
         // 查询增量库存
@@ -676,7 +677,7 @@ EOF;
         }
 
         $adjustmentModel = $this->app->model('shop_adjustment');
-        $skus = $adjustmentModel->getList('shop_product_bn,bind,shop_id,shop_bn,id,mapping',array('id'=>$ids));
+        $skus = $adjustmentModel->getList('shop_product_bn,bind,shop_id,shop_bn,id,mapping,shop_sku_id,shop_iid',array('id'=>$ids));
         $pbns = [];
         foreach ($skus as $sku) {
             $pbns[] = $sku['shop_product_bn'];
@@ -702,8 +703,12 @@ EOF;
 
         $data = array();
         foreach ($skus as $sku) {
+            $product = $products[$sku['shop_product_bn']];
+
+            $product['shop_sku_id'] = $sku['shop_sku_id'] ? $sku['shop_sku_id'] : $sku['shop_iid'];
+
             // 发布库存
-            $stock = kernel::single('inventorydepth_logic_stock')->getStock($products[$sku['shop_product_bn']],$sku['shop_id'],$sku['shop_bn']);
+            $stock = kernel::single('inventorydepth_logic_stock')->getStock($product,$sku['shop_id'],$sku['shop_bn']);
 
             $quantity     = $stock['quantity'];
             $actual_stock = $stock['actual_stock'];

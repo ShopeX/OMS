@@ -45,6 +45,8 @@ class ome_bill_label
         'newcarton_package' => ['label_name' => '全新纸箱发货', 'label_color' => 'SteelBlue'],
         'gift_package'      => ['label_name' => '礼盒包装发货', 'label_color' => 'IndianRed'],
         'system_bufa'       => ['label_name' => '延迟补发赠品', 'label_color' => 'DeepPink'],
+        'SOMS_JDECARD'      => ['label_name' => '京东E卡', 'label_color' => 'LightSeaGreen'],
+        'SOMS_BUFA_REFUND'  => ['label_name' => '补发转退款', 'label_color' => 'OrangeRed'],
         // 系统内部的请用SOMS_为开头
         'SOMS_WFP'          => ['label_name' => '晚发赔', 'label_color' => 'Green'],
         'SOMS_SHSM'         => ['label_name' => '送货上门', 'label_color' => 'Chocolate', 'label_thumb'=>'送'],
@@ -71,6 +73,7 @@ class ome_bill_label
         'SOMS_GXD'          => ['label_name' => '工小达', 'label_color' => 'MediumTurquoise','label_to_delivery' => true],
         'SOMS_GB'           => ['label_name' => '国补', 'label_color' => 'Coral', 'label_thumb'=>'国补'],
         'SOMS_FENXIAO'      => ['label_name' => '分销订单', 'label_color' => 'Peru'],
+        'SOMS_ASCP'         => ['label_name' => '天猫供应链', 'label_color' => 'DarkOrchid'],
         'SOMS_WEIPAI'      => ['label_name' => '微派服务', 'label_color' => '#cca4e3', 'label_thumb'=>'微','label_desc'=>'该订单已签署顺丰微派服务，请与物流服务商（如顺丰）确认获取现场拆封激活拍照的核验照片'],
         'SOMS_FUKUBUKURO'  => ['label_name' => '福袋', 'label_color' => '#FFD700', 'label_thumb'=>'福袋'],
         'SOMS_FULLPAY_PRESALE'  => ['label_name' => '全款预售', 'label_color' => 'LightCoral', 'label_thumb'=>'全预'],
@@ -78,8 +81,14 @@ class ome_bill_label
         'SOMS_ISDELIVERY'  => ['label_name' => '禁发', 'label_color' => '#DC2626', 'label_thumb'=>'禁发'],
         'SOMS_LOGISTICS'  => ['label_name' => '承诺达', 'label_color' => '#1E40AF', 'label_thumb'=>'物流升级'],
         'SOMS_XSDBC'       => ['label_name' => '小时达', 'label_color' => '#FF4500'],
+        'SOMS_GIFT_RELATED_ORDER'  => ['label_name' => '赠品子单', 'label_color' => '#cca4e3', 'label_thumb'=>'赠品子单'],
+        'SOMS_YPDS'        => ['label_name' => '百亿补贴', 'label_color' => '#FF6B6B', 'label_thumb'=>'百补'],
+        'SOMS_SUPERLINK'   => ['label_name' => '超链', 'label_color' => '#FF6B6B', 'label_thumb'=>'超链'],
+        
+        'SOMS_TMYP' => ['label_name' => '天猫优品国补', 'label_color' => 'Coral', 'label_thumb'=>'天猫优品国补'],
+        'SOMS_LARGE_APPLIANCE' => ['label_name'=>'大家电', 'label_color'=>'#c25975', 'label_to_delivery'=>true],
+        'SOMS_PICKUP'          => ['label_name' => '物流提货', 'label_color' => 'Teal'],
     ];
-
     // 小标
     public $labelValuePreset = [
         'quality_check' => [
@@ -95,6 +104,32 @@ class ome_bill_label
         ],
         'SOMS_GNJY' => [
             0x0001 => ['label_name' => '新疆'],
+            0x0002 => ['label_name' => '西藏'],
+            0x0004 => ['label_name' => '甘肃'],
+            0x0008 => ['label_name' => '内蒙古'],
+            0x0010 => ['label_name' => '宁夏'],
+            0x0020 => ['label_name' => '青海'],
+            0x0040 => ['label_name' => '香港'],
+            0x0080 => ['label_name' => '台湾'],
+            0x0100 => ['label_name' => '澳门'],
+        ],
+        'SOMS_GYJY' => [
+            0x0001 => ['label_name' => '哈萨克斯坦'],
+            0x0002 => ['label_name' => '日本'],
+            0x0004 => ['label_name' => '韩国'],
+            0x0008 => ['label_name' => '新加坡'],
+            0x0010 => ['label_name' => '马来西亚'],
+            0x0020 => ['label_name' => '泰国'],
+            0x0040 => ['label_name' => '越南'],
+            0x0080 => ['label_name' => '吉尔吉斯斯坦'],
+            0x0100 => ['label_name' => '乌兹别克斯坦'],
+            0x0200 => ['label_name' => '柬埔寨'],
+            0x0400 => ['label_name' => '老挝'],
+            0x0800 => ['label_name' => '塔吉克斯坦'],
+            0x1000 => ['label_name' => '亚美尼亚'],
+            0x2000 => ['label_name' => '格鲁吉亚'],
+            0x4000 => ['label_name' => '蒙古'],
+            0x8000 => ['label_name' => '加拿大'],
         ],
         'SOMS_GXD'  => [
             0x0001 => ['label_name' => '平台结算'],
@@ -112,6 +147,18 @@ class ome_bill_label
             0x0100 => ['label_name' => '需校验SN码'],
             0x0200 => ['label_name' => '需校验IMEI码'],
             0x0400 => ['label_name' => '专项补贴'],
+            0x0800 => ['label_name' => '天猫优品'],
+            0x2000 => ['label_name' => '纯商家出资'],
+            0x4000 => ['label_name' => '平台出资'],
+            0x8000 => ['label_name' => '平台和商家混合出资'],
+            0x10000 => ['label_name' => '政府和商家混合出资'],
+            0x20000 => ['label_name' => '政府、商家和平台三方混合出资'],
+        ],
+        'SOMS_ASCP' => [
+            0x0001 => ['label_name' => '猫享商仓鸟配'],
+            0x0002 => ['label_name' => '国际商仓鸟配'],
+            0x0004 => ['label_name' => '猫享商仓顺丰配'],
+            0x0008 => ['label_name' => '喵速达商仓顺丰配'],
         ],
         'SOMS_ISDELIVERY'=>[
             0x0001 => ['label_name' => '赠品订单未创建'],
@@ -129,6 +176,12 @@ class ome_bill_label
             0x0002 => ['label_name' => '商家自配运力'],
             0x0004 => ['label_name' => '平台运力'],
             0x0008 => ['label_name' => '城市仓配'],
+        ],
+        'SOMS_YPDS' => [
+            0x0001 => ['label_name' => '百补超级半托管'],
+        ],
+        'SOMS_PICKUP' => [
+            0x0001 => ['label_name' => '官方'],
         ],
     ];
 
@@ -458,11 +511,11 @@ class ome_bill_label
         return true;
     }
 
-    public function orderToDeliveryLabel($orderId, $deliveryId, $bill_type = 'ome_delivery') {
+    public function orderToDeliveryLabel($orderId, $deliveryId, $bill_type = 'ome_delivery', $extend_info='') {
         $labelOrder = $this->getLabelFromOrder($orderId, 'order');
         foreach ($labelOrder as $k => $label) {
             if($this->orderLabelsPreset[$label['label_code']]['label_to_delivery']) {
-                $this->markBillLabel($deliveryId, '', $label['label_code'], $bill_type, $err, $label['label_value']);
+                $this->markBillLabel($deliveryId, '', $label['label_code'], $bill_type, $err, $label['label_value'], $extend_info);
             }
         }
     }

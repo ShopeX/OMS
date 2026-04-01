@@ -41,7 +41,7 @@ class console_finder_wms_reship {
         return implode('|', $btn);
     }*/
 
-    public $detail_item = "货品详情";
+    public $detail_item = "基础物料详情";
     public function detail_item($id){
         $render = app::get('console')->render();
         $items = app::get('console')->model('wms_reship_items')->getList('*', ['wr_id'=>$id]);

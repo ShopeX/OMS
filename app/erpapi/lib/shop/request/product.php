@@ -312,10 +312,14 @@ class erpapi_shop_request_product extends erpapi_shop_request_abstract
         );
         $param = array_merge((array)$param,(array)$filter);
         $title = "获取店铺(" . $this->__channelObj->channel['name'] .')商品';
-        $result = $this->__caller->call(SHOP_GET_ITEMS_ALL_RPC,$param,array(),$title,$timeout);
+        $shop_bn = $this->__channelObj->channel['shop_bn'];
+        $primary_bn = $shop_bn.'_'.date('Ymd', time());
+        
+        $result = $this->__caller->call(SHOP_GET_ITEMS_ALL_RPC,$param,array(),$title,$timeout, $primary_bn);
         if ($result['res_ltype'] > 0) {
             for ($i=0;$i<3;$i++) {
-                $result = $this->__caller->call(SHOP_GET_ITEMS_ALL_RPC,$param,array(),$title,$timeout);
+                $primary_bn = $shop_bn.'-'.date('Ymd', time());
+                $result = $this->__caller->call(SHOP_GET_ITEMS_ALL_RPC,$param,array(),$title,$timeout, $primary_bn);
                 if ($result['res_ltype'] == 0) {
                     break;
                 }

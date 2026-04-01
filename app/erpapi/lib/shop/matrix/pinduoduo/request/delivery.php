@@ -36,14 +36,15 @@ class erpapi_shop_matrix_pinduoduo_request_delivery extends erpapi_shop_request_
         //@todo：1为首次发货：用于订单首次发货,仅待发货订单可传入;
         //@todo：2为修改发货：用于订单修改发货,调用成功后将会覆盖原发货信息,仅已发货订单可传入(OMS现在没有此业务);
         $param['redelivery_type'] = 1;
-
+        if($sdf['gift_order_flag']){
+            $param['package_type'] = 'break';
+        }
         if ($sdf['delivery_package'] &&
             (($sdf['is_split'] && !$sdf['is_first_delivery']) || !$sdf['is_split'])
         ) {
-
-
             $logistics_list = [];
             $firstDeliveryId = $sdf['first_delivery_id'];//第一张发货单ID
+           
             foreach ($sdf['delivery_package'] as $package) {
                     //排除第一张发货单
                     if ($package['delivery_id'] == $firstDeliveryId) {
@@ -67,11 +68,12 @@ class erpapi_shop_matrix_pinduoduo_request_delivery extends erpapi_shop_request_
             if($sdf['gift_items'] && $sdf['gift_order_status']==1){
                 foreach($sdf['gift_items'] as $gv){
                     $gift_items = [
-                        'tid'=>$gv['oid'],
+                        'tid'=>$gv['order_bn'],
                     ];
-                    $logistics_list[$gv['oid']]['logistics_no'] = $package['logi_no'];
-                    $logistics_list[$gv['oid']]['company_code'] = $package['logi_bn'];
-                    $logistics_list[$gv['oid']]['tid'] = $gv['oid'];
+                 
+                    $logistics_list[$gv['logi_no']]['logistics_no'] = $gv['logi_no'];
+                    $logistics_list[$gv['logi_no']]['company_code'] = $gv['logi_bn'];
+                    $logistics_list[$gv['logi_no']]['tid'] = $gv['order_bn'];
                 }
             }
 
@@ -82,10 +84,20 @@ class erpapi_shop_matrix_pinduoduo_request_delivery extends erpapi_shop_request_
                     $tmparm = $param;
                     $param['packages_list'][0] = $param;
 
-                    
+                    $giftparams =[];
+                    foreach($sdf['gift_items'] as $gv){
 
-                    $tmparm['tid'] = $gift_items['tid'];
-                    $param['packages_list'][1] =$tmparm;
+                        $giftparams = [
+                            'tid'=>$gv['order_bn'],
+                            'logistics_no'=>$gv['logi_no'],
+                            'company_code'=>$gv['logi_type'],
+                            'company_name'=>$gv['logi_name'],
+                            'redelivery_type'=>1,
+                        ];
+                    }
+
+                 
+                    $param['packages_list'][1] =$giftparams;
                     $param['is_single_item_send'] = true;
                 }
 

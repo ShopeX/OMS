@@ -29,54 +29,215 @@
 }
 </style>
 <div class="tableform">
-  <div class="division">
-    <form method="post" action="index.php?app=financebase&ctl=admin_shop_settlement_rules&act=saveCategory" id="form-rule">
-      <input type="hidden" name="rule_id" value="<{$rule_info.rule_id}>">
+    <{if $history}>
+    <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; margin-bottom: 15px; border-radius: 3px;">
+        <h4 style="margin: 0 0 10px 0; color: #856404;">历史快照 - 只读模式</h4>
+        <p style="margin: 0; color: #856404;">此页面显示的是历史快照数据，仅供查看，不可编辑。</p>
+    </div>
+    <{/if}>
+    
+    <div class="division">
+        <{if !$history}>
+        <form method="post" action="index.php?app=financebase&ctl=admin_shop_settlement_rules&act=saveCategory" id="form-rule">
+            <input type="hidden" name="rule_id" value="<{$rule_info.rule_id}>">
+        <{/if}>
       <table width="100%" cellspacing="0" cellpadding="0" border="0" id="rule-section">
         <tbody>
           <tr>
-            <th><em class="c-red">*</em>具体类别</th>
-            <td><input type="text" name="bill_category"  value="<{$rule_info.bill_category}>" vtype="required"/>
+            <th><em class="c-red">*</em>具体类别：</th>
+            <td>
+              <{if $history}>
+                <{if $diff_data.bill_category}>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #999; text-decoration: line-through; font-family: inherit;">
+                    <{$diff_data.bill_category.old_value}>
+                  </span>
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #fff5f5; border: 1px solid #f56565; border-radius: 3px; color: #e53e3e; font-weight: bold; font-family: inherit;">
+                    <{$diff_data.bill_category.new_value}>
+                  </span>
+                </div>
+                <{else}>
+                <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #495057; font-family: inherit;"><{$rule_info.bill_category}></span>
+                <{/if}>
+              <{else}>
+                <input type="text" name="bill_category" style="width:200px;" value="<{$rule_info.bill_category}>" vtype="required"/>
+              <{/if}>
              </td>
           </tr>
           <tr>
+            <th>贷会计科目：</th>
+            <td>
+              <{if $history}>
+                <{if $diff_data.account_id_plus}>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #999; text-decoration: line-through; font-family: inherit;">
+                    <{$diff_data.account_id_plus.old_value}>
+                  </span>
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #fff5f5; border: 1px solid #f56565; border-radius: 3px; color: #e53e3e; font-weight: bold; font-family: inherit;">
+                    <{$diff_data.account_id_plus.new_value}>
+                  </span>
+                </div>
+                <{else}>
+                <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #495057; font-family: inherit;"><{$rule_info.account_id_plus}></span>
+                <{/if}>
+              <{else}>
+                <select name="account_id_plus" id="account-plus-select" style="width:148px;" data-tail-select>
+                  <option value="">请选择贷会计科目</option>
+                  <{foreach from=$account_list item=account}>
+                  <option value="<{$account.id}>" <{if $rule_info.account_id_plus == $account.id}>selected<{/if}>>[<{$account.account}>-<{$account.postingkey}>]<{$account.description}></option>
+                  <{/foreach}>
+                </select>
+              <{/if}>
+            </td>
+          </tr>
+          <tr>
+            <th>借会计科目：</th>
+            <td>
+              <{if $history}>
+                <{if $diff_data.account_id_minus}>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #999; text-decoration: line-through; font-family: inherit;">
+                    <{$diff_data.account_id_minus.old_value}>
+                  </span>
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #fff5f5; border: 1px solid #f56565; border-radius: 3px; color: #e53e3e; font-weight: bold; font-family: inherit;">
+                    <{$diff_data.account_id_minus.new_value}>
+                  </span>
+                </div>
+                <{else}>
+                <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #495057; font-family: inherit;"><{$rule_info.account_id_minus}></span>
+                <{/if}>
+              <{else}>
+                <select name="account_id_minus" id="account-minus-select" style="width:148px;" data-tail-select>
+                  <option value="">请选择借会计科目</option>
+                  <{foreach from=$account_list item=account}>
+                  <option value="<{$account.id}>" <{if $rule_info.account_id_minus == $account.id}>selected<{/if}>>[<{$account.account}>-<{$account.postingkey}>]<{$account.description}></option>
+                  <{/foreach}>
+                </select>
+              <{/if}>
+            </td>
+          </tr>
+          <tr>
             <th><em class="c-red">*</em> 优先级：</th>
-            <td><input style="width:50px;" type="number" name="ordernum" vtype="required" value="<{$rule_info.ordernum}>">
-            数字越小，优先级越高！
+            <td>
+              <{if $history}>
+                <{if $diff_data.ordernum}>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #999; text-decoration: line-through; font-family: inherit;">
+                    <{$diff_data.ordernum.old_value}>
+                  </span>
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #fff5f5; border: 1px solid #f56565; border-radius: 3px; color: #e53e3e; font-weight: bold; font-family: inherit;">
+                    <{$diff_data.ordernum.new_value}>
+                  </span>
+                </div>
+                <{else}>
+                <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #495057; font-family: inherit;"><{$rule_info.ordernum}></span>
+                <{/if}>
+              <{else}>
+                <input style="width:200px;" type="number" name="ordernum" vtype="required" value="<{$rule_info.ordernum}>">
+                数字越小，优先级越高！
+              <{/if}>
+            </td>
+          </tr>
+          <tr>
+            <th>是否需要核对：</th>
+            <td>
+              <{if $history}>
+                <{if $diff_data.need_ar_verify}>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #999; text-decoration: line-through; font-family: inherit;">
+                    <{$diff_data.need_ar_verify.old_value}>
+                  </span>
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #fff5f5; border: 1px solid #f56565; border-radius: 3px; color: #e53e3e; font-weight: bold; font-family: inherit;">
+                    <{$diff_data.need_ar_verify.new_value}>
+                  </span>
+                </div>
+                <{else}>
+                <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #495057; font-family: inherit;">
+                  <{if $rule_info.need_ar_verify == 1}>需核对AR<{else}>无需核对AR<{/if}>
+                </span>
+                <{/if}>
+              <{else}>
+                <label style="margin-right: 20px;">
+                  <input type="radio" name="need_ar_verify" value="1" <{if $rule_info.need_ar_verify == 1}>checked<{/if}>>
+                  需核对AR
+                </label>
+                <label>
+                  <input type="radio" name="need_ar_verify" value="0" <{if $rule_info.need_ar_verify == 0}>checked<{/if}>>
+                  无需核对AR
+                </label>
+                <br>
+                <em class="c-red">仅针对非订单费用的分类可选无需核对AR</em>
+              <{/if}>
             </td>
           </tr>
 
           
           </table>
-         
-
-      <div class="table-action">  <{button label="提交" type="submit" name="submit" id="btn-rule"}> &nbsp;&nbsp; <{button isCloseDialogBtn="true" label="关闭" onclick="javascript:void(window.close());" class="btn-secondary" type="button"}></div>
-   
-    </form>
-  </div>
+        <{if !$history}>
+        <div class="table-action">
+            <{button class="btn-primary" type="button" id='submit_btn' label='确定' }>
+            <{button class="btn-secondary" type="button" label='关闭' isCloseDialogBtn="true" }>
+        </div>
+        </form>
+        <{/if}>
+    </div>
 </div>
-<script>
+<{if !$history}>
+<script type="text/javascript">
+(function(){
+    var _form = $('form-rule');//表单ID 
+    var btn   = $('submit_btn');//按钮ID
+    var finder = finderGroup['<{$env.get.finder_id}>'];
+    
+    // 初始化tail.select
+    Ex_Loader("tail.select", function(){
+        tail.select('#account-plus-select', {
+            search: true,
+            width: 'auto',
+            height: 200,
+            searchMinLength: 0,
+            searchPlaceholder: '输入关键词搜索贷会计科目',
+            searchFocus: true,
+            searchMark: true,
+            searchMarkPlaceholder: '未找到匹配项'
+        });
+        tail.select('#account-minus-select', {
+            search: true,
+            width: 'auto',
+            height: 200,
+            searchMinLength: 0,
+            searchPlaceholder: '输入关键词搜索借会计科目',
+            searchFocus: true,
+            searchMark: true,
+            searchMarkPlaceholder: '未找到匹配项'
+        });
+    });
+    
+    _form.store('target',{
+        onRequest:function(){
+            btn.setAttribute('disabled', 'disabled');
+        },
+        onComplete:function(){
+            btn.removeAttribute('disabled');
+        },
+        onSuccess:function(response){
+            var hash_res_obj = JSON.decode(response);
+            if (hash_res_obj.success != undefined && hash_res_obj.success != ""){
+                try{
+                    var _dialogIns = btn.getParent('.dialog').retrieve('instance');
+                }catch(e){}
 
+                if(_dialogIns){
+                    setTimeout(finder.refresh(),30000);
+                    _dialogIns.close();
+                }
+            }
+        }
+    });
 
-
-$('form-rule').store('target',{
-    onRequest:function(){
-       $('btn-rule').set('disabled', 'true');
-       
-    },
-    onComplete:function(jsontext){
-       var json = Json.evaluate(jsontext);
-       if (typeof(json.error) != 'undefined'){
-           $('btn-rule').set('disabled', '');
-       }else{
-           $('btn-rule').set('disabled', 'true');
-           parent.finderGroup['<{$env.get.finder_id}>'].refresh.delay(400,parent.finderGroup['<{$env.get.finder_id}>']);
-           window.close();
-           $('form-rule').getParent('.dialog').retrieve('instance').close();
-       }
-    }
-});
-
-
-
+    btn.addEvent('click',function(){
+        _form.fireEvent('submit',{stop:$empty});
+    });
+})();
 </script>
+<{/if}>

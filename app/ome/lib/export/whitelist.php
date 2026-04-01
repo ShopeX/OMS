@@ -54,6 +54,7 @@ class ome_export_whitelist
             'finance_mdl_analysis_book_bills' => array('cansplit'=>1, 'splitnums'=>200, 'structure'=>'single'),
             'finance_mdl_monthly_report_items'=> array('cansplit'=>1, 'splitnums'=>200, 'primary_key' => 'id', 'structure'=>'single'),
             'financebase_mdl_base'=> array('cansplit'=>1, 'splitnums'=>200, 'primary_key' => 'id', 'structure'=>'single'),
+            'financebase_mdl_expenses_rule'=> array('cansplit'=>1, 'splitnums'=>200, 'primary_key' => 'rule_id', 'structure'=>'single'),
             'console_mdl_branch_product' => array('cansplit'=>0, 'splitnums'=>200),
             'wms_mdl_branch_product' => array('cansplit'=>0, 'splitnums'=>200),
             'drm_mdl_distributor_product_sku' => array('cansplit'=>1, 'splitnums'=>200, 'structure'=>'single'),
@@ -108,7 +109,7 @@ class ome_export_whitelist
             'console_mdl_vopbill_amount'=>array('cansplit'=>1, 'splitnums'=>500, 'primary_key' => 'id', 'structure'=>'single'),
             'console_mdl_vopbill_discount'=>array('cansplit'=>1, 'splitnums'=>500, 'primary_key' => 'id', 'structure'=>'single'),
             'console_mdl_difference_receiving_inventory'=>array('cansplit'=>1, 'splitnums'=>500, 'primary_key' => 'diff_id', 'structure'=>'single'),
-            'ome_mdl_return_product' => array('cansplit'=>1, 'splitnums'=>200, 'primary_key'=>'return_id', 'structure'=>'multi'),
+            'ome_mdl_return_product' => array('cansplit'=>1, 'splitnums'=>200, 'primary_key'=>'return_id', 'structure'=>'spec'),
             'ome_mdl_order_fail' => array('cansplit'=>1, 'splitnums'=>200, 'primary_key' => 'order_id', 'structure'=>'single'),
             'desktop_mdl_users' => array('cansplit'=>0, 'splitnums'=>200),
             'invoice_mdl_order_golden3CancelExport' => array('cansplit' => 1, 'splitnums' => 200, 'primary_key' => 'id', 'structure' => 'single'),
@@ -131,8 +132,25 @@ class ome_export_whitelist
                 'primary_key' => 'id',
                 'structure' => 'multi'
             ),
+            'tongyioil_mdl_bill' => array(
+                'cansplit' => 1,
+                'splitnums' => 200,
+                'primary_key' => 'id',
+                'structure' => 'multi'
+            ),
         );
-
+        // 增加service调用，允许通过service扩展导出白名单
+        $service_list = kernel::servicelist('ome.service.export.whitelist.allowed.after');
+        if ($service_list) {
+            foreach ($service_list as $service) {
+                if (method_exists($service, 'extend_whitelist')) {
+                    $extend = $service->extend_whitelist();
+                    if (is_array($extend)) {
+                        $data_source = array_merge($data_source, $extend);
+                    }
+                }
+            }
+        }
         if(!empty($source)){
             return isset($data_source[$source]) ? $data_source[$source] : '';
         }else{

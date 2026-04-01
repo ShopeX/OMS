@@ -32,7 +32,15 @@ class monitor_ctl_admin_setting extends desktop_controller
     {
         $this->begin();
 
-        app::get('monitor')->setConf('email.config', $_POST['email']);
+        $emailConfig = (array) app::get('monitor')->getConf('email.config');
+        $emailPost = isset($_POST['email']) && is_array($_POST['email']) ? $_POST['email'] : array();
+
+        // 密码未提交或提交为空字符串时保留历史值，避免误清空（如字符串"0"被empty误判）
+        if ($emailPost && (!array_key_exists('smtppasswd', $emailPost) || $emailPost['smtppasswd'] === '') && !empty($emailConfig['smtppasswd'])) {
+            $emailPost['smtppasswd'] = $emailConfig['smtppasswd'];
+        }
+
+        app::get('monitor')->setConf('email.config', $emailPost);
 
         app::get('monitor')->setConf('workwx.config', $_POST['workwx']);
 

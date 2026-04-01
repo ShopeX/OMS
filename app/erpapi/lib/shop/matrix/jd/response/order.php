@@ -53,7 +53,7 @@ class erpapi_shop_matrix_jd_response_order extends erpapi_shop_response_order
     {
         parent::_analysis();
         //买家实付字段名
-        $this->_ordersdf['coupon_actuallypay_field'] = 'extend_item_list/cost';
+        $this->_ordersdf['coupon_actuallypay_field'] = $field = 'extend_item_list/cost';
         // 预约发货 hold 时间
         if ($this->_ordersdf['cn_info']['appointment_ship_time']) {
             $opPickDate = kernel::single('ome_func')->date2time($this->_ordersdf['cn_info']['appointment_ship_time']);
@@ -69,7 +69,8 @@ class erpapi_shop_matrix_jd_response_order extends erpapi_shop_response_order
             if ($this->_ordersdf['timing_confirm']) {
                 $object['estimate_con_time'] = (int)$this->_ordersdf['timing_confirm'];
             }
-
+            $arrField = explode('/', $field);
+            $object['actually_amount'] = current($object['order_items'])[$arrField[0]][$arrField[1]];
             foreach ($object['order_items'] as &$item) {
                 if ($this->_ordersdf['timing_confirm']) {
                     $item['estimate_con_time'] = (int)$this->_ordersdf['timing_confirm'];

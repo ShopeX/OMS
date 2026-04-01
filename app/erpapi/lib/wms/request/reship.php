@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * 退货单推送
  *
@@ -45,6 +44,19 @@ class erpapi_wms_request_reship extends erpapi_wms_request_abstract
         $title = $this->__channelObj->wms['channel_name'] . '退货单添加';
 
         $params = $this->_format_reship_create_params($sdf);
+        
+        // 调用 service 进行参数扩展或修改
+        if ($service = kernel::servicelist('erpapi.service.wms.reship.params.format')) {
+            foreach ($service as $object => $instance) {
+                if (method_exists($instance, 'format_reship_create_params')) {
+                    $params = $instance->format_reship_create_params($sdf, $params, $this->__channelObj);
+                }
+            }
+        }
+        
+        if (!$params) {
+            return $this->error('参数为空,终止同步');
+        }
 
         $callback = array(
             'class'  => get_class($this),
@@ -173,6 +185,7 @@ class erpapi_wms_request_reship extends erpapi_wms_request_abstract
                     'is_gift'        => '0', // TODO: 判断是否为赠品0:不是1:是
                     'item_remark'    => '', // TODO: 商品备注
                     'inventory_type' => $sdf['branch_type'] == 'damaged' ? '101' : '1', // TODO: 库存类型1可销售库存101类型用来定义残次品201冻结类型库存301在途库存
+                    'sn'             => $v['sn'] ? ['sn' => $v['sn']] : '',
                 );
             }
         }

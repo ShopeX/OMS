@@ -99,53 +99,44 @@ class ome_event_trigger_shop_data_delivery_pinduoduo extends ome_event_trigger_s
         
         $giftinfo = $this->isGIFT($order['order_id']);
 
-        if($giftinfo && $giftinfo['gift_order_status']){
-            $gift_items = $this->_get_gift_items_sdf($delivery_id);
+        if($giftinfo && $giftinfo['order_sn'] && $giftinfo['relation_type']==4){
+            
+            $parent_order_bn = $giftinfo['order_sn'];
+           
+            // 判断父订单是否已发货，未发货则不回传
+            $parent_order = app::get('ome')->model('orders')->dump(['order_bn' => $parent_order_bn],'order_id,ship_status');
+        
+            if($parent_order['ship_status'] != '1'){
+                return [];
+            }
+            
+            $this->__sdf['order_sn'] = $giftinfo['order_sn'];
+            $this->__sdf['gift_order_flag'] = 1;
+        }
+        
+        $maininfo = $this->isMAINGIFT($order['order_id']);
+
+        if($maininfo){
+            $gift_items = $this->_get_gift_items_sdf($maininfo['order_sns']);
+          
             if($gift_items){
                 $this->__sdf['gift_items'] = $gift_items;
                 
             }
-            $this->__sdf['gift_order_status'] = $giftinfo['gift_order_status'];
+            $this->__sdf['gift_order_status'] = $maininfo['gift_order_status'];
         }
-        
 
         return $this->__sdf;
     }
 
 
-    protected function _get_gift_items_sdf($delivery_id)
-    {
-        $delivery_items = array();
-
-        $delivery_items_detail = $this->_get_delivery_items_detail($delivery_id);
-        $order_objects         = $this->_get_order_objects($delivery_id);
-        $gift_items = [];
-        foreach ($delivery_items_detail as $key => $value) {
-            $order_item = $order_objects[$value['order_obj_id']]['order_items'][$value['order_item_id']];
-            $oid = $order_objects[$value['order_obj_id']]['oid'];
-            if ($value['item_type'] == 'gift' && $oid) {
-              
-               $gift_items[] = array(
-                   
-                    'oid'           => $order_objects[$value['order_obj_id']]['oid'],
-                    'logi_no'       => $value['logi_no'] ? $value['logi_no'] : $this->__sdf['logi_no'],
-                    'logi_type'     => $value['logi_type'] ? $value['logi_type'] : $this->__sdf['logi_type'],
-                    'logi_name'     => $value['logi_name'] ? $value['logi_name'] : $this->__sdf['logi_name'],
-                    
-                );
-               
-            } 
-        }
-        if($gift_items) return $gift_items;
-        
-    }
-
+    
     public function isGIFT($order_id){
 
         //京东变成可发货
         $ordLabelObj = app::get('ome')->model('bill_label');
        
-        $bills = $ordLabelObj->dump(array('label_code'=>'SOMS_GIFT_ORDER_STATUS','bill_type'=>'order','bill_id'=>$order_id),'bill_id,extend_info');
+        $bills = $ordLabelObj->dump(array('label_code'=>'SOMS_GIFT_RELATED_ORDER','bill_type'=>'order','bill_id'=>$order_id),'bill_id,extend_info');
 
         if($bills){
            
@@ -157,4 +148,59 @@ class ome_event_trigger_shop_data_delivery_pinduoduo extends ome_event_trigger_s
         return false;
 
     }
+
+    public function isMAINGIFT($order_id){
+
+        //京东变成可发货
+        $ordLabelObj = app::get('ome')->model('bill_label');
+       
+        $bills = $ordLabelObj->dump(array('label_code'=>'SOMS_GIFT_ORDER_STATUS','bill_type'=>'order','bill_id'=>$order_id),'bill_id,extend_info');
+
+        if($bills){
+           
+            $extend_info = json_decode($bills['extend_info'],true);
+            
+            // order_sns 可能是 JSON 字符串，需要解析
+            if(isset($extend_info['order_sns']) && is_string($extend_info['order_sns'])){
+                $extend_info['order_sns'] = json_decode($extend_info['order_sns'], true);
+            }
+            
+            return $extend_info;
+        }
+
+        return false;
+
+    }
+
+    protected function _get_gift_items_sdf($order_sn)
+    {
+        // 判断订单是否已发货，未发货则返回空
+        $order = app::get('ome')->model('orders')->dump(['order_bn' => $order_sn],'order_id,ship_status,order_bn,sync');
+       
+        if($order['ship_status'] != '1'){
+            return [];
+        }
+       
+        if($order['sync'] == 'succ'){
+            return [];
+        }
+        // 获取发货包裹信息
+        $orderDelivery = app::get('ome')->model('delivery')->getAllDeliversOrderId($order['order_id']);
+
+        $gift_items = [];
+        foreach($orderDelivery as $value){
+            // 根据 logi_id 从 dly_corp 表获取 type 作为 logi_type
+            $dly_corp = app::get('ome')->model('dly_corp')->dump(['corp_id' => $value['logi_id']], 'type');
+            
+            $gift_items[$value['logi_no']] = array(
+                'logi_no'       => $value['logi_no'],
+                'logi_type'     => $dly_corp['type'],
+                'logi_name'     => $value['logi_name'],
+                'order_bn'      => $order['order_bn'], 
+            );
+        }
+       
+        return $gift_items;
+    }
+
 }

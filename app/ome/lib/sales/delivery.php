@@ -14,23 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class ome_sales_delivery {
 
-    /**
-     * __construct
-     * @return mixed 返回值
-     */
-    public function __construct(){
+	public function __construct(){
 		$this->db = kernel::database();
     }
 
-    /**
-     * 处理
-     * @param mixed $delivery_id ID
-     * @return mixed 返回值
-     */
-    public function process($delivery_id){
+    public function process($delivery_id, &$msg){
 
         
         $sales_data = $this->get_sales_data($delivery_id);
@@ -41,11 +31,9 @@ class ome_sales_delivery {
         $sales_delivery = $saledeliverysObj->db_dump(array('delivery_id'=>$delivery_id),'delivery_id');
         if ($sales_delivery) return true;
 
-        $this->db->beginTransaction();
         $rs = $this->insertRow($delivery_id);
         if (!$rs) {
-                    
-            $this->db->rollBack();
+            $msg = '发货销售单插入失败!';
             return false;
         }
                
@@ -55,14 +43,11 @@ class ome_sales_delivery {
         $sql = ome_func::get_insert_sql($itemsObj, $sales_delivery_data);
         $rs = $this->db->exec($sql);
         if (!$rs) {
-                 
-            $this->db->rollBack();
+            $msg = '发货单明细插入失败!';
             return false;
         }
 
-        $this->db->commit();
-
-      
+        return true;
     }
 
 
@@ -87,11 +72,26 @@ class ome_sales_delivery {
 
 
         $productId = array();
+        $orderItemId = array();
         foreach ($delivery_items_detail as $item) {
             $productId[] = $item['product_id'];
+            $orderItemId[] = $item['order_item_id'];
         }
 
-      
+        $orderItemDetail = app::get('sales')->model('delivery_order_item')->getList('*', array('order_item_id' => $orderItemId), 0, -1);
+        $orderItemSum = array();
+        foreach ($orderItemDetail as $item) {
+            $orderItemSum[$item['order_item_id']]['nums'] += $item['nums'];
+            $orderItemSum[$item['order_item_id']]['pmt_price'] += $item['pmt_price'];
+            $orderItemSum[$item['order_item_id']]['sale_price'] += $item['sale_price'];
+            $orderItemSum[$item['order_item_id']]['apportion_pmt'] += $item['apportion_pmt'];
+            $orderItemSum[$item['order_item_id']]['sales_amount'] += $item['sales_amount'];
+            $orderItemSum[$item['order_item_id']]['platform_amount'] += $item['platform_amount'];
+            $orderItemSum[$item['order_item_id']]['settlement_amount'] += $item['settlement_amount'];
+            $orderItemSum[$item['order_item_id']]['actually_amount'] += $item['actually_amount'];
+            $orderItemSum[$item['order_item_id']]['platform_pay_amount'] += $item['platform_pay_amount'];
+        }
+
         $shop_detail = $this->get_shop_detail($deliveryDetail['shop_id']);
 
         $branch_detail = $this->get_branch_detail($deliveryDetail['branch_id']);
@@ -144,17 +144,27 @@ class ome_sales_delivery {
             } else {
             
                 //判断是否是最后一条,如果是,剩余的赋上
-                
-                $tmpSaleDeliveryData['pmt_price'] = sprintf('%.2f', $tmpItemSalePrice['pmt_price']*$val['number']/$tmpItemSalePrice['nums']);
-                $tmpSaleDeliveryData['sale_price'] = sprintf('%.2f',$tmpItemSalePrice['sale_price']*$val['number']/$tmpItemSalePrice['nums']);
-                $tmpSaleDeliveryData['apportion_pmt'] = sprintf('%.2f', $tmpItemSalePrice['apportion_pmt']*$val['number']/$tmpItemSalePrice['nums']);
-                $tmpSaleDeliveryData['price'] = sprintf('%.2f',$tmpItemSalePrice['price']);
-                $tmpSaleDeliveryData['sales_amount'] = sprintf('%.2f', $tmpItemSalePrice['sales_amount']*$val['number']/$tmpItemSalePrice['nums']);
-                $tmpSaleDeliveryData['platform_amount'] = sprintf('%.2f', $tmpItemSalePrice['platform_amount']*$val['number']/$tmpItemSalePrice['nums']);
-                $tmpSaleDeliveryData['settlement_amount'] = sprintf('%.2f', $tmpItemSalePrice['settlement_amount']*$val['number']/$tmpItemSalePrice['nums']);
-                $tmpSaleDeliveryData['platform_pay_amount'] = sprintf('%.2f', $tmpItemSalePrice['platform_pay_amount']*$val['number']/$tmpItemSalePrice['nums']);
-                $tmpSaleDeliveryData['actually_amount'] = sprintf('%.2f', $tmpItemSalePrice['actually_amount']*$val['number']/$tmpItemSalePrice['nums']);
-               
+                if($val['number'] + $orderItemSum[$val['order_item_id']]['nums'] == $tmpItemSalePrice['nums']){
+                    $tmpSaleDeliveryData['pmt_price'] = sprintf('%.2f',$tmpItemSalePrice['pmt_price'] - $orderItemSum[$val['order_item_id']]['pmt_price']);
+                    $tmpSaleDeliveryData['sale_price'] = sprintf('%.2f',$tmpItemSalePrice['sale_price'] - $orderItemSum[$val['order_item_id']]['sale_price']);
+                    $tmpSaleDeliveryData['apportion_pmt'] = sprintf('%.2f',$tmpItemSalePrice['apportion_pmt'] - $orderItemSum[$val['order_item_id']]['apportion_pmt']);
+                    $tmpSaleDeliveryData['price'] = sprintf('%.2f',$tmpItemSalePrice['price']);
+                    $tmpSaleDeliveryData['sales_amount'] = sprintf('%.2f',$tmpItemSalePrice['sales_amount'] - $orderItemSum[$val['order_item_id']]['sales_amount']);
+                    $tmpSaleDeliveryData['platform_amount'] = sprintf('%.2f',$tmpItemSalePrice['platform_amount'] - $orderItemSum[$val['order_item_id']]['platform_amount']);
+                    $tmpSaleDeliveryData['settlement_amount'] = sprintf('%.2f',$tmpItemSalePrice['settlement_amount'] - $orderItemSum[$val['order_item_id']]['settlement_amount']);
+                    $tmpSaleDeliveryData['platform_pay_amount'] = sprintf('%.2f',$tmpItemSalePrice['platform_pay_amount'] - $orderItemSum[$val['order_item_id']]['platform_pay_amount']);
+                    $tmpSaleDeliveryData['actually_amount'] = sprintf('%.2f',$tmpItemSalePrice['actually_amount'] - $orderItemSum[$val['order_item_id']]['actually_amount']);
+                } else {
+                    $tmpSaleDeliveryData['pmt_price'] = sprintf('%.2f', $tmpItemSalePrice['pmt_price']*$val['number']/$tmpItemSalePrice['nums']);
+                    $tmpSaleDeliveryData['sale_price'] = sprintf('%.2f',$tmpItemSalePrice['sale_price']*$val['number']/$tmpItemSalePrice['nums']);
+                    $tmpSaleDeliveryData['apportion_pmt'] = sprintf('%.2f', $tmpItemSalePrice['apportion_pmt']*$val['number']/$tmpItemSalePrice['nums']);
+                    $tmpSaleDeliveryData['price'] = sprintf('%.2f',$tmpItemSalePrice['price']);
+                    $tmpSaleDeliveryData['sales_amount'] = sprintf('%.2f', $tmpItemSalePrice['sales_amount']*$val['number']/$tmpItemSalePrice['nums']);
+                    $tmpSaleDeliveryData['platform_amount'] = sprintf('%.2f', $tmpItemSalePrice['platform_amount']*$val['number']/$tmpItemSalePrice['nums']);
+                    $tmpSaleDeliveryData['settlement_amount'] = sprintf('%.2f', $tmpItemSalePrice['settlement_amount']*$val['number']/$tmpItemSalePrice['nums']);
+                    $tmpSaleDeliveryData['platform_pay_amount'] = sprintf('%.2f', $tmpItemSalePrice['platform_pay_amount']*$val['number']/$tmpItemSalePrice['nums']);
+                    $tmpSaleDeliveryData['actually_amount'] = sprintf('%.2f', $tmpItemSalePrice['actually_amount']*$val['number']/$tmpItemSalePrice['nums']);
+                }
             }
           
             $zkjg = $objMath->number_minus(array($tmpSaleDeliveryData['price']*$tmpSaleDeliveryData['nums'],$tmpSaleDeliveryData['pmt_price'],$tmpSaleDeliveryData['sale_price']));
@@ -225,11 +235,6 @@ class ome_sales_delivery {
     }
 
 
-    /**
-     * insertRow
-     * @param mixed $delivery_id ID
-     * @return mixed 返回值
-     */
     public function insertRow($delivery_id) {
 
         $deliveryObj = app::get('ome')->model('delivery');
@@ -267,11 +272,6 @@ class ome_sales_delivery {
     }
 
 
-    /**
-     * 获取_avg_delivery_data
-     * @param mixed $salesData 数据
-     * @return mixed 返回结果
-     */
     public function get_avg_delivery_data($salesData){
         
         $delivery_items = array();

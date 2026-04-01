@@ -1269,8 +1269,8 @@ class dealer_platform_orders extends dealer_abstract
     }
     
     /**
-     * 请求smart接口获取经销商品价格
-     * 
+     * 请求smart接口获取经销商物料价格
+     *
      * @param $erp_order_bn
      * @return void
      */

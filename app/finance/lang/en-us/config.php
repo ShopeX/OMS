@@ -29,5 +29,9 @@ return [
         '应收应退单' => 'Receivable and Refundable Orders',
         '实收实退单' => 'Actual Receipt and Refund Orders',
         '账期列表' => 'Account Period List',
+        '销售物料编码' => 'Sales Material Code',
+        '销售物料名称' => 'Sales Material Name',
+        '商品货号' => 'Sales Material Code',
+        '商品名称' => 'Sales Material Name',
     ],
 ];

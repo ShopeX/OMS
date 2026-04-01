@@ -101,7 +101,7 @@
             <th><b>订单总金额：</b></th>
             <td><b id="total_amount_show" val="<{$order.total_amount}>"><{$order.total_amount|cur}></b><input type="hidden" name="new_total_amount" id="new_total_amount" value="<{$order.total_amount}>" /></td>
             <th>订单折扣：</th>
-            <td><input type="text" vtype="number" name="discount" id="discount" size="10" onchange="cal_discount(this);" value="<{$order.discount}>" /><br />要给顾客便宜100元，则输入"-100";</td>
+            <td><input type="text" vtype="number" name="discount" id="discount" size="10" onchange="cal_discount(this);" value="<{$order.discount}>" /><br />要给顾客便宜100元，则输入"-100"；要提高订单价格100元，则输入"100"。</td>
           </tr>
           <tr>
             <th>下单日期：</th>
@@ -123,7 +123,7 @@
           <tr>
             <th>订单优惠金额：</th>
             <td>
-                <input id='pmt_order' size='10' name="pmt_order" oninput="value=value.toString().match(/^\d+(?:\.\d{0,2})?/)" onchange="cal_cost_shiping(this);"  value="<{$order.pmt_order}>">
+                <input id='pmt_order' size='10' name="pmt_order" oninput="value=value.toString().match(/^\d+(?:\.\d{0,2})?/)" onchange="cal_cost_shiping(this);"  value="<{$order.pmt_order}>" <{if $has_oid_limit}>readonly="readonly" style="color:#666;"<{/if}>>
             </td>
             <th>保价：</th>
             <td><{$order.shipping.cost_protect|cur}> <span style="color:#84A2AD;">是否要保价：<{if $order.shipping.is_protect == 'true'}>是<{else}>否<{/if}> <input type="hidden" name="cost_protect" value="<{$order.shipping.cost_protect|cur}>"></span></td>
@@ -371,6 +371,103 @@ function ome_edit_total_amount(total,sale_amount)
         discount = 0;
     }
 
+    // 检查是否存在oid限制，如果存在则自动计算订单优惠金额
+    var hasOidLimit = false;
+    var totalPartMjzDiscount = 0;
+    
+    // 检查所有商品类型的oid限制行明细（排除已删除的商品）
+    var oidLimitRows = [];
+    var collectOidRows = function(rows) {
+        if (!rows) {
+            return;
+        }
+        rows.each(function(row) {
+            oidLimitRows.push(row);
+        });
+    };
+    if ($('goods_list')) {
+        collectOidRows($('goods_list').getElements('tr[data-oid]'));
+    }
+    if ($('pkg_list')) {
+        collectOidRows($('pkg_list').getElements('tr.bindtitle[data-oid]'));
+    }
+    if ($('pko_list')) {
+        collectOidRows($('pko_list').getElements('tr[data-oid]'));
+    }
+    if ($('giftpackage_list')) {
+        collectOidRows($('giftpackage_list').getElements('tr[data-oid]'));
+    }
+    if ($('lkb_list')) {
+        collectOidRows($('lkb_list').getElements('tr.bindtitle[data-oid]'));
+    }
+    
+    oidLimitRows.each(function(tr) {
+        var oid = tr.get('data-oid');
+        if (oid && oid != '-1') {
+            // 先判断是否存在oid限制（不管是否删除）
+            hasOidLimit = true;
+            
+            // 排除已删除的商品（只累加未删除商品的均摊优惠）
+            var isDeleted = false;
+            // 检查 goods/pko/giftpackage 的删除标记
+            var gDel = tr.get('g-del');
+            // 处理 get 可能返回数组的情况
+            var gDelValue = Array.isArray(gDel) ? gDel[0] : gDel;
+            // 处理 hasClass 可能返回数组的情况
+            var hasDisabledClass = tr.hasClass('disabled');
+            var isDisabled = Array.isArray(hasDisabledClass) ? (hasDisabledClass.indexOf('disabled') >= 0 || hasDisabledClass[0] === true) : hasDisabledClass === true;
+            if (gDelValue == 'b' || isDisabled) {
+                isDeleted = true;
+            }
+            // 检查 pkg 的删除标记
+            var pkgDel = tr.get('pkg-del');
+            var pkgDelValue = Array.isArray(pkgDel) ? pkgDel[0] : pkgDel;
+            if (pkgDelValue == 'b') {
+                isDeleted = true;
+            }
+            // 检查 lkb 的删除标记
+            var lkbDel = tr.get('lkb-del');
+            var lkbDelValue = Array.isArray(lkbDel) ? lkbDel[0] : lkbDel;
+            if (lkbDelValue == 'b') {
+                isDeleted = true;
+            }
+            
+            // 如果已删除，跳过累加
+            if (isDeleted) {
+                return;
+            }
+            
+            var aid = tr.get('aid') || tr.get('pkg-id') || tr.get('lkb-id');
+            
+            // 直接读取obj层的part_mjz_discount
+            var partMjzDiscount = 0;
+            
+            // 根据商品类型获取对应的part_mjz_discount字段
+            if ($('goodspartmjz_'+aid)) {
+                partMjzDiscount = parseFloat($('goodspartmjz_'+aid).value || 0);
+            } else if ($('pkgpartmjz_'+aid)) {
+                partMjzDiscount = parseFloat($('pkgpartmjz_'+aid).value || 0);
+            } else if ($('pkopartmjz_'+aid)) {
+                partMjzDiscount = parseFloat($('pkopartmjz_'+aid).value || 0);
+            } else if ($('giftpackagepartmjz_'+aid)) {
+                partMjzDiscount = parseFloat($('giftpackagepartmjz_'+aid).value || 0);
+            } else if ($('lkbpartmjz_'+aid)) {
+                partMjzDiscount = parseFloat($('lkbpartmjz_'+aid).value || 0);
+            }
+            
+            if (partMjzDiscount > 0 || partMjzDiscount < 0) {
+                totalPartMjzDiscount += partMjzDiscount;
+            }
+        }
+    });
+    
+    // 如果有oid限制，仅同步订单优惠金额
+    if (hasOidLimit) {
+        pmt_order = totalPartMjzDiscount.toFixed(2);
+        // 更新输入框的值
+        $('pmt_order').set('value', pmt_order);
+    }
+
     //计算当前总金额(订单总金额 = sale_amount实际销售总金额 + cost_tax税金 + cost_protect保价费用 + cost_payment支付手续费 + service_price服务订单费用)
     total_amount = parseFloat(sale_amount) + parseFloat(cost_tax) + parseFloat(cost_protect) + parseFloat(cost_payment) + service_price;
     
@@ -435,19 +532,13 @@ function cal_discount(e)
    var _ca = e.getNext('.error');
    if (!/^[\d-]+(\.\d+)?$/.test(e.value)){
         if (!_ca){
-            new Element('span',{'class':"error caution notice-inline",html:"请录入负数值"}).injectAfter(e);
+            new Element('span',{'class':"error caution notice-inline",html:"请录入数值"}).injectAfter(e);
             return;
         }
    }else{
         if (_ca) _ca.remove();
-        
-        if (e.value > 0){
-            e.value = 0;
-            new Element('span',{'class':"error caution notice-inline",html:"请录入小于0的负数值"}).injectAfter(e);
-            return;
-        }
    }
-   
+
    var _ca = $('total_amount_show').getNext('.error');
    if (_ca) _ca.remove();
 

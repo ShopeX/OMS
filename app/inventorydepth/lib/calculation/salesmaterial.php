@@ -27,10 +27,12 @@ class inventorydepth_calculation_salesmaterial {
     protected $obj;
     protected $isInit = false;
     protected $releaseStock = [];
+    protected $shopFreeze = []; // 缓存店铺冻结数据，key为 sha1(shop_id.'-'.sm_id)
 
     public function init($salesmaterial) {
         $this->isInit = true;
         $this->releaseStock = [];
+        $this->shopFreeze = [];
         $smBn = [];
         foreach ($salesmaterial as $key => $value) {
             $smBn[] = $value['sales_material_bn'];
@@ -40,6 +42,30 @@ class inventorydepth_calculation_salesmaterial {
             foreach ($list as $l) {
                 $tmpsha1 = sha1($l['shop_bn'].'-'.$l['shop_product_bn']);
                 $this->releaseStock[$tmpsha1] = (int)$l['release_stock'];
+            }
+        }
+        
+        // 批量查询冻结数据
+        $smIds = [];
+        foreach ($salesmaterial as $key => $value) {
+            $smIds[] = $value['sm_id'];
+        }
+        
+        if (!empty($smIds)) {
+            $smIds = array_unique($smIds);
+            
+            $orderObjectsFreezeModel = app::get('ome')->model('order_objects_freeze');
+            $freezeList = $orderObjectsFreezeModel->getList('sm_id,shop_id,quantity', [
+                'sm_id|in' => $smIds
+            ]);
+            
+            // 按 sm_id 和 shop_id 汇总
+            foreach ($freezeList as $freeze) {
+                $key = sha1($freeze['shop_id'].'-'.$freeze['sm_id']);
+                if (!isset($this->shopFreeze[$key])) {
+                    $this->shopFreeze[$key] = 0;
+                }
+                $this->shopFreeze[$key] += (int)$freeze['quantity'];
             }
         }
     }
@@ -74,6 +100,54 @@ class inventorydepth_calculation_salesmaterial {
         }
         $this->releaseStock[$sha1] = (int)$release_stock > 0 ? (int)$release_stock : 0;
         return [$this->releaseStock[$sha1], []];
+    }
+
+    /**
+     * 获取销售物料店铺冻结数量
+     * @param array $sku 包含 shop_product_bn, shop_id, shop_bn
+     * @return array [冻结数量, 详细信息]
+     */
+    public function get_sales_material_shop_freeze($sku)
+    {
+        $shop_product_bn = $sku['shop_product_bn'];
+        $shop_id = $sku['shop_id'];
+        
+        // 获取销售物料信息
+        $basicObj = kernel::single('inventorydepth_calculation_basicmaterial');
+        $salesMaterial = $basicObj->getSalesMaterial($shop_product_bn, $shop_id);
+        
+        if (empty($salesMaterial)) {
+            return [0, ['warning' => '未找到销售物料']];
+        }
+        
+        $sm_id = $salesMaterial['sm_id'];
+        
+        $key = sha1($shop_id.'-'.$sm_id);
+        
+        if (isset($this->shopFreeze[$key])) {
+            return [$this->shopFreeze[$key], ['info' => '销售物料店铺冻结', 'quantity' => $this->shopFreeze[$key]]];
+        }
+        
+        if ($this->isInit) {
+            return [0, ['warning' => '初始化未查到']];
+        }
+        
+        // 如果未初始化，则查询数据库
+        $orderObjectsFreezeModel = app::get('ome')->model('order_objects_freeze');
+        $freezeList = $orderObjectsFreezeModel->getList('quantity', [
+            'sm_id' => $sm_id,
+            'shop_id' => $shop_id
+        ]);
+        
+        $totalFreeze = 0;
+        foreach ($freezeList as $freeze) {
+            $totalFreeze += (int)$freeze['quantity'];
+        }
+        
+        $freezeQuantity = (int)$totalFreeze;
+        $this->shopFreeze[$key] = $freezeQuantity;
+        
+        return [$freezeQuantity, ['info' => '销售物料店铺冻结', 'quantity' => $freezeQuantity]];
     }
 
     /**

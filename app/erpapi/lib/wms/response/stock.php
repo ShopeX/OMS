@@ -14,8 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
+/**
+* 库存对账
+*
+* @copyright shopex.cn 2013.04.08
+* @author dongqiujing<123517746@qq.com>
+*/
 class erpapi_wms_response_stock extends erpapi_wms_response_abstract
 {    
     /**
@@ -87,6 +91,7 @@ class erpapi_wms_response_stock extends erpapi_wms_response_abstract
                     'produce_code'  => $val['produceCode'],
                     'expire_date'   => $val['expireDate'],
                     'change_time'   => $val['changeTime'],
+                    'out_biz_code'  => $val['outBizCode'],
                     'sn_list'       => $val['sn_list'] ? json_encode($val['sn_list'], JSON_UNESCAPED_UNICODE) : '',
                     'wms_node_id'   => $this->__channelObj->wms['node_id'],
                     

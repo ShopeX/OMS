@@ -41,20 +41,52 @@
 		  </div>
           </div>
 		  <script>
-				$$('#finder-header-<{$name}> .col-select-opt').addEvents({
-					'click':function(e){
-						if(e.target.match('input'))return;
-						var menu = this.retrieve('dropmenu',this.getElement('.x-drop-menu'));
-						menu.setStyles({
-								top:(this.getPosition('workground').y+this.offsetHeight.toInt()),
-								left:this.getPosition('workground').x
-						});
-						menu.style.display= (menu.style.display=="block"?'none':'block');
-					},
-					'mouseleave':function(){
-						this.retrieve('dropmenu',this.getElement('.x-drop-menu')).hide();
+				(function(){
+					var trigger = $$('#finder-header-<{$name}> .col-select-opt')[0];
+					if(!trigger) return;
+					var menu = trigger.getElement('.x-drop-menu');
+					if(!menu) return;
+					trigger.store('dropmenu', menu);
+					// 显示时注入到 body，避免被 finder-header-wrapper 的 overflow:hidden 裁剪
+					function showMenu(){
+						if(menu.getParent() !== document.body){
+							menu.inject(document.body);
+						}
+						var top, left;
+						if(trigger.getBoundingClientRect){
+							var rect = trigger.getBoundingClientRect();
+							top = (rect.bottom != null ? rect.bottom : rect.top + trigger.offsetHeight);
+							left = (rect.left != null ? rect.left : rect.x);
+						} else {
+							var scroll = window.getScroll();
+							var pos = trigger.getPosition();
+							top = pos.y + trigger.offsetHeight - scroll.y;
+							left = pos.x - scroll.x;
+						}
+						menu.setStyle('position', 'fixed');
+						menu.setStyles({ top: top + 'px', left: left + 'px', zIndex: 9999 });
+						menu.style.display = 'block';
 					}
-				});
+					function hideMenu(){ menu.style.display = 'none'; }
+					function bindDocClose(){
+						var docClick = function(e){
+							var t = e.target;
+							if(trigger.contains(t)) return;
+							hideMenu();
+							document.removeEvent('click', docClick);
+						};
+						setTimeout(function(){ document.addEvent('click', docClick); }, 0);
+					}
+					trigger.addEvent('click', function(e){
+						if(e.target && e.target.match && e.target.match('input')) return;
+						if(menu.style.display === 'block'){
+							hideMenu();
+							return;
+						}
+						showMenu();
+						bindDocClose();
+					});
+				})();
 		  </script>
           <{/if}>
         </td>

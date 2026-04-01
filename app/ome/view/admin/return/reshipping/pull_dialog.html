@@ -1,0 +1,129 @@
+<div class="tableform">
+    <form id="pullForm" method="post" action="index.php?app=ome&ctl=admin_return_reshipping&act=doPull">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+            <tr>
+                <th>
+                    <{t}>店铺：<{/t}>
+                </th>
+                <td>
+                    <select name="shop_id" id="shop_id" style="width:300px;">
+                        <option value="">请选择店铺</option>
+                        <{foreach from=$shops item=shop}>
+                        <option value="<{$shop.shop_id}>"><{$shop.name}></option>
+                        <{/foreach}>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <th>
+                    <{t}>补寄单号：<{/t}>
+                </th>
+                <td>
+                    <input type="text" name="dispute_id" id="dispute_id" style="width:300px;" placeholder="请输入补寄单号（dispute_id）" />
+                </td>
+            </tr>
+        </table>
+    </form>
+</div>
+
+<div class="table-action">
+    <button type="button" id="submit_btn" class="btn" onclick="doPull()">确定</button>
+    <button type="button" id="close_btn" class="btn" onclick="closeDialog()">取消</button>
+</div>
+
+<script>
+// 初始化 tail.select 搜索功能
+Ex_Loader("tail.select", function(){
+    tail.select('#shop_id', {
+        search: true,
+        width: 'auto',
+        height: 200,
+        searchMinLength: 0,
+        searchFocus: true,
+        searchMarked: true,
+        locale: 'zh'
+    });
+});
+
+function doPull() {
+    var shopId = $('shop_id').value;
+    var disputeId = $('dispute_id').value.trim();
+    
+    if (!shopId) {
+        alert('请选择店铺');
+        return;
+    }
+    
+    if (!disputeId) {
+        alert('请输入补寄单号');
+        return;
+    }
+    
+    // 禁用按钮
+    var btn = $('submit_btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '处理中...';
+    }
+    
+    // AJAX 提交
+    new Request({
+        url: 'index.php?app=ome&ctl=admin_return_reshipping&act=doPull',
+        method: 'post',
+        data: {
+            shop_id: shopId,
+            dispute_id: disputeId
+        },
+        onRequest: function() {
+            MessageBox.show('处理中...');
+        },
+        onComplete: function(response) {
+            try {
+                var result = JSON.parse(response);
+                if (result.rsp == 'succ') {
+                    MessageBox.success(result.msg || '单拉成功');
+                    // 关闭对话框并刷新列表
+                    var dialog = $('pullForm').getParent('.dialog').retrieve('instance');
+                    if (dialog) {
+                        dialog.close();
+                    }
+                    // 刷新finder列表
+                    var finderId = window.location.href.match(/finder_id=([^&]*)/);
+                    if (finderId && finderId[1] && window.finderGroup && window.finderGroup[finderId[1]]) {
+                        window.finderGroup[finderId[1]].refresh();
+                    } else {
+                        window.location.reload();
+                    }
+                } else {
+                    MessageBox.error(result.msg || '单拉失败');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '确定';
+                    }
+                }
+            } catch (e) {
+                MessageBox.error('处理失败：' + response);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '确定';
+                }
+            }
+        },
+        onFailure: function() {
+            MessageBox.error('请求失败，请重试');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '确定';
+            }
+        }
+    }).send();
+}
+
+function closeDialog() {
+    var dialog = $('pullForm').getParent('.dialog').retrieve('instance');
+    if (dialog) {
+        dialog.close();
+    }
+}
+</script>
+

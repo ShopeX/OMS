@@ -127,9 +127,7 @@ class ome_mdl_product_serial_history extends dbeav_model{
                 FROM sdb_ome_delivery_order as deo
                 LEFT JOIN sdb_ome_delivery AS d ON deo.delivery_id = d.delivery_id
                 WHERE deo.order_id={$order_id}
-                AND (d.parent_id=0 OR d.is_bind='true')
-         
-                AND d.status IN('succ')";
+                AND (d.parent_id=0 OR d.is_bind='true')";
         $delivery = kernel::database()->select($sql);
         if ($delivery){
             $delivery_list[$order_bn] = array_map('current', $delivery);
@@ -170,8 +168,10 @@ class ome_mdl_product_serial_history extends dbeav_model{
         $order_info = app::get('ome')->model('orders')->select()->columns('order_id')->where('order_bn=?',$order_bn)->instance()->fetch_row();
         if ($order_info){
             $order_detail[$order_bn] = $order_info['order_id'];
-            return $order_detail[$order_bn];
+        } else {
+            $order_detail[$order_bn] = -1;
         }
+        return $order_detail[$order_bn];
     }
 
     /**

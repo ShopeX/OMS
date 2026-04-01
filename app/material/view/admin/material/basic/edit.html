@@ -97,7 +97,7 @@
                     <{if $readonly.type == 1}>
                         <{$material_info.material_bn}><input type="hidden" name="material_bn" value="<{$material_info.material_bn}>" >
                     <{else}>
-                        <input class="form-input" placeholder="请输入物料编号" type="text" name="material_bn" vtype="required"  onkeyup="value=value.replace(/[^A-Za-z0-9_-\/]/ig,'')" value="<{$material_info.material_bn}>" />
+                        <input class="form-input" placeholder="请输入物料编号" type="text" name="material_bn" vtype="required"  onkeyup="value=value.replace(/[^A-Za-z0-9_-\/ ]/ig,'')" value="<{$material_info.material_bn}>" />
                     <{/if}>
                 </div>
                 <div class="form-field">
@@ -165,6 +165,18 @@
                     </div>
                     <span style="color:red;">*支持门店销售，需要开启此配置项。</span>
                 </div>
+
+                <div class="form-field">
+                    <span class="form-field-label">是否管控库存：</span>
+                    <div class="form-radios">
+                        <input id="is_ctrl_store01" name="is_ctrl_store" type="radio" <{if $material_info.is_ctrl_store != 2}>checked="checked"<{/if}> value="1">
+                        <label for="is_ctrl_store01">是</label>
+                        <input id="is_ctrl_store02" name="is_ctrl_store" type="radio" <{if $material_info.is_ctrl_store == 2}>checked="checked"<{/if}> value="2">
+                        <label for="is_ctrl_store02" >否</label>
+                    </div>
+                    <span style="color:red;">*审核订单时，是否需要管控库存。</span>
+                </div>
+
                 <div class="form-field">
                     <span class="form-field-label">所属公司业务组织：</span>
                     <select class="form-input" placeholder="请选择" name="bbu_info">
@@ -437,14 +449,17 @@
         window.addEvent('domready', function() {
             $ES('input[name=type]').each(function(item){
                 item.addEvent('click',function(e){
-                    if(this.value == '1'){
+                    if(this.value == '1' || this.value == '4'){
                         $('combination_items').setStyle('display','block');
                     }else{
                         $('combination_items').setStyle('display','none');
                     }
                 });
 
-                if((item.checked || item.getProperty('type') == 'hidden') && item.getValue() == 2){
+                // 初始化：成品(1)和礼盒(4)显示关联半成品/普通物料信息，其他类型隐藏
+                if((item.checked || item.getProperty('type') == 'hidden') && (item.getValue() == '1' || item.getValue() == '4')){
+                    $('combination_items').setStyle('display','block');
+                }else if(item.checked || item.getProperty('type') == 'hidden'){
                     $('combination_items').setStyle('display','none');
                 }
             });
@@ -498,7 +513,7 @@
                     +'</tr>';
 
             $('material-find-btn').addEvent('click',function(e){
-                var material_type = "<{$material_info.type}>";
+                var material_type = $$('input[name=type]:checked').get('value');
                 var type = 2;
                 if (material_type == 4){
                     type ='giftpackage';

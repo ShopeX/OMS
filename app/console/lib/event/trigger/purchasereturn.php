@@ -44,7 +44,7 @@ class console_event_trigger_purchasereturn extends console_event_trigger_stockou
             'create_time'=> $purchaseReturn['returned_time'],
             'total_goods_fee'=> $purchaseReturn['amount'],
             'branch_id'=>$branch_id,
-            
+            'branch_type'=>$branch_detail['type'],
             'supplier_id'=>$supplier_id,
             );
         if ($purchaseReturn['corp_id']) {

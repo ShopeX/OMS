@@ -16,11 +16,12 @@
  */
 
 class finance_finder_monthly_report_items{
-    var $addon_cols = "order_bn,monthly_id";
+    var $addon_cols = "order_bn,monthly_id,sales_gap,refund_gap";
 
 	var $column_edit = "操作";
     var $column_edit_width = "150";
     var $column_edit_order=5;
+    
     function column_edit($row){
         $confhref = '';
         $row['monthly_id'] = $row[$this->col_prefix.'monthly_id'];

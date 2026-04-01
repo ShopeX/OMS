@@ -26,12 +26,6 @@ class ome_mdl_order_items extends dbeav_model
         'pko'         => '多选一',
     );
     
-    /**
-     * 获取ItemDetail
-     * @param mixed $bn bn
-     * @param mixed $order_id ID
-     * @return mixed 返回结果
-     */
     public function getItemDetail($bn, $order_id)
     {
         $aGoods = $this->db->select('SELECT i.*,nums-sendnum AS send,sendnum AS resend,p.store FROM sdb_ome_order_items i
@@ -40,11 +34,6 @@ class ome_mdl_order_items extends dbeav_model
         return $aGoods[0];
     }
 
-    /**
-     * 获取OrderIdByPbn
-     * @param mixed $product_bn product_bn
-     * @return mixed 返回结果
-     */
     public function getOrderIdByPbn($product_bn)
     {
         $sql   = 'SELECT count(1) as _c FROM sdb_ome_order_items WHERE bn like \'' . addslashes($product_bn) . '%\'';
@@ -69,11 +58,6 @@ class ome_mdl_order_items extends dbeav_model
         return $rows;
     }
 
-    /**
-     * 获取OrderIdByPbarcode
-     * @param mixed $product_barcode product_barcode
-     * @return mixed 返回结果
-     */
     public function getOrderIdByPbarcode($product_barcode)
     {
         $sql = 'SELECT count(1) as _c FROM sdb_ome_order_items as I LEFT JOIN ' .
@@ -150,7 +134,7 @@ class ome_mdl_order_items extends dbeav_model
     }
 
     /**
-     * 
+     *
      */
     public function getOrderIdByPkgbn($product_bn)
     {
@@ -177,26 +161,32 @@ class ome_mdl_order_items extends dbeav_model
     }
 
     /**
-     * 获取OrderIdByPkgbnEq
-     * @param mixed $filter filter
-     * @return mixed 返回结果
+     * 按销售物料(bn)查询相关订单，关联主表并应用其他筛选条件，避免数据量过大导致内存溢出
      */
     public function getOrderIdByPkgbnEq($filter)
     {
-        $where      = 1;
-        $product_bn = $filter['product_bn'];
+        $orderObj     = app::get('ome')->model('orders');
+        $searchfilter = $filter;
+        $product_bn   = $filter['product_bn'];
+
+        $where = 1;
         if (is_array($product_bn)) {
             $where = 'in (\'' . implode('\',\'', $product_bn) . '\')';
         } else {
             $where = '= \'' . $product_bn . '\'';
         }
-        $sql   = 'SELECT count(1) as _c FROM sdb_ome_order_objects WHERE bn ' . $where;
+        unset($searchfilter['product_bn'], $searchfilter['sales_material_bn']);
+        $order_filter = $orderObj->_filter($searchfilter);
+        $order_filter = str_replace('`sdb_ome_orders`', 'o', $order_filter);
+        $order_filter = str_replace('order_id', 'o.order_id', $order_filter);
+
+        $sql   = 'SELECT count(1) as _c FROM sdb_ome_order_objects as obj LEFT JOIN sdb_ome_orders as o ON obj.order_id=o.order_id WHERE obj.bn ' . $where . ' AND' . $order_filter;
         $count = $this->db->selectrow($sql);
         if ($count['_c'] >= 10000) {
             $offset = 0;
             $limit  = 9000;
             $list   = array();
-            $sql    = 'SELECT order_id FROM sdb_ome_order_objects WHERE bn ' . $where;
+            $sql    = 'SELECT obj.order_id FROM sdb_ome_order_objects as obj LEFT JOIN sdb_ome_orders as o ON obj.order_id=o.order_id WHERE obj.bn ' . $where . ' AND ' . $order_filter;
             $total  = floor($count['_c'] / $limit);
             for ($i = $total; $i >= 0; $i--) {
                 $rows = $this->db->selectlimit($sql, $limit, $i * $limit);
@@ -207,7 +197,7 @@ class ome_mdl_order_items extends dbeav_model
             return $list;
         }
 
-        $sql  = 'SELECT order_id FROM sdb_ome_order_objects WHERE bn ' . $where;
+        $sql  = 'SELECT obj.order_id FROM sdb_ome_order_objects as obj LEFT JOIN sdb_ome_orders as o ON obj.order_id=o.order_id WHERE obj.bn ' . $where . ' AND ' . $order_filter;
         $rows = $this->db->select($sql);
 
         return $rows;
@@ -250,11 +240,6 @@ class ome_mdl_order_items extends dbeav_model
         return $rows;
     }
 
-    /**
-     * 获取OrderIdByFilterbnEq
-     * @param mixed $filter filter
-     * @return mixed 返回结果
-     */
     public function getOrderIdByFilterbnEq($filter)
     {
         $orderObj = app::get('ome')->model('orders');
@@ -295,13 +280,6 @@ class ome_mdl_order_items extends dbeav_model
         return $rows;
     }
 
-    /**
-     * 更新SplitNum
-     * @param mixed $itemId ID
-     * @param mixed $num num
-     * @param mixed $op op
-     * @return mixed 返回值
-     */
     public function updateSplitNum($itemId, $num, $op)
     {
         $updateSql = 'update sdb_ome_order_items set split_num = ';
@@ -321,10 +299,10 @@ class ome_mdl_order_items extends dbeav_model
 
     /**
      * 判断订单是否已经拆分（已弃用，可以使用getProcessStatus方法）
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     public function is_splited($order_id)
     {
         $row = $this->db->selectrow('SELECT item_id FROM sdb_ome_order_items WHERE order_id=' . $order_id . ' AND nums > split_num AND `delete`="false"');
@@ -358,6 +336,7 @@ class ome_mdl_order_items extends dbeav_model
         
         //防止订单编辑与生成发货单并发导致错误  更新订单修改标识
         $orderMdl->update(array('is_modify'=>'true'), array('order_id'=>$order_id));
+        
         //订单信息
         $order = $orderMdl->dump($order_id, "*", array("order_objects" => array("*", array("order_items" => array('*')))));
         $object = array_column($order['order_objects'], null, 'bn');
@@ -593,6 +572,10 @@ class ome_mdl_order_items extends dbeav_model
                         'sale_price'        => $objectInfo['sale_price'],
                         'divide_order_fee'  => $objectInfo['divide_order_fee'],
                         'part_mjz_discount' => $objectInfo['part_mjz_discount'],
+                        'settlement_amount' => $objectInfo['settlement_amount'],
+                        'actually_amount' => $objectInfo['actually_amount'],
+                        'platform_pay_amount' => $objectInfo['platform_pay_amount'],
+                        'platform_amount' => $objectInfo['platform_cost_amount'],
                         'oid' => $objectInfo['oid'],
                         'main_oid' => $objectInfo['main_oid'],
                         'estimate_con_time' => $objectInfo['estimate_con_time'],
@@ -789,14 +772,6 @@ class ome_mdl_order_items extends dbeav_model
         return true;
     }
     
-    /**
-     * conver
-     * @param mixed $salesMaterial salesMaterial
-     * @param mixed $object object
-     * @param mixed $order_id ID
-     * @param mixed $old_bn old_bn
-     * @return mixed 返回值
-     */
     public function conver($salesMaterial, $object, $order_id, $old_bn) {
         $salesMLib             = kernel::single('material_sales_material');
         $basicMStockLib       = kernel::single('material_basic_material_stock');

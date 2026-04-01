@@ -74,6 +74,16 @@ class ome_finder_extend_filter_return_product{
                     'filtertype' => 'normal',
                     'filterdefault' => true,
                 ),
+                'product_bn' => array (
+                    'type' => 'varchar(30)',
+                    'label' => '基础物料编码',
+                    'width' => 85,
+                    'filtertype' => 'textarea',
+                    'filterdefault' => true,
+                    'editable' => false,
+                    'in_list' => true,
+                    'default_in_list' => true,
+                ),
             )
         );
         return $db;

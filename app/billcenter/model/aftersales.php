@@ -50,7 +50,7 @@ class billcenter_mdl_aftersales extends dbeav_model
         
         foreach ($data['items'] as $key => $item) {
             if (!$item['material_bn']){
-                return [false, '商品编码为空'];
+                return [false, '基础物料编码为空'];
             }
             
             if (!$item['bm_id']) {

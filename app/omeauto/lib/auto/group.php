@@ -161,30 +161,87 @@ class omeauto_auto_group {
      */
     public function process($inletClass) {
 
+        // 如果没有订单项，直接返回空结果
+        if (empty($this->items)) {
+            return array('total' => 0, 'succ' => 0, 'fail' => 0);
+        }
+
         $confirmRoles = $this->getRoles();
         $confirmRoles['inlet_class'] = $inletClass;
         $plugins = $this->getPluginNames($inletClass);
+
+        // 获取第一个订单号用于记录
+        $originalBn = '';
+        if (!empty($this->items)) {
+            $orders = $this->items[0]->getOrders();
+            $firstOrder = current($orders);
+            $originalBn = $firstOrder['order_bn'] ?? '';
+        }
+
+        // 开始性能监控
+        ome_api_log::record_start('订单审核', $originalBn, 'omeauto_auto_group');
+
+        $pluginTimings = array();
 
         foreach ($plugins as $plugName) {
 
             $plugObj = $this->initPlugin($plugName);
             if (is_object($plugObj)) {
                 foreach ((array) $this->items as $key => $item) {
-
-                    $plugObj->process($this->items[$key], $confirmRoles);
+                    // 记录单个插件执行开始时间
+                    $pluginStartTime = microtime(true);
+                    
+                    $pluginResult = $plugObj->process($this->items[$key], $confirmRoles);
+                    
+                    // 如果插件返回了性能数据，记录到性能日志
+                    if (is_array($pluginResult) && isset($pluginResult['execution_time'])) {
+                        ome_api_log::add_message('plugin', $plugName, $pluginResult['execution_time'], $pluginResult);
+                        $pluginExecutionTime = $pluginResult['execution_time'];
+                    } else {
+                        // 否则使用外层计算的时间
+                        $pluginExecutionTime = microtime(true) - $pluginStartTime;
+                        ome_api_log::add_message('plugin', $plugName, $pluginExecutionTime, array('total_orders' => count($this->items)));
+                    }
+                    
+                    // 累加插件执行时间
+                    if (!isset($pluginTimings[$plugName])) {
+                        $pluginTimings[$plugName] = 0;
+                    }
+                    $pluginTimings[$plugName] += $pluginExecutionTime;
                 }
             }
         }
 
+
         $result = array('total' => 0, 'succ' => 0, 'fail' => 0);
+        
+        // 记录订单组处理开始时间
+        $groupProcessStart = microtime(true);
+        
         foreach ((array) $this->items as $key => $group) {
             $result['total'] += $group->orderNums;
-            if ($group->process($confirmRoles)) {
+            
+            $groupResult = $group->process($confirmRoles);
+            
+            if ($groupResult) {
                 $result['succ'] += $group->orderNums;
             } else {
                 $result['fail'] += $group->orderNums;
             }
         }
+        
+        // 计算订单组处理时间
+        $groupProcessTime = microtime(true) - $groupProcessStart;
+
+        // 记录订单组性能数据
+        ome_api_log::add_message('group', 'order_group', $groupProcessTime, array(
+            'total_orders' => $result['total'],
+            'success_orders' => $result['succ'],
+            'failed_orders' => $result['fail']
+        ));
+
+        // 结束性能监控
+        ome_api_log::record_end();
 
         return $result;
     }
@@ -210,6 +267,7 @@ class omeauto_auto_group {
         }
         return self::$_plugObjects[$fix];
     }
+
 
     /**
      * @param string $inletClass 入口类区分
@@ -376,5 +434,6 @@ class omeauto_auto_group {
 
         $this->filter = array();
     }
+
 
 }

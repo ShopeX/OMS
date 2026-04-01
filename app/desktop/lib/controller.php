@@ -838,19 +838,14 @@ JS;
 
     }
 
-        /**
-     * returnJson
-     * @param array $data 数据
-     * @param mixed $status status
-     * @param mixed $msg msg
-     * @return mixed 返回值
-     */
-    public function returnJson(array $data,$status = true,$msg = '')
+    public function returnJson(array $data,$status = true,$msg = '',$code = 200)
     {
         $params = [
-            'rsp'  => $status ? 'succ' : 'fail',
-            'msg'  => $msg ? $msg : $status,
-            'data' => $data
+            'rsp'       => $status ? 'succ' : 'fail',
+            'msg'       => $msg ? $msg : $status,
+            'data'      => $data,
+            'code'      => $code,
+            'message'   => $msg ? $msg : $status,
         ];
         $this->splash($status ? 'success' : 'fail', null, $msg, 'redirect', $params);
     }
@@ -874,11 +869,15 @@ JS;
      * 订单单切片导入页面
      * @date 2024-10-11 4:05 下午
      */
-    public function displayImportV2($type='')
+    public function displayImportV2($type='', $extraParams=[])
     {
         $finder_id = $_GET['_finder']['finder_id'];
         $this->pagedata['type']           = $type;
         $this->pagedata['download_url']   = sprintf('index.php?app=%s&ctl=%s&act=exportTemplateV2&finder_id=%s', $_GET['app'], $_GET['ctl'], $finder_id);
+        
+        // 传递额外参数到模板
+        $this->pagedata['extra_hidden_fields'] = $extraParams;
+        
         $this->display('admin/order/order_import.html', 'ome');
     }
     

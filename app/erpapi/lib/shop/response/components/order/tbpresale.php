@@ -60,11 +60,11 @@ class erpapi_shop_response_components_order_tbpresale extends erpapi_shop_respon
     {
 
         if($this->_platform->_tgOrder['order_type'] == 'presale') {
+            $order_id = $this->_platform->_tgOrder['order_id'];
             if($this->_platform->_ordersdf['step_trade_status'] == 'FRONT_PAID_FINAL_PAID'){
 
                 $this->_platform->_newOrder['step_trade_status'] = $this->_platform->_ordersdf['step_trade_status'];
                 //查看扩展表里状态是否为1如果为1 需要更新状态
-                $order_id = $this->_platform->_tgOrder['order_id'];
                 $extendObj = app::get('ome')->model('order_extend');
                 $extend = $extendObj->dump(array('order_id'=>$order_id));
                 if ($extend['presale_auto_paid']>0 && $extend['presale_pay_status'] == '1'){

@@ -16,7 +16,7 @@
  */
 
 /***
- * 导入供应商货品数据
+ * 导入供应商基础物料数据
  */
 class purchase_supplier_goods_to_import
 {

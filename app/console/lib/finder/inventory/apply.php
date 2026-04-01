@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class console_finder_inventory_apply{
    
     var $detail_item = "详情";
@@ -38,11 +37,6 @@ class console_finder_inventory_apply{
     }
     
     public $detail_oplog = "操作记录";
-    /**
-     * detail_oplog
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function detail_oplog($id){
         $render = app::get('console')->render();
         $opObj  = app::get('ome')->model('operation_log');
@@ -56,21 +50,21 @@ class console_finder_inventory_apply{
 
     var $column_operation = '操作';
     var $column_operation_width = 70;
-    /**
-     * column_operation
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_operation($row){
         $apply_id = $row['inventory_apply_id'];
         $inv_aObj = app::get('console')->model('inventory_apply');
         $info = $inv_aObj->dump($apply_id);
+        if (empty($info)) {
+            return '';
+        }
         $id = $info['inventory_apply_id'];
-        $fid = $_GET['_finder']['finder_id'];
-        
-        if (in_array($info['status'], ['unconfirmed', 'confirming'])){
+        $fid = isset($_GET['_finder']['finder_id']) ? $_GET['_finder']['finder_id'] : '';
+        $return = '';
+        if ($info['status'] == 'unconfirmed') {
             $return = ' <a href="index.php?app=console&ctl=admin_inventory_apply&act=do_confirm&p[0]='.$id.'&finder_id='.$fid.'" target="_blank">确认</a>';
             $return .= ' | '.sprintf('<a href="javascript:if (confirm(\'确认要关闭吗？\')){W.page(\'index.php?app=console&ctl=admin_inventory_apply&act=do_close&p[0]=%s&finder_id=%s\', $extend({method: \'get\'}, JSON.decode({})), this);}void(0);" target="">关闭</a>',$id,$fid);
+        } elseif ($info['status'] == 'confirming') {
+            $return = ' '.sprintf('<a href="javascript:if (confirm(\'确认要关闭吗？\')){W.page(\'index.php?app=console&ctl=admin_inventory_apply&act=do_close&p[0]=%s&finder_id=%s\', $extend({method: \'get\'}, JSON.decode({})), this);}void(0);" target="">关闭</a>',$id,$fid);
         }
 
         return $return;
@@ -78,11 +72,6 @@ class console_finder_inventory_apply{
 
 
     public $detail_useful = "有效期列表";
-    /**
-     * detail_useful
-     * @param mixed $apply_id ID
-     * @return mixed 返回值
-     */
     public function detail_useful($apply_id){
         $render = app::get('console')->render();
         $inv_aiObj = app::get('console')->model('inventory_apply_items');

@@ -330,11 +330,11 @@ class financebase_data_bill_alipay extends financebase_abstract_bill
         $title = array_values($this->getTitle());
         sort($title);
 
-        $aliTitle = $row[1];
+        /* $aliTitle = $row[1];
         sort($aliTitle);
         if ($title == $aliTitle) {
             return array(true, '文件模板匹配', $row[1]);
-        }
+        } */
 
         $aliTitle = $row[4];
         sort($aliTitle);

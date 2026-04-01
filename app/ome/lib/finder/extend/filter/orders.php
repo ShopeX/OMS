@@ -383,6 +383,26 @@ class ome_finder_extend_filter_orders{
                     'in_list' => true,
                     'default_in_list' => true,
                 ),
+                'seller_code' => array(
+                    'type'  => 'varchar(50)',
+                    'label' => '销售人员编码',
+                    'width' => 120,
+                    'filtertype' => 'normal',
+                    'filterdefault' => true,
+                    'editable' => false,
+                    'in_list' => true,
+                    'default_in_list' => true,
+                ),
+                'seller_name' => array(
+                    'type'  => 'varchar(50)',
+                    'label' => '销售人员名称',
+                    'width' => 160,
+                    'filtertype' => 'normal',
+                    'filterdefault' => true,
+                    'editable' => false,
+                    'in_list' => true,
+                    'default_in_list' => true,
+                ),
             )
         );
         #只有财务那边的才用这个签收

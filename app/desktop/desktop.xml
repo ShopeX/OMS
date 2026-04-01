@@ -51,7 +51,7 @@
     <adminpanel group="desktop_other" permission="performance" controller="cachemgr" action="optimize" display='false'>优化缓存</adminpanel>
     <adminpanel group="desktop_other" permission="performance" controller="cachemgr" action="clean" display='false'>清空缓存</adminpanel>
     <adminpanel group="desktop_setting" permission="shopsetting" controller="appmgr" display='true' order="20">应用中心</adminpanel>
-    <adminpanel group="desktop_other" permission="other" controller="rpcnotify" display='true'>通知</adminpanel>
+    <!-- <adminpanel group="desktop_other" permission="other" controller="rpcnotify" display='true'>通知</adminpanel> -->
 
     <adminpanel group="desktop_other" permission="other" controller="shoprelation" display='false'>网店邻居</adminpanel>
 
@@ -67,6 +67,7 @@
         <permission id="user_roles_edit" display='true'>角色编辑</permission>
         <permission id="user_roles_add" display='true'>角色新增</permission>
         <permission id="page_config_setting" display='true'>页面配置项</permission>
+        <permission id="message_notify" display='true'>消息通知</permission>
     </permissions>
 
     <workground name="控制面板" id="adminpanel" order="1800" icon="icon-kongzhimianban-01">
@@ -87,7 +88,7 @@
         </workground>
 
         <menugroup name="其他" en="other">
-            <menu controller='rpcnotify' permission='other' display='true'>消息通知</menu>
+            <menu controller='rpcnotify' permission='message_notify' display='true'>消息通知</menu>
             <menu controller='queue' permission='performance' display='true'>队列列表</menu>
         </menugroup>
     </workground>

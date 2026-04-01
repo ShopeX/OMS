@@ -44,8 +44,18 @@ class erpapi_shop_matrix_weimobr_response_order extends erpapi_shop_response_ord
     protected function _analysis()
     {
         parent::_analysis();
+        
         //买家实付字段名
         $this->_ordersdf['coupon_actuallypay_field'] = 'extend_item_list/payAmount';
+        foreach ($this->_ordersdf['order_objects'] as &$object) {
+            $arrField = explode('/', $this->_ordersdf['coupon_actuallypay_field']);
+            $object['actually_amount'] = current($object['order_items'])[$arrField[0]][$arrField[1]];
+        }
+        
+        // custom_mark
+        if(empty($this->_ordersdf['custom_mark']) && $this->_ordersdf['buyer_memo']){
+            $this->_ordersdf['custom_mark'] = $this->_ordersdf['buyer_memo'];
+        }
     }
 
     /**

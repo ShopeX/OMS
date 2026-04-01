@@ -66,7 +66,14 @@ class omeauto_auto_group_item
     private $status = array('opt' => 0, 'log' => array());
 
     private $orderWeight;
-
+    
+    /**
+     * 发货单扩展信息
+     *
+     * @var array
+     */
+    private $_deliveryExtendInfo = array();
+    
     /**
      * 符合自动仓库规则
      *
@@ -490,7 +497,13 @@ class omeauto_auto_group_item
 
                 return;
             }
-
+            if($status == omeauto_auto_const::__STORE_CODE) {
+                $branch_id = 0;
+                if(is_array($this->getBranchId())) {
+                    $branch_id = current($this->getBranchId());
+                }
+                kernel::single('ome_order_store')->lackNotify($this->orders[$oId], $branch_id);
+            }
             if (isset($this->orderStatus[$oId])) {
 
                 $this->orderStatus[$oId] = $this->orderStatus[$oId] | $status;
@@ -536,7 +549,57 @@ class omeauto_auto_group_item
     {
         return $this->status;
     }
-
+    
+    /**
+     * 设置指定的发货单号
+     *
+     * @param Integer $branchId
+     * @return void
+     */
+    public function setAssignDeliveryBn($extendInfo)
+    {
+        if(isset($extendInfo['delivery_bn']) && $extendInfo['delivery_bn']){
+            $this->status['extendInfo']['delivery_bn'] = $extendInfo['delivery_bn'];
+        }else{
+            $this->status['extendInfo']['delivery_bn'] = '';
+        }
+    }
+    
+    /**
+     * 获取指定的发货单号
+     *
+     * @return String
+     */
+    public function getAssignDeliveryBn()
+    {
+        return $this->status['extendInfo']['delivery_bn'];
+    }
+    
+    /**
+     * 设置发货单扩展信息
+     *
+     * @param $extendInfo
+     * @return void
+     */
+    public function setDeliveryExtendInfo($extendInfo)
+    {
+        if($extendInfo){
+            $this->_deliveryExtendInfo = $extendInfo;
+        }else{
+            $this->_deliveryExtendInfo = [];
+        }
+    }
+    
+    /**
+     * 获取发货单扩展信息
+     *
+     * @return mixed
+     */
+    public function getDeliveryExtendInfo()
+    {
+        return $this->_deliveryExtendInfo;
+    }
+    
     /**
      * 检查订单组内容是否有效
      *
@@ -655,22 +718,46 @@ class omeauto_auto_group_item
      */
     public function process($config)
     {
-        
         if ($this->vaild($config)) {
             $bgData = $this->getBranchGroup();
             if($this->splitNotDly) {
+                $nodeStart = microtime(true);
                 foreach ($this->orders as $order) {
                     $return = $this->_processSplitNotDly($config, $order);
                 }
+                $nodeTime = microtime(true) - $nodeStart;
+                $orderIds = array_column($this->orders, 'order_id');
+                $orderBns = array_column($this->orders, 'order_bn');
+                ome_api_log::add_message('node', 'split_not_dly', $nodeTime, array(
+                    'order_ids' => $orderIds,
+                    'order_bns' => $orderBns
+                ));
             } elseif ($bgData) {
+                $nodeStart = microtime(true);
                 $return = $this->_processBranchGroupConfirm($config);
+                $nodeTime = microtime(true) - $nodeStart;
+                $orderIds = array_column($this->orders, 'order_id');
+                $orderBns = array_column($this->orders, 'order_bn');
+                ome_api_log::add_message('node', 'branch_group_confirm', $nodeTime, array(
+                    'order_ids' => $orderIds,
+                    'order_bns' => $orderBns
+                ));
             } else {
+                $nodeStart = microtime(true);
                 $return = $this->_processConfirm($config);
+                $nodeTime = microtime(true) - $nodeStart;
+                $orderIds = array_column($this->orders, 'order_id');
+                $orderBns = array_column($this->orders, 'order_bn');
+                ome_api_log::add_message('node', 'process_confirm', $nodeTime, array(
+                    'order_ids' => $orderIds,
+                    'order_bns' => $orderBns
+                ));
             }
             
             //虚拟商品拆单后自动完成发货
             $auto_dly = $this->isAutoDelivery();
             if($return && $auto_dly){
+                $nodeStart = microtime(true);
                 $queueObj = app::get('base')->model('queue');
                 
                 foreach ($this->orders as $order)
@@ -691,21 +778,53 @@ class omeauto_auto_group_item
                     );
                     $queueObj->save($queueData);
                 }
+                $nodeTime = microtime(true) - $nodeStart;
+                $orderIds = array_column($this->orders, 'order_id');
+                $orderBns = array_column($this->orders, 'order_bn');
+                ome_api_log::add_message('node', 'auto_delivery_queue', $nodeTime, array(
+                    'order_ids' => $orderIds,
+                    'order_bns' => $orderBns
+                ));
             }
             
         } else {
+            $nodeStart = microtime(true);
             $return = $this->_processDispatch($config);
+            $nodeTime = microtime(true) - $nodeStart;
+            $orderIds = array_column($this->orders, 'order_id');
+            $orderBns = array_column($this->orders, 'order_bn');
+            ome_api_log::add_message('node', 'process_dispatch', $nodeTime, array(
+                'order_ids' => $orderIds,
+                'order_bns' => $orderBns
+            ));
         }
+        
+        // 合单处理
         if ($this->combineOrderId) {
+            $nodeStart = microtime(true);
             kernel::single('ome_batch_log')->combineAgain($this->combineOrderId);
+            $nodeTime = microtime(true) - $nodeStart;
+            ome_api_log::add_message('node', 'combine_again', $nodeTime, array(
+                'order_ids' => $this->combineOrderId
+            ));
         }
+        
+        // 拆单处理
         if ($this->splitOrderId) {
+            $nodeStart = microtime(true);
             kernel::single('ome_batch_log')->split($this->splitOrderId);
+            $nodeTime = microtime(true) - $nodeStart;
+            ome_api_log::add_message('node', 'split_log', $nodeTime, array(
+                'order_ids' => $this->splitOrderId
+            ));
         }
+        
         return $return;
     }
 
+
     private function _processSplitNotDly($config, $order) {
+        $split_status = '';
         list($rs, $msg) = kernel::single('ome_order_platform_split')->dealOrderObjects($order, $split_status);
         if(!$rs) {
             $logMsg = sprintf('订单拆分失败:%s,审单规则:%s(%s),仓库规则:%s(%s)', $msg, $config['confirmName'], $config['confirmId'], (string) $this->_autobranch['name'], $this->_autobranch['tid'] ? $this->_autobranch['tid'] : '-');
@@ -827,7 +946,15 @@ class omeauto_auto_group_item
                 $deliveryInfo['delivery_sub_waybillCode'] = $subWaybillCode;
                 unset($deliveryInfo['order_items']);
                 $split_status = '';
+                $addDeliveryStart = microtime(true);
                 $result       = $deliveryObj->addDelivery($orderId, $deliveryInfo, array(), $order_items, $split_status);
+                $addDeliveryTime = microtime(true) - $addDeliveryStart;
+                
+                // 记录addDelivery性能数据
+                ome_api_log::add_message('node', 'addDelivery', $addDeliveryTime, array(
+                    'order_id' => $orderId,
+                    'delivery_id' => $result['data'] ?? null
+                ));
                 if ($result['rsp'] == 'succ') {
 
                     $orderBranch[$orderId] = $deliveryInfo['branch_id'];
@@ -878,7 +1005,15 @@ class omeauto_auto_group_item
                         kernel::single('ome_o2o_performance_orders')->updateProcessStatus($orderId, 'confirm');
                     }
                     // 全链路审单/通知配货回流
+                    $messageStartTime = microtime(true);
                     kernel::single('ome_event_trigger_shop_order')->order_message_produce(array($orderId),['check','to_wms']);
+                    $messageTime = microtime(true) - $messageStartTime;
+                    
+                    // 记录全链路消息生产性能数据
+                    ome_api_log::add_message('message', 'order_message_produce', $messageTime, array(
+                        'order_id' => $orderId,
+                        'message_types' => 'check,to_wms'
+                    ));
                 } elseif ($result['rsp'] == 'fail') {
                     if (!in_array($result['msg'], array('明细已经生成发货单'))) {
                         if ($this->isProcessSplit) {
@@ -917,6 +1052,7 @@ class omeauto_auto_group_item
         $waybillCode = $this->getWaybillCode();
 
         //合并发货单
+        $err = '';
         if (!empty($ids) && count($ids) > 1 && $_isCombine) {
             //多个订单合并审核，合并发货单
             $newdly_id = $deliveryObj->merge($ids, array('logi_no' => $this->getWaybillCode(), 'logi_id' => $this->status['change']['dlyCorp']['corp_id'], 'logi_name' => $this->status['change']['dlyCorp']['name']));
@@ -925,15 +1061,56 @@ class omeauto_auto_group_item
             foreach ($orderIds as $order_id) {
                 kernel::single('ome_bill_label')->markBillLabel($order_id, '', 'SOMS_COMBINE_ORDER', 'order', $err, 0);
             }
+            // 发货单创建完成后的service扩展点
+            $serviceStart = microtime(true);
+            foreach(kernel::servicelist('omeauto.service.group.item.confirm.after') as $serviceName => $object) {
+                $individualServiceStart = microtime(true);
+                if(method_exists($object, 'afterCreateDelivery')) {
+                    $object->afterCreateDelivery($newdly_id);
+                }
+                $serviceTime = microtime(true) - $individualServiceStart;
+                
+                // 记录每个service的性能数据
+                ome_api_log::add_message('service', $serviceName, $serviceTime, array(
+                    'delivery_id' => $newdly_id
+                ));
+            }
             //发货单通知单推送仓库
+            $wmsStart = microtime(true);
             ome_delivery_notice::create($newdly_id);
+            $wmsTime = microtime(true) - $wmsStart;
+            
+            // 记录WMS通知性能数据
+            ome_api_log::add_message('node', 'wms_notification', $wmsTime, array(
+                'delivery_id' => $newdly_id
+            ));
             if ($waybillCode) {
                 $deliveryObj->db->exec("UPDATE sdb_ome_delivery SET logi_no='" . $waybillCode . "' WHERE delivery_id=" . $newdly_id);
             }
         } else {
             //发货单通知单推送仓库
             foreach ($ids as $newdly_id) {
+                // 发货单创建完成后的service扩展点
+                foreach(kernel::servicelist('omeauto.service.group.item.confirm.after') as $serviceName => $object) {
+                    $individualServiceStart = microtime(true);
+                    if(method_exists($object, 'afterCreateDelivery')) {
+                        $object->afterCreateDelivery($newdly_id);
+                    }
+                    $serviceTime = microtime(true) - $individualServiceStart;
+                    
+                    // 记录每个service的性能数据
+                    ome_api_log::add_message('service', $serviceName, $serviceTime, array(
+                        'delivery_id' => $newdly_id
+                    ));
+                }
+                $wmsStart = microtime(true);
                 ome_delivery_notice::create($newdly_id);
+                $wmsTime = microtime(true) - $wmsStart;
+                
+                // 记录WMS通知性能数据
+                ome_api_log::add_message('node', 'wms_notification', $wmsTime, array(
+                    'delivery_id' => $newdly_id
+                ));
                 if ($waybillCode) {
                     $deliveryObj->db->exec("UPDATE sdb_ome_delivery SET logi_no='" . $waybillCode . "' WHERE delivery_id=" . $newdly_id);
                 }
@@ -1262,6 +1439,7 @@ class omeauto_auto_group_item
         $orderObj    = app::get('ome')->model("orders");
         $opInfo         = kernel::single('ome_func')->getDesktopUser();
         $user_id        = $opInfo['op_id'];
+        
 
         if($this->splitNotDly) {
             foreach ($this->orders as $order) {
@@ -1286,18 +1464,20 @@ class omeauto_auto_group_item
             }
             return $returnTxt;
         }
+        
         if (isset($consignee['memo'])) {
             $remark = $consignee['memo'];
             unset($consignee['memo']);
         } else {
-
             $remark = '';
         }
+        
         $oper_source = '';
         if (isset($consignee['oper_source'])) {
             $oper_source = $consignee['oper_source'];
             unset($consignee['oper_source']);
         }
+        
         $deliveryInfos = $this->fetchDeliveryFormat($consignee);
 
         $ids         = array();
@@ -1305,9 +1485,9 @@ class omeauto_auto_group_item
         $branchLib   = kernel::single('ome_branch');
 
         //此处要增加判断
-
         $deliveryid_nums = count($deliveryInfos);
-        #本次发货单数量，如果大于1，就是属于合单的，合单的发货单，不能传物流单号，因为物流单号表字段唯一，会导致生成单据只能保存进一个子发货单
+        
+        // 本次发货单数量，如果大于1，就是属于合单的，合单的发货单，不能传物流单号，因为物流单号表字段唯一，会导致生成单据只能保存进一个子发货单
         if ($deliveryid_nums > 1) {
             $delivery_waybillCode   = null;
             $deliverySubWaybillCode = null;
@@ -1315,6 +1495,23 @@ class omeauto_auto_group_item
             $delivery_waybillCode   = $this->getWaybillCode();
             $deliverySubWaybillCode = $this->getSubWaybillCode();
         }
+        
+        // 是否指定发货单号
+        $assign_delivery_bn = $this->getAssignDeliveryBn();
+        if($assign_delivery_bn){
+            if(count($deliveryInfos) > 1){
+                $error_msg = '本次会生成多个发货单，不允许使用指定发货单号';
+                return ['rsp'=>'fail', 'msg'=>$error_msg];
+            }
+            
+            // 检查指定发货单号是否已经存在
+            $deliveryRow = $deliveryObj->db_dump(array('delivery_bn'=>$assign_delivery_bn), 'delivery_id, delivery_bn');
+            if($deliveryRow){
+                $error_msg = '指定发货单号：'. $assign_delivery_bn .'已经存在,请检查';
+                return ['rsp'=>'fail', 'msg'=>$error_msg];
+            }
+        }
+        
         $orderBranch = [];
         $orderIds = [];
         foreach ($deliveryInfos as $orderId => $deliveryInfo) {
@@ -1324,8 +1521,28 @@ class omeauto_auto_group_item
                 $deliveryInfo['delivery_sub_waybillCode'] = $deliverySubWaybillCode;
                 $order_items                              = $deliveryInfo['order_items'];
                 unset($deliveryInfo['order_items']);
-
-                $result = $deliveryObj->addDelivery($orderId, $deliveryInfo, array(), $order_items, $split_status);
+                
+                // 指定发货单号
+                if($assign_delivery_bn && empty($deliveryInfo['delivery_bn'])){
+                    $deliveryInfo['delivery_bn'] = $assign_delivery_bn;
+                }
+                
+                // 是否补差价订单
+                $is_diff_order = false;
+                
+                // 发货单扩展信息
+                $deliveryExtendInfo = $this->getDeliveryExtendInfo();
+                
+                // 生成发货单
+                $addDeliveryStart = microtime(true);
+                $result = $deliveryObj->addDelivery($orderId, $deliveryInfo, array(), $order_items, $split_status, $is_diff_order, $deliveryExtendInfo);
+                $addDeliveryTime = microtime(true) - $addDeliveryStart;
+                
+                // 记录addDelivery性能数据
+                ome_api_log::add_message('node', 'addDelivery', $addDeliveryTime, array(
+                    'order_id' => $orderId,
+                    'delivery_id' => $result['data'] ?? null
+                ));
 
                 if ($result['rsp'] == 'succ') {
                     $delivery_id = $result['data'];
@@ -1364,7 +1581,20 @@ class omeauto_auto_group_item
                         kernel::single('ome_o2o_performance_orders')->updateProcessStatus($orderId, 'confirm');
                     }
                     // 全链路审单/通知配货回流
+                    $messageStartTime = microtime(true);
                     kernel::single('ome_event_trigger_shop_order')->order_message_produce(array($orderId),['check','to_wms']);
+                    $messageTime = microtime(true) - $messageStartTime;
+                    
+                    // 记录全链路消息生产性能数据
+                    ome_api_log::add_message('message', 'order_message_produce', $messageTime, array(
+                        'order_id' => $orderId,
+                        'message_types' => 'check,to_wms'
+                    ));
+                    
+                    // [更新]预约订单的确认状态
+                    $error_msg = '';
+                    kernel::single('ome_order_reservation')->operateReservationOrder($sdf, $error_msg);
+                    
                 } elseif ($result['rsp'] == 'fail') {
                     $returnTxt = array('rsp' => 'fail', 'msg' => $result['msg']);
                 }
@@ -1378,8 +1608,11 @@ class omeauto_auto_group_item
         if ($dly_corp['type'] == 'DANGDANG' || $dly_corp['type'] == 'AMAZON' || $combine_select == '1') {
             $_isCombine = false;
         }
+        
         $waybillCode = $this->getWaybillCode();
+        
         //合并发货单
+        $err = '';
         if (!empty($ids) && count($ids) > 1 && $_isCombine) {
             //多个订单合并审核，合并发货单
             $newdly_id = $deliveryObj->merge($ids, array('logi_no' => $this->getWaybillCode(), 'logi_id' => $this->status['change']['dlyCorp']['corp_id'], 'logi_name' => $this->status['change']['dlyCorp']['name'], 'memo' => $remark));
@@ -1393,9 +1626,29 @@ class omeauto_auto_group_item
             foreach ($orderIds as $order_id) {
                 kernel::single('ome_bill_label')->markBillLabel($order_id, '', 'SOMS_COMBINE_ORDER', 'order', $err, 0);
             }
+            // 发货单创建完成后的service扩展点
+            $serviceStart = microtime(true);
+            foreach(kernel::servicelist('omeauto.service.group.item.confirm.after') as $serviceName => $object) {
+                $individualServiceStart = microtime(true);
+                if(method_exists($object, 'afterCreateDelivery')) {
+                    $object->afterCreateDelivery($newdly_id);
+                }
+                $serviceTime = microtime(true) - $individualServiceStart;
+                
+                // 记录每个service的性能数据
+                ome_api_log::add_message('service', $serviceName, $serviceTime, array(
+                    'delivery_id' => $newdly_id
+                ));
+            }
             //发货单通知单推送仓库
+            $wmsStart = microtime(true);
             ome_delivery_notice::create($newdly_id);
-
+            $wmsTime = microtime(true) - $wmsStart;
+            
+            // 记录WMS通知性能数据
+            ome_api_log::add_message('node', 'wms_notification', $wmsTime, array(
+                'delivery_id' => $newdly_id
+            ));
         } else {
             //发货单通知单推送仓库
             foreach ($ids as $newdly_id) {
@@ -1404,9 +1657,31 @@ class omeauto_auto_group_item
                     $deliveryObj->db->exec("UPDATE sdb_ome_delivery SET logi_no='" . $waybillCode . "' WHERE delivery_id=" . $newdly_id);
 
                 }
+                
+                // 发货单创建完成后的service扩展点
+                foreach(kernel::servicelist('omeauto.service.group.item.confirm.after') as $serviceName => $object) {
+                    $individualServiceStart = microtime(true);
+                    if(method_exists($object, 'afterCreateDelivery')) {
+                        $object->afterCreateDelivery($newdly_id);
+                    }
+                    $serviceTime = microtime(true) - $individualServiceStart;
+                    
+                    // 记录每个service的性能数据
+                    ome_api_log::add_message('service', $serviceName, $serviceTime, array(
+                        'delivery_id' => $newdly_id
+                    ));
+                }
+                $wmsStart = microtime(true);
                 ome_delivery_notice::create($newdly_id);
+                $wmsTime = microtime(true) - $wmsStart;
+                
+                // 记录WMS通知性能数据
+                ome_api_log::add_message('node', 'wms_notification', $wmsTime, array(
+                    'delivery_id' => $newdly_id
+                ));
             }
         }
+        
         // todo maxiaochen 得物品牌直发 请求接单接口，如果检测到有取消的发货单，则先调用发货仓修改接口
         $this->_dewu_afterAddDelivery($orderBranch);
 

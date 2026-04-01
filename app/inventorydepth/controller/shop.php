@@ -14,11 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-/**
- * @author chenping<chenping@shopex.cn>
- */
-
 class inventorydepth_ctl_shop extends desktop_controller
 {
 
@@ -261,9 +256,14 @@ class inventorydepth_ctl_shop extends desktop_controller
                 break;
         }
         $loadList = $loadList ? : [];
+        $width = 0;
+        if($loadList){
+            $width = intval(100 / count($loadList));
+        }
+        
         $this->pagedata['url']          = $url;
         $this->pagedata['loadList']     = $loadList;
-        $this->pagedata['width']        = intval(100 / count($loadList));
+        $this->pagedata['width']        = $width;
         $this->pagedata['downloadType'] = $downloadType;
 
         if ($_GET['redirectUrl']) {

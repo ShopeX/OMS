@@ -119,7 +119,7 @@ class logisticsmanager_waybill_taobao {
             'SF'              => array('code' => 'SF', 'name' => '顺丰'),
             'ZJS'             => array('code' => 'ZJS', 'name' => '宅急送'),
             'ZTO'             => array('code' => 'ZTO', 'name' => '中通'),
-            'HTKY'            => array('code' => 'HTKY', 'name' => '百世快递'),
+            'HTKY'            => array('code' => 'HTKY', 'name' => '极兔速递'),
             'UC'              => array('code' => 'UC', 'name' => '优速'),
             'YTO'             => array('code' => 'YTO', 'name' => '圆通'),
             'STO'             => array('code' => 'STO', 'name' => '申通'),
@@ -198,11 +198,6 @@ class logisticsmanager_waybill_taobao {
         return self::$businessType[$type];
     }
 
-    /**
-     * service_code
-     * @param mixed $param param
-     * @return mixed 返回值
-     */
     public function service_code($param) {
         $sdf = array('cp_code'=>$param['logistics']);
         $rs = kernel::single('erpapi_router_request')->set('shop', $param['shop_id'])->logistics_getCorpServiceCode($sdf);
@@ -228,12 +223,6 @@ class logisticsmanager_waybill_taobao {
         return $service;
     }
 
-    /**
-     * 获取ServiceCodeValue
-     * @param mixed $cpCode cpCode
-     * @param mixed $serviceCode serviceCode
-     * @return mixed 返回结果
-     */
     public function getServiceCodeValue($cpCode, $serviceCode) {
         if(empty($serviceCode)) {
             return array();
@@ -256,10 +245,6 @@ class logisticsmanager_waybill_taobao {
 //        return $obj;
 //    }
 //    
-    /**
-     * template_cfg
-     * @return mixed 返回值
-     */
     public function template_cfg() {
         $arr = array(
             'template_name' => '菜鸟',

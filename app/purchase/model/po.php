@@ -1128,6 +1128,8 @@ class purchase_mdl_po extends dbeav_model{
                         "*:条形码" => mb_convert_encoding($item['barcode'], 'GBK', 'UTF-8'),
                         "*:数量" => $item['num'],
                         "*:已入库数量" => $item['in_num'],
+                        "*:入库取消" => $item['out_num'],
+                        "*:不良品" => $item['defective_num'],
                         "*:价格" => $item['price'],
                 );
                 $data[$row_num] = implode(',', $temp_row);
@@ -1143,6 +1145,8 @@ class purchase_mdl_po extends dbeav_model{
                     '*:条形码',
                     '*:数量',
                     '*:已入库数量',
+                    '*:入库取消',
+                    '*:不良品',
                     '*:价格',
             );
             foreach ((array)$title as $key => $value) {

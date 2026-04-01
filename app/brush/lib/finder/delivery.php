@@ -17,7 +17,7 @@
 
 class brush_finder_delivery{
     public $detail_basic = "发货单详情";
-    public $detail_item = "货品详情";
+    public $detail_item = "基础物料详情";
     private $write = '2';
 
 

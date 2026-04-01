@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class console_receipt_reship{
 
     private static $is_check = array(
@@ -85,6 +84,17 @@ class console_receipt_reship{
         $arrItemUpData = [];
         if ($items) {
             $tran = kernel::database()->beginTransaction();
+            
+            // 提前获取所有reship_items，避免循环中重复查询导致数据丢失
+            $all_reship_items = array();
+            // 为每个item_id维护数量消耗计数器
+            $consumed_quantities = array();
+            $all_bns = array_unique(array_column($items, 'bn'));
+            $tmpReshipItems = $oReship_items->getlist('num,normal_num,defective_num,item_id,branch_id,bn',array('reship_id'=>$reship_id,'bn'=>$all_bns,'defective_num'=>0,'normal_num'=>0,'return_type'=>array('return','refuse')),0,-1,'num desc');
+            foreach($tmpReshipItems as $v) {
+                $all_reship_items[$v['bn']][] = $v;
+            }
+                    
             foreach ($items as  $item) {
                 $bn = $item['bn'];
                 $check_num = (int)$item['normal_num'];
@@ -109,6 +119,10 @@ class console_receipt_reship{
                         $tmpUseful['expire_time'] = (int)$bv['expire_time'];
                         $tmpUseful['purchase_code'] = $bv['purchase_code'];
                         $tmpUseful['produce_code'] = $bv['produce_code'];
+                        if($item['branch_id']) {
+                            $tmpUseful['branch_id'] = $item['branch_id'];
+                            $tmpUseful['normal_defective'] = 'normal';
+                        }
                         $useful[] = $tmpUseful;
                     }
                     $useLogModel->db->exec(ome_func::get_insert_sql($useLogModel, $useful));
@@ -119,7 +133,7 @@ class console_receipt_reship{
                     $historyData = [];
                     foreach($item['sn_list'] as $serial){
                         $tmpHistoryData = [
-                            'branch_id' => $reship['branch_id'],
+                            'branch_id' => $item['branch_id'] ? : $reship['branch_id'],
                             'bn' => $item['bn'],
                             'product_name' => $bnBmIdName['material_name'],
                             'act_type' => '2',
@@ -137,7 +151,8 @@ class console_receipt_reship{
                 // pda过来的支持部分收
                 if ($data['source'] == 'pda') {
                     $item_add = array();
-                    $reship_items = $oReship_items->dump(array('reship_id'=>$reship_id,'bn'=>$item['bn'],'return_type'=>array('return','refuse')),'normal_num,defective_num,item_id');
+                    // 使用预先获取的reship_items数据，取第一条记录
+                    $reship_items = isset($all_reship_items[$bn]) && !empty($all_reship_items[$bn]) ? $all_reship_items[$bn][0] : null;
                     if (!$reship_items) {
                         /* */
                     }else{
@@ -158,73 +173,94 @@ class console_receipt_reship{
                     }
                     $oReship_items->save($item_add);
                 } else {
-                    $reship_items = $oReship_items->getlist('num,normal_num,defective_num,item_id,branch_id',array('reship_id'=>$reship_id,'bn'=>$item['bn'],'defective_num'=>0,'normal_num'=>0,'return_type'=>array('return','refuse')),0,-1,'num desc');
+                    // 根据传入的item中的branch_id来确定入库仓库
+                    $target_branch_id = $reship['branch_id']; // 默认使用退货单的仓库
+                    
+                    // 如果item中有指定branch_id，则使用item的branch_id
+                    if (!empty($item['branch_id'])) {
+                        $target_branch_id = $item['branch_id'];
+                    }
+                    
+                    // 使用预先获取的reship_items数据，考虑已消耗的数量
+                    $reship_items = isset($all_reship_items[$bn]) ? $all_reship_items[$bn] : array();
                     if ($reship_items) {
                         $reship_item_loop = 1;
                         $reship_items_count = count($reship_items);
-
+                        
                         foreach($reship_items as $reship_item){
                             $item_add = array();
                             $item_add['item_id'] = $reship_item['item_id'];
-                            $need_return_num = $reship_item['num'];
+                            $need_return_num = $reship_item['num'] - $consumed_quantities[$reship_item['item_id']]['normal'] - $consumed_quantities[$reship_item['item_id']]['defective'];
 
                             //如果实际入库数为0，跳出该货品的退入数量处理逻辑
                             if($check_num + $defective_num <= 0){
                                 break;
                             }
-
-                            //如果只有一行sku或者循环到最后一行sku时，良品不良品数量全部放在这一行sku上
-                            if($reship_item_loop == $reship_items_count){
+                            if($need_return_num < 1){
+                                continue;
+                            }
+                            //申请数量大于实际退入良品，把良品都给这一行的sku，不足的后面再用不良品补
+                            if($need_return_num >= $check_num){
                                 $item_add['normal_num'] = $check_num;
-                                $item_add['defective_num'] = $defective_num;
-                            }else{
-                                //申请数量大于实际退入良品，把良品都给这一行的sku，不足的后面再用不良品补
-                                if($need_return_num >= $check_num){
-                                    $item_add['normal_num'] = $check_num;
-                                    $need_return_num = $need_return_num - $item_add['normal_num'];
-                                    $check_num = 0;
-                                }elseif($need_return_num < $check_num){
-                                    //申请数量小于实际退入良品，直接按申请数量扣减良品数量，这一行sku退入完成
-                                    $item_add['normal_num'] = $need_return_num;
-                                    $need_return_num = 0;
-                                    $check_num = $check_num-$item_add['normal_num'];
-                                }
-
-                                //这一行sku良品不够用，还需不良品填充
-                                if($need_return_num > 0 ){
-                                    //申请数量大于实际退入不良品，把不良品都给这一行的sku
-                                    if($need_return_num >= $defective_num){
-                                        $item_add['defective_num'] = $defective_num;
-                                        $need_return_num = $need_return_num - $item_add['defective_num'];
-                                        $defective_num = 0;
-                                    }elseif($need_return_num < $defective_num){
-                                        //申请数量小于实际退入不良品，直接按申请数量扣减不良品数量，这一行sku退入完成
-                                        $item_add['defective_num'] = $need_return_num;
-                                        $need_return_num = 0;
-                                        $defective_num = $defective_num-$item_add['defective_num'];
-                                    }
-                                }
+                                $need_return_num = $need_return_num - $item_add['normal_num'];
+                                $check_num = 0;
+                            }elseif($need_return_num < $check_num){
+                                //申请数量小于实际退入良品，直接按申请数量扣减良品数量，这一行sku退入完成
+                                $item_add['normal_num'] = $need_return_num;
+                                $need_return_num = 0;
+                                $check_num = $check_num-$item_add['normal_num'];
                             }
 
-                            //获取不良品退货入库的残损仓ID
-                            $damaged = kernel::single('console_iostockdata')->getDamagedbranch($reship['branch_id']);
+                            //这一行sku良品不够用，还需不良品填充
+                            if($need_return_num > 0 ){
+                                //申请数量大于实际退入不良品，把不良品都给这一行的sku
+                                if($need_return_num >= $defective_num){
+                                    $item_add['defective_num'] = $defective_num;
+                                    $need_return_num = $need_return_num - $item_add['defective_num'];
+                                    $defective_num = 0;
+                                }elseif($need_return_num < $defective_num){
+                                    //申请数量小于实际退入不良品，直接按申请数量扣减不良品数量，这一行sku退入完成
+                                    $item_add['defective_num'] = $need_return_num;
+                                    $need_return_num = 0;
+                                    $defective_num = $defective_num-$item_add['defective_num'];
+                                }
+                            }
                             
-                            //更新收货数量
+
+                            //更新收货数量 - 良品入库
                             if($item_add['normal_num'] > 0){
-                                $this->dealProcessItems($arrItemUpData, $bnBmIdName['bm_id'], $item_add['normal_num'], $reship['branch_id'], $reship_item['item_id']);
+                                $this->dealProcessItems($arrItemUpData, $bnBmIdName['bm_id'], $item_add['normal_num'], $target_branch_id, $reship_item['item_id']);
                             }
                             
                             //不良品需要更新为：残次仓
                             if ($item_add['defective_num']>0) {
-                                $this->dealProcessItems($arrItemUpData, $bnBmIdName['bm_id'], $item_add['defective_num'], $damaged['branch_id'], $reship_item['item_id'], '1');
+                                //获取不良品退货入库的残损仓ID
+                                $defective_branch_id = $damaged['branch_id'] ? $damaged['branch_id'] : $target_branch_id;
+                                $this->dealProcessItems($arrItemUpData, $bnBmIdName['bm_id'], $item_add['defective_num'], $defective_branch_id, $reship_item['item_id'], '1');
                             }
                             
-                            $oReship_items->save($item_add);
+                            //$oReship_items->save($item_add);
+
+                            // 更新已消耗的数量
+                            $consumed_quantities[$reship_item['item_id']]['normal'] += $item_add['normal_num'];
+                            $consumed_quantities[$reship_item['item_id']]['defective'] += $item_add['defective_num'];
 
                             $reship_item_loop++;
                         }
-                        
                     }
+                }
+            }
+            // 更新退货明细表中normal_num和defective_num
+            foreach ($consumed_quantities as $item_id => $consumed_quantity) {
+                $update_data = array();
+                if (isset($consumed_quantity['normal'])) {
+                    $update_data['normal_num'] = $consumed_quantity['normal'];
+                }
+                if (isset($consumed_quantity['defective'])) {
+                    $update_data['defective_num'] = $consumed_quantity['defective'];
+                }
+                if (!empty($update_data)) {
+                    $oReship_items->update($update_data, array('item_id' => $item_id));
                 }
             }
             if($arrItemUpData) {
@@ -308,9 +344,6 @@ class console_receipt_reship{
                     if (!$res) {
                         return false;
                     }
-                    //反审核质检
-                    $process_sql = "UPDATE sdb_ome_return_process_items SET is_check='true' WHERE reship_id=".$reship_id." AND is_check='false'";
-                    $oReship->db->exec($process_sql);
                 }
             }
         }
@@ -338,16 +371,6 @@ class console_receipt_reship{
         return true;
     }
 
-    /**
-     * dealProcessItems
-     * @param mixed $arrItemUpData 数据
-     * @param mixed $bmId ID
-     * @param mixed $num num
-     * @param mixed $branchId ID
-     * @param mixed $reshipItemId ID
-     * @param mixed $storeType storeType
-     * @return mixed 返回值
-     */
     public function dealProcessItems(&$arrItemUpData, $bmId, $num, $branchId, $reshipItemId, $storeType ='0') {
         if(isset($arrItemUpData[$bmId])) {
             $arrItemUpData[$bmId]['check_num'] += $num;
@@ -453,7 +476,12 @@ class console_receipt_reship{
                 $oReship->db->exec("UPDATE sdb_ome_delivery SET status='succ', logi_status='8', problem_time=". time() ." WHERE delivery_id=". $reship['delivery_id']);
             }
         }
-        
+        // 退货单取消后的service扩展点
+        foreach(kernel::servicelist('console.service.reship.cancel.after') as $object) {
+            if(method_exists($object, 'cancel_reship_after')) {
+                $object->cancel_reship_after($reship_id);
+            }
+        }
         return true;
     }
 

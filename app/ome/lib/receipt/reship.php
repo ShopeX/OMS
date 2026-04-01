@@ -44,6 +44,7 @@ class ome_receipt_reship
         $return_product  = $oReturn->dump($reship['return_id'], '*');
         $order_id        = $reship['order_id'];
         $branch_id       = $reship['branch_id'];
+        $reship_item    = $oReship_item->getlist('product_id,bn,product_name as name,num,price,branch_id,order_item_id,item_id as reship_item_id', array('reship_id' => $reship_id, 'return_type' => array('return', 'refuse')), 0, -1);
         // source=archive or archive=1时，获取发货单信息
         if ($reship['source'] == 'archive' || $reship['archive'] == '1') {
             $archive_ordObj = kernel::single('archive_interface_orders');
@@ -55,23 +56,55 @@ class ome_receipt_reship
             foreach ($delivery_order as $key => $value) {
                 $deliveryIds[] = $value['delivery_id'];
             }
-            $delivery = $archive_delObj->getDelivery(array('delivery_id' => $deliveryIds), 'delivery_bn');
+            $delivery = $archive_delObj->getDelivery(array('delivery_id' => $deliveryIds), 'delivery_id,delivery_bn');
         } else {
             $order = $oOrder->dump($order_id, 'order_bn,shop_id');
             // 获取对应的发货单
-            if($reship['logi_no']) $delivery = $oDelivery->db_dump(['logi_no'=>$reship['logi_no']], 'delivery_bn');
+            if($reship['logi_no']) $delivery = $oDelivery->db_dump(['logi_no'=>$reship['logi_no']], 'delivery_id,delivery_bn');
             if(!$delivery) {
-                $delivery = $oDelivery->db->selectrow("SELECT d.delivery_bn FROM sdb_ome_delivery_order AS dord
-                                            LEFT JOIN sdb_ome_delivery AS d ON(dord.delivery_id=d.delivery_id)
-                                            WHERE dord.order_id=" . $order_id . " AND   d.status IN ('succ') AND d.pause='false' AND d.parent_id=0");
+                $order_item_id = current($reship_item)['order_item_id'];
+                $delivery = $oDelivery->db->selectrow("SELECT doi.delivery_id,doi.delivery_bn FROM sdb_sales_delivery_order_item AS doi
+                                            WHERE order_item_id=" . $order_item_id);
             }
         }
+        $historyLog = app::get('ome')->model('product_serial_history')->getList('bn,serial_number', array('bill_id' => $delivery['delivery_id'], 'bill_type' => '1'));
+        if($historyLog) {
+            $bnSerial = [];
+            foreach($historyLog as $v) {
+                $bnSerial[$v['bn']][] = $v['serial_number'];
+            }
+            foreach($reship_item as $k => $v) {
+                if(empty($bnSerial[$v['bn']])) continue;
 
+                for($i = 0; $i < $v['num']; $i++) {
+                    if(empty($bnSerial[$v['bn']])) break;
+                    $reship_item[$k]['sn'][] = array_shift($bnSerial[$v['bn']]);
+                }
+            }
+        }
+        // 过滤掉虚拟类型的基础物料(type=5)
+        if (!empty($reship_item)) {
+            $product_ids = array_column($reship_item, 'product_id');
+            $basicMaterialObj = app::get('material')->model('basic_material');
+            $basic_materials = $basicMaterialObj->getList('bm_id,type', array('bm_id' => $product_ids));
+            $basic_materials = array_column($basic_materials, 'type', 'bm_id');
+            $filtered_reship_item = array();
+            foreach ($reship_item as $item) {
+                $bm_id = $item['product_id'];
+                if (isset($basic_materials[$bm_id]) && $basic_materials[$bm_id] == 5) {
+                    continue;
+                }
+                $filtered_reship_item[] = $item;
+            }
+            $reship_item = $filtered_reship_item;
+        }
+        if (empty($reship_item)) {
+            return array();
+        }
         // 外部订单
         $dextMdl      = app::get('console')->model('delivery_extension');
         $delivery_ext = $dextMdl->dump(array('delivery_bn' => $delivery['delivery_bn']), 'original_delivery_bn');
 
-        $reship_item    = $oReship_item->getlist('bn,product_name as name,num,price,branch_id', array('reship_id' => $reship_id, 'return_type' => array('return', 'refuse')), 0, -1);
         $shopObj        = app::get('ome')->model('shop');
         $shopInfo       = $shopObj->dump($order['shop_id'], 'name,node_id,shop_bn');
 
@@ -97,6 +130,7 @@ class ome_receipt_reship
             'problem_name'         => $problem['problem_name'],
             'create_time'          => $reship['t_begin'],
             'memo'                 => $reship['memo'],
+            'flag_type'            => $reship['flag_type'],
             'original_delivery_bn' => $delivery_ext['original_delivery_bn'],
             'delivery_bn'          => $delivery['delivery_bn'],
             'logi_no'              => $reship['return_logi_no'],

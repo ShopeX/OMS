@@ -19,7 +19,7 @@ class ome_mdl_delivery_items_detail extends dbeav_model{
 
     /**
      * 创建大发货单对应的发货单订单商品详情
-     * 
+     *
      * @param bigint $parent_id
      * @param array() $items
      * 
@@ -49,6 +49,7 @@ class ome_mdl_delivery_items_detail extends dbeav_model{
                     'number'            => $oi['total_num'],
                     'price'             => $oi['price'],
                     'amount'            => $oi['total_num']*$oi['price'],
+                    'actually_amount'   => $oi['actually_amount'], // 客户实付
                 );
                 $this->save($did);
             }

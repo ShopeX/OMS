@@ -34,7 +34,7 @@ class console_finder_wms_delivery {
         return implode('|', $btn);
     }*/
 
-    public $detail_item = "货品详情";
+    public $detail_item = "基础物料详情";
     public function detail_item($id){
         $render = app::get('console')->render();
         $items = app::get('console')->model('wms_delivery_items')->getList('*', ['wd_id'=>$id]);

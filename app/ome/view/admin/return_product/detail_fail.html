@@ -35,10 +35,11 @@
         <{foreach from=$item_list item=item}>
             
             <tr>
-                <td ><{$item.bn}>
-                    <{if $item.status <= 0}>
-                        <input type="hidden" name="oldPbn[<{$item.item_id}>]" value="<{$item.bn}>" /><{/if}></td>
-                <td><{$item.name}></td>
+                <td><{$item.bn}></td>
+                <td>
+                    <{$item.name}>
+                    <{if $item.status <= 0}><input type="hidden" name="oldPbn[<{$item.item_id}>]" value="<{$item.bn}>" /><{/if}>
+                </td>
                 <td><{$item.num}></td>
                 <td>
                     

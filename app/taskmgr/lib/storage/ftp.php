@@ -20,25 +20,17 @@
  * @author kamisama.xia@gmail.com
  * @version 0.1
  */
+
 class taskmgr_storage_ftp extends taskmgr_storage_abstract implements taskmgr_storage_interface
 {
 
     private static $_storageConn = null;
-
-    /**
-     * __construct
-     * @return mixed 返回值
-     */
 
     public function __construct()
     {
         $this->connect();
     }
 
-    /**
-     * connect
-     * @return mixed 返回值
-     */
     public function connect()
     {
         if (!isset(self::$_storageConn)) {
@@ -69,14 +61,19 @@ class taskmgr_storage_ftp extends taskmgr_storage_abstract implements taskmgr_st
 
     /**
      * 向远程ftp上传保存生成文件
-     * 
+     *
      * @param string $source_file 源文件含路径
      * @param string $task_id 目标文件名命名传入参数
      * @param string $url 生成目标文件路径
      * @return boolean true/false
      */
-    public function save($source_file, $task_id, &$url)
+    public function save($source_file, $task_id, &$url, $extName = '')
     {
+        // 设置扩展名
+        if ($extName) {
+            $this->setExtName($extName);
+        }
+
         //存储的目的地文件路径
         $destination_file = $this->_get_ident($task_id);
 
@@ -98,7 +95,7 @@ class taskmgr_storage_ftp extends taskmgr_storage_abstract implements taskmgr_st
 
     /**
      * 向远程ftp下载文件到本地
-     * 
+     *
      * @param string $url 远程源文件
      * @param string $local_file 本地目标文件
      * @return boolean true/false
@@ -120,7 +117,7 @@ class taskmgr_storage_ftp extends taskmgr_storage_abstract implements taskmgr_st
 
     /**
      * 向远程ftp删除指定文件
-     * 
+     *
      * @param string $url 远程源文件
      */
     public function delete($url)
@@ -169,10 +166,6 @@ class taskmgr_storage_ftp extends taskmgr_storage_abstract implements taskmgr_st
         return $url;
     }
 
-    /**
-     * __destruct
-     * @return mixed 返回值
-     */
     public function __destruct()
     {
         ftp_close(self::$_storageConn);

@@ -51,14 +51,14 @@ $db['diff_items'] = array(
         ),
         'diff_reason'         =>array(
             'type'            => array(
-                ''       =>  '',
+                // ''       =>  '',
                 'less'   =>  '短发',
                 'lost'   =>  '丢失',
                 'wrong'  =>  '收货操作失误',
                 'other'  =>  '其他原因',
                 'more'   =>  '超发',
             ),
-            'default'         =>  '',
+            // 'default'         =>  '',
             'label'           => '差异原因',
             'in_list'         => true,
             'default_in_list' => true,
@@ -107,11 +107,11 @@ $db['diff_items'] = array(
         ),
         'handle_type'         =>array(
             'type'            => array(
-                ''            =>  '',
+                // ''            =>  '',
                 'transfer'    =>  '调拔',
                 'directOut'   =>  '直接出库',
             ),
-            'default'         =>  '',
+            // 'default'         =>  '',
             'label'           => '最终处理类型',
             'in_list'         => true,
             'default_in_list' => true,

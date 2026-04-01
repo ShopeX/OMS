@@ -86,6 +86,7 @@ class finance_ar
             'charge_time'           => $sdf['charge_time'],
             'money'                 => (empty($sdf['money']) ? 0 : $sdf['money']),
             'actually_money'        => (empty($sdf['actually_money']) ? 0 : $sdf['actually_money']),
+            'platform_amount'       => (empty($sdf['platform_amount']) ? 0 : $sdf['platform_amount']),
             'serial_number'         => $sdf['serial_number'],
             'unique_id'             => $sdf['unique_id'],
             'addon'                 => serialize($addon),
@@ -112,6 +113,7 @@ class finance_ar
                     'num'   => $v['num'],
                     'money' => (empty($v['money']) ? 0 : $v['money']),
                     'actually_money' => (empty($v['actually_money']) ? 0 : $v['actually_money']),
+                    'platform_amount' => (empty($v['platform_amount']) ? 0 : $v['platform_amount']),
                 );
                 if (!$receitemObj->insert($items)) {
                     $res = array('status' => 'fail', 'msg' => '明细数据保存失败:'.$receitemObj->db->errorinfo());

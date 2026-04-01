@@ -125,28 +125,45 @@ class base_db_tools{
     }
 
     static function filter2sql($filter){
+        $db = kernel::database();
         $where = array('1');
-        if($filter){
-            foreach($filter as $k=>$v){
-                if(is_array($v)){
+        
+        // format filter to array
+        if ($filter) {
+            foreach ($filter as $k => $v) {
+                // Column name hardening: only allow simple identifiers
+                $k = (string)$k;
+                if ($k === '' || !preg_match('/^[a-zA-Z0-9_]+$/', $k)) {
+                    continue;
+                }
+                $col = '`' . $k . '`';
+                
+                if (is_array($v)) {
                     $ac = array();
-                    foreach($v as $m){
-                        if($m!=='_ANY_' && $m!=='' && $m!='_ALL_'){
-                            $ac[] = $k.'=\''.$m.'\'';
-                        }else{
+                    foreach ($v as $m) {
+                        if ($m !== '_ANY_' && $m !== '' && $m != '_ALL_') {
+                            if ($m === null) {
+                                $m = '';
+                            }
+                            $ac[] = $col . ' = ' . $db->quote($m);
+                        } else {
                             $ac = array();
                             break;
                         }
                     }
-                    if(count($ac)>0){
-                        $where[] = '('.implode(' or ', $ac).')';
+                    if (count($ac) > 0) {
+                        $where[] = '(' . implode(' or ', $ac) . ')';
                     }
-                }else{
-                    $where[] = '`'.$k.'` = "'.str_replace('"','\\"',$v).'"';
+                } else {
+                    if ($v === null) {
+                        $v = '';
+                    }
+                    $where[] = $col . ' = ' . $db->quote($v);
                 }
             }
         }
-        return implode(' AND ',$where);
+        
+        return implode(' AND ', $where);
     }
 
     /**

@@ -16,7 +16,7 @@
  */
 
 class omeanalysts_finder_ome_goods{
-	var $detail_basic = '货品详情';
+	var $detail_basic = '基础物料详情';
 
     /**
      * detail_basic

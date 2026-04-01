@@ -111,7 +111,7 @@ class erpapi_logistics_matrix_pdd_request_template extends erpapi_logistics_requ
                     if($val['keys']) {
                         foreach ($val['keys'] as $kVal) {
                             if($kVal['key_name']) {
-                                $tplSelect[] = str_replace(array('data.'), '', $kVal['key_name']);
+                                $tplSelect[] = str_replace(array('data.'), '', trim($kVal['key_name']));
                             }
                         }
                         $rs['data'] = array(

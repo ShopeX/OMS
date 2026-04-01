@@ -36,7 +36,7 @@ $db['orders'] = array(
             'filtertype'      => 'textarea',
             'filterdefault'   => true,
             'in_list'         => true,
-            'default_in_list' => false,
+            'default_in_list' => true,
         ),
         'platform_order_bn' => array (
             'type' => 'varchar(32)',
@@ -93,7 +93,7 @@ $db['orders'] = array(
             'filtertype'      => 'yes',
             'filterdefault'   => true,
             'in_list'         => true,
-            'default_in_list' => false,
+            'default_in_list' => true,
             'comment' => '订单确认状态,可选值:unconfirmed(未确认),confirmed(已确认),splitting(部分拆分),splited(已拆分完),cancel(取消),remain_cancel(余单撤销),is_retrial(复审订单),is_declare(跨境申报订单)',
         ),
         'splited_num'   => array(
@@ -118,8 +118,8 @@ $db['orders'] = array(
             'width'           => 75,
             'hidden'          => true,
             'editable'        => false,
-            'in_list'         => false,
-            'default_in_list' => false,
+            'in_list'         => true,
+            'default_in_list' => true,
             'comment' => '订单状态,可选值:active(活动订单),dead(已作废),finish(已完成)',
         ),
         'pay_status'         => array(
@@ -142,7 +142,7 @@ $db['orders'] = array(
             'filtertype'      => 'yes',
             'filterdefault'   => true,
             'in_list'         => true,
-            'default_in_list' => false,
+            'default_in_list' => true,
             'comment' => '付款状态,可选值:0(未支付),1(已支付),2(处理中),3(部分付款),4(部分退款),5(全额退款),6(退款申请中),7(退款中),8(支付中)',
         ),
         'ship_status'        => array(
@@ -159,8 +159,17 @@ $db['orders'] = array(
             'width'           => 75,
             'editable'        => false,
             'in_list'         => true,
-            'default_in_list' => false,
+            'default_in_list' => true,
             'comment' => '发货状态,可选值:0(未发货),1(已发货),2(部分发货),3(部分退货),4(已退货)'
+        ),
+        'is_not_combine' => array(
+            'type' => 'bigint(20)',
+            'default' => 0,
+            'label' => '是否允许审核',
+            'editable' => false,
+            'in_list' => false,
+            'default_in_list' => false,
+            'comment' => '是否允许OMS审核,可选值：0(允许审核),大于0(不允许审核订单)'
         ),
         'is_delivery'        => array(
             'type'     => 'tinybool',
@@ -214,7 +223,7 @@ $db['orders'] = array(
         'createtime'         => array(
             'type'          => 'time',
             'label'         => '下单时间',
-            'width'         => 130,
+            'width'         => 160,
             'editable'      => false,
             'filtertype'    => 'time',
             'filterdefault' => true,
@@ -223,7 +232,7 @@ $db['orders'] = array(
         'download_time'      => array(
             'type'     => 'time',
             'label'    => '订单下载时间',
-            'width'    => 130,
+            'width'    => 160,
             'editable' => false,
             'in_list'  => true,
         ),
@@ -236,21 +245,21 @@ $db['orders'] = array(
         'last_modified'      => array(
             'label'    => '最后更新时间',
             'type'     => 'last_modify',
-            'width'    => 130,
+            'width'    => 160,
             'editable' => false,
             'in_list'  => true,
         ),
         'outer_lastmodify'   => array(
             'label'    => '前端店铺最后更新时间',
             'type'     => 'time',
-            'width'    => 130,
+            'width'    => 160,
             'editable' => false,
             'in_list'  => true,
         ),
         'shop_id'            => array(
             'type'          => 'varchar(32)',
             'label'         => '来源店铺',
-            'width'         => 75,
+            'width'         => 150,
             'editable'      => false,
             'in_list'       => true,
             'filtertype'    => 'normal',
@@ -279,7 +288,7 @@ $db['orders'] = array(
         'ship_area'          => array(
             'type'          => 'region',
             'label'         => '收货地区',
-            'width'         => 170,
+            'width'         => 230,
             'editable'      => false,
             'filtertype'    => 'yes',
             'filterdefault' => true,
@@ -289,7 +298,7 @@ $db['orders'] = array(
         'ship_addr'          => array(
             'type'       => 'text',
             'label'      => '收货地址',
-            'width'      => 180,
+            'width'      => 230,
             'editable'   => false,
             'filtertype' => 'normal',
             'sdfpath'    => 'consignee/addr',
@@ -329,7 +338,7 @@ $db['orders'] = array(
             'hidden'   => true,
             'type'     => 'varchar(200)',
             'editable' => false,
-            'width'    => 120,
+            'width'    => 160,
             'sdfpath'  => 'consignee/mobile',
             'in_list'  => true,
         ),
@@ -640,7 +649,7 @@ $db['orders'] = array(
             'type'            => 'table:groups@ome',
             'label'           => '确认组',
             'editable'        => false,
-            'width'           => 90,
+            'width'           => 120,
             'filtertype'      => 'normal',
             'filterdefault'   => true,
             'in_list'         => true,
@@ -650,7 +659,7 @@ $db['orders'] = array(
             'type'            => 'table:account@pam',
             'label'           => '确认人',
             'editable'        => false,
-            'width'           => 60,
+            'width'           => 100,
             'filtertype'      => 'normal',
             'filterdefault'   => true,
             'in_list'         => true,
@@ -660,7 +669,7 @@ $db['orders'] = array(
             'type'            => 'time',
             'label'           => '分派时间',
             'editable'        => false,
-            'width'           => 130,
+            'width'           => 160,
             'filtertype'      => 'time',
             'filterdefault'   => true,
             'in_list'         => true,
@@ -720,6 +729,16 @@ $db['orders'] = array(
             'default'  => '0',
             'editable' => false,
             'comment' => '订单原金额',
+        ),
+        'settlement_amount' => array(
+            'type'    => 'money',
+            'default' => '0',
+            'label'   => '结算金额',//客户实付 + 平台支付总额
+        ),
+        'actually_amount' => array(
+            'type'    => 'money',
+            'default' => '0',
+            'label'   => '客户实付',// 已支付金额 减去平台支付优惠，加平台支付总额
         ),
         'order_type'         => array(
             'type'     => array(
@@ -817,14 +836,14 @@ $db['orders'] = array(
         'paytime'            => array(
             'type'     => 'time',
             'label'    => '付款时间',
-            'width'    => 130,
+            'width'    => 160,
             'editable' => false,
             'in_list'  => true,
         ),
         'modifytime'         => array(
             'type'     => 'time',
             'label'    => '最后修改时间',
-            'width'    => 130,
+            'width'    => 160,
             'editable' => false,
             'in_list'  => true,
         ),
@@ -955,7 +974,7 @@ $db['orders'] = array(
             'type'            => 'varchar(64)',
             'label'           => '平台状态',
             'editable'        => false,
-            'width'           => 120,
+            'width'           => 180,
             'in_list'         => true,
             'default_in_list' => false,
         ),
@@ -1102,12 +1121,9 @@ $db['orders'] = array(
     ),
     'index'   => array(
         'ind_order_bn_shop'    => array('columns' => array(0 => 'order_bn', 1 => 'shop_id'), 'prefix' => 'unique'),
-      
         'ind_archive'          => array('columns' => array(0 => 'archive')),
-        // 'ind_ship_status'      => array('columns' => array(0 => 'ship_status')),
         'ind_pay_status'       => array('columns' => array('pay_status','paytime')),
         'ind_status'           => array('columns' => array(0 => 'status')),
-        // 'ind_process_status'   => array('columns' => array(0 => 'process_status')),
         'ind_shop_type'        => array('columns' => array(0 => 'shop_type')),
         'ind_is_cod'           => array('columns' => array(0 => 'is_cod')),
         'ind_createtime'       => array('columns' => array(0 => 'createtime')),
@@ -1121,7 +1137,6 @@ $db['orders'] = array(
         'ind_ship_tel'         => array('columns' => array(0 => 'ship_tel')),
         'ind_ship_name'        => array('columns' => array(0 => 'ship_name')),
         'ind_ship_addr'        => array('columns' => array(0 => 'ship_addr(255)')),
-        // 'ind_is_fail'          => array('columns' => array(0 => 'is_fail')),
         'ind_logi_no'          => array('columns' => array(0 => 'logi_no')),
         'ind_splited_num'      => array('columns' => array(0 => 'splited_num')),
         'ind_end_time'         => array('columns' => array(0 => 'end_time')),
@@ -1256,6 +1271,14 @@ $db['orders'] = array(
         'ind_cos_id' => array(
             'columns' => array(
                 0 => 'cos_id',
+            ),
+        ),
+        'idx_status_combine' => array(
+            'columns' => array(
+                0 => 'process_status',
+                1 => 'status',
+                2 => 'archive',
+                3 => 'is_not_combine',
             ),
         ),
     ),

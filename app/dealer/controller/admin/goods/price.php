@@ -19,7 +19,7 @@
  * @Author:   Assistant
  * @Version:  1.0
  * @DateTime: 2024年
- * @describe: 经销商品价格管理
+ * @describe: 经销商物料价格管理
  * ============================
  */
 class dealer_ctl_admin_goods_price extends desktop_controller 
@@ -34,7 +34,7 @@ class dealer_ctl_admin_goods_price extends desktop_controller
         // 检查导出权限
         if (isset($_GET['action']) && $_GET['action'] == 'to_export') {
             if (!$this->has_permission('dealer_goods_price_export')) {
-                $this->splash('error', null, '您没有导出经销商品价格的权限');
+                $this->splash('error', null, '您没有导出经销商物料价格的权限');
             }
         }
         
@@ -54,7 +54,7 @@ class dealer_ctl_admin_goods_price extends desktop_controller
             $actions[] = array(
                 'label'  => '导入',
                 'href'   => 'index.php?app=dealer&ctl=admin_goods_price&act=displayImportV2&p[0]=goods_price&finder_id={finder_id}',
-                'target' => 'dialog::{width:760,height:300,title:\'经销商品价格导入\'}',
+                'target' => 'dialog::{width:760,height:300,title:\'经销基础物料价格导入\'}',
             );
         }
         
@@ -73,7 +73,7 @@ class dealer_ctl_admin_goods_price extends desktop_controller
         }
         
         $params = array(
-            'title' => '经销商品价格管理',
+            'title' => '经销基础物料价格管理',
             'use_buildin_set_tag' => false,
             'use_buildin_filter' => true,
             'use_buildin_export' => $this->has_permission('dealer_goods_price_export'),
@@ -92,7 +92,7 @@ class dealer_ctl_admin_goods_price extends desktop_controller
      */
     public function exportTemplateV2()
     {
-        $fileName = "经销商品价格导入模板.xlsx";
+        $fileName = "经销商物料价格导入模板.xlsx";
         $title = app::get('dealer')->model('goods_price')->exportTemplateV2('dealer_goods_price_importV2');
         kernel::single('omecsv_phpoffice')->export($fileName, [0 => $title]);
     }
@@ -101,7 +101,7 @@ class dealer_ctl_admin_goods_price extends desktop_controller
     {
         // 检查编辑权限
         if (!$this->has_permission('dealer_goods_price_edit')) {
-            $this->splash('error', null, '您没有编辑经销商品价格的权限');
+            $this->splash('error', null, '您没有编辑经销商物料价格的权限');
         }
         
         $id = $_GET['p'][0];
@@ -177,7 +177,7 @@ class dealer_ctl_admin_goods_price extends desktop_controller
     {
         // 检查新增权限
         if (!$this->has_permission('dealer_goods_price_add')) {
-            $this->splash('error', null, '您没有新增经销商品价格的权限');
+            $this->splash('error', null, '您没有新增经销商物料价格的权限');
         }
         
         // 获取所有经销商
@@ -207,11 +207,11 @@ class dealer_ctl_admin_goods_price extends desktop_controller
         // 根据操作类型检查对应权限
         if ($is_edit) {
             if (!$this->has_permission('dealer_goods_price_edit')) {
-                $this->end(false, '您没有编辑经销商品价格的权限');
+                $this->end(false, '您没有编辑经销商物料价格的权限');
             }
         } else {
             if (!$this->has_permission('dealer_goods_price_add')) {
-                $this->end(false, '您没有新增经销商品价格的权限');
+                $this->end(false, '您没有新增经销商物料价格的权限');
             }
         }
         
@@ -478,7 +478,7 @@ class dealer_ctl_admin_goods_price extends desktop_controller
     {
         // 检查批量更新权限
         if (!$this->has_permission('dealer_goods_price_batchupdate')) {
-            $this->splash('error', null, '您没有批量更新经销商品价格的权限');
+            $this->splash('error', null, '您没有批量更新经销商物料价格的权限');
         }
         
         // 获取选中的记录ID
@@ -500,7 +500,7 @@ class dealer_ctl_admin_goods_price extends desktop_controller
     {
         // 检查批量更新权限
         if (!$this->has_permission('dealer_goods_price_batchupdate')) {
-            $this->splash('error', null, '您没有批量更新经销商品价格的权限');
+            $this->splash('error', null, '您没有批量更新经销商物料价格的权限');
         }
         
         // 获取选中的记录ID
@@ -523,7 +523,7 @@ class dealer_ctl_admin_goods_price extends desktop_controller
         // 检查批量更新权限
         if (!$this->has_permission('dealer_goods_price_batchupdate')) {
             header('Content-Type: application/json');
-            echo json_encode(array('success' => false, 'message' => '您没有批量更新经销商品价格的权限', 'error_messages' => array()));
+            echo json_encode(array('success' => false, 'message' => '您没有批量更新经销商物料价格的权限', 'error_messages' => array()));
             exit;
         }
         

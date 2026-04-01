@@ -418,6 +418,7 @@ class material_basic_select
             
             //根据仓库ID、基础物料ID获取该物料仓库级的预占
             $branch_product[$key]['store_freeze']  = $basicMStockFreezeLib->getBranchFreeze($val['product_id'], $val['branch_id']);
+            $branch_product[$key]['available_store'] = max(0, $val['store'] - $branch_product[$key]['store_freeze']);
         }
 
         $pro['branch_product'] = $branch_product;

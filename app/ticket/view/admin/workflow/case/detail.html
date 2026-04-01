@@ -1,0 +1,113 @@
+<{capture name="header"}>
+<link href="../app/ome/statics/ome.css" rel="stylesheet" type="text/css">
+<{/capture}>
+
+<div class="tableform" id="caseinfo">
+  <h4>基本信息</h4>
+  <div class="division">
+    <table border="0" cellspacing="0" cellpadding="0">
+      <tr>
+        <th>审批号：</th>
+        <td><{$data.case_bn}></td>
+        <th>审批标题：</th>
+        <td><{$data.title}></td>
+        <th>创建时间：</th>
+        <td><{$data.at_time}></td>
+      </tr>
+      <tr>
+        <th>来源ID：</th>
+        <td><{$data.original_id}></td>
+        <th>来源单号：</th>
+        <td><{$data.original_bn}></td>
+        <th>更新时间：</th>
+        <td><{$data.up_time}></td>
+      </tr>
+      <tr>
+        <th>订单号：</th>
+        <td><{$data.original_bn}></td>
+        <th>业务单号：</th>
+        <td><{$data.bill_bn}></td>
+        <th>业务类型：</th>
+        <td><{$data.bill_type}></td>
+      </tr>
+      <tr>
+        <th>审批场景类型：</th>
+        <td>
+          <{if $data.scene_type == 'add_gift'}>加赠<{/if}>
+        </td>
+        <th>审核状态：</th>
+        <td>
+          <{if $data.status == 'pending'}>待审批<{/if}>
+          <{if $data.status == 'processing'}>审批中<{/if}>
+          <{if $data.status == 'approved'}>同意<{/if}>
+          <{if $data.status == 'rejected'}>拒绝<{/if}>
+          <{if $data.status == 'cancelled'}>取消<{/if}>
+        </td>
+        <th>流程模板ID：</th>
+        <td><{$data.template_id}></td>
+      </tr>
+      <tr>
+        <th>提交人ID：</th>
+        <td><{$data.submitter_id}></td>
+        <th>提交人姓名：</th>
+        <td><{$data.submitter_name}></td>
+        <th>当前节点ID：</th>
+        <td><{$data.current_node_id}></td>
+      </tr>
+      <tr>
+        <th>开始时间：</th>
+        <td><{$data.start_time}></td>
+        <th>结束时间：</th>
+        <td><{$data.end_time}></td>
+        <th>审批人类型：</th>
+        <td>
+          <{if $data.assignee_type == 'user'}>用户<{/if}>
+          <{if $data.assignee_type == 'role'}>角色<{/if}>
+          <{if $data.assignee_type == 'dept'}>部门<{/if}>
+        </td>
+      </tr>
+      <tr>
+        <th>审批人ID：</th>
+        <td><{$data.assignee_id}></td>
+        <th>审批人姓名：</th>
+        <td><{$data.assignee_name}></td>
+        <th></th>
+        <td></td>
+      </tr>
+    </table>
+  </div>
+  
+  <{if $data.items_context}>
+  <h4>订单赠品明细列表</h4>
+  <div class="goods-spec-cell" id='goods-spec-product'>
+    <{if $data.items_list && is_array($data.items_list) && count($data.items_list) > 0}>
+      <table class="gridlist">
+        <thead>
+          <tr>
+            <th style="text-align: left; font-weight: bold;">商品名称</th>
+            <th style="text-align: left;; font-weight: bold;">商品编码</th>
+            <th style="text-align: left;; font-weight: bold;">规格</th>
+            <th style="text-align: left;; font-weight: bold;">数量</th>
+            <th style="text-align: left;; font-weight: bold;">单价</th>
+            <th style="text-align: left;; font-weight: bold;">小计</th>
+          </tr>
+        </thead>
+        <tbody>
+          <{foreach from=$data.items_list item=item}>
+            <tr>
+              <td><{$item.name|default:'-'}></td>
+              <td><{$item.bn|default:'-'}></td>
+              <td><{$item.spec_info|default:'-'}></td>
+              <td><{$item.quantity|default:'0'}></td>
+              <td><{$item.price|default:'0.00'}></td>
+              <td><{$item.amount|default:'0.00'}></td>
+            </tr>
+          <{/foreach}>
+        </tbody>
+      </table>
+    <{else}>
+      <p class="text-muted">暂无商品明细数据</p>
+    <{/if}>
+  </div>
+  <{/if}>
+</div> 

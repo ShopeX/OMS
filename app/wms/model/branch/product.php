@@ -118,7 +118,7 @@ class wms_mdl_branch_product extends ome_mdl_branch_product{
                 '*:仓库' => 'branch_name',
                 '*:货号' => 'bn',
                 '*:条形码' => 'barcode',
-                '*:货品名称' => 'name',
+                '*:基础物料名称' => 'name',
                 '*:库存' => 'store',
                 '*:冻结库存' => 'store_freeze',
                 '*:在途库存'=>'arrive_store'

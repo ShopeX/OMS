@@ -35,12 +35,12 @@
         <permission id="dealer_betc" show='ome_roles:show_dealer'>业务贸易公司</permission>
         <permission id="dealer_bs" show='ome_roles:show_dealer'>经销商</permission>
         <permission id="dealer_bs_jcda" show='ome_roles:show_dealer'>经销商</permission>
-        <permission id="dealer_goods_price" show='ome_roles:show_dealer'>经销商品价格</permission>
-        <permission id="dealer_goods_price_add" show='ome_roles:show_dealer'>经销商品价格新增</permission>
-        <permission id="dealer_goods_price_edit" show='ome_roles:show_dealer'>经销商品价格编辑</permission>
-        <permission id="dealer_goods_price_batchupdate" show='ome_roles:show_dealer'>经销商品价格批量更新</permission>
-        <permission id="dealer_goods_price_import" show='ome_roles:show_dealer'>经销商品价格导入</permission>
-        <permission id="dealer_goods_price_export" show='ome_roles:show_dealer'>经销商品价格导出</permission>
+        <permission id="dealer_goods_price" show='ome_roles:show_dealer'>经销基础物料价格</permission>
+        <permission id="dealer_goods_price_add" show='ome_roles:show_dealer'>经销基础物料价格新增</permission>
+        <permission id="dealer_goods_price_edit" show='ome_roles:show_dealer'>经销基础物料价格编辑</permission>
+        <permission id="dealer_goods_price_batchupdate" show='ome_roles:show_dealer'>经销基础物料价格批量更新</permission>
+        <permission id="dealer_goods_price_import" show='ome_roles:show_dealer'>经销基础物料价格导入</permission>
+        <permission id="dealer_goods_price_export" show='ome_roles:show_dealer'>经销基础物料价格导出</permission>
         <permission id="dealer_platform_sales" show='ome_roles:show_dealer'>代发销售单</permission>
         <permission id="dealer_platform_delivery" show='ome_roles:show_dealer'>代发发货单</permission>
         <permission id="dealer_platform_reship" show='ome_roles:show_dealer'>代发退货单</permission>
@@ -87,12 +87,12 @@
     <workground name="基础档案" id="goods_manager" order="600" icon="icon-jichudangan-01">
         <menugroup name="经销商管理" en="dealer-management">
             <menu controller='admin_bs' action='index' permission='dealer_bs_jcda' display='true' order='6001030'>经销商</menu>
-            <menu controller='admin_goods_price' action='index' permission='dealer_goods_price' display='true' order='6001040'>经销商品价格</menu>
-            <menu controller='admin_goods_price' action='add' permission='dealer_goods_price_add' display='false' order='6001041'>经销商品价格新增</menu>
-            <menu controller='admin_goods_price' action='edit' permission='dealer_goods_price_edit' display='false' order='6001042'>经销商品价格编辑</menu>
-            <menu controller='admin_goods_price' action='batchUpdateStartTime' permission='dealer_goods_price_batchupdate' display='false' order='6001043'>经销商品价格批量更新</menu>
-            <menu controller='admin_goods_price' action='displayImportV2' permission='dealer_goods_price_import' display='false' order='6001044'>经销商品价格导入</menu>
-            <menu controller='admin_goods_price' action='export' permission='dealer_goods_price_export' display='false' order='6001045'>经销商品价格导出</menu>
+            <menu controller='admin_goods_price' action='index' permission='dealer_goods_price' display='true' order='6001040'>经销基础物料价格</menu>
+            <menu controller='admin_goods_price' action='add' permission='dealer_goods_price_add' display='false' order='6001041'>经销基础物料价格新增</menu>
+            <menu controller='admin_goods_price' action='edit' permission='dealer_goods_price_edit' display='false' order='6001042'>经销基础物料价格编辑</menu>
+            <menu controller='admin_goods_price' action='batchUpdateStartTime' permission='dealer_goods_price_batchupdate' display='false' order='6001043'>经销基础物料价格批量更新</menu>
+            <menu controller='admin_goods_price' action='displayImportV2' permission='dealer_goods_price_import' display='false' order='6001044'>经销基础物料价格导入</menu>
+            <menu controller='admin_goods_price' action='export' permission='dealer_goods_price_export' display='false' order='6001045'>经销基础物料价格导出</menu>
         </menugroup>
     </workground>
 

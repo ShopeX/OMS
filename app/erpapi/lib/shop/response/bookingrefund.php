@@ -27,6 +27,7 @@ class erpapi_shop_response_bookingrefund extends erpapi_shop_response_abstract {
      */
 
     public function ordermsg($params){
+        // 原有的预约退款逻辑
         $this->__apilog['title'] = '客户有意退款';
         $this->__apilog['original_bn'] = $params['tid'];
         $sdf = [
@@ -38,6 +39,33 @@ class erpapi_shop_response_bookingrefund extends erpapi_shop_response_abstract {
             'oid_list' => $params['oid_list'],
             'refundStatus' => $params['refundStatus'] ? : 1,
             'shop_id' => $this->__channelObj->channel['shop_id'],
+        ];
+        return $sdf;
+    }
+
+    public function fxordermsg($params){
+        // shopbee供销供应商订单信息同步
+        $this->__apilog['title'] = '供销供应商订单信息同步';
+        $this->__apilog['original_bn'] = $params['bizOrderCode'];
+        if (empty($params['bizOrderCode'])) {
+            return array('rsp' => 'fail', 'msg' => '业务单号不能为空');
+        }
+        $sdf = [
+            'order_bn' => $params['bizOrderCode'],
+            'shop_id' => $this->__channelObj->channel['shop_id'],
+            'supplierName' => $params['supplierName'],
+            'buyerComments' => $params['buyerComments'],
+            'supplierId' => $params['supplierId'],
+            'sellerId' => $params['sellerId'],
+            'bizType' => $params['bizType'],
+            'outBizCode' => $params['outBizCode'],
+            'extraContent' => $params['extraContent'],
+            'sellerComments' => $params['sellerComments'],
+            'sellerName' => $params['sellerName'],
+            'bizOrderCode' => $params['bizOrderCode'],
+            'deliverRequirement' => $params['deliverRequirement'],
+            'appointArrivedTime' => $params['appointArrivedTime'],
+            'appointDeliveryTime' => $params['appointDeliveryTime'],
         ];
         return $sdf;
     }

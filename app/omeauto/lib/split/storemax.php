@@ -81,6 +81,7 @@ class omeauto_split_storemax extends omeauto_split_abstract
      */
     public function splitOrder(&$group, $splitConfig)
     {
+        $startTime = microtime(true);
         $arrOrder   = $group->getOrders();
         $arrOrderId = array();
         $splitOrder = array();
@@ -111,7 +112,7 @@ class omeauto_split_storemax extends omeauto_split_abstract
         if (empty($splitOrder)) {
             return array(false, '无法拆单');
         }
-        return array(true);
+        return array(true, '');
     }
 
     /**
@@ -127,6 +128,7 @@ class omeauto_split_storemax extends omeauto_split_abstract
 
     protected function _splitOrderByStore(&$arrOrder, &$group, $splitConfig)
     {
+        $startTime = microtime(true);
         $group->setConfirmBranch(true);
         $bmIdNum = array();
         foreach ($arrOrder as $k => $order) {
@@ -243,18 +245,36 @@ class omeauto_split_storemax extends omeauto_split_abstract
             $group->setStoreBranch();
             $group->setStoreDlyType('o2o_ship');
         }
-        $logResult = [
-            '初始值' => $branchInfo,
-            '拆分情况' => $rs,
-            '初选仓' => $canBranchId,
-            '终选仓' => $branchId
-        ];
-        $this->writeSuccessLog($logResult, $arrOrder);
+        $endTime = microtime(true);
+        $executionTime = $endTime - $startTime;
+        
         if(isset($tid)) {#有仓库规则需要重置仓库
             $group->setBranchId(array($branchId));
         }
         $arrOrder = $rs['order'][$branchId];
-        return [true];
+        
+        // 记录插件性能数据
+        $optimizedRs = $this->optimizeSplitDetailsForLog($rs);
+        
+        $details = array(
+            'success' => true,
+            'message' => '拆单处理完成',
+            'order_bns' => implode(',', array_column($arrOrder, 'order_bn')),
+            'split_type' => 'storemax',
+            'split_result' => array(
+                'success' => true,
+                'message' => '拆单成功',
+                'split_type' => 'storemax',
+                'initial_branch_info' => $branchInfo,
+                'split_details' => $optimizedRs,
+                'candidate_branches' => $canBranchId,
+                'final_branch' => $branchId
+            )
+        );
+        
+        ome_api_log::add_message('plugin', 'split', $executionTime, $details);
+        
+        return [true, ''];
     }
 
     #根据库存订单处理拆分
@@ -518,51 +538,7 @@ class omeauto_split_storemax extends omeauto_split_abstract
         return $this->sortBranchById($storeRows, $arrO2oBranchId);
     }
 
-    protected function writeSuccessLog($logResult, $arrOrder)
-    {
-        $bmIdBn  = array();
-        $arrOrderBn = array();
-        foreach ($arrOrder as $order) {
-            foreach ($order['objects'] as $ok => $object) {
-                foreach ($object['items'] as $ik => $item) {
-                    $bmIdBn[$item['product_id']] = $item['bn'];
-                }
-            }
-            $arrOrderBn[] = $order['order_bn'];
-        }
-        $branchId = array();
-        foreach ($logResult['初始值'] as $v) {
-            $branchId[] = $v['branch_id'];
-        }
-        $branchLib  = kernel::single('ome_interface_branch');
-        $branchRows = $branchLib->getList('branch_id, branch_bn', array('branch_id' => $branchId));
-        $branchIdBn = array();
-        foreach ($branchRows as $v) {
-            $branchIdBn[$v['branch_id']] = $v['branch_bn'];
-        }
-        $logResult['id对应编码'] = [
-            '基础物料'=>$bmIdBn,
-            '仓库'=>$branchIdBn,
-        ];
-        $apilogModel = app::get('ome')->model('api_log');
-        $log_id      = $apilogModel->gen_id();
-        $logsdf      = array(
-            'log_id'        => $log_id,
-            'task_name'     => '按库存就全拆结果',
-            'status'        => 'success',
-            'worker'        => '',
-            'params'        => json_encode(array('store.split', $logResult), JSON_UNESCAPED_UNICODE), #longtext
-            'msg'           => '', #text json字符串
-            'log_type'      => '',
-            'api_type'      => 'response',
-            'memo'          => '',
-            'original_bn'   => $arrOrderBn[0],
-            'createtime'    => time(),
-            'last_modified' => time(),
-            'msg_id'        => '',
-        );
-        $apilogModel->insert($logsdf);
-    }
+
     
     /**
      * 过滤出管控库存的仓库
@@ -592,5 +568,73 @@ class omeauto_split_storemax extends omeauto_split_abstract
         }
         
         return $branchIds;
+    }
+    
+    /**
+     * 优化拆单详情数据用于日志记录
+     * 只记录代码中实际使用的字段，减少冗余数据
+     * 
+     * @param array $rs 原始拆单结果数据
+     * @return array 优化后的拆单结果数据
+     */
+    private function optimizeSplitDetailsForLog($rs) {
+        $optimizedRs = array();
+        
+        // 优化 order 信息，只记录实际使用的字段
+        if (isset($rs['order'])) {
+            $optimizedOrder = array();
+            foreach ($rs['order'] as $branchId => $orders) {
+                $optimizedOrder[$branchId] = array();
+                foreach ($orders as $order) {
+                    $optimizedOrderData = array(
+                        'order_id' => $order['order_id'],
+                        'order_bn' => $order['order_bn']
+                    );
+                    
+                    // 只记录代码中实际使用的 item 字段
+                    if (isset($order['objects'])) {
+                        $optimizedOrderData['items'] = array();
+                        foreach ($order['objects'] as $object) {
+                            if (isset($object['items'])) {
+                                foreach ($object['items'] as $item) {
+                                    $optimizedOrderData['items'][] = array(
+                                        'product_id' => $item['product_id'], // 用于库存计算
+                                        'nums' => $item['nums'] ?? 0,        // 用于数量计算
+                                        'split_num' => $item['split_num'] ?? 0, // 用于拆单逻辑
+                                        'original_num' => $item['original_num'] ?? 0 // 用于记录原始数量
+                                    );
+                                }
+                            }
+                        }
+                    }
+                    
+                    $optimizedOrder[$branchId][] = $optimizedOrderData;
+                }
+            }
+            $optimizedRs['order'] = $optimizedOrder;
+        }
+        
+        // 优化 branchInfo 信息，只保留实际使用的字段
+        if (isset($rs['branchInfo'])) {
+            $optimizedBranchInfo = array();
+            foreach ($rs['branchInfo'] as $branchId => $branchData) {
+                $optimizedBranchInfo[$branchId] = array(
+                    'branch_id' => $branchData['branch_id'],
+                    'store' => $branchData['store'] // 用于库存计算，保留完整数据
+                );
+            }
+            $optimizedRs['branchInfo'] = $optimizedBranchInfo;
+        }
+        
+        // 保留 sku_num 和 is_split 信息（代码中直接使用）
+        if (isset($rs['sku_num'])) {
+            $optimizedRs['sku_num'] = $rs['sku_num'];
+        }
+        
+        if (isset($rs['is_split'])) {
+            $optimizedRs['is_split'] = $rs['is_split'];
+        }
+        
+        return $optimizedRs;
     }
 }

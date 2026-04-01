@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
 * 更新库存RPC接口实现
 *
@@ -196,9 +195,9 @@ class inventorydepth_taog_rpc_request_stock extends ome_rpc_request
         # [多选一]销售物料
         $products_pko = $salesMaterialObj->getList('sm_id,sales_material_name,sales_material_bn,shop_id',array('sales_material_bn'=>$bn, 'sales_material_type'=>5));
         
-        kernel::single('inventorydepth_stock_products')->writeMemory($products);
-        kernel::single('inventorydepth_stock_pkg')->writeMemory($products_pkg);
-        kernel::single('inventorydepth_stock_pko')->writeMemory($products_pko);
+       // kernel::single('inventorydepth_stock_products')->writeMemory($products);
+       // kernel::single('inventorydepth_stock_pkg')->writeMemory($products_pkg);
+       // kernel::single('inventorydepth_stock_pko')->writeMemory($products_pko);
         
         $stores = $approve_status = array();
         foreach ($items as $shop_iid => $item) {

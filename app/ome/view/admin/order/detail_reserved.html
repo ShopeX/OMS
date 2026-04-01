@@ -1,0 +1,71 @@
+<{capture name="header"}>
+  <link href="../app/ome/statics/ome.css" rel="stylesheet" type="text/css">
+<{/capture}>
+
+<div class="tableform" id="saleinfo">
+    <h4>基本信息</h4>
+    <div class="division">
+    <table border="0" cellspacing="0" cellpadding="0">
+        <tr>
+            <th>订单号：</th>
+            <td><{$data.order_bn}></td>
+            <th>创建日期：</th>
+            <td><{$data.at_time}></td>
+            <th>更新时间：</th>
+            <td><{$data.up_time}></td>
+        </tr>
+        <tr>
+            <th>顾客姓名：</th>
+            <td><{$data.custom_reserved_name}></td>
+            <th>预约手机号：</th>
+            <td><{$data.custom_reserved_mobile}></td>
+            <th>客户预约时间：</th>
+            <td><{if $data.custom_reserved_time}><{$data.custom_reserved_time|date:"Y-m-d"}><{/if}></td>
+        </tr>
+        <tr>
+            <th>预约收货地区：</th>
+            <td><{if $data.custom_reserved_area}><{$data.custom_reserved_area|region}><{/if}></td>
+            <th>预约收货地址：</th>
+            <td><{$data.custom_reserved_address}></td>
+            <th>&nbsp;</th>
+            <td>&nbsp;</td>
+        </tr>
+    </table>
+    </div>
+    
+    <{if $reservationItems}>
+    <h4>商品预约信息：</h4>
+    <div class="goods-spec-cell" id='goods-spec-product'>
+    <table cellspacing="0" cellpadding="0" border="0" class="gridlist">
+        <thead>
+            <tr>
+                <th>&nbsp;基础物料编码</th>
+                <th>&nbsp;基础物料名称</th>
+                <th>&nbsp;销售物料编码</th>
+                <th>&nbsp;预约数量</th>
+                <th>&nbsp;客户预约时间</th>
+                <th>&nbsp;SAP预约时间</th>
+                <th>&nbsp;车队预约日期</th>
+                <th>&nbsp;DN创建时间</th>
+                <th>&nbsp;备注</th>
+            </tr>
+        </thead>
+        <tbody>
+            <{foreach from=$reservationItems item=itemInfo}>
+            <tr>
+                <td><{$itemInfo.product_bn}></td>
+                <td><{$itemInfo.product_name}></td>
+                <td><{$itemInfo.goods_bn}></td>
+                <td><{$itemInfo.quantity}></td>
+                <td><{if $itemInfo.item_reserved_time}><{$itemInfo.item_reserved_time|date:"Y-m-d"}><{/if}></td>
+                <td><{if $itemInfo.sap_reserved_times}><{$itemInfo.sap_reserved_times}><{/if}></td>
+                <td><{if $itemInfo.sap_delivery_date}><{$itemInfo.sap_delivery_date}><{/if}></td>
+                <td><{if $itemInfo.dn_create_times}><{$itemInfo.dn_create_times}><{/if}></td>
+                <td><{if $itemInfo.remark}><{$itemInfo.remark}><{/if}></td>
+            </tr>
+            <{/foreach}>
+        </tbody>
+    </table>
+    </div>
+    <{/if}>
+</div>

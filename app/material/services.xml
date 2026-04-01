@@ -13,6 +13,7 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
+
 <services>
     <service id="desktop_finder.material_mdl_basic_material"> 
         <class>material_finder_basic_material</class>
@@ -42,12 +43,18 @@
     <service id="desktop_finder.material_mdl_fukubukuro_combine">
         <class>material_finder_fukubukuro_combine</class>
     </service>
-    <service id="set_pagecols_setting">
-        <class>material_sales_setting</class>
-    </service>
     
+    <service id="operation_log">
+        <class>material_operation_log</class>
+    </service>
+    <service id="desktop_finder.material_mdl_seller">
+        <class>material_finder_seller</class>
+    </service>
     <service id="desktop_finder.material_mdl_customer_classify">
         <class>material_finder_customer_classify</class>
+    </service>
+    <service id="set_pagecols_setting">
+        <class>material_sales_setting</class>
     </service>
 </services>
 

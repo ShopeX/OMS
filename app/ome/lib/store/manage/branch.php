@@ -48,10 +48,8 @@ class ome_store_manage_branch extends ome_store_manage_abstract implements ome_s
      */
     public function addDly($params, &$err_msg)
     {
-
         $branchObj            = app::get('ome')->model("branch");
-        $basicMStockFreezeLib = kernel::single('material_basic_material_stock_freeze');
-
+        
         $delivBranch = $branchObj->getDelivBranch($params['branch_id']);
         $branchIds   = $delivBranch[$params['branch_id']]['bind_conf'];
         $branchIds[] = $params['branch_id'];
@@ -60,6 +58,12 @@ class ome_store_manage_branch extends ome_store_manage_abstract implements ome_s
         $delivery_items = $params['delivery_items'];
 
         foreach ($delivery_items as $item) {
+            // 基础物料不管控库存，则跳过
+            $is_product_ctrl_store = true;
+            if(isset($item['is_product_ctrl_store']) && $item['is_product_ctrl_store'] === false){
+                $is_product_ctrl_store = false;
+            }
+            
             if (isset($nitems[$item['product_id']])) {
                 $nitems[$item['product_id']]['number'] += $item['number'];
             } else {
@@ -69,6 +73,7 @@ class ome_store_manage_branch extends ome_store_manage_abstract implements ome_s
                     'number'     => $item['number'],
                     'bn' => $item['bn'],
                     'is_wms_gift' => $item['is_wms_gift'], //是否京东云交易赠品
+                    'is_product_ctrl_store' => $is_product_ctrl_store, //是否管控库存
                 );
             }
 
@@ -85,47 +90,29 @@ class ome_store_manage_branch extends ome_store_manage_abstract implements ome_s
             $negative_store = true;
         }
         $batchList = $wmsGiftBatchList = [];
+        
+        // product_id
+        $productIds = array_column($nitems, 'product_id');
+        
+        // 获取指定不需要管控库存的基础物料
+        $notCtrlStoreBmList = kernel::single('material_basic_material')->getNotCtrlStoreProducts($productIds);
+        
         //增加branch_product的冻结库存
         foreach ($nitems as $key => $items) {
-            /*
-            $sql = "SELECT product_id, branch_id, store FROM sdb_ome_branch_product
-                    WHERE product_id=" . $items['product_id'] . " AND branch_id IN (" . implode(',', $branchIds) . ")";
-            $branch_p = $branchObj->db->select($sql);
+            $product_id = $items['product_id'];
             
-            if ($negative_store === false) {
-                $store_num = 0;
-                if ($branch_p) {
-                    foreach ((array) $branch_p as $row) {
-                        //根据仓库ID、基础物料ID获取该物料仓库级的预占
-                        $store_freeze = $basicMStockFreezeLib->getBranchFreeze($row['product_id'], $row['branch_id']);
-                        $row['store'] = ($row['store'] < $store_freeze) ? 0 : ($row['store'] - $store_freeze);
-                        $store_num += $row['store'];
-                    }
-                }
-            }
-            */
-
             if (!is_numeric($items['number'])) {
                 $err_msg .= $items['product_name'] . ":请输入正确数量";
                 return false;
             }
-            /*  
-            // order_type的判断？？？
-            if ($params['order_type'] != 'platform') {
-                if (empty($store_num) || $store_num == 0 || $store_num < $items['number']) {
-                    $err_msg .= $items['product_name'] . ":商品库存不足";
-                    return false;
-                }
-                if ($params['order_type'] != 'platform') {
-                    if (empty($store_num) || $store_num == 0 || $store_num < $items['number']) {
-                        $err_msg .= $items['product_name'] . ":商品库存不足";
-                        return false;
-                    }
-        
-                }
+            
+            // 是否管控库存
+            if(isset($notCtrlStoreBmList[$product_id]) && $notCtrlStoreBmList[$product_id]){
+                $items['is_product_ctrl_store'] = false;
+            }else{
+                $items['is_product_ctrl_store'] = true;
             }
-            */
-
+            
             //订单货品预占释放
             $tmp = [
                 'bm_id'     =>  $items['product_id'],
@@ -137,6 +124,7 @@ class ome_store_manage_branch extends ome_store_manage_abstract implements ome_s
                 'bmsq_id'   =>  material_basic_material_stock_freeze::__SHARE_STORE,
                 'num'       =>  $items['number'], 
                 'sync_sku'  =>  false,
+                'is_product_ctrl_store' => $items['is_product_ctrl_store'], //是否管控库存
             ];
 
             //添加仓库预占流水
@@ -154,7 +142,11 @@ class ome_store_manage_branch extends ome_store_manage_abstract implements ome_s
             $freezeData['obj_bn'] = $delivery_bn;
             $freezeData['sync_sku'] = false;
             $freezeData['log_type'] = $negative_store === true ? 'negative_stock' : '';
-
+            
+            // 是否管控库存
+            $freezeData['is_product_ctrl_store'] = $items['is_product_ctrl_store'];
+            
+            // format
             if ($items['is_wms_gift'] == 'true') {
                 //临时解决
                 $wmsGiftBatchList['-'][] = $tmp;
@@ -192,7 +184,6 @@ class ome_store_manage_branch extends ome_store_manage_abstract implements ome_s
      */
     public function cancelDly($params, &$err_msg)
     {
-
         $nitems         = array();
         $delivery_items = $params['delivery_items'];
 
@@ -240,7 +231,24 @@ class ome_store_manage_branch extends ome_store_manage_abstract implements ome_s
         $order_bn = $theOrder['order_bn'];
         $batchList = $wmsGiftBatchList = [];
         $freezeBatchList = $freezeWmsGiftBatchList = [];
+        
+        // product_id
+        $productIds = array_column($nitems, 'product_id');
+        
+        // 获取指定不需要管控库存的基础物料
+        $notCtrlStoreBmList = kernel::single('material_basic_material')->getNotCtrlStoreProducts($productIds);
+        
+        // format
         foreach ($nitems as $key => $dly_item) {
+            $product_id = $dly_item['product_id'];
+            
+            // 是否管控库存
+            if(isset($notCtrlStoreBmList[$product_id]) && $notCtrlStoreBmList[$product_id]){
+                $dly_item['is_product_ctrl_store'] = false;
+            }else{
+                $dly_item['is_product_ctrl_store'] = true;
+            }
+            
             //释放仓库预占流水
             $tmp = [
                 'bm_id'     =>  $dly_item['product_id'],
@@ -253,7 +261,9 @@ class ome_store_manage_branch extends ome_store_manage_abstract implements ome_s
                 'log_type'  =>  '',
                 'bm_bn'     =>  $dly_item['bn'],
                 'sync_sku'  =>  false,
+                'is_product_ctrl_store' => $dly_item['is_product_ctrl_store'], // 是否管控库存
             ];
+            
             if($dly_item['is_wms_gift'] == 'true'){
                 //临时解决
                 $wmsGiftBatchList[] = $tmp;
@@ -274,14 +284,16 @@ class ome_store_manage_branch extends ome_store_manage_abstract implements ome_s
             $freezeData['num'] = $dly_item['number'];
             $freezeData['obj_bn'] = $order_bn;
             $freezeData['sync_sku'] = false;
+            $freezeData['is_product_ctrl_store'] = $dly_item['is_product_ctrl_store']; // 是否管控库存
+            
             if ($dly_item['is_wms_gift'] == 'true') {
                 //临时解决
                 $freezeWmsGiftBatchList[] = $freezeData;
             } else {
                 $freezeBatchList[] = $freezeData;
             }
-
         }
+        
         //释放仓库预占流水
         $rs = $this->_basicMStockFreezeLib->unfreezeBatch($batchList, __CLASS__.'::'.__FUNCTION__, $err);
         if ($rs == false) {
@@ -313,7 +325,6 @@ class ome_store_manage_branch extends ome_store_manage_abstract implements ome_s
      */
     public function consignDly($params, &$err_msg)
     {
-
         $delivery_items = $params['delivery_items'];
 
         // 获取sm_id
@@ -358,9 +369,18 @@ class ome_store_manage_branch extends ome_store_manage_abstract implements ome_s
         }
 
         ksort($nitems);
-
+        
+        // product_id
+        $productIds = array_column($nitems, 'product_id');
+        
+        // 获取指定不需要管控库存的基础物料
+        $notCtrlStoreBmList = kernel::single('material_basic_material')->getNotCtrlStoreProducts($productIds);
+        
+        // format
         $branchBatchList = $branchWmsGiftBatchList = [];
         foreach ($nitems as $key => $dly_item) {
+            $product_id = $dly_item['product_id'];
+            
             $tmp = [
                 'bm_id'     =>  $dly_item['product_id'],
                 'sm_id'     =>  $dly_item['goods_id'],
@@ -373,13 +393,20 @@ class ome_store_manage_branch extends ome_store_manage_abstract implements ome_s
                 'log_type'  =>  '',
                 'bm_bn'     =>  $dly_item['bn'],
             ];
+            
+            // 是否管控库存
+            if(isset($notCtrlStoreBmList[$product_id]) && $notCtrlStoreBmList[$product_id]){
+                $tmp['is_product_ctrl_store'] = false;
+            }else{
+                $tmp['is_product_ctrl_store'] = true;
+            }
+            
             if ($dly_item['is_wms_gift'] == 'true') {
                 //临时解决
                 $branchWmsGiftBatchList[] = $tmp;
             } else {
                 $branchBatchList[] = $tmp;
             }
-
         }
 
         //释放仓库预占流水
@@ -2085,9 +2112,19 @@ class ome_store_manage_branch extends ome_store_manage_abstract implements ome_s
     public function changeStoreBatch($params, &$err_msg)
     {
         $branchObj = app::get('ome')->model('branch_product');
+        
+        // product_id
+        $productIds = array_column($params['items'], 'product_id');
+        
+        // 获取指定不需要管控库存的基础物料
+        $notCtrlStoreBmList = kernel::single('material_basic_material')->getNotCtrlStoreProducts($productIds);
+        
+        // items
         $items = [];
         foreach ($params['items'] as $item) {
-
+            $product_id = $item['product_id'];
+            
+            // 初始化，添加仓库基础物料
             if (!$branchObj->count(array('branch_id' => $item['branch_id'], 'product_id' => $item['product_id']))) {
                 $branch_arr                  = array();
 
@@ -2101,10 +2138,17 @@ class ome_store_manage_branch extends ome_store_manage_abstract implements ome_s
                 $branch_arr['last_modified'] = time();
                 $branchObj->insert($branch_arr);
             }
-
+            
+            // check
             if ($item['nums'] == 0) {
                 continue;
             }
+            
+            // 是否管控库存
+            if(isset($notCtrlStoreBmList[$product_id]) && $notCtrlStoreBmList[$product_id]){
+                continue;
+            }
+            
             $items[] = [
                 'branch_id'     =>  $item['branch_id'],
                 'product_id'    =>  $item['product_id'],
@@ -2114,7 +2158,12 @@ class ome_store_manage_branch extends ome_store_manage_abstract implements ome_s
                 'negative_stock' =>  $item['negative_stock']?true:false,
             ];
         }
-
+        
+        // check
+        if(empty($items)){
+            return true;
+        }
+        
         $rs  = ome_branch_product::storeInRedis($items, $params['operator'], __CLASS__.'::'.__FUNCTION__);
 
         $res     = $rs[0];

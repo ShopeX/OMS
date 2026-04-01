@@ -87,7 +87,7 @@
             </div>
         </div>
         <div class="form-layout-block">
-            <h3>差异明细商品</h3>
+            <h3>差异明细</h3>
             <div>
                 <div class="content-container" style="width: 100%">
                     <table class="gridlist" >
@@ -148,6 +148,7 @@
                 <{button class="btn-primary" label="确定责任处理" id="check-btn"}>
 <!--                <{button class="btn-primary" label="确定责任处理" onclick="checkDetail1111('{$data.diff_id}','{$page}','{$view}')" id="check-btn"}>-->
                 <{/if}>
+                <button type="button" class="btn" onclick="goBackToList()"><span><span>返回</span></span></button>
             </div>
         </div>
     </form>
@@ -244,6 +245,15 @@
     function getPackagingStatus(packagingStatus)
     {
         document.getElementById("packaging_status").value = packagingStatus;
+    }
+
+    function goBackToList() {
+        if (history.length > 1) {
+            history.back();
+            return;
+        }
+        // 回退兜底：返回差异单列表首页
+        W.page('index.php?app=console&ctl=admin_difference_inventory&act=index');
     }
 
 </script>

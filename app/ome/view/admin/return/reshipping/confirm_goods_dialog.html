@@ -1,0 +1,260 @@
+<div class="tableform">
+    <div class="division">
+        <h4>
+            <{t}>补寄申请单信息<{/t}>
+        </h4>
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+            <tr>
+                <th>
+                    <{t}>补寄申请单号：<{/t}>
+                </th>
+                <td>
+                    <{$reshipping.reshipping_bn}>
+                </td>
+                <th>
+                    <{t}>关联订单号：<{/t}>
+                </th>
+                <td><{$reshipping.order_bn|default:'-'}></td>
+                <th>
+                    <{t}>状态：<{/t}>
+                </th>
+                <td>等待卖家发货（商品未确认）</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="division">
+        <h4>
+            <{t}>补寄商品信息（请确认）<{/t}>
+        </h4>
+        <form method="post" action="index.php?app=ome&ctl=admin_return_reshipping&act=doConfirmGoods" id="confirm_goods_form">
+            <input type="hidden" name="reshipping_id" value="<{$reshipping.reshipping_id}>">
+            <table width="100%" border="0" cellspacing="0" cellpadding="0" class="gridlist">
+                <thead>
+                    <tr>
+                        <th>
+                            <{t}>销售物料编码<{/t}>
+                        </th>
+                        <th>
+                            <{t}>商品名称<{/t}>
+                        </th>
+                        <th>
+                            <{t}>确认销售物料编码<{/t}>
+                        </th>
+                        <th>
+                            <{t}>确认数量<{/t}>
+                        </th>
+                        <th>
+                            <{t}>价格<{/t}>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <{foreach from=$items item=item name=items}>
+                    <tr>
+                        <td><{$item.bn}></td>
+                        <td>
+                            <{if $item.sales_material}>
+                            <{$item.sales_material.sales_material_name}>
+                            <{else}>-<{/if}>
+                        </td>
+                        <td>
+                            <input type="hidden" name="items_detail[<{$item.item_id}>][item_id]" value="<{$item.item_id}>">
+                            <div class="sales_material_selector_<{$item.item_id}>" style="position:relative;">
+                                <input type="hidden" name="items_detail[<{$item.item_id}>][sm_id]"
+                                    id="sm_id_<{$item.item_id}>" value="<{$item.goods_id}>">
+                                <input type="text" 
+                                    id="sales_material_input_<{$item.item_id}>" 
+                                    name="items_detail[<{$item.item_id}>][sales_material_bn]"
+                                    value="<{$item.bn}>" 
+                                    placeholder="输入销售物料编码"
+                                    style="width:200px;"
+                                    autocomplete="off">
+                            </div>
+                        </td>
+                        <td>
+                            <input type="text" name="items_detail[<{$item.item_id}>][nums]" value="<{$item.nums}>"
+                                style="width:80px;">
+                        </td>
+                        <td><{$item.price|cur}></td>
+                    </tr>
+                    <{/foreach}>
+                </tbody>
+            </table>
+        </form>
+    </div>
+</div>
+
+<{area inject=".mainFoot" }>
+    <div class="table-action">
+        <table width="100%" cellspacing="0" cellpadding="0">
+            <tbody>
+                <tr>
+                    <td>
+                        <{button type="button" id='submit_btn' class="btn-primary" label='确认商品信息' }>
+                            <{button type="button" id='close_btn' class="btn-secondary" label='关闭'
+                                isCloseDialogBtn="true" }>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+<{/area}>
+
+<{script src="coms/autocompleter.js" app="desktop"}>
+<{* 为每个商品项初始化 autocompleter *}>
+<{foreach from=$items item=item name=items}>
+<script type="text/javascript">
+(function() {
+    var itemId = '<{$item.item_id}>';
+    var inputElement = $('sales_material_input_' + itemId);
+    var smIdInput = $('sm_id_' + itemId);
+    var smBnInput = $('sales_material_bn_' + itemId);
+    
+    if (!inputElement) return;
+    
+    // 创建自定义下拉框容器，注入到输入框的父容器中
+    var containerDiv = inputElement.getParent('div');
+    var customChoices = new Element('ul', {
+        'class': 'autocompleter-choices',
+        'styles': {
+            display: 'none',
+            position: 'absolute',
+            top: '100%',
+            left: '0',
+            width: '200px',
+            'zIndex': 65535,
+            margin: '0',
+            padding: '0',
+            listStyle: 'none',
+            background: '#fff',
+            border: '1px solid #ccc',
+            'maxHeight': '200px',
+            overflow: 'auto'
+        }
+    }).inject(containerDiv);
+    
+    var callurl = 'index.php?app=ome&ctl=admin_order&act=getSalesMaterialByAddNormalOrder&from=return_reshipping';
+    var options = {
+        'getVar': 'bn',
+        'delay': 800,
+        'fxOptions': false,
+        'customChoices': customChoices,
+        'relative': false,
+        'width': 200,
+        callJSON: function() {
+            return window.autocompleter_json;
+        },
+        injectChoice: function(json) {
+            // 显示格式：编码 - 名称
+            var displayText = (json.bn || json.sales_material_bn || '') + ' - ' + (json.name || json.sales_material_name || '');
+            var choice = new Element('li', {
+                'html': this.markQueryValue(displayText),
+                'styles': {
+                    padding: '5px 10px',
+                    cursor: 'pointer',
+                    borderBottom: '1px solid #eee'
+                }
+            });
+            choice.store('_data', json);
+            choice.inputValue = json.bn || json.sales_material_bn || '';
+            this.addChoiceEvents(choice).inject(this.choices);
+        },
+        onShow: function() {
+            // 确保下拉框宽度与输入框一致
+            var inputWidth = inputElement.getStyle('width');
+            if (inputWidth) {
+                this.choices.setStyle('width', inputWidth);
+            }
+        },
+        onHide: function() {
+            if (!this.selected) return;
+            var _json = this.selected.retrieve('_data');
+            if (_json) {
+                // 更新隐藏字段
+                if (smIdInput) {
+                    smIdInput.value = _json.product_id || _json.sm_id || '';
+                }
+                if (smBnInput) {
+                    smBnInput.value = _json.bn || _json.sales_material_bn || '';
+                }
+                // 更新显示值（显示编码）
+                this.element.value = _json.bn || _json.sales_material_bn || '';
+            }
+        },
+        onFocus: function(ipt) {
+        }
+    };
+    
+    // 创建 autocompleter 实例（只使用编码搜索）
+    new Autocompleter.script(inputElement, callurl, options);
+})();
+</script>
+<{/foreach}>
+
+<script type="text/javascript">
+    (function () {
+        var _form = $('confirm_goods_form');
+        var btn = $('submit_btn');
+        var finder = finderGroup['<{$env.get.finder_id}>'];
+        if (!_form || !btn) {
+            return;
+        }
+
+        _form.store('target',{
+            onRequest:function(){
+                btn.setAttribute('disabled', 'disabled');
+            },
+            onComplete:function(){
+                btn.removeAttribute('disabled');
+            },
+            onSuccess:function(response){
+                var hash_res_obj = JSON.decode(response);
+                if (hash_res_obj.success != undefined && hash_res_obj.success != ""){
+                    try{
+                        var _dialogIns = btn.getParent('.dialog').retrieve('instance');
+                    }catch(e){}
+
+                    if(_dialogIns){
+                        if(finder){
+                            setTimeout(finder.refresh(),30000);
+                        }
+                        _dialogIns.close();
+                    }
+                }
+            }
+        });
+
+        // 按钮点击事件
+        btn.addEvent('click', function () {
+            // 验证商品信息
+            var itemsInputs = _form.getElements('input[name*="[sales_material_bn]"]');
+            var hasError = false;
+            itemsInputs.each(function (input) {
+                if (!input.value.trim()) {
+                    alert('请选择确认销售物料编码');
+                    hasError = true;
+                    return;
+                }
+            });
+            if (hasError) {
+                return;
+            }
+
+            var numsInputs = _form.getElements('input[name*="[nums]"]');
+            numsInputs.each(function (input) {
+                var nums = parseInt(input.value);
+                if (isNaN(nums) || nums <= 0) {
+                    alert('确认数量必须大于0');
+                    hasError = true;
+                    return;
+                }
+            });
+            if (hasError) {
+                return;
+            }
+
+            _form.fireEvent('submit', { stop: $empty });
+        });
+    })();
+</script>

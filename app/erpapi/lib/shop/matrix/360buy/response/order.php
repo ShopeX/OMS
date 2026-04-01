@@ -246,11 +246,17 @@ class erpapi_shop_matrix_360buy_response_order extends erpapi_shop_response_orde
                     if (is_string($popSignMap)) {
                         $popSignMap = json_decode($popSignMap, 1);
                     }
-                    if ($popSignMap && $popSignMap['24'] == '2') {
-                        // 重置guobu_info，专项补贴是商家自补行为
+                    // popSignMap[24] 对应的 guobu_type 映射
+                    $popSignMap24TypeMap = [
+                        '2' => ['1024'],      // 专项补贴
+                        '4' => [0x2000],      // 纯商家出资
+                        '5' => [0x10000],     // 政府和商家混合出资
+                    ];
+                    if ($popSignMap && isset($popSignMap['24']) && isset($popSignMap24TypeMap[$popSignMap['24']])) {
+                        // 重置guobu_info
                         $this->_ordersdf['guobu_info'] = [
                             'use_gov_subsidy_new' => true,
-                            'guobu_type' => ['1024'] // 专项补贴
+                            'guobu_type' => $popSignMap24TypeMap[$popSignMap['24']]
                         ];
                     }
                 }
@@ -267,6 +273,8 @@ class erpapi_shop_matrix_360buy_response_order extends erpapi_shop_response_orde
         if(is_string($orderExt)) {
             $orderExt = json_decode($orderExt, 1);
         }
+        
+        $paymentDetailList = [];
         if($this->_ordersdf['extend_field']['version'] >= 3){ 
             if($orderExt
                 && !isset($orderExt['totalSellerReceivable'])){
@@ -326,8 +334,11 @@ class erpapi_shop_matrix_360buy_response_order extends erpapi_shop_response_orde
                         }
                     }
 
-                    // type = 244 && bearer = 5 国补立减,也需要算在订单总额里
-                    if($value['type'] == 244) {
+                    // bearer = 5 国补立减,也需要算在订单总额里
+                    //@todo：官方文档：https://open.jd.com/v2/#/doc/scene?listId=2168
+                    // type = 244 代表：244-新品国补立减
+                    // type = 1080 代表：1080-政府消费券（可开票）
+                    if(in_array($value['type'], [244, 1080])) {
                         foreach ($value['orderCostAmounts'] as $orderCostAmount) {
 
                             if($orderCostAmount['bearer'] == 5 && $orderCostAmount['bearAmount'] > 0) {
@@ -336,7 +347,7 @@ class erpapi_shop_matrix_360buy_response_order extends erpapi_shop_response_orde
 
                                 $this->_ordersdf['payments'][] = [
                                     "money" => $orderCostAmount['bearAmount'],
-                                    "paymethod" => '国补立减-政府承担'
+                                    "paymethod" => isset($value['typeName']) ? $value['typeName'] : '国补立减-政府承担',
                                 ];
                             }
 
@@ -344,8 +355,32 @@ class erpapi_shop_matrix_360buy_response_order extends erpapi_shop_response_orde
                     }
                 }
             }
+        }else{
+            if(isset($this->_ordersdf['extend_field']['paymentDetailList'])){
+                $paymentDetailList = $this->_ordersdf['extend_field']['paymentDetailList'];
+                if(is_string($paymentDetailList)) {
+                    $paymentDetailList = json_decode($paymentDetailList, 1);
+                }
+            }
         }
-
+        
+        // 京东E卡
+        if($paymentDetailList){
+            foreach ($paymentDetailList as $pdKey => $payDetais)
+            {
+                if(!isset($payDetais['amountExpands'])){
+                    continue;
+                }
+                
+                foreach ($payDetais['amountExpands'] as $payDetailKey => $payDetailInfo)
+                {
+                    if(isset($payDetailInfo['type']) && $payDetailInfo['type'] == 101){
+                        $this->_ordersdf['extend_field']['is_jd_e_card'] = true;
+                    }
+                }
+            }
+        }
+        
         // 国补金额（下单立减）
         if ($orderExt) {
 
@@ -388,10 +423,23 @@ class erpapi_shop_matrix_360buy_response_order extends erpapi_shop_response_orde
                     }
                     $this->_ordersdf['guobu_info']['gov_subsidy_amount_new'] = $govSubsidyInfo['govSubsidyAmount'];
                 }
+                
+                // 国补订单拍照规则
+                if(isset($orderExt['SnImgRule'])){
+                    $SnImgRuleInfo = $orderExt['SnImgRule'];
+                    if (is_string($SnImgRuleInfo)) {
+                        $SnImgRuleInfo = json_decode($SnImgRuleInfo, true);
+                    }
+                    
+                    // 是否需要拍照
+                    if($SnImgRuleInfo['checkImg'] == 1){
+                        $this->_ordersdf['guobu_info'] = ['use_gov_subsidy_new' => true];
+                        $this->_ordersdf['guobu_info']['guobu_type'][] = 1024; // 需要拍照(十六制数值)
+                    }
+                }
             }
         }
-
-
+        
         if(is_array($this->_ordersdf['extend_field']['sendpayMap'])) {
             foreach($this->_ordersdf['extend_field']['sendpayMap'] as $spVal){
                 if(is_string($spVal)) {
@@ -823,6 +871,29 @@ class erpapi_shop_matrix_360buy_response_order extends erpapi_shop_response_orde
     {
         if($this->_ordersdf['extend_field']['version'] >= 3) {
             $this->_ordersdf['coupon_oid_field'] = 'sku_uuid';
+            if (isset($this->_ordersdf['coupon_field']) && is_array($this->_ordersdf['coupon_field'])) {
+                // 调用自定义的service来修改$coupon
+                foreach (kernel::servicelist('erpapi.service.360buy.order.coupon.format') as $service) {
+                    if (method_exists($service, 'format_coupon')) {
+                        $service->format_coupon($this, $this->_ordersdf['coupon_field']);
+                    }
+                }
+                // 先构建sku_uuid到实付金额的映射
+                $skuCalcActuallyPayMap = [];
+                foreach ($this->_ordersdf['coupon_field'] as $cf) {
+                    if (isset($cf['sku_uuid']) && isset($cf['calcActuallyPay'])) {
+                        $skuCalcActuallyPayMap[$cf['sku_uuid']] += $cf['calcActuallyPay'];
+                    }
+                }
+                // 将实付金额写入到order_objects
+                if (!empty($skuCalcActuallyPayMap) && isset($this->_ordersdf['order_objects']) && is_array($this->_ordersdf['order_objects'])) {
+                    foreach ($this->_ordersdf['order_objects'] as $k => $object) {
+                        if (isset($object['sku_uuid']) && isset($skuCalcActuallyPayMap[$object['sku_uuid']])) {
+                            $this->_ordersdf['order_objects'][$k]['actually_amount'] = $skuCalcActuallyPayMap[$object['sku_uuid']];
+                        }
+                    }
+                }
+            }
         } else {
             //矩阵返回优惠数据不请求接口，否则请求接口
             $ext_data                   = array();

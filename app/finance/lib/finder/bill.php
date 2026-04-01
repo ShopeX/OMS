@@ -112,7 +112,7 @@ class finance_finder_bill{
 
         return $render->fetch("settlement/verification_logs.html");
     }
-    
+
     public $column_monthly_id = '账期名称';
     public $column_monthly_id_order = 1;
     public $column_monthly_id_width = 180;

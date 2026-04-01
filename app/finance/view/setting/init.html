@@ -134,7 +134,40 @@ $('setting-form').store('target',{
 
         $('setting-form').getParent('.dialog').retrieve('instance').close();
 
-        finderGroup['<{$env.get.finder_id}>'].refresh();
+        // 安全地刷新finder，如果存在的话
+        try {
+            var finderId = '<{$env.get.finder_id}>';
+            if (finderId && finderGroup && finderGroup[finderId]) {
+                // 有finder上下文的情况：从finder页面调用（如monthend.php的index方法）
+                finderGroup[finderId].refresh();
+            } else {
+                // 没有finder上下文的情况：从dialog弹窗调用
+                // 调用场景：
+                // 1. app/financebase/view/admin/bill/import.html - 账单导入页面
+                // 2. 其他通过 target="dialog" 直接打开此页面的场景
+                // 3. 通过 window.open 或类似方式打开的弹窗
+                if (window.opener && !window.opener.closed) {
+                    // 通过window.open打开的弹窗，刷新打开者页面
+                    window.opener.location.reload();
+                } else if (window.parent && window.parent !== window) {
+                    // 在iframe中，刷新父框架页面
+                    window.parent.location.reload();
+                } else {
+                    // 其他情况，刷新当前页面
+                    window.location.reload();
+                }
+            }
+        } catch (e) {
+            console.log('[WARN] 刷新finder失败，尝试刷新页面:', e.message);
+            // 如果刷新finder失败，尝试刷新页面
+            if (window.opener && !window.opener.closed) {
+                window.opener.location.reload();
+            } else if (window.parent && window.parent !== window) {
+                window.parent.location.reload();
+            } else {
+                window.location.reload();
+            }
+        }
     }
 });
 </script>

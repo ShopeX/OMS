@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * 商品明细controller
  *
@@ -391,9 +390,9 @@ class inventorydepth_ctl_shop_frame extends desktop_controller {
         $products_pko = $salesMaterialObj->getList('sm_id,sales_material_name,sales_material_bn,shop_id', array('sales_material_bn'=>$shop_product_bn, 'sales_material_type'=>5));
         
         $products = $products ? $products : array();
-        kernel::single('inventorydepth_stock_pkg')->writeMemory($products_pkg);
-        kernel::single('inventorydepth_stock_products')->writeMemory($products);
-        kernel::single('inventorydepth_stock_pko')->writeMemory($products_pko);
+        // kernel::single('inventorydepth_stock_pkg')->writeMemory($products_pkg);
+        // kernel::single('inventorydepth_stock_products')->writeMemory($products);
+        // kernel::single('inventorydepth_stock_pko')->writeMemory($products_pko);
 
         $skuMapping = array();
         $list = $this->app->model('shop_adjustment')->getList('shop_product_bn,bind',array('shop_product_bn'=>$shop_product_bn,'mapping'=>'1','shop_id'=>$shop_id));
@@ -458,7 +457,7 @@ EOF;
             }
             
             $shop_product_bn = array(); $pkgFlag = $productFlag = $pkoFlag = array();
-            if ($r['skus']['sku']) {
+            if (isset($r['skus']['sku']) && $r['skus']['sku']) {
                 foreach ($r['skus']['sku'] as $sku) {
                     $shop_product_bn[] = $sku['outer_id'];
                     if (isset($skuMapping[$sku['outer_id']]) && $skuMapping[$sku['outer_id']] == 1) {

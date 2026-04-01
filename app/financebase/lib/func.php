@@ -31,7 +31,6 @@ class financebase_func
      * @param String $type 队列类型
      * @return bool
      */
-
     public function addTask($title, $worker, $params, $type = 'slow')
     {
         if (empty($params)) {
@@ -231,11 +230,7 @@ class financebase_func
     }
 
     // 获取店铺平台
-    /**
-     * 获取ShopPlatform
-     * @return mixed 返回结果
-     */
-    public function getShopPlatform()
+    public function getShopPlatform($column_platform = false)
     {
         $data = array(
             'alipay' => '支付宝',
@@ -247,16 +242,26 @@ class financebase_func
             'wechatpay'    => '微信',
             'wx'    => '微信小店',
             'vop'    => '唯品会',
+            'miaosuda' => '喵速达', // shop_type='taobao' and business_type='maochao'
+            'weimobr' => '微盟零售',
         );
+        if (!$column_platform){
+            $data = array_merge($data, array(
+                'jdwallet' => '京东钱包',
+                'jdecard' => '京东E卡',
+                'jdguobu' => '京东国补',
+                'tmyp' => '天猫优品',
+            ));
+        }
         return $data;
     }
     public static function getShopType()
     {
-        $data = array ('taobao','360buy','luban','youzan','pinduoduo','wx','weixinshop','wxshipin','website','vop');
+        $data = array ('taobao','360buy','luban','youzan','pinduoduo','wx','weixinshop','wxshipin','website','vop','xhs','miaosuda','weimobr');
         return $data;
     }
 
-    public static function getShopList($shop_type='', $s_type = '')
+    public static function getShopList($shop_type='', $s_type = '', $filter_config = array())
     {
         $filter = array('active' => 'true','delivery_mode'=>'self');
         if ($shop_type) {
@@ -271,6 +276,25 @@ class financebase_func
 
         if ($s_type){
             $filter['s_type'] = $s_type;
+        }
+
+        // 支持灵活的筛选条件（支持 business_type, tbbusiness_type 等扩展字段）
+        if ($filter_config && is_array($filter_config)) {
+            foreach ($filter_config as $field => $value) {
+                // 跳过 shop_type（已在上面处理）
+                if ($field === 'shop_type') {
+                    continue;
+                }
+                
+                // 处理各种筛选字段
+                if ($value) {
+                    if (is_array($value)) {
+                        $filter[$field . '|in'] = $value;
+                    } else {
+                        $filter[$field] = $value;
+                    }
+                }
+            }
         }
 
         return app::get('ome')->model('shop')->getList('shop_id,name,shop_type,node_type,business_type,config', $filter);
@@ -294,10 +318,10 @@ class financebase_func
 
     /**
      *  数据保存到存储空间 返回远程数据
-     * 
+     *
      * @param      string   $file_name  文件名
      * @param      array    $data       数据
-     * 
+     *
      * @return     Mix
      */
     public static function storeStorageData($file_name, $data = array())

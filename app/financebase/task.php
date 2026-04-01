@@ -30,7 +30,7 @@ class financebase_task{
         }
 
 
-        kernel::single('base_initial', 'financebase')->init();
+        //kernel::single('base_initial', 'financebase')->init();
 
    
   

@@ -31,6 +31,8 @@
       </td>
     </tr>
     <{/if}>
+
+    <{if $is_prohibit_submit !== 'true'}>
     <tr>
       <th><{t}>追加留言：<{/t}></th>
       <td><textarea name="order[custom_mark]" id="memo" rows="6" vtype="required" style="width:80%"></textarea>
@@ -40,6 +42,8 @@
       <th>&nbsp;</th>
       <td><{button type="submit" label="保存" }></td>
     </tr>
+    <{/if}>
+
     </table>  
 </div>
 </form>

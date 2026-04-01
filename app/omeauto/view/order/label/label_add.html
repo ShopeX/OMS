@@ -29,8 +29,8 @@
             <tbody>
                 <tr>
                     <th>标签代码：</th>
-                    <td><input name="label_code" type="text" value="<{$data.label_code}>" maxlength="20" vtype="required" onkeyup="this.value=this.value.replace(/[^a-zA-Z0-9]/g,'')" />
-                    &nbsp;&nbsp;<span style="color:red;">*</span>必填项,支持英文字母、数字</td>
+                    <td><input name="label_code" type="text" value="<{$data.label_code}>" maxlength="20" vtype="required" onkeyup="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,'')" />
+                    &nbsp;&nbsp;<span style="color:red;">*</span>必填项,支持英文字母、数字、下划线</td>
                 </tr>
                 <tr>
                     <th>标签名称：</th>

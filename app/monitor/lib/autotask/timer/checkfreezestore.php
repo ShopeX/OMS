@@ -28,6 +28,14 @@ class monitor_autotask_timer_checkfreezestore
         set_time_limit(0);
         ignore_user_abort(1);
         @ini_set('memory_limit', '1024M');
+        
+        // ---------------------------init time---------------------------
+        // ---------------------------init time---------------------------
+        // $init_time = strtotime('2026-03-27 09:00:00');
+        // base_kvstore::instance('monitor/checkfreezestore')->store('sync-lastexectime-exec', $init_time);
+        // base_kvstore::instance('monitor/checkfreezestore')->store('sync-lastexectime', $init_time);
+        // ---------------------------init time---------------------------
+        // ---------------------------init time---------------------------
 
         $now = time();
 
@@ -528,8 +536,33 @@ class monitor_autotask_timer_checkfreezestore
 
         }
 
+        // 定时场景下做二次复检，过滤瞬时抖动导致的误报
+        $skipDoubleCheck = false;
+        if (!$params['show'] && !$params['script'] && !$params['skip_double_check'] && $failInfo) {
+            $candidateBmIds = $this->collectFailBmIds($failInfo);
+            if ($candidateBmIds) {
+                $candidateCount = count($candidateBmIds);
+                if ($candidateCount > 600) {
+                    $skipDoubleCheck = true;
+                } else {
+                    sleep(6);
+                    $scriptParams = [
+                        'script'             => true,
+                        'uptime'             => false,
+                        'script_bm_id_list'  => $candidateBmIds,
+                        'skip_double_check'  => true,
+                    ];
+                    $tmpErr = '';
+                    $doubleCheckFailInfo = $this->process($scriptParams, $tmpErr);
+                    if (is_array($doubleCheckFailInfo)) {
+                        $failInfo = $doubleCheckFailInfo;
+                    }
+                }
+            }
+        }
+
         $msgHead = [
-            '时间:' . ($last_modified ? date('m/d H:i:s', $last_modified) : 'NULL') . '——' . $timeEnd,
+            '时间:' . ($last_modified ? date('m/d H:i:s', $last_modified) : 'NULL') . '——' . $timeEnd . ($skipDoubleCheck ? ' (未复检)' : ''),
             // '域名:' . kernel::base_url(1),
             "====== ====== ======",
         ];
@@ -545,7 +578,7 @@ class monitor_autotask_timer_checkfreezestore
                     $earliest = $sfv['last_modified'];
                 }
                 if ($sfk<$showNum) {
-                    $stock_freeze_msg = array_merge($msgHead, json_encode($sfv, JSON_UNESCAPED_UNICODE));
+                    $stock_freeze_msg = array_merge($msgHead, [json_encode($sfv, JSON_UNESCAPED_UNICODE)]);
                 }
             }
         }
@@ -684,6 +717,51 @@ class monitor_autotask_timer_checkfreezestore
             }
         }
         return true;
+    }
+
+    /**
+     * 汇总各维度异常中的 bm_id，做二次复检用
+     */
+    private function collectFailBmIds($failInfo)
+    {
+        $bmIds = [];
+        if (!is_array($failInfo)) {
+            return [];
+        }
+
+        if (!empty($failInfo['vsFreeze'])) {
+            foreach ($failInfo['vsFreeze'] as $list) {
+                foreach ((array)$list as $info) {
+                    if (isset($info['bmId'])) {
+                        $bmIds[(int)$info['bmId']] = 1;
+                    }
+                }
+            }
+        }
+
+        if (!empty($failInfo['vsStore'])) {
+            foreach ($failInfo['vsStore'] as $list) {
+                foreach ((array)$list as $info) {
+                    if (isset($info['bmId'])) {
+                        $bmIds[(int)$info['bmId']] = 1;
+                    }
+                }
+            }
+        }
+
+        if (!empty($failInfo['vsBmFreeze'])) {
+            foreach ((array)$failInfo['vsBmFreeze'] as $bmId => $info) {
+                $bmIds[(int)$bmId] = 1;
+            }
+        }
+
+        if (!empty($failInfo['vsBmStore'])) {
+            foreach ((array)$failInfo['vsBmStore'] as $bmId => $info) {
+                $bmIds[(int)$bmId] = 1;
+            }
+        }
+
+        return array_keys($bmIds);
     }
 
     private function getMainInfo($type = 'freeze', $info = '')

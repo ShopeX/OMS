@@ -105,11 +105,60 @@ $db['bill_category_rules']=array (
       'in_list' => true,
       'label' => '设置最后修改时间'
     ),
+    'account_id_plus' => 
+    array (
+      'type' => 'table:account_chart@financebase',
+      'label' => '贷会计科目ID',
+      'editable' => false,
+      'default_in_list' => false,
+      'in_list' => false,
+      'order' => 60,
+    ),
+    'account_id_minus' => 
+    array (
+      'type' => 'table:account_chart@financebase',
+      'label' => '借会计科目ID',
+      'editable' => false,
+      'default_in_list' => false,
+      'in_list' => false,
+      'order' => 65,
+    ),
+    'need_ar_verify' => array(
+          'type' => 'tinyint(1)',
+          'default' => '1',
+          'label' => '是否需要核对AR',
+          'comment' => '是否需要核对AR：0-无需核对AR，1-需核对AR',
+          'editable' => false,
+          'in_list' => true,
+          'default_in_list' => true,
+          'order' => 70,
+    ),
+    'at_time' => 
+    array (
+      'type' => 'TIMESTAMP',
+      'label' => '创建时间',
+      'default' => 'CURRENT_TIMESTAMP',
+      'width' => 150,
+      'in_list' => true,
+      'default_in_list' => true,
+      'order' => 80,
+    ),
+    'up_time' => 
+    array (
+      'type' => 'TIMESTAMP',
+      'label' => '更新时间',
+      'default' => 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+      'width' => 150,
+      'in_list' => true,
+      'default_in_list' => true,
+      'order' => 90,
+    ),
   ),
   'index' => array(
     'ind_bill_category' => array('columns' => array(0 => 'bill_category')),
     'ind_ordernum' => array('columns' => array(0 => 'ordernum')),
     'ind_disabled' => array('columns' => array(0 => 'disabled')),
+    'ind_need_ar_verify' => array('columns' => array(0 => 'need_ar_verify')),
    ),
   'comment' => '对账类目规则表',
   'engine' => 'innodb',

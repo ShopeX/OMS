@@ -34,7 +34,7 @@ class console_finder_wms_stockin {
         return implode('|', $btn);
     }*/
 
-    public $detail_item = "货品详情";
+    public $detail_item = "基础物料详情";
     public function detail_item($id){
         $render = app::get('console')->render();
         $items = app::get('console')->model('wms_stockin_items')->getList('*', ['wsi_id'=>$id]);

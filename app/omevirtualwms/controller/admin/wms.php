@@ -21,11 +21,6 @@ define('TIP_INFO', '部分回传'); //再次展示时的提示信息
 class omevirtualwms_ctl_admin_wms extends desktop_controller
 {
 
-    /**
-     * __construct
-     * @param mixed $app app
-     * @return mixed 返回值
-     */
     public function __construct($app)
     {
         parent::__construct($app);
@@ -42,20 +37,11 @@ class omevirtualwms_ctl_admin_wms extends desktop_controller
     }
 
     //用于显示展示页面
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index()
     {
         $this->page('show.html');
     }
     //显示入库，出库 发货 退货
-    /**
-     * show2
-     * @param mixed $flag flag
-     * @return mixed 返回值
-     */
     public function show2($flag = '')
     {
 
@@ -86,10 +72,6 @@ class omevirtualwms_ctl_admin_wms extends desktop_controller
 
     }
 
-    /**
-     * callback
-     * @return mixed 返回值
-     */
     public function callback()
     {
         $this->title = 'callback回传';
@@ -106,12 +88,6 @@ class omevirtualwms_ctl_admin_wms extends desktop_controller
     }
 
     // 商品返回模拟页面
-    /**
-     * callback_goods_html
-     * @param mixed $msg_id ID
-     * @param mixed $finder_id ID
-     * @return mixed 返回值
-     */
     public function callback_goods_html($msg_id, $finder_id)
     {
         $apilogModel = app::get('ome')->model('api_log');
@@ -126,12 +102,6 @@ class omevirtualwms_ctl_admin_wms extends desktop_controller
     }
 
     // 异步返回模拟页面
-    /**
-     * callback_html
-     * @param mixed $msg_id ID
-     * @param mixed $finder_id ID
-     * @return mixed 返回值
-     */
     public function callback_html($msg_id, $finder_id)
     {
         $this->pagedata['msg_id']    = $msg_id;
@@ -140,12 +110,6 @@ class omevirtualwms_ctl_admin_wms extends desktop_controller
     }
 
     // 异步返回模拟处理
-    /**
-     * callback_call
-     * @param mixed $msg_id ID
-     * @param mixed $rsp rsp
-     * @return mixed 返回值
-     */
     public function callback_call($msg_id, $rsp = 'succ')
     {
         $callbackModel = app::get('omevirtualwms')->model('callback');
@@ -179,11 +143,6 @@ class omevirtualwms_ctl_admin_wms extends desktop_controller
     }
 
     // 商品异步返回模拟处理
-    /**
-     * callback_goods_call
-     * @param mixed $msg_id ID
-     * @return mixed 返回值
-     */
     public function callback_goods_call($msg_id)
     {
         $this->begin('index.php?app=omevirtualwms&ctl=admin_wms&act=callback');
@@ -227,11 +186,6 @@ class omevirtualwms_ctl_admin_wms extends desktop_controller
     }
 
     //显示所有回传菜单
-    /**
-     * show
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function show($data = '')
     {
         $flag = in_array(trim($_GET['flag']), array('stockin', 'stockout', 'inventory', 'delivery', 'reship', 'account')) ? $_GET['flag'] : 'reship';
@@ -292,11 +246,6 @@ class omevirtualwms_ctl_admin_wms extends desktop_controller
     }
 
     //处理提交过来的数据
-    /**
-     * doSubmit
-     * @param mixed $type_id ID
-     * @return mixed 返回值
-     */
     public function doSubmit($type_id = '')
     {
         ini_set('memory_limit','256M');
@@ -359,10 +308,17 @@ class omevirtualwms_ctl_admin_wms extends desktop_controller
 
         //消息发送成功，插入数据状态表
         if ($info['rsp'] == 'succ') {
+            // 操作员信息
+            $op_id = kernel::single('desktop_user')->get_id();
+            $op_name = kernel::single('desktop_user')->get_name();
+            
+            // data
             $data = array(
                 'bn'          => $_POST[$_POST['flag'] . '_bn'],
                 'type'        => $_POST['flag'],
                 'status'      => $query_params['status'] ? $query_params['status'] : 'success',
+                'op_id'       => $op_id,
+                'op_name'     => $op_name,
                 'create_time' => time(),
             );
             $this->app->model('dataStatus')->save($data);
@@ -372,17 +328,15 @@ class omevirtualwms_ctl_admin_wms extends desktop_controller
     }
 
     //根据传来的参数获取相应的回传信息
-    /**
-     * 获取info
-     * @param mixed $bn bn
-     * @param mixed $method method
-     * @param mixed $type_id ID
-     * @return mixed 返回结果
-     */
     public function getinfo($bn, $method, $type_id='')
     {
         $_POST["bn"]   = $bn;
         $_POST["flag"] = $method;
+        
+        // 兼容 GET 请求：点击「开始模拟」链接时 i_type 在 URL 中（$_GET），需同步到 $_POST 供后续逻辑使用
+        if (isset($_GET['i_type'])) {
+            $_POST['i_type'] = $_GET['i_type'];
+        }
 
         if (strtolower($method) == 'vopstockout') {
             $iostocktype = 'VOP';
@@ -438,6 +392,7 @@ class omevirtualwms_ctl_admin_wms extends desktop_controller
         if (!empty($data)) {
             $this->pagedata['data'] = $data;
             $this->pagedata['type_id'] = $type_id;
+            $this->pagedata['i_type'] = isset($_POST['i_type']) ? $_POST['i_type'] : '';
             $this->page($method . '.html');
         } else {
             $this->show($method);
@@ -939,16 +894,16 @@ class omevirtualwms_ctl_admin_wms extends desktop_controller
                 $mpRow = app::get('console')->model('material_package')->db_dump(['mp_bn'=>$data['storeprocess_bn']], 'id,service_type');
                 $mpid = $mpRow['id'];
                 $service_type = $mpRow['service_type'];
-                $productitems = [];
+                $materialitems = [];
                 foreach(app::get('console')->model('material_package_items')->getList('*', ['mp_id'=>$mpid]) as $v) {
-                    $productitems[] = [
+                    $materialitems[] = [
                         'itemCode' => $v['bm_bn'],
                         'quantity' => $v['number'],
                     ];
                 }
-                $materialitems = [];
+                $productitems = [];
                 foreach(app::get('console')->model('material_package_items_detail')->getList('*', ['mp_id'=>$mpid]) as $v) {
-                    $materialitems[] = [
+                    $productitems[] = [
                         'itemCode' => $v['bm_bn'],
                         'quantity' => $v['number'],
                     ];
@@ -958,16 +913,17 @@ class omevirtualwms_ctl_admin_wms extends desktop_controller
                     'materialitems'     => json_encode(['item'=>$materialitems]),
                     'productitems'      => json_encode(['item'=>$productitems]),
                 );
+                // 如果是service_type=2（仓内组合拆分），调换materialitems和productitems
+                if($service_type == '2') {
+                    $params['materialitems'] = json_encode(['item'=>$productitems]);
+                    $params['productitems'] = json_encode(['item'=>$materialitems]);
+                }
                 return $params;
                 break;
         }
 
     }
 
-    /**
-     * err
-     * @return mixed 返回值
-     */
     public function err()
     {
         $err = <<<EOF
@@ -1061,10 +1017,6 @@ EOF;
         return strtoupper(md5(strtoupper(md5($this->_assemble($params))) . $token));
     }
 
-    /**
-     * config
-     * @return mixed 返回值
-     */
     public function config()
     {
 
@@ -1107,10 +1059,6 @@ EOF;
         $this->page('config.html');
     }
 
-    /**
-     * callback_config
-     * @return mixed 返回值
-     */
     public function callback_config()
     {
         if ($_POST) {
@@ -1127,7 +1075,7 @@ EOF;
             } elseif ($callback['status'] == '2') {
 #外网
                 #异步
-                $update_sdf = array('node_url' => MATRIX_URL);
+                $update_sdf = array('node_url' => MATRIX_URL); //'http://matrix.ecos.shopex.cn');
                 $filter     = array('node_id' => '1');
                 $networkModel->update($update_sdf, $filter);
             } else {
@@ -1142,11 +1090,6 @@ EOF;
         $this->page('callback_config.html');
     }
 
-    /**
-     * show_inventory
-     * @param mixed $inventory_num inventory_num
-     * @return mixed 返回值
-     */
     public function show_inventory($inventory_num)
     {
 
@@ -1164,10 +1107,6 @@ EOF;
 
     }
 
-    /**
-     * back_branch
-     * @return mixed 返回值
-     */
     public function back_branch()
     {
         $tt = '<select name="warehouse">';
@@ -1189,10 +1128,6 @@ EOF;
         echo $tt;
         exit;
     }
-    /**
-     * 获取_stock
-     * @return mixed 返回结果
-     */
     public function get_stock()
     {
         $basicMaterialLib = kernel::single('material_basic_material');
@@ -1207,10 +1142,6 @@ EOF;
     }
 
     //显示所有同步中的商品列表
-    /**
-     * show_goods
-     * @return mixed 返回值
-     */
     public function show_goods()
     {
         $titles["goods"] = "商品同步状态模拟回传";
@@ -1230,11 +1161,6 @@ EOF;
 
     }
 
-    /**
-     * goods
-     * @param mixed $log_id ID
-     * @return mixed 返回值
-     */
     public function goods($log_id)
     {
         $this->begin('javascript:finderGroup["finderGroup["' . $_GET['finder_id'] . '"].refresh();');
@@ -1249,10 +1175,6 @@ EOF;
     }
 
     //模拟直连WMS 推送交易流水单据
-    /**
-     * iostock
-     * @return mixed 返回值
-     */
     public function iostock()
     {
         $iotypeObj                      = app::get('ome')->model('iostock_type');

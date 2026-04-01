@@ -143,7 +143,7 @@ class ome_event_trigger_shop_data_delivery_common
                 'aikucun','weimobv','yutang','mingrong','beibei','360buy','yangsc','yunji4fx',
                 'luban','xiaohongshu','xhs','weimobr','yunmall','meituan4medicine','yunji4pop',
                 'ecos.ecshopx','weixinshop','website','website_d1m','wxshipin','zkh','kuaishou','pinduoduo',
-                'meituan4bulkpurchasing','meituan4sg','website_v2',
+                'meituan4bulkpurchasing','meituan4sg','website_v2','xiaomi',
         );
         
         // 开启拆单
@@ -304,16 +304,29 @@ class ome_event_trigger_shop_data_delivery_common
 
         foreach ($delivery_items_detail as $key => $value) {
             $order_item = $order_objects[$value['order_obj_id']]['order_items'][$value['order_item_id']];
-
+            
+            // 订单基础物料已经发货数量
+            $item_sendnum = intval($order_item['sendnum']);
+            
             if ($value['item_type'] == 'pkg') {
                 $number = $order_objects[$value['order_obj_id']]['quantity']*$value['number']/$order_item['nums'];
-
+                
+                // 公式：子订单已发货数量 = (子订单数量 * 基础物料已发货数量) / 基础物料数量
+                // 先乘后除可以减少精度损失，使用 floor() 确保向下取整为整数
+                if ($order_item['nums'] > 0 && isset($order_objects[$value['order_obj_id']]['quantity'])) {
+                    $obj_sendnum = intval($order_objects[$value['order_obj_id']]['quantity'] / $order_item['nums'] * $item_sendnum);
+                } else {
+                    $obj_sendnum = 0;
+                }
+                
                 $delivery_items['obj_'.$value['order_obj_id'] . '_' . $value['delivery_id']] = array(
                     'name'          => trim($order_objects[$value['order_obj_id']]['name']),
                     'bn'            => trim($order_objects[$value['order_obj_id']]['bn']),
                     'number'        => $number,
+                    'sendnum'       => $obj_sendnum,
                     'item_type'     => $value['item_type'],
                     'shop_goods_id' => $order_objects[$value['order_obj_id']]['shop_goods_id'],
+                    'shop_product_id' => $order_item['shop_product_id'],
                     'oid'           => $order_objects[$value['order_obj_id']]['oid'],
                     'main_oid'      => $order_objects[$value['order_obj_id']]['main_oid'],
                     'logi_no'       => $value['logi_no'] ? $value['logi_no'] : $this->__sdf['logi_no'],
@@ -1023,8 +1036,8 @@ class ome_event_trigger_shop_data_delivery_common
             foreach ($object['order_items'] as $item) {
                 if ($product_serial[$item['item_id']] && $object['oid']){
                     foreach ($product_serial[$item['item_id']]['sn'] as $_sk => $_sn) {
-                        $_imei = $product_serial[$item['item_id']]['imei'][$_sk];
-                        $feature[] = $object['oid'].':'.$_sn.':'.explode(',', $_imei);
+                        $_imei = $product_serial[$item['item_id']]['imei'][$_sk] ?? '';
+                        $feature[] = $object['oid'].':'.$_sn.':'.$_imei;
                     }
                 }
             }
@@ -1033,8 +1046,9 @@ class ome_event_trigger_shop_data_delivery_common
         if ($feature) {
             if ($this->__sdf['feature']) {
                 $this->__sdf['feature'] .= ';sn='.implode('|',$feature);
+            } else {
+                $this->__sdf['feature'] = 'sn='.implode('|',$feature);
             }
-            $this->__sdf['feature'] = 'sn='.implode('|',$feature);
         }
     }
 

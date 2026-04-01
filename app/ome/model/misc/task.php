@@ -31,7 +31,7 @@ class ome_mdl_misc_task extends dbeav_model
         'delivery_lan_jie'  => array(
             'text'   => '发货单因售后仅退款拦截',
             'class'  => 'console_reship',
-            'method' => 'orderRefundToLJRK',
+            'method' => 'batchOrderRefundToLJRK',
         ),
         'timing_bufa_order' => array(
             'text'   => '延迟创建补发赠品订单',

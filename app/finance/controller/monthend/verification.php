@@ -63,6 +63,11 @@ class finance_ctl_monthend_verification extends desktop_controller{
                 'submit'   => $this->url.'&act=ruleVerification&p[]='.$monthly_id.'&view='.$_GET['view'],
                 'target' => 'dialog::{width:600,height:300,title:\'规则核销\'}'
             );
+            $actions['import'] = array(
+                'label'  => '导入差异类型',
+                'href' => 'index.php?app=finance&ctl=monthend_verification&act=displayImportV2&p[0]=finance_gap_type_import&finder_id={finder_id}&monthly_id='.$monthly_id,
+                'target' => 'dialog::{width:760,height:300,title:\'' . app::get('desktop')->_('导入差异类型') . '\'}',
+            );
         }
         if (!kernel::single('desktop_user')->has_permission('finance_export')) {
             unset($actions['export']);
@@ -170,6 +175,16 @@ class finance_ctl_monthend_verification extends desktop_controller{
 
         $this->pagedata['finder_id'] = $_GET['finder_id'];
 
+        // 获取差异类型列表（只显示有效的）
+        $oGap = app::get('financebase')->model("gap");
+        $gap_list = $oGap->getList('gap_name', array('status' => '1'));
+        $this->pagedata['gap_list'] = $gap_list;
+
+        // 查询已保存的差异类型
+        $mdlItem = app::get('finance')->model('monthly_report_items');
+        $saved_gap_type = $mdlItem->getList('gap_type', array('order_bn' => $order_bn, 'monthly_id' => $monthly_id), 0, 1);
+        $this->pagedata['saved_gap_type'] = $saved_gap_type ? $saved_gap_type[0]['gap_type'] : '';
+
         $this->singlepage('monthed/verificate_detail.html');
     }
 
@@ -206,6 +221,19 @@ class finance_ctl_monthend_verification extends desktop_controller{
      */
     public function doVerificate(){
         $this->begin('');
+        
+        // 保存差异类型
+        if($_POST['gap_type']) {
+            $mdlBill = app::get('finance')->model('bill');
+            $mdlBill->update(array('gap_type' => $_POST['gap_type']), array('order_bn' => $_POST['order_bn'], 'monthly_id' => $_POST['monthly_id']));
+            
+            $mdlAr = app::get('finance')->model('ar');
+            $mdlAr->update(array('gap_type' => $_POST['gap_type']), array('order_bn' => $_POST['order_bn'], 'monthly_id' => $_POST['monthly_id']));
+            
+            $mdlItem = app::get('finance')->model('monthly_report_items');
+            $mdlItem->update(array('gap_type' => $_POST['gap_type']), array('order_bn' => $_POST['order_bn'], 'monthly_id' => $_POST['monthly_id']));
+        }
+        
         $res = kernel::single('finance_verification')->doManVerificate($_POST);
         $this->end(true, app::get('base')->_('核销成功'));
     }
@@ -294,6 +322,16 @@ class finance_ctl_monthend_verification extends desktop_controller{
     {
         $this->pagedata['monthly_id'] = $monthly_id;
         $this->pagedata['order_bn']   = $order_bn;
+
+        // 获取差异类型列表（只显示有效的）
+        $oGap = app::get('financebase')->model("gap");
+        $gap_list = $oGap->getList('gap_name', array('status' => '1'));
+        $this->pagedata['gap_list'] = $gap_list;
+
+        // 查询已保存的差异类型
+        $mdlItem = app::get('finance')->model('monthly_report_items');
+        $saved_gap_type = $mdlItem->getList('gap_type', array('order_bn' => $order_bn, 'monthly_id' => $monthly_id), 0, 1);
+        $this->pagedata['saved_gap_type'] = $saved_gap_type ? $saved_gap_type[0]['gap_type'] : '';
 
         $this->display('monthed/gap_type.html');
     }
@@ -428,4 +466,32 @@ class finance_ctl_monthend_verification extends desktop_controller{
         );
         $this->finder('sales_mdl_sales', $params);
     }
+
+    /**
+     * 新版导出模板方法，参考订单的实现方式
+     */
+    public function exportTemplateV2()
+    {
+        $fileName = "差异类型导入模板.xlsx";
+        $title = app::get('finance')->model('monthly_report_items')->exportTemplateV2('finance_monthly_report_items_import');
+        kernel::single('omecsv_phpoffice')->export($fileName, [0 => $title]);
+    }
+
+    /**
+     * 导入差异类型页面
+     */
+    public function displayImportV2($type='', $extraParams=[])
+    {
+        // 如果是财务差异类型导入，添加monthly_id
+        if ($type === 'finance_gap_type_import' && isset($_GET['monthly_id'])) {
+            $extraParams[] = [
+                'name' => 'queue_data[monthly_id]',
+                'value' => $_GET['monthly_id']
+            ];
+        }
+        
+        // 调用父类方法，传递额外参数
+        parent::displayImportV2($type, $extraParams);
+    }
+    
 }

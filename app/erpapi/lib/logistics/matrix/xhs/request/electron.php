@@ -405,6 +405,8 @@ class erpapi_logistics_matrix_xhs_request_electron extends erpapi_logistics_requ
                     'district_name'  => $v['senderAddressList'][0]['address']['district'],
                     'street_name'    => $v['senderAddressList'][0]['address']['town'],
                     'detail_address' => $v['senderAddressList'][0]['address']['detail'],
+                    // 一个物流品牌多个签约地的时候，只有一个accountId，控制层拿到数据是以acct_id为key组数据，需要加一个唯一key
+                    '_unique_acct_id'=> $result['data']['data']['accountId'].'-'.$v['branchCode'],
                 ];
             }
             $result['data']['account_list'] = $_tmp;

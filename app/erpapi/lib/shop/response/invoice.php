@@ -126,12 +126,13 @@ class erpapi_shop_response_invoice extends erpapi_shop_response_abstract
         return $sdf;
     }
 
-    protected $electronKind = array(0);
-    protected $specialKind = array(2);
+    protected $electronKind = array(0, 4);
+    protected $specialKind = array(2, 3, 5);
 
     protected function _formatMessagePush($params)
     {
-        #淘宝 0=电子发票，1=纸质发票，2=专票 && ERP 2=纸质发票，1=电子发票, 3=专票
+        #淘宝 0=电子发票，1=纸质发票，2=专票，3=电子专用发票，4=全电普通发票，5=全电专用发票
+        #ERP 1=电子发票，2=纸质发票，3=专票
         $invoice_kind = '2';
         if(isset($params['invoice_kind'])) {
             if(in_array($params['invoice_kind'], $this->electronKind)) {

@@ -49,7 +49,8 @@ class ome_autotask_task_preselectbranch
         $groups    = array();
         
         //[获取所有可操作的订单组]合并识别号_合并索引号[order_combine_hash、order_combine_idx]
-        $row = app::get('ome')->model('orders')->db_dump(array('order_id'=>$order_id),'order_id,shop_id,process_status,shop_type,is_fail,order_combine_hash,order_combine_idx,op_id,group_id');
+        $row = app::get('ome')->model('orders')->db_dump(array('order_id'=>$order_id), '*');
+        
         //[批量日志]处理中
         $deliBatchLog = app::get('ome')->model('batch_log');
         $rs = $deliBatchLog->update(array('status'=>'2'),array('log_id'=>$params['log_id'],'status'=>'0'));
@@ -58,7 +59,7 @@ class ome_autotask_task_preselectbranch
             return false;
         }
 
-        #只处理未确认订单 && 失败订单不处理
+        //只处理未确认订单 && 失败订单不处理
         if(!$row ||
             !in_array($row['process_status'], array('unconfirmed','confirmed')) ||
             $row['is_fail'] == 'true' || 
@@ -74,6 +75,16 @@ class ome_autotask_task_preselectbranch
             $error_msg = '订单状态不对' . var_export($row, 1);
             return false;
         }
+        
+        //是否允许审核
+        if($row['is_not_combine'] > 0){
+            //[批量日志]已处理
+            $fail = 1;
+            $deliBatchLog->update(array('status'=>'1','fail_number'=>$fail), array('log_id'=>$params['log_id']));
+            
+            return array(false, '订单已被标记：不允许审核!' . var_export($row, 1));
+        }
+        
         $shop = app::get('ome')->model('shop')->db_dump(['shop_id'=>$row['shop_id']], 'delivery_mode');
         if($shop['delivery_mode'] == 'jingxiao') {
             $fail    = 1;

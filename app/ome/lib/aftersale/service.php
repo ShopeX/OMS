@@ -19,10 +19,6 @@ class ome_aftersale_service{
     
     const _APP_NAME = 'ome';
     
-    /**
-     * __construct
-     * @return mixed 返回值
-     */
     public function __construct(){
         $this->_router = kernel::single('ome_aftersale_request');
     }
@@ -194,7 +190,8 @@ class ome_aftersale_service{
         $result = $this->_router->setShopId($shop_id)->reship_edit($returninfo);
         $shopModel = app::get('ome')->model('shop');
         $shop = $shopModel->dump($shop_id);
-        if ($result && $result['rsp']!='fail' && $shop && $shop['node_id']) {
+        $result_ok = $result && (is_array($result) ? $result['rsp'] != 'fail' : true);
+        if ($result_ok && $shop && $shop['node_id']) {
             return $result;
         }
     }

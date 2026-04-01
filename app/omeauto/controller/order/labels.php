@@ -22,9 +22,28 @@
  */
 class omeauto_ctl_order_labels extends omeauto_controller
 {
+    var $title = '订单标签管理';
     var $workground = 'setting_tools';
     
-    function index()
+    private $_appName = 'omeauto';
+    private $_mdl = null; //model类
+    private $_primary_id = null; //主键ID字段名
+    private $_primary_bn = null; //单据编号字段名
+    
+    public function __construct($app)
+    {
+        parent::__construct($app);
+        
+        $this->_mdl = app::get($this->_appName)->model('order_labels');
+        
+        //primary_id
+        $this->_primary_id = 'label_id';
+        
+        //primary_bn
+        $this->_primary_bn = 'label_code';
+    }
+    
+    public function index()
     {
         $base_filter = array();
         $actions = array();
@@ -43,7 +62,7 @@ class omeauto_ctl_order_labels extends omeauto_controller
         );
         
         $params = array(
-                'title' => '订单标签管理',
+                'title' => $this->title,
                 'actions' => $actions,
                 'use_buildin_new_dialog' => false,
                 'use_buildin_set_tag' => false,
@@ -57,19 +76,17 @@ class omeauto_ctl_order_labels extends omeauto_controller
         $this->finder('omeauto_mdl_order_labels', $params);
     }
     
-    function add()
+    public function add()
     {
         $this->pagedata['data'] = array();
         
         $this->page('order/label/label_add.html');
     }
     
-    function edit($label_id)
+    public function edit($label_id)
     {
-        $labelObj = app::get('omeauto')->model('order_labels');
-        
         //标记信息
-        $labelInfo = $labelObj->dump(array('label_id'=>$label_id), '*');
+        $labelInfo = $this->_mdl->dump(array('label_id'=>$label_id), '*');
         
         $this->pagedata['data'] = $labelInfo;
         
@@ -83,8 +100,6 @@ class omeauto_ctl_order_labels extends omeauto_controller
 
     public function save()
     {
-        $labelObj = app::get('omeauto')->model('order_labels');
-        
         $labelLib = kernel::single('omeauto_order_label');
         
         $url = "index.php?app=omeauto&ctl=order_labels&act=index";
@@ -108,7 +123,7 @@ class omeauto_ctl_order_labels extends omeauto_controller
         }
         
         //save
-        $return = $labelObj->save($data);
+        $return = $this->_mdl->save($data);
         if(!$return){
             $this->splash("error", $url, '保存失败');
         }
@@ -123,7 +138,6 @@ class omeauto_ctl_order_labels extends omeauto_controller
     {
         $this->begin('index.php?app=omeauto&ctl=order_labels&act=index');
         
-        $labelObj = app::get('omeauto')->model('order_labels');
         $orderLabelObj = app::get('ome')->model('bill_label');
         
         if($_POST['isSelectedAll'] == '_ALL_'){
@@ -134,6 +148,11 @@ class omeauto_ctl_order_labels extends omeauto_controller
             $this->end(false, '没有可删除的记录');
         }
         
+        // list
+        $labelList = $this->_mdl->getList('*', array('label_id'=>$_POST['label_id']));
+        $labelList = array_column($labelList, null, 'label_id');
+        
+        // delete label
         foreach($_POST['label_id'] as $label_id)
         {
             //判断是否已经有订单使用
@@ -142,8 +161,13 @@ class omeauto_ctl_order_labels extends omeauto_controller
                 $this->end(false, $labelInfo['label_name'] .'已经被订单使用,不能删除');
             }
             
+            // 系统标签不能删除
+            if(isset($labelList[$label_id]) && $labelList[$label_id]['source'] == 'system'){
+                $this->end(false, $labelList[$label_id]['label_name'] .'：是系统标签,不能删除');
+            }
+            
             //del
-            $labelObj->db->exec("DELETE FROM sdb_omeauto_order_labels WHERE label_id=".$label_id);
+            $this->_mdl->db->exec("DELETE FROM sdb_omeauto_order_labels WHERE label_id=".$label_id);
         }
         
         $this->end(true, '已经删除完成!');

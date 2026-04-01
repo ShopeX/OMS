@@ -418,6 +418,8 @@ class erpapi_shop_matrix_luban_response_order extends erpapi_shop_response_order
         
         //抖音sku维度实付金额与优惠明细
         $this->_ordersdf['coupon_data'] = array();
+        $oidActuallyPayMap = [];
+        $oidPlatformAmountMap = [];
         if (isset($this->_ordersdf['coupon_field'])) {
             $couponData = $this->_ordersdf['coupon_field'];
             $coupon = [];
@@ -444,7 +446,9 @@ class erpapi_shop_matrix_luban_response_order extends erpapi_shop_response_order
                     if ($v <= 0 || $k == 'sku_id' || $k == 'item_num' || $k == 'oid') {
                         continue;
                     }
-                    
+                    if($k == 'platform_cost_amount'){
+                        $oidPlatformAmountMap[$value['oid']] += $v;
+                    }
                     $coupon[] = array(
                         'num'           => $value['item_num'],
                         'oid'           => $value['oid'],
@@ -455,30 +459,14 @@ class erpapi_shop_matrix_luban_response_order extends erpapi_shop_response_order
                         'amount'        => $v,
                         'total_amount'  => $v,
                         'create_time'   => sprintf('%.0f', time()),
-                        'pay_time'      => $this->_ordersdf['payment_detail']['pay_time'],
+                        'pay_time'      => !empty($this->_ordersdf['payment_detail']['pay_time']) ? kernel::single('ome_func')->date2time($this->_ordersdf['payment_detail']['pay_time']) : null,
                         'shop_type'     => $this->__channelObj->channel['shop_type'],
                     );
                 }
                 
                 //实付金额
                 $realPay = $value['pay_amount'] - $value['promotion_pay_amount'];
-                
-                // 如果有运费且尚未扣除，验证运费是否包含在当前oid的pay_amount中
-                if ($shippingCost > 0 && !$shippingDeducted && isset($value['oid']) && isset($oidDivideOrderFeeMap[$value['oid']]) && $realPay > $shippingCost) {
-                    // 使用order_objects中相同oid的divide_order_fee作为商品实付金额
-                    $divideOrderFee = $oidDivideOrderFeeMap[$value['oid']];
-                    // 计算pay_amount与商品实付金额的差值
-                    $diffAmount = (float)$value['pay_amount'] - $divideOrderFee;
-                    
-                    // 判断差值是否等于运费（允许0.01的误差）
-                    if (abs($diffAmount - $shippingCost) <= 0.01) {
-                        // 运费包含在当前oid的pay_amount中，需要从realPay中减去运费
-                        $realPay = $realPay - $shippingCost;
-                        // 标记运费已扣除，避免重复扣除
-                        $shippingDeducted = true;
-                    }
-                }
-                
+                $oidActuallyPayMap[$value['oid']] += $realPay;
                 $realPayData = [
                     'num'           => $value['item_num'],
                     'oid'           => $value['oid'],
@@ -489,7 +477,7 @@ class erpapi_shop_matrix_luban_response_order extends erpapi_shop_response_order
                     'amount'        => $realPay,
                     'total_amount'  => $realPay,
                     'create_time'   => sprintf('%.0f', time()),
-                    'pay_time'      => $this->_ordersdf['payment_detail']['pay_time'],
+                    'pay_time'      => !empty($this->_ordersdf['payment_detail']['pay_time']) ? kernel::single('ome_func')->date2time($this->_ordersdf['payment_detail']['pay_time']) : null,
                     'shop_type'     => $this->__channelObj->channel['shop_type'],
                 ];
                 
@@ -505,6 +493,12 @@ class erpapi_shop_matrix_luban_response_order extends erpapi_shop_response_order
         // 处理gift_mids
         reset($this->_ordersdf['order_objects']);
         foreach ($this->_ordersdf['order_objects'] as $objectKey => $object) {
+            if(isset($oidPlatformAmountMap[$object['oid']])){
+                $this->_ordersdf['order_objects'][$objectKey]['settlement_amount'] = $object['divide_order_fee'] + $oidPlatformAmountMap[$object['oid']];
+            }
+            if(isset($oidActuallyPayMap[$object['oid']])){
+                $this->_ordersdf['order_objects'][$objectKey]['actually_amount'] = $oidActuallyPayMap[$object['oid']];
+            }
             if(!isset($object['gift_mids']) || !$object['gift_mids']){
                 continue;
             }
@@ -569,6 +563,16 @@ class erpapi_shop_matrix_luban_response_order extends erpapi_shop_response_order
         
             if ($this->_ordersdf['source_status']) {
                 $upData['source_status'] = $this->_ordersdf['source_status'];
+                
+                //保存旧的source_status，用于后续判断是否需要重新审单
+                if ($this->_ordersdf['source_status'] != $this->_tgOrder['source_status']) {
+                    if (!isset($this->_newOrder)) {
+                        $this->_newOrder = array();
+                    }
+                    $this->_newOrder['old_source_status'] = $this->_tgOrder['source_status'];
+                    $this->_newOrder['new_source_status'] = $this->_ordersdf['source_status'];
+                }
+                
                 if ($this->_ordersdf['source_status'] == 'TRADE_CLOSED') {
                     $rdboRs = $orderModel->rebackDeliveryByOrderId($this->_tgOrder['order_id'], false, '平台订单状态取消');
                     if ($rdboRs) {
@@ -669,6 +673,13 @@ class erpapi_shop_matrix_luban_response_order extends erpapi_shop_response_order
                 $upData = array();
                 $upData['source_status'] = $this->_ordersdf['source_status'];
                 
+                //保存旧的source_status，用于后续判断是否需要重新审单
+                if (!isset($this->_newOrder)) {
+                    $this->_newOrder = array();
+                }
+                $this->_newOrder['old_source_status'] = $this->_tgOrder['source_status'];
+                $this->_newOrder['new_source_status'] = $this->_ordersdf['source_status'];
+                
                 //平台订单已取消，撤消OMS发货单
                 if($this->_ordersdf['source_status'] == 'TRADE_CLOSED') {
                     $rdboRs = $orderModel->rebackDeliveryByOrderId($this->_tgOrder['order_id'], false, '平台订单状态取消');
@@ -746,7 +757,7 @@ class erpapi_shop_matrix_luban_response_order extends erpapi_shop_response_order
                         'material_name' => '自选快递运费',
                         'amount'        => $amount,
                         'total_amount'  => $amount,
-                        'create_time'   => kernel::single('ome_func')->date2time($ext_data['createtime']),
+                        'create_time'   => sprintf('%.0f', time()),
                         'pay_time'      => kernel::single('ome_func')->date2time($ext_data['payment_detail']['pay_time']),
                         'shop_type'     => $ext_data['shop_type'],
                         'source'        => 'local',

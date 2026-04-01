@@ -120,6 +120,14 @@ class erpapi_shop_response_plugins_order_orderlabels extends erpapi_shop_respons
             }
         }
 
+        // 官方提货物流
+        if ($platform->_ordersdf['official_pickup']) {
+            $labels[] = [
+                'label_code'  => 'SOMS_PICKUP',
+                'label_value' => 0x0001,
+            ];
+        }
+
         // 京东POP订单，微信支付先用后付打标签
         if ($platform->_ordersdf['use_before_payed']) {
             $labels[] = [
@@ -251,7 +259,16 @@ class erpapi_shop_response_plugins_order_orderlabels extends erpapi_shop_respons
                 'extend_info'   =>  json_encode($platform->_ordersdf['guobu_info'], JSON_UNESCAPED_UNICODE),
             ];
         }
-
+        
+        // 天猫优品国补打标记
+        if (isset($platform->_ordersdf['guobu_info']) && isset($platform->_ordersdf['guobu_info']['tmyp_info'])) {
+            if($platform->_ordersdf['guobu_info']['tmyp_info']['is_tmyp_order']){
+                $labels[] = [
+                    'label_code' => 'SOMS_TMYP',
+                ];
+            }
+        }
+        
         //微派服务
         if($platform->_ordersdf['extend_field']['order_tag_list']) {
             $order_tag_list = $platform->_ordersdf['extend_field']['order_tag_list'];
@@ -263,16 +280,19 @@ class erpapi_shop_response_plugins_order_orderlabels extends erpapi_shop_respons
                 }
             }
         }
-
+        
         if(isset($platform->_ordersdf['extend_field']['gift_order_status']) && in_array($platform->_ordersdf['extend_field']['gift_order_status'],['0','1','2']) ) {
             $gift_order_status = $platform->_ordersdf['extend_field']['gift_order_status'];
             $related_order_list = $platform->_ordersdf['extend_field']['related_order_list'];
+            $gift_list = $platform->_ordersdf['extend_field']['gift_list'];
+            $order_sns = array_column($gift_list, 'order_sn');
+            
             $gift_extdnd = [
                 'gift_order_status' =>  $gift_order_status,
-                'related_order_list'=>  $related_order_list,    
+                'order_sns'=>  json_encode($order_sns, JSON_UNESCAPED_UNICODE),   
 
             ];
-            if($gift_order_status==0){//related_order_list
+            if($gift_order_status==1){//related_order_list
                 
                 
                 $labels[] = [
@@ -280,33 +300,68 @@ class erpapi_shop_response_plugins_order_orderlabels extends erpapi_shop_respons
                   
                     'extend_info'   =>  json_encode($gift_extdnd, JSON_UNESCAPED_UNICODE),
                 ];
-                $labels[] = [
-                    'label_code'    =>  'SOMS_ISDELIVERY',
-                    'label_value'   =>  '1',
-                   
-
-                ];
-            }else{
-                if($platform->_ordersdf['is_delivery']=== 'Y'){
-                    $labels[] = [
-                        'label_code'    =>  'SOMS_GIFT_ORDER_STATUS',
-                  
-                        'extend_info'   =>  json_encode($gift_extdnd, JSON_UNESCAPED_UNICODE),
-                    ];
-                    $labels[] = [
-                        'label_code'    =>  'SOMS_ISDELIVERY',
-                        'label_action'  =>'del',
-
-                    ];
-                }
+                
             }
 
 
+        }
+
+        if($platform->_ordersdf['extend_field']['related_order_list']){
+            $related_order_list = $platform->_ordersdf['extend_field']['related_order_list'];
+            foreach($related_order_list as $related_order){
+                if($related_order['order_sn'] && $related_order['relation_type']==4){
+                    $labels[] = [
+                        'label_code'    =>  'SOMS_GIFT_RELATED_ORDER',
+                        'extend_info'   =>  json_encode($related_order, JSON_UNESCAPED_UNICODE),
+                    ];
+                }
+            }
         }
         // 京东分销订单，发货回写需要添加360buy_is_dx=true
         if ($platform->_ordersdf['fenxiao_order']) {
             $labels[] = [
                 'label_code'    =>  'SOMS_FENXIAO',
+            ];
+        }
+        
+        // Maochao订单SOMS_ASCP标识
+        if ($platform->_ordersdf['extend_field']['businessModel']) {
+            $businessModel = intval($platform->_ordersdf['extend_field']['businessModel']);
+            if ($businessModel >= 1 && $businessModel <= 4) {
+                $label_value = pow(2, $businessModel - 1); // 转换为二进制位
+                
+                // 收集 order_objects 层的 store_code，以 oid 为维度存储
+                $storeCodeMap = array();
+                if (isset($platform->_ordersdf['order_objects']) && is_array($platform->_ordersdf['order_objects'])) {
+                    foreach ($platform->_ordersdf['order_objects'] as $order_object) {
+                        if (isset($order_object['oid']) && $order_object['oid']) {
+                            $oid = $order_object['oid'];
+                            
+                            // 获取 store_code，注意 clear_plate_branch='true' 时可能为空字符串
+                            $store_code = isset($order_object['store_code']) ? $order_object['store_code'] : '';
+                            $storeCodeMap[$oid] = $store_code;
+                        }
+                    }
+                }
+                
+                // 构建 extend_info，以 storeCodeMap 为键名存储
+                $extend_info = '';
+                if (!empty($storeCodeMap)) {
+                    $extend_info = json_encode(array('storeCodeMap' => $storeCodeMap), JSON_UNESCAPED_UNICODE);
+                }
+                
+                $labels[] = [
+                    'label_code' => 'SOMS_ASCP',
+                    'label_value' => $label_value,
+                    'extend_info' => $extend_info,
+                ];
+            }
+        }
+        
+        // 京东E卡
+        if (is_array($platform->_ordersdf['extend_field']) && $platform->_ordersdf['extend_field']['is_jd_e_card']) {
+            $labels[] = [
+                'label_code' => 'SOMS_JDECARD',
             ];
         }
 
@@ -401,6 +456,56 @@ class erpapi_shop_response_plugins_order_orderlabels extends erpapi_shop_respons
             ];
         }
 
+        // 百补超级半托
+        // 只从订单级 ypds_info 获取
+        if (isset($platform->_ordersdf['ypds_info']) && !empty($platform->_ordersdf['ypds_info'])) {
+            $ypdsInfo = $platform->_ordersdf['ypds_info'];
+            
+            if (!empty($ypdsInfo['ypds_order_type'])) {
+                // 构建 extend_info JSON
+                $extendInfo = array(
+                    'ypds_platform_order_id' => isset($ypdsInfo['ypds_platform_order_id']) ? $ypdsInfo['ypds_platform_order_id'] : '',
+                    'ypds_platform_pay_order_id' => isset($ypdsInfo['ypds_platform_pay_order_id']) ? $ypdsInfo['ypds_platform_pay_order_id'] : '',
+                    'ypds_order_type' => $ypdsInfo['ypds_order_type'],
+                    'ypds_order_supply_price' => isset($ypdsInfo['ypds_order_supply_price']) ? $ypdsInfo['ypds_order_supply_price'] : 0,
+                );
+                
+                $labelValue = 0;
+                // 当 ypds_order_type = 1 时，设置 label_value 为标识"百补超级半托管"
+                if ($ypdsInfo['ypds_order_type'] == '1' || $ypdsInfo['ypds_order_type'] == 1) {
+                    $labelValue = 0x0001; // 百补超级半托管（使用位运算）
+                }
+                
+                $labels[] = array(
+                    'label_code'    => 'SOMS_YPDS',
+                    'label_value'   => $labelValue,
+                    'extend_info'   => json_encode($extendInfo, JSON_UNESCAPED_UNICODE),
+                );
+            }
+        }
+
+        // 产地优选（超链）
+        // 只从订单级 superlink_info 获取
+        if (isset($platform->_ordersdf['superlink_info']) && !empty($platform->_ordersdf['superlink_info'])) {
+            $superlinkInfo = $platform->_ordersdf['superlink_info'];
+            
+            if (!empty($superlinkInfo['superlink_platform_order_id'])) {
+                // 构建 extend_info JSON
+                $extendInfo = array(
+                    'superlink_platform_order_id' => isset($superlinkInfo['superlink_platform_order_id']) ? $superlinkInfo['superlink_platform_order_id'] : '',
+                    'superlink_platform_sub_order_id' => isset($superlinkInfo['superlink_platform_sub_order_id']) ? $superlinkInfo['superlink_platform_sub_order_id'] : '',
+                    'superlink_platform_payment' => isset($superlinkInfo['superlink_platform_payment']) ? $superlinkInfo['superlink_platform_payment'] : 0,
+                    'superlink_alipay_no' => isset($superlinkInfo['superlink_alipay_no']) ? $superlinkInfo['superlink_alipay_no'] : '',
+                    'superlink_order_supply_price' => isset($superlinkInfo['superlink_order_supply_price']) ? $superlinkInfo['superlink_order_supply_price'] : 0,
+                );
+                
+                $labels[] = array(
+                    'label_code'    => 'SOMS_SUPERLINK',
+                    'label_value'   => 0,
+                    'extend_info'   => json_encode($extendInfo, JSON_UNESCAPED_UNICODE),
+                );
+            }
+        }
 
         return $labels;
     }

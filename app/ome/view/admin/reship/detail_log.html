@@ -27,7 +27,7 @@
     <tbody>
     <{foreach from=$log item=item}>
     <tr>
-        <td ><{$item.operate_time|cdate:'FDATE_STIME'}></td>
+        <td ><{$item.operate_time|cdate}></td>
         <td ><{$item.op_name}></td>
         <td ><{$item.operation}></td>
         <td ><{$item.memo}></td>

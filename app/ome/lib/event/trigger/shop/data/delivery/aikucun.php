@@ -33,6 +33,7 @@ class ome_event_trigger_shop_data_delivery_aikucun extends ome_event_trigger_sho
             $this->_get_split_sdf($delivery_id);
             $this->_add_item_info();
 
+            $deleteOlds = array();
             if($this->__sdf['oid_list']) {
                 $delivery = $this->__deliverys[$delivery_id];
 
@@ -42,7 +43,6 @@ class ome_event_trigger_shop_data_delivery_aikucun extends ome_event_trigger_sho
                     'status'  => 'succ',
                 ];
                 $shipMent = app::get('ome')->model('shipment_log')->getList('deliveryCode,oid_list', $filter);
-                $deleteOlds = array();
                 
                 foreach ($shipMent as $value) {
                     if(!$value['oid_list'] || $delivery['logi_no'] == $value['deliveryCode']) {

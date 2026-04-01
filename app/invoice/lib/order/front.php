@@ -61,7 +61,13 @@ class invoice_order_front {
             return [true, ['msg'=>'更新完成']];
         }
         $inData['status'] = $inData['status'] ? : 'acitve';
-        $inData['title'] = $inData['title'] ? : '个人'; 
+        $inData['title'] = $inData['title'] ? : '个人';
+        
+        // 发票抬头最多支持150个字符，防止SQL错误
+        if(strlen($inData['title']) > 150){
+            $inData['title'] = kernel::single('ome_func')->substrStringSafe($inData['title'], 150);
+        }
+        
         $inData = kernel::single('invoice_order_front_router', $source)->getMain($inData);
         if(empty($inData)) {
             return [false, ['msg'=>'该来源暂不支持：'.$source]];

@@ -854,7 +854,7 @@ class ome_func
         }
         
         //严格：|^14[5,7]{1}\d{8}$、|^17[0,6,7,8]{1}\d{8}$
-        return preg_match('#^13[\d]{9}$|^14[\d]{9}$|^15[\d]{9}$|^16[\d]{9}$|^17[\d]{9}$|^18[\d]{9}$#', $mobile) ? true : false;
+        return preg_match('#^13[\d]{9}$|^14[\d]{9}$|^15[\d]{9}$|^16[\d]{9}$|^17[\d]{9}$|^18[\d]{9}$|^19[\d]{9}$#', $mobile) ? true : false;
     }
 
     /**
@@ -1378,5 +1378,55 @@ class ome_func
             '%04x%04x-%04x-%04x-%04x-%04x%04x%04x', mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0x0fff) | 0x4000, mt_rand(0, 0x3fff) | 0x8000, mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
         );
     }
-
+    
+    /**
+     * 按字节长度截取字符串，确保中文字符完整
+     * 规则：
+     * - 使用 strlen($str) 检查字节长度
+     * - 截取后的字符串，strlen() 结果不能大于255
+     * - 如果都是英文字符，可以截取255个字符（1个英文字符=1个字节）
+     * - 如果有中文字符，UTF-8编码下一个汉字=3个字节，需要确保最后一个汉字完整
+     *
+     * @param string $str 要截取的字符串
+     * @param int $maxLength 最大字节长度（默认255）
+     * @return string 截取后的字符串（strlen() 结果 <= 255）
+     */
+    public function substrStringSafe($str, $maxLength = 255)
+    {
+        // 使用 strlen() 获取字符串的字节长度（UTF-8编码：1个英文字符=1字节，1个汉字=3字节）
+        $byteLength = strlen($str);
+        
+        // 如果字符串字节长度不超过最大长度，直接返回
+        if ($byteLength <= $maxLength) {
+            return $str;
+        }
+        
+        // 从maxLength位置向前查找，找到最后一个安全的截取位置
+        // 如果maxLength位置是多字节字符的中间字节，需要向前找到字符的开始位置
+        $cutPos = $maxLength;
+        
+        // 向前查找，确保不会截断中文字符
+        // UTF-8多字节字符的后续字节以 0x80-0xBF 开头（即最高两位是10）
+        while ($cutPos > 0 && (ord($str[$cutPos]) & 0xC0) == 0x80) {
+            $cutPos--;
+        }
+        
+        // 使用 mb_strcut 截取，确保中文字符完整
+        $result = mb_strcut($str, 0, $cutPos, 'UTF-8');
+        
+        // 最终验证：确保 strlen() 结果不超过255
+        $finalLength = strlen($result);
+        while ($finalLength > $maxLength && $cutPos > 0)
+        {
+            // 如果还是超过255，继续向前查找
+            $cutPos--;
+            while ($cutPos > 0 && (ord($str[$cutPos]) & 0xC0) == 0x80) {
+                $cutPos--;
+            }
+            $result = mb_strcut($str, 0, $cutPos, 'UTF-8');
+            $finalLength = strlen($result);
+        }
+        
+        return $result;
+    }
 }

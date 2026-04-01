@@ -14,14 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
-
 /**
-     * CSV导入
-     */
-class purchase_mdl_supplier_goods extends dbeav_model {
+ * 供应商商品
+ */
 
+class purchase_mdl_supplier_goods extends dbeav_model{
+    
+    /*
+     * 获取供应商商品列表
+     */
     function getSupplierGoods($supplier_id=null){
         
         $filter = array("supplier_id"=>$supplier_id);
@@ -43,10 +44,6 @@ class purchase_mdl_supplier_goods extends dbeav_model {
         return $base_filter;
     }
     
-    /**
-     * 搜索Options
-     * @return mixed 返回值
-     */
     public function searchOptions()
     {
         return array(
@@ -55,13 +52,6 @@ class purchase_mdl_supplier_goods extends dbeav_model {
         );
     }
     
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter,$tableAlias=null,$baseWhere=null)
     {
         $where = ' 1 ';
@@ -157,7 +147,7 @@ class purchase_mdl_supplier_goods extends dbeav_model {
         
         foreach($pSdf as $v){
             $queueData = array(
-                    'queue_title'=>'供应商货品导入',
+                    'queue_title'=>'供应商基础物料导入',
                     'start_time'=>time(),
                     'params'=>array(
                             'sdfdata'=>$v,
@@ -228,7 +218,7 @@ class purchase_mdl_supplier_goods extends dbeav_model {
                 $tempData    = $this->dump(array('supplier_id'=>$sdfRow['supplier_id'], 'bm_id'=>$sdfRow['bm_id']), '*');
                 if($tempData)
                 {
-                    $msg['error'] = '供应商货品关系已经存在，不能重复导入!';
+                    $msg['error'] = '供应商基础物料关系已经存在，不能重复导入!';
                     return false;
                 }
                 

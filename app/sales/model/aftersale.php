@@ -14,8 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
+/**
+    * ShopEx licence
+    *
+    * @copyright  Copyright (c) 2005-2012 ShopEx Technologies Inc. (http://www.shopex.cn)
+    * @license  http://ecos.shopex.cn/ ShopEx License
+    * @date 2012-08-22
+    * 售后单
+*/
 class sales_mdl_aftersale extends dbeav_model{
 
     //是否有导出配置
@@ -51,10 +57,6 @@ class sales_mdl_aftersale extends dbeav_model{
                         );
     public $appendCols = 'order_id';
 
-    /**
-     * 搜索Options
-     * @return mixed 返回值
-     */
     public function searchOptions(){
 
         $ext_columns = array(
@@ -66,13 +68,6 @@ class sales_mdl_aftersale extends dbeav_model{
         return $ext_columns;
     }
 
-    /**
-     * io_title
-     * @param mixed $filter filter
-     * @param mixed $ioType ioType
-     * @param mixed $return_type return_type
-     * @return mixed 返回值
-     */
     public function io_title( $filter=null,$ioType='csv',$return_type ){
       switch( $ioType ){
             case 'csv':
@@ -93,7 +88,7 @@ class sales_mdl_aftersale extends dbeav_model{
      * @param main aftersale 主表字段 aftersale_items 明细字段
      * @param type 1 退货单(return) 2 换货单(change) 3 拒收退货单(refuse) 4 退款单(refund)     
      * @author 
-     * */
+     **/
     public function get_return_type($main,$type){
       
       return kernel::single('sales_export_aftersale')->io_title($main,$this->common_type[$type]);
@@ -303,12 +298,6 @@ class sales_mdl_aftersale extends dbeav_model{
         return true;
     }
 
-        /**
-     * export_csv
-     * @param mixed $data 数据
-     * @param mixed $exportType exportType
-     * @return mixed 返回值
-     */
     public function export_csv($data,$exportType = 1 ){
         $output = array();
          foreach( $data['title'] as $k => $val ){
@@ -317,13 +306,6 @@ class sales_mdl_aftersale extends dbeav_model{
         echo implode("\n",$output);
     }
 
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter,$tableAlias=null,$baseWhere=null){
        $Obj = app::get('ome');
        $where = '1 ';
@@ -497,15 +479,6 @@ class sales_mdl_aftersale extends dbeav_model{
     }
     
     //获取导出明细数据
-    /**
-     * 获取exportdetail
-     * @param mixed $fields fields
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $limit limit
-     * @param mixed $has_title has_title
-     * @return mixed 返回结果
-     */
     public function getexportdetail($fields,$filter,$offset=0,$limit=1,$has_title=false){
         $mdl_sa = app::get('sales')->model('aftersale');
         $mdl_sai = app::get('sales')->model('aftersale_items');
@@ -717,11 +690,6 @@ class sales_mdl_aftersale extends dbeav_model{
         return $data;
     }
     
-    /**
-     * 获取CustomExportTitle
-     * @param mixed $main_title main_title
-     * @return mixed 返回结果
-     */
     public function getCustomExportTitle($main_title)
     {
         $main_title = array_keys($main_title);
@@ -731,10 +699,6 @@ class sales_mdl_aftersale extends dbeav_model{
     }
     
     
-    /**
-     * aftersalesItemsExportTitle
-     * @return mixed 返回值
-     */
     public function aftersalesItemsExportTitle()
     {
         $items_title = array(
@@ -747,8 +711,8 @@ class sales_mdl_aftersale extends dbeav_model{
             '详情付款方式'   => 'payment',
             '详情退款申请时间' => 'create_time',
             '详情退款完成时间' => 'last_modified',
-            '详情货号'     => 'bn',
-            '详情货品名称'   => 'product_name',
+            '详情基础物料编码'     => 'bn',
+            '详情基础物料名称'   => 'product_name',
             '详情申请数量'     => 'apply_num',
             '详情数量'     => 'num',
             '详情单价'     => 'price',
@@ -765,13 +729,6 @@ class sales_mdl_aftersale extends dbeav_model{
         return $items_title;
     }
     
-    /**
-     * modifier_member_id
-     * @param mixed $member_id ID
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_member_id($member_id, $list, $row)
     {
         static $get_from_db, $order_list;
@@ -822,13 +779,6 @@ HTML;
         return $order_list[$row['order_id']]['uname'];
     }
     
-    /**
-     * modifier_ship_mobile
-     * @param mixed $mobile mobile
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_ship_mobile($mobile, $list, $row)
     {
         if ($this->is_export_data) return $mobile;

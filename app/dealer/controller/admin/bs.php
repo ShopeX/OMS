@@ -28,7 +28,7 @@ class dealer_ctl_admin_bs extends desktop_controller
             array(
                 'label'  => '添加经销商',
                 'href'   => 'index.php?app=dealer&ctl=admin_bs&act=create',
-                'target' => "dialog::{width:760,height:635,title:'添加经销商'}",
+                'target' => "dialog::{width:780,height:635,title:'添加经销商'}",
             ),
             array(
                 'label'  => '导出模板',

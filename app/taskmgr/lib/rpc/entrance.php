@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * 自动任务入口类
  *
@@ -126,16 +125,16 @@ class taskmgr_rpc_entrance{
 
     /**
      *
-     * 验证签名函数
+     * 验证签名函数（支持新旧token平滑切换）
      * @param array $params
      */
     private function validate($params){
 
         $sign = $params['taskmgr_sign'];
         unset($params['taskmgr_sign']);
-        $local_sign = taskmgr_rpc_sign::gen_sign($params);
-
-        if(!$local_sign || $sign != $local_sign){
+        
+        // 使用新的验证方法，支持新旧token同时验证
+        if(!taskmgr_rpc_sign::validate_sign($params, $sign)){
             return false;
         }else{
             unset($params['task_type']);

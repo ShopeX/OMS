@@ -97,7 +97,7 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
 
     public function add($sdf)
     {
-
+        //sdf
         $this->_ordersdf = $sdf;
         $this->_tgOrder  = $this->_newOrder  = array();
 
@@ -110,7 +110,6 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
         
         //是否接收订单
         $accept = $this->_canAccept();
-
         if ($accept === false) {
             return array();
         }
@@ -449,6 +448,25 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
     {
         $ordFunLib = kernel::single('ome_order_func');
         
+        //[转换订单]调用service进行转单逻辑
+        foreach(kernel::servicelist('erpapi.service.order.analysis.prepose') as $object)
+        {
+            if(method_exists($object, 'prepose_analysis')){
+                // shop
+                $this->_ordersdf['shop_id'] = $this->__channelObj->channel['shop_id'];
+                $this->_ordersdf['shop_type'] = $this->__channelObj->channel['shop_type'];
+                
+                // analysis
+                $analysisSdf = $object->prepose_analysis($this->_ordersdf);
+                
+                //merge
+                if($analysisSdf){
+                    $this->_ordersdf = array_merge($this->_ordersdf, $analysisSdf);
+                }
+            }
+        }
+        
+        // source_status
         $source_status = $this->_sourceStatus[$this->_ordersdf['source_status']] ?: $this->_ordersdf['source_status'];
         $this->_ordersdf['source_status'] = kernel::single('ome_order_func')->get_source_status($source_status);
         if(in_array($this->_ordersdf['status'], ['close', 'dead'])) {
@@ -690,7 +708,17 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
         //         return false;
         //     }
         // }
-
+        // 检查是否有自定义的 service 拦截接单，允许扩展处理
+        foreach(kernel::servicelist('erpapi.service.order.canaccept') as $service){
+            if(method_exists($service, 'canAccept')){
+                $result = $service->canAccept($this);
+                // service 返回明确的拒绝理由
+                if(is_array($result) && isset($result['succ']) && !$result['succ']){
+                    $this->__apilog['result']['msg'] = $result['msg'] ?: '服务插件拒绝接单';
+                    return false;
+                }
+            }
+        }
         return true;
     }
 
@@ -828,6 +856,10 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
             if ($this->_ordersdf['status'] == 'finish' && ($this->_ordersdf['end_time'] == '' || $this->_tgOrder['end_time'] > 0)) {
                 $this->__apilog['result']['msg'] = '完成订单不接收';
                 
+                // [更新]预约订单的相关状态
+                $error_msg = '';
+                kernel::single('ome_order_reservation')->operateReservationOrder($this->_ordersdf, $error_msg);
+                
                 return false;
             }
             if ($this->_update_accept_dead_order === false && $this->_ordersdf['status'] == 'dead') {
@@ -847,15 +879,17 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
         }
 
         if ($this->_tgOrder['status'] == 'dead') {
+            // [更新]预约订单的相关状态
+            $error_msg = '';
+            kernel::single('ome_order_reservation')->operateReservationOrder($this->_ordersdf, $error_msg);
+            
             $this->__apilog['result']['msg'] = 'ERP取消订单，不做更新';
             return false;
         }
         
         if (in_array($this->_tgOrder['ship_status'], array('1', '2')) || $this->_tgOrder['status'] == 'finish') {
-            if ($this->_ordersdf['end_time'] <= 0 || $this->_tgOrder['end_time'] > 0) {
-                $this->__apilog['result']['msg'] = 'ERP发货订单，不做更新';
-                return false;
-            }
+            $this->__apilog['result']['msg'] = 'ERP发货订单，不做更新';
+            return false;
         }
 
         if (in_array($this->_tgOrder['ship_status'], array('3', '4'))) {

@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class wms_mdl_delivery extends dbeav_model{
     public $filter_use_like = true;
     var $has_many = array(
@@ -57,11 +56,56 @@ class wms_mdl_delivery extends dbeav_model{
         ///////////////////////////
         // 加密处理逻辑 2017/5/5 by cp //
         ///////////////////////////
-        //filter - 加密字段处理
-        $encryptWhere = kernel::single('ome_filter_encrypt')->encrypt($filter, $this->__encrypt_cols, $tPre, 'delivery');
-        $baseWhere = array_merge($baseWhere, $encryptWhere);
-        
-        $where = '';
+        foreach ($filter as $key => $value) {
+            $pos = strpos($key,'|');
+            $field = false !== $pos ? substr($key,0,$pos): $key;
+
+            $encrypt_type = $this->__encrypt_cols[$field];
+            if ($encrypt_type) {
+                $searchtype = false !== $pos ? substr($key,$pos+1): 'nequal';
+
+                // 京东加密
+                $encryptVal360 = kernel::single('erpapi_rpc_hufu')->encrypt($value).kernel::single('ome_security_hash')->get_code();
+
+                // 拼多多加密
+                $encryptValPdd = kernel::single('erpapi_rpc_fangzhou')->encrypt($value).kernel::single('ome_security_hash')->get_code();
+
+                if ($searchtype!='nequal' && in_array($encrypt_type,array('search','nick','receiver_name'))) {
+                    $encryptVal = kernel::single('ome_security_factory')->search($value,$encrypt_type);
+
+                    $encryptVal360 = kernel::single('ome_security_factory')->search($encryptVal360,$encrypt_type);
+
+                    $encryptValPdd = kernel::single('ome_security_factory')->search($encryptValPdd,$encrypt_type);
+                } else {
+                    $encryptVal = kernel::single('ome_security_factory')->encryptPublic($value,$encrypt_type);
+
+                    $encryptVal360 = kernel::single('ome_security_factory')->encryptPublic($encryptVal360,$encrypt_type);
+
+                    $encryptValPdd = kernel::single('ome_security_factory')->encryptPublic($encryptValPdd,$encrypt_type);
+                }
+
+
+                $originalVal      = utils::addslashes_array($value);
+                $encryptVal = utils::addslashes_array($encryptVal);
+
+                switch ($searchtype) {
+                    case 'has':
+                        $baseWhere[] = "({$tPre}{$field} LIKE '%".$originalVal."%' || {$tPre}{$field} LIKE '%".$encryptVal."%')";
+                        break;
+                    case 'head':
+                        $baseWhere[] = "({$tPre}{$field} LIKE '".$originalVal."%' || {$tPre}{$field} LIKE '%".$encryptVal."%')";
+                        break;
+                    case 'foot':
+                        $baseWhere[] = "({$tPre}{$field} LIKE '%".$originalVal."' || {$tPre}{$field} LIKE '%".$encryptVal."%')";
+                        break;
+                    default:
+                        $baseWhere[] = "{$tPre}{$field} IN('".$originalVal."','".$encryptVal."','".$encryptVal360."','".$encryptValPdd."')";
+                        break;
+                }
+
+                unset($filter[$key]);
+            }
+        }
         if(isset($filter['ship_tel_mobile'])){
             $encryptVal = kernel::single('ome_security_factory')->encryptPublic($filter['ship_tel_mobile'],'phone');
             $encryptVal  = utils::addslashes_array($encryptVal);
@@ -581,7 +625,7 @@ class wms_mdl_delivery extends dbeav_model{
     }
 
     /**
-     * 获取打印货品位
+     * 获取打印基础物料位
      *
      * @param Array $deliverys 发货单集合
      * @return void
@@ -601,7 +645,7 @@ class wms_mdl_delivery extends dbeav_model{
             }
         }
 
-        // 货品货位有关系
+        // 基础物料货位有关系
         $bppModel = app::get('ome')->model('branch_product_pos');
         $bppList = $bppModel->getList('product_id,pos_id,branch_id',array('product_id'=>$product_ids));
 
@@ -1128,7 +1172,7 @@ class wms_mdl_delivery extends dbeav_model{
             $_rows = $this->db->select($_sql);
             $_store_position = null;
             if(!empty($_rows[0])){
-                #一个货品有多个货位时，中间要隔开
+                #一个基础物料有多个货位时，中间要隔开
                 foreach($_rows as $v){
                     $_store_position .= $v['store_position'].'|';
                 }
@@ -1139,7 +1183,7 @@ class wms_mdl_delivery extends dbeav_model{
 
             $product_info    = $basicMaterialLib->getBasicMaterialExt($row['product_id']);
             
-            #处理货品多规格值
+            #处理基础物料多规格值
             $spec_value = '';
             if(is_array($product_info['spec_desc']['spec_value']) && !empty($product_info['spec_desc']['spec_value'])){
                 $spec_value = implode('|',$product_info['spec_desc']['spec_value']);
@@ -1339,7 +1383,7 @@ class wms_mdl_delivery extends dbeav_model{
         return $type;
     }
 
-    //逐单发货时，根据发货单id，获取货号、货品名称、数量、重量
+    //逐单发货时，根据发货单id，获取基础物料编码、基础物料名称、数量、重量
     function getProcutInfo($delivery_id){
         $sql = 'select
                     items.bn,items.product_id,items.product_name,items.number,delivery.net_weight,delivery.delivery_id
@@ -1430,7 +1474,7 @@ class wms_mdl_delivery extends dbeav_model{
             'columns' => array (
                 'bn' => array(
                     'type' => 'varchar(30)',
-                    'label' => '商品货号',
+                    'label' => '基础物料编码',
                     'width' => 85,
                     'editable' => false,
                 ),
@@ -1599,7 +1643,7 @@ class wms_mdl_delivery extends dbeav_model{
             $_rows = $this->db->select($_sql);
             $_store_position = null;
             if(!empty($_rows[0])){
-                #一个货品有多个货位时，中间要隔开
+                #一个基础物料有多个货位时，中间要隔开
                 foreach($_rows as $v){
                     $_store_position .= $v['store_position'].'|';
                 }

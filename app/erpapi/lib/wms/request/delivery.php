@@ -29,20 +29,19 @@ class erpapi_wms_request_delivery extends erpapi_wms_request_abstract
     
     /**
      * 发货单暂停
-     * 
+     *
      * @return void
      * @author
-     * */
-
+     **/
     public function delivery_pause($sdf)
     {}
 
     /**
      * 发货单暂停恢复
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     public function delivery_renew($sdf)
     {}
 
@@ -88,14 +87,15 @@ class erpapi_wms_request_delivery extends erpapi_wms_request_abstract
     }
     /**
      * 发货单创建
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     public function delivery_create($sdf)
     {
         $delivery_bn = $sdf['outer_delivery_bn'];
-
+        $channel_id = $this->__channelObj->wms['channel_id'];
+        
         $iscancel = kernel::single('ome_interface_delivery')->iscancel($delivery_bn);
         if ($iscancel) {
             return $this->succ('发货单已取消,终止同步');
@@ -107,13 +107,54 @@ class erpapi_wms_request_delivery extends erpapi_wms_request_abstract
         if ($sdf['member']['name'] && $encrytPos = strpos($sdf['member']['name'] , '>>')){
             $sdf['member']['name'] = substr($sdf['member']['name'] , 0, $encrytPos);
         }
+        
+        // 自发货标记：调用selfwms渠道自动完成发货
+        //@todo：发货单明细里都是虚拟商品,则打标记为虚拟发货单，并推送selfwms接口，自动完成发货
+        if(isset($sdf['is_self_shipment']) && $sdf['is_self_shipment'] === true){
+            // params
+            $responseData = [
+                'delivery_bn' => $delivery_bn, // 发货单号
+                'status' => 'delivery',
+                'logi_id' => $sdf['logi_id'], // 物流公司ID：直接使用发货单上的物流公司ID
+                'logistics' => $sdf['logi_id'], // 物流公司ID：直接使用发货单上的物流公司ID
+                'logi_no' => $delivery_bn, // 物流单号：直接使用发货单号作为虚拟物流单号
+            ];
+            
+            // delivery_items
+            if($sdf['delivery_items']){
+                $itemList = [];
+                foreach($sdf['delivery_items'] as $itemVal)
+                {
+                    $itemList[] = array(
+                        'product_bn' => $itemVal['bn'],
+                        'num' => $itemVal['number'],
+                    );
+                }
+                
+                $responseData['item'] = json_encode($itemList);
+            }
+            
+            return kernel::single('erpapi_router_response')->set_channel_id($channel_id)->set_api_name('wms.delivery.status_update')->dispatch($responseData);
+        }
+        
         // 加密推送
         if ($this->_needEncryptOriginData($sdf)) {
             $this->_getEncryptOriginData($sdf);
         }
         $title = $this->__channelObj->wms['channel_name'] . '发货单添加';
 
+        // 通过 service 处理不同 APP 的参数格式化
         $params = $this->_format_delivery_create_params($sdf);
+        
+        // 调用 service 进行参数扩展或修改
+        if ($service = kernel::servicelist('erpapi.service.wms.delivery.params.format')) {
+            foreach ($service as $object => $instance) {
+                if (method_exists($instance, 'format_delivery_create_params')) {
+                    $params = $instance->format_delivery_create_params($sdf, $params, $this->__channelObj);
+                }
+            }
+        }
+        
         if (!$params) {
             return $this->error('参数为空,终止同步');
         }
@@ -163,7 +204,7 @@ class erpapi_wms_request_delivery extends erpapi_wms_request_abstract
 
     /**
      * 发货单创建接口名
-     * 
+     *
      * @return void
      * @author
      */
@@ -352,12 +393,6 @@ class erpapi_wms_request_delivery extends erpapi_wms_request_abstract
         return $params;
     }
 
-    /**
-     * delivery_create_callback
-     * @param mixed $response response
-     * @param mixed $callback_params 参数
-     * @return mixed 返回值
-     */
     public function delivery_create_callback($response, $callback_params)
     {
         $deliveryObj = app::get('ome')->model('delivery');
@@ -418,10 +453,10 @@ class erpapi_wms_request_delivery extends erpapi_wms_request_abstract
 
     /**
      * 发货单取消
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     public function delivery_cancel($sdf)
     {
         $delivery_bn = $sdf['outer_delivery_bn'];
@@ -445,10 +480,10 @@ class erpapi_wms_request_delivery extends erpapi_wms_request_abstract
 
     /**
      * 发货单查询
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     public function delivery_search($sdf)
     {
         $delivery_bn = $sdf['delivery_bn'];
@@ -532,11 +567,6 @@ class erpapi_wms_request_delivery extends erpapi_wms_request_abstract
     }
 
     # 发货单截单
-        /**
-     * delivery_cut
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function delivery_cut($sdf){
         $deliveryBn = $sdf['outer_delivery_bn'];
         $title = $this->__channelObj->channel['channel_name'] . '发货单截单';
@@ -568,9 +598,9 @@ class erpapi_wms_request_delivery extends erpapi_wms_request_abstract
     }
 
 
-    /**
+     /**
      * 预售付尾款通知wms接口
-     * 
+     *
      * @param $sdf
      * @return string
      */
@@ -607,12 +637,6 @@ class erpapi_wms_request_delivery extends erpapi_wms_request_abstract
         return array();
     }
 
-    /**
-     * delivery_notify_callback
-     * @param mixed $response response
-     * @param mixed $callback_params 参数
-     * @return mixed 返回值
-     */
     public function delivery_notify_callback($response, $callback_params)
     {
         $rsp     = $response['rsp'];

@@ -18,13 +18,6 @@
 class ome_mdl_branch extends dbeav_model {
 
     public static $branchList = null;
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter, $tableAlias=null, $baseWhere=null) {
         $op_id = kernel::single('desktop_user')->get_id();
         if ($op_id) {//如果是系统同步，是没有当前管理员，默认拥有所有仓库权限
@@ -140,6 +133,9 @@ class ome_mdl_branch extends dbeav_model {
                 return $corp_sys;
             } else {
                 $corp3_corp_id_arr = array_intersect($corp_ids,$corp_remove); //取交集
+                if (!$corp3_corp_id_arr) {
+                    return [];
+                }
                 $corp3 = $this->db->select("SELECT corp_id,name,type,weight,tmpl_type,channel_id FROM sdb_ome_dly_corp WHERE corp_id IN(" . implode(",", $corp3_corp_id_arr) . ") and disabled='false' ORDER BY weight DESC");
                 $corp_sys = array_merge($corp_sys,$corp3);
                 $corp_sys = $this->sysSortArray($corp_sys,'weight',"SORT_DESC","SORT_NUMERIC");
@@ -371,7 +367,7 @@ class ome_mdl_branch extends dbeav_model {
 
     /**
      * 获取所有仓库(过滤o2o门店仓)
-     * 
+     *
      * @param string $field
      * @return Array
      */
@@ -382,15 +378,15 @@ class ome_mdl_branch extends dbeav_model {
     }
 
     /**
-     * 对二维数组进行排序
-     * 
-     * sysSortArray($Array,"Key1","SORT_ASC","SORT_RETULAR","Key2"……)
-     * @param array   $ArrayData  需要排序的数组.
-     * @param string $KeyName1    排序字段.
-     * @param string $SortOrder1  顺序("SORT_ASC"|"SORT_DESC")
-     * @param string $SortType1   排序类型("SORT_REGULAR"|"SORT_NUMERIC"|"SORT_STRING")
-     * @return array              排序后的数组.
-     */
+    * 对二维数组进行排序
+    *
+    * sysSortArray($Array,"Key1","SORT_ASC","SORT_RETULAR","Key2"……)
+    * @param array   $ArrayData  需要排序的数组.
+    * @param string $KeyName1    排序字段.
+    * @param string $SortOrder1  顺序("SORT_ASC"|"SORT_DESC")
+    * @param string $SortType1   排序类型("SORT_REGULAR"|"SORT_NUMERIC"|"SORT_STRING")
+    * @return array              排序后的数组.
+    */
     function sysSortArray($ArrayData,$KeyName1,$SortOrder1 = "SORT_ASC",$SortType1 = "SORT_REGULAR")
     {
         if(!is_array($ArrayData))
@@ -465,6 +461,22 @@ class ome_mdl_branch extends dbeav_model {
             ];
             $arriveResult = kernel::single('erpapi_router_request')->set('shop', $oneOrder['shop_id'])->logistics_addressReachable($data);
         }
+        // 指定快递：查询 assign_express_code，用于后续标记 flag_select
+        $assignExpressCode = '';
+        $assignExpressInfo = $orderExtendObj->db_dump(array('order_id'=>$order_id), 'assign_express_code');
+        if (!empty($assignExpressInfo['assign_express_code'])) {
+            $assignExpressCode = $assignExpressInfo['assign_express_code'];
+        }
+
+        // SOMS_PICKUP + 指定快递：只返回匹配的物流公司
+        if ($assignExpressCode && kernel::single('ome_bill_label')->getBillLabelInfo($order_id, 'order', 'SOMS_PICKUP')) {
+            $corpData = $cropObj->dump(array('type' => $assignExpressCode, 'disabled' => 'false'), '*');
+            if ($corpData) {
+                $corpData['flag_select'] = 1;
+                return array($corpData);
+            }
+        }
+
         if(strtolower($shop_type) === 'aikucun' && $oneOrder['shipping']){
             $corps = $cropObj->getList('corp_id,name,type,weight,shop_id,tmpl_type,channel_id',array('type'=>$oneOrder['shipping'],'channel_id|than'=>'0','disabled'=>'false'));
             $orderExtend = app::get('ome')->model('order_extend')->dump(array('order_id'=>$order_id),'platform_logi_no');
@@ -856,12 +868,10 @@ class ome_mdl_branch extends dbeav_model {
         return $corp_rule_list;
     }
 
-    /**
-     * 获取ChannelBybranchID
-     * @param mixed $branch_id ID
-     * @return mixed 返回结果
-     */
     public function getChannelBybranchID($branch_id){
+        if(!is_numeric($branch_id)){
+            return '';
+        }
         $sql = "SELECT c.node_type FROM sdb_ome_branch as b LEFT JOIN sdb_channel_channel as c ON b.wms_id=c.channel_id WHERE b.branch_id=".$branch_id;
         $branch_detail = $this->db->selectrow($sql);
         return $branch_detail['node_type'];
@@ -876,11 +886,6 @@ class ome_mdl_branch extends dbeav_model {
         }
     }
 
-    /**
-     * 获取Branchtype
-     * @param mixed $type_code type_code
-     * @return mixed 返回结果
-     */
     public function getBranchtype($type_code){
 
         $typeMdl = app::get('ome')->model('branch_type');

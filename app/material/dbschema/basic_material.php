@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * 基础物料数据结构
  *
@@ -40,7 +39,7 @@ $db['basic_material']=array(
     'material_bn' => array(
         'type' => 'varchar(200)',
         'label' => '基础物料编码',
-        'width' => 120,
+        'width' => 230,
         'editable' => false,
         'in_list' => true,
         'default_in_list' => true,
@@ -100,7 +99,7 @@ $db['basic_material']=array(
       'required' => false,
       'default' => 0,
       'label' => '分类',
-      'width' => 75,
+      'width' => 160,
       'editable' => true,
       'filtertype' => 'yes',
       'filterdefault' => true,
@@ -138,7 +137,7 @@ $db['basic_material']=array(
         'default' => 1,
         'label' => '是否管控库存',
         'in_list' => true,
-        'default_in_list' => false,
+        'default_in_list' => true,
         'comment' => '管控库存(1=是，2=否)',
     ),
     'visibled' =>
@@ -158,6 +157,8 @@ $db['basic_material']=array(
       'label' => '创建时间',
       'in_list' => true,
       'default_in_list' => true,
+      'filtertype' => 'time',
+      'filterdefault' => true,
       'default' => 0,
     ),
     'tax_rate' =>
@@ -227,13 +228,15 @@ $db['basic_material']=array(
         'width' => 130,
         'in_list' => true,
         'default_in_list' => true,
+        'filtertype' => 'time',
+        'filterdefault' => true,
     ),
     'source' => array(
         'type'     => 'varchar(50)',
         'required' => true,
         'label'    => '数据来源',
         'default'  => 'local',
-        'default_in_list' => true,
+        // 'default_in_list' => true,
         'in_list' => true,
         'comment' => '数据来源,可选值:local(本地),api(接口)',
     ),
@@ -288,13 +291,16 @@ $db['basic_material']=array(
             0 => 'material_spu',
         ),
     ),
-    'ind_last_modified' =>
-    array(
-        'columns' =>
-        array(
+    'ind_last_modified' => array(
+        'columns' => array(
             0 => 'last_modified',
         ),
     ),
+   'create_time' => array (
+       'columns' => array (
+          0 => 'create_time',
+       ),
+   ),
   ),
   'comment' => '基础物料表,用于存储SKU纬度的商品数据',
   'engine' => 'innodb',

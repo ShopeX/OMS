@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
 class ome_order_fail
 {
     //批量修复失败订单
@@ -114,7 +113,7 @@ class ome_order_fail
         }
         $this->addFailOrderLog($order_id);//失败订单操作日志记录添加
 
-        $orderInfo = $orderObj->getList('shop_id,ship_status, shop_type, order_bn',array('order_id'=>$order_id));
+        $orderInfo = $orderObj->getList('order_id,order_bn,status,pay_status,ship_status,shop_id,shop_type',array('order_id'=>$order_id));
         
         //shop_bn
         $shopInfo = $shopObj->dump(array('shop_id'=>$orderInfo[0]['shop_id']), 'shop_bn');
@@ -324,6 +323,10 @@ class ome_order_fail
                         'obj_id' => $objInfo[0]['obj_id'],
                         'part_mjz_discount' => $objInfo[0]['part_mjz_discount'],
                         'divide_order_fee' => $objInfo[0]['divide_order_fee'],
+                        'settlement_amount' => $objInfo[0]['settlement_amount'],
+                        'actually_amount' => $objInfo[0]['actually_amount'],
+                        'platform_pay_amount' => $objInfo[0]['platform_pay_amount'],
+                        'platform_amount' => $objInfo[0]['platform_amount'],
                         'goods_id'      => $salesMInfo['sm_id'] ? $salesMInfo['sm_id'] : 0,
                         'bn'            => $bn ? $bn : null,
                         'obj_type'      => $obj_type,
@@ -340,6 +343,10 @@ class ome_order_fail
                         'goods_id' => $objInfo[0]['goods_id'],
                         'part_mjz_discount' => $objInfo[0]['part_mjz_discount'],
                         'divide_order_fee' => $objInfo[0]['divide_order_fee'],
+                        'settlement_amount' => $objInfo[0]['settlement_amount'],
+                        'actually_amount' => $objInfo[0]['actually_amount'],
+                        'platform_pay_amount' => $objInfo[0]['platform_pay_amount'],
+                        'platform_amount' => $objInfo[0]['platform_amount'],
                         'order_items'   => $order_items,
                     ));
                 }
@@ -349,10 +356,18 @@ class ome_order_fail
             }
         }
         
+        $is_sales_material_setmapping = false;
         if($newOrder){
             $basicMStockFreezeLib = kernel::single('material_basic_material_stock_freeze');
             $needFreezeItem = [];
             foreach($newOrder['order_objects'] as $ok => $obj){
+                
+                // check setmapping
+                // @todo：只要销售物料是PKG组合类型，都需要按SET商品价格计算；
+                if(isset($obj['obj_type']) && $obj['obj_type'] === 'pkg'){
+                    $is_sales_material_setmapping = true;
+                }
+                
                 foreach($obj['order_items'] as $ik =>$item){
                     $num = intval($item['quantity'])-intval($item['sendnum']);
                     if($item['product_id'] > 0 && $item['delete'] == 'false' && $num > 0){
@@ -408,8 +423,10 @@ class ome_order_fail
             }else{
                 unset($basic_material_arr);
             }
-
+            
             $newOrder['order_id'] = $order_id;
+            
+            // 计算订单items分摊金额
             $newOrder = kernel::single('ome_order')->divide_objects_to_items($newOrder);
             
             $orderObj->save($newOrder);
@@ -427,6 +444,21 @@ class ome_order_fail
                 
                 $luckyBagLib = kernel::single('ome_order_luckybag');
                 $luckyBagLib->saveLuckyBagUseLogs($orderDetailInfo);
+            }
+            
+            //订单打标识
+            $error_msg = '';
+            kernel::single('ome_preprocess_label')->process($order_id, $error_msg);
+            
+            // 订单预约信息
+            kernel::single('ome_order_reservation')->createReservation($orderInfo[0]);
+            
+            //[SAP创建]调用service进行SAP创建
+            foreach(kernel::servicelist('ome.service.order.create.after') as $object)
+            {
+                if(method_exists($object, 'after_create')){
+                    $object->after_create($orderInfo[0]);
+                }
             }
             
             return true;
@@ -478,7 +510,7 @@ class ome_order_fail
             return false;
         }
         
-        $orderInfo = $orderObj->getList('shop_id,ship_status, shop_type, order_bn,is_fail',array('order_id'=>$order_id));
+        $orderInfo = $orderObj->getList('order_id,order_bn,ship_status,shop_id,shop_type,is_fail',array('order_id'=>$order_id));
         
         // shop info
         $shopInfo = $shopObj->dump(array('shop_id'=>$orderInfo[0]['shop_id']), 'shop_bn');
@@ -699,6 +731,10 @@ class ome_order_fail
                         'obj_id' => $objInfo[0]['obj_id'],
                         'part_mjz_discount' => $objInfo[0]['part_mjz_discount'],
                         'divide_order_fee' => $objInfo[0]['divide_order_fee'],
+                        'settlement_amount' => $objInfo[0]['settlement_amount'],
+                        'actually_amount' => $objInfo[0]['actually_amount'],
+                        'platform_pay_amount' => $objInfo[0]['platform_pay_amount'],
+                        'platform_amount' => $objInfo[0]['platform_amount'],
                         'goods_id'      => $salesMInfo['sm_id'] ? $salesMInfo['sm_id'] : 0,
                         'bn'            => $bn ? $bn : null,
                         'obj_type'      => $obj_type,
@@ -715,6 +751,10 @@ class ome_order_fail
                         'goods_id' => $objInfo[0]['goods_id'],
                         'part_mjz_discount' => $objInfo[0]['part_mjz_discount'],
                         'divide_order_fee' => $objInfo[0]['divide_order_fee'],
+                        'settlement_amount' => $objInfo[0]['settlement_amount'],
+                        'actually_amount' => $objInfo[0]['actually_amount'],
+                        'platform_pay_amount' => $objInfo[0]['platform_pay_amount'],
+                        'platform_amount' => $objInfo[0]['platform_amount'],
                         'order_items'   => $order_items,
                     ));
                 }
@@ -726,11 +766,18 @@ class ome_order_fail
                 $excludeObjIds[] = $objInfo[0]['obj_id'];
             }
         }
-
+        
+        $is_sales_material_setmapping = false;
         if($newOrder){
             $basicMStockFreezeLib = kernel::single('material_basic_material_stock_freeze');
             $needFreezeItem = [];
             foreach($newOrder['order_objects'] as $ok => $obj){
+                
+                // check setmapping
+                // @todo：只要销售物料是PKG组合类型，都需要按SET商品价格计算；
+                if(isset($obj['obj_type']) && $obj['obj_type'] === 'pkg'){
+                    $is_sales_material_setmapping = true;
+                }
                 
                 foreach($obj['order_items'] as $ik =>$item){
                     
@@ -790,9 +837,12 @@ class ome_order_fail
             }else{
                 unset($basic_material_arr);
             }
-
+            
             $newOrder['order_id'] = $order_id;
+            
+            // 计算订单items分摊金额
             $newOrder = kernel::single('ome_order')->divide_objects_to_items($newOrder);
+            
             $orderObj->save($newOrder);
         }
         
@@ -814,6 +864,18 @@ class ome_order_fail
                 
                 $luckyBagLib = kernel::single('ome_order_luckybag');
                 $luckyBagLib->saveLuckyBagUseLogs($orderDetailInfo);
+            }
+            
+            //订单打标识
+            $error_msg = '';
+            kernel::single('ome_preprocess_label')->process($order_id, $error_msg);
+            
+            //[SAP创建]调用service进行SAP创建
+            foreach(kernel::servicelist('ome.service.order.create.after') as $object)
+            {
+                if(method_exists($object, 'after_create')){
+                    $object->after_create($orderInfo[0]);
+                }
             }
             
             return true;

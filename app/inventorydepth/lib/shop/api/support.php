@@ -42,7 +42,7 @@ class inventorydepth_shop_api_support
     }
     
     //支持拉取商品的店铺类型
-    public static $items_all_get_shops = array('taobao','paipai','360buy', 'ecos.b2c','bbc','ecos.b2b2c.stdsrc','luban','alibaba','dewu','huawei','kuaishou','vop','pinduoduo','zkh','meituan4bulkpurchasing');
+    public static $items_all_get_shops = array('taobao','paipai','360buy', 'ecos.b2c','bbc','ecos.b2b2c.stdsrc','luban','alibaba','dewu','huawei','kuaishou','vop','pinduoduo','zkh','meituan4bulkpurchasing','weimobr');
     
     //不显示前端购物小车的店铺类型
     public static $stock_shop_type_not_support = array('alibaba','suning','amazon', 'kaola','juanpi','cmb','haoshiqi','vop','eyee','yunji','congminggou','gegejia');
@@ -67,7 +67,7 @@ class inventorydepth_shop_api_support
     }
     
     //支持批量拉取商品的店铺类型
-    public static $items_get_shops = array('taobao','paipai','360buy', 'ecos.b2c','bbc','ecos.b2b2c.stdsrc','alibaba');
+    public static $items_get_shops = array('taobao','paipai','360buy', 'ecos.b2c','bbc','ecos.b2b2c.stdsrc','alibaba','weimobr');
     
     /**
      * 接口store.item.get 

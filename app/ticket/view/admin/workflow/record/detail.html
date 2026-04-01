@@ -1,0 +1,62 @@
+<{capture name="header"}>
+<link href="../app/ome/statics/ome.css" rel="stylesheet" type="text/css">
+<{/capture}>
+
+<div class="tableform" id="recordinfo">
+  <h4>基本信息</h4>
+  <div class="division">
+    <table border="0" cellspacing="0" cellpadding="0">
+      <tr>
+        <th>审批流案例ID：</th>
+        <td><{$data.case_id}></td>
+        <th>节点ID：</th>
+        <td><{$data.node_id}></td>
+        <th>创建时间：</th>
+        <td><{$data.at_time}></td>
+      </tr>
+      <tr>
+        <th>审批人类型：</th>
+        <td>
+          <{if $data.assignee_type == 'user'}>用户<{/if}>
+          <{if $data.assignee_type == 'role'}>角色<{/if}>
+          <{if $data.assignee_type == 'dept'}>部门<{/if}>
+        </td>
+        <th>审批人ID：</th>
+        <td><{$data.assignee_id}></td>
+        <th>更新时间：</th>
+        <td><{$data.up_time}></td>
+      </tr>
+      <tr>
+        <th>审批人姓名：</th>
+        <td><{$data.assignee_name}></td>
+        <th>操作类型：</th>
+        <td>
+          <{if $data.action == 'approved'}>同意<{/if}>
+          <{if $data.action == 'rejected'}>拒绝<{/if}>
+          <{if $data.action == 'forward'}>转发<{/if}>
+        </td>
+        <th>状态：</th>
+        <td>
+          <{if $data.status == 'pending'}>待审批<{/if}>
+          <{if $data.status == 'approved'}>同意<{/if}>
+          <{if $data.status == 'rejected'}>拒绝<{/if}>
+        </td>
+      </tr>
+      <tr>
+        <th>处理时间：</th>
+        <td><{$data.process_time}></td>
+        <th></th>
+        <td></td>
+        <th></th>
+        <td></td>
+      </tr>
+    </table>
+  </div>
+  
+  <{if $data.remark}>
+  <h4>审批意见</h4>
+  <div class="division">
+    <pre><{$data.remark}></pre>
+  </div>
+  <{/if}>
+</div> 

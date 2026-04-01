@@ -150,6 +150,8 @@ $db['shop_skus'] = array(
             'label' => app::get('inventorydepth')->_('条形码'),
             'default' => '',
             'filtertype' => 'normal',
+            'in_list' => true,
+            'default_in_list' => false,
         ),
         'release_stock' => array(
             'type'            => 'int(10) unsigned',

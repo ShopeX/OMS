@@ -210,17 +210,23 @@ class finance_monthly_report
                 }
             }
 
-            $ar_list = $mdlMonthlyReport->db->select('select sum(money) as amount,monthly_id,ar_type from sdb_finance_ar where monthly_id in ('.implode(',', $monthly_list).') and charge_status = 1 group by monthly_id,ar_type');
+            $ar_list = $mdlMonthlyReport->db->select('select sum(money) as amount,sum(actually_money) as actually_amount,sum(platform_amount) as platform_amount,monthly_id,ar_type from sdb_finance_ar where monthly_id in ('.implode(',', $monthly_list).') and charge_status = 1 group by monthly_id,ar_type');
             if($ar_list)
             {
                 foreach ($ar_list as $v) {
                     if($v['ar_type'])
                     {
                         $monthly_amount[$v['monthly_id']]['ar_out_amount'] = $v['amount'];
+                        // 累计退款客户实付和退款平台承担金额（只计算流出）
+                        $monthly_amount[$v['monthly_id']]['refund_actually_amount'] = $v['actually_amount'];
+                        $monthly_amount[$v['monthly_id']]['refund_platform_amount'] = $v['platform_amount'];
                     }
                     else
                     {
                         $monthly_amount[$v['monthly_id']]['ar_in_amount'] = $v['amount'];
+                        // 累计客户实付和平台承担金额（只计算流入）
+                        $monthly_amount[$v['monthly_id']]['actually_amount'] = $v['actually_amount'];
+                        $monthly_amount[$v['monthly_id']]['platform_amount'] = $v['platform_amount'];
                     }
                 }
             }
@@ -232,6 +238,10 @@ class finance_monthly_report
                 $data['bill_out_amount'] = isset($monthly_amount[$monthly_id]['bill_out_amount']) ? $monthly_amount[$monthly_id]['bill_out_amount'] : 0;
                 $data['ar_in_amount'] = isset($monthly_amount[$monthly_id]['ar_in_amount']) ? $monthly_amount[$monthly_id]['ar_in_amount'] : 0;
                 $data['ar_out_amount'] = isset($monthly_amount[$monthly_id]['ar_out_amount']) ? $monthly_amount[$monthly_id]['ar_out_amount'] : 0;
+                $data['actually_amount'] = isset($monthly_amount[$monthly_id]['actually_amount']) ? $monthly_amount[$monthly_id]['actually_amount'] : 0;
+                $data['platform_amount'] = isset($monthly_amount[$monthly_id]['platform_amount']) ? $monthly_amount[$monthly_id]['platform_amount'] : 0;
+                $data['refund_actually_amount'] = isset($monthly_amount[$monthly_id]['refund_actually_amount']) ? $monthly_amount[$monthly_id]['refund_actually_amount'] : 0;
+                $data['refund_platform_amount'] = isset($monthly_amount[$monthly_id]['refund_platform_amount']) ? $monthly_amount[$monthly_id]['refund_platform_amount'] : 0;
                 $mdlMonthlyReport->update($data,array('monthly_id'=>$monthly_id));
             }
         }

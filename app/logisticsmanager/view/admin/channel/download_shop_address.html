@@ -13,7 +13,6 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-
 <form id="form1" action="index.php?app=logisticsmanager&ctl=admin_channel&act=save_shop_address" name="form1" method="post" class="tableform">
   <input type="hidden" name="account_list_json" value='<{$account_list_json}>' >
   <input type="hidden" name="channel_id" value='<{$channel_id}>' >
@@ -40,9 +39,9 @@
       </tr>
       </thead>
       <tbody>
-      <{foreach from=$account_list item=account}>
+      <{foreach from=$account_list key=key item=account}>
         <tr>
-          <td><input type="radio" name="acct_id" value="<{$account.acct_id}>"></td>
+          <td><input type="radio" name="_unique_acct_id" value="<{$key}>"></td>
           <!-- <td><{$account.delivery_id}></td> -->
           <td><{$account.shop_id}></td>
           <td><{$account.acct_id}></td>

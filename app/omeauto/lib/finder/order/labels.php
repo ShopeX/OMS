@@ -33,7 +33,11 @@ class omeauto_finder_order_labels
     {
         $url = "index.php?app=omeauto&ctl=order_labels&act=edit&p[0]={$row['label_id']}&finder_id={$_GET['_finder']['finder_id']}";
         
-        $str = "<a href='javascript:void(0);' target='download' onclick=\"new Dialog('%s', {width:500,height:300,title:'修改标签'}); \">修改</a>";
+        // 是否显示：修改按钮
+        $str = '';
+        if($row['source'] != 'system'){
+            $str = "<a href='javascript:void(0);' target='download' onclick=\"new Dialog('%s', {width:500,height:300,title:'修改标签'}); \">修改</a>";
+        }
         
         return sprintf($str, $url);
     }

@@ -93,6 +93,8 @@
 var weightSet ='<{$weightSet}>'; 
 var weightWarn='<{$weightWarn}>';
 var logi_no_position = '<{$logi_no_position}>';
+var BASE_URL = '<{$env.BASE_URL}>';
+var currentDeliveryIsPickup = false;
 
 switch(logi_no_position){
     case 'up':
@@ -215,10 +217,13 @@ function delivery_verify(e){
                 }
             }catch(e){}
             return MessageBox.error(json.msg);
-        }else{
-            if (json != ''){
-
-	            json = json.filter(function(n){
+        }
+        if (typeof json === 'object' && json.status === 'ok'){
+            currentDeliveryIsPickup = (json.is_pickup === true);
+            json = '';
+        }
+        if (json != ''){
+            json = json.filter(function(n){
 	                if (n.order_exists_refund != ''){
 	                	is_confirm_delivery = true;
 	                    refund_orders = n.order_exists_refund;
@@ -372,23 +377,44 @@ function delivery_verify(e){
                 }});
                 
             }else{
-               
-                submitSend(e);
+                if (currentDeliveryIsPickup) { submitSend(e); } else { $('ome_single_delivery').submit(); }
             }
 
         }
         }else{
-
-	                submitSend(e);
+	                if (currentDeliveryIsPickup) { submitSend(e); } else { $('ome_single_delivery').submit(); }
                  }
 	            }
             }
         }
-      }
     }).send();
 }
 function submitSend(e){
-   $('ome_single_delivery').fireEvent('submit',{stop:$empty});
+    var form = $('ome_single_delivery');
+    if (form.retrieve('submiting')) return;
+    var target = form.retrieve('target') || {};
+    // 先触发打印（不等待），再提交 consign；打印异常也不影响 consign 提交
+    var printVal = $('delivery_id').value || '';
+    if (printVal) {
+        try { autoCainiaoPrint(printVal); } catch (err) {}
+    }
+    if (target.onRequest) target.onRequest();
+    form.store('submiting', true);
+    new Request({
+        url: form.get('action'),
+        method: (form.get('method') || 'post').toLowerCase(),
+        data: form,
+        onComplete: function(resp) {
+            if (form && form.uid) form.eliminate('submiting');
+            if (target.onComplete) target.onComplete(resp);
+        },
+        onFailure: function() {
+            if (form && form.uid) form.eliminate('submiting');
+            $('sendProduct').set('disabled', '');
+            $('sendProduct').getElements('span')[1].set('text','确认出库');
+            $('error').show().set('html', '请求失败，请重试');
+        }
+    }).send();
 }
 //根据物流单号，获取货号、货品名称
 function showProductItems(){
@@ -429,8 +455,125 @@ $('ome_single_delivery').store('target',{
            }
        }else{
            $('sendProduct').set('disabled', 'true');
+           if (json.redirect) {
+               if (typeof MessageBox !== 'undefined') {
+                   new MessageBox(json.success || '发货处理完成', { type: 'success', autohide: 1500 });
+               }
+               var url = json.redirect;
+               var q = (window.location.search || '').replace(/^\?/, '');
+               if (q) url += (url.indexOf('?') >= 0 ? '&' : '?') + q;
+               setTimeout(function(){ window.location.href = url; }, 800);
+           }
        }
 
     }
 });
+
+// 仅 pickup 时拦截 submit，走自定义 Request + 打印 + redirect；非 pickup 保持原样 fireEvent('submit') 由框架处理
+$('ome_single_delivery').addEvent('submit', function(e) {
+    if (currentDeliveryIsPickup) {
+        e.stop();
+        if (e.preventDefault) e.preventDefault();
+        submitSend(e);
+        return false;
+    }
+});
+
+var _printerJsLoaded = false;
+function _loadPrinterJs(cb) {
+    if (_printerJsLoaded && typeof(initPrinter) == 'function') return cb();
+    if (typeof(Ex_Loader) == 'function') {
+        Ex_Loader('security', BASE_URL + '/app/logisticsmanager/statics/js/printer.js?v=20210412', function(){
+            _printerJsLoaded = true;
+            cb();
+        });
+        return;
+    }
+    var s = document.createElement('script');
+    s.type = 'text/javascript';
+    s.src = BASE_URL + '/app/logisticsmanager/statics/js/printer.js?v=20210412';
+    s.onload = function(){ _printerJsLoaded = true; cb(); };
+    document.getElementsByTagName('head')[0].appendChild(s);
+}
+
+function autoCainiaoPrint(deliveryId) {
+    _loadPrinterJs(function(){
+        new Request({
+            url:'index.php?app=wms&ctl=admin_receipts_print&act=ajaxGetPrintExpreData',
+            method:'POST',
+            data:{delivery_id:deliveryId},
+            onSuccess:function(resp){
+                resp = (resp || '').trim();
+                var ret = resp ? JSON.decode(resp) : {};
+                if (!ret || ret.status != 'success') {
+                    if (ret && ret.msg && (ret.msg.indexOf('未找到提货单') >= 0 || ret.msg.indexOf('非提货单') >= 0)) return;
+                    var msg = ret && ret.msg ? ret.msg : '获取打印数据失败';
+                    $('error').show().set('html',msg);
+                    return;
+                }
+                var options = ret.options || {};
+                var printerType = (ret.printer_type && ret.printer_type !== '') ? ret.printer_type : 'cainiao';
+                if (printerType === 'cainiao' && options.data && options.data.length) {
+                    var hasJsonPacket = options.data.every(function(item){ return item && typeof item.json_packet === 'string' && item.json_packet.length > 0; });
+                    if (!hasJsonPacket) {
+                        $('error').show().set('html', '无电子面单数据，无法触发菜鸟打印。请确认该单已获取电子面单或稍后在打印页补打。');
+                        return;
+                    }
+                }
+                options.onError = function(data){
+                    var msg = (typeof data == 'object' && data.errmsg) ? data.errmsg : '与菜鸟打印组件通信失败，请确认已安装并打开菜鸟组件';
+                    $('error').show().set('html',msg);
+                };
+
+                var decrypted = false;
+                var printersReady = false;
+                var printerName = '';
+                var printed = false;
+                var printTriggered = false;
+
+                options.onOpen = function(){
+                    try { printerObj.getPrinters(); } catch(e){}
+                };
+                options.onGetPrinters = function(data){
+                    if(!data.printers || data.printers.length == 0) {
+                        $('error').show().set('html', data.msg ? data.msg : '没有可用打印机');
+                        return;
+                    }
+                    printerName = data.defaultPrinter ? data.defaultPrinter : data.printers[0].name;
+                    printersReady = true;
+                    tryStartPrint();
+                };
+                options.onDecryptComplete = function(p){
+                    if (p && p.rsp == 'fail') {
+                        $('error').show().set('html', p.errmsg ? p.errmsg : '数据解密失败');
+                        return;
+                    }
+                    decrypted = true;
+                    tryStartPrint();
+                };
+                options.onPrintFailure = function(data){
+                    var msg = data && data.msg ? data.msg : '打印失败';
+                    $('error').show().set('html', msg);
+                    printed = false;
+                };
+                options.onPrintSuccess = function(){
+                    printed = true;
+                };
+
+                var printerObj = initPrinter(printerType, options);
+                printerObj.decryptAsync(5);
+
+                function tryStartPrint(){
+                    if (printTriggered) return;
+                    if (!decrypted || !printersReady) return;
+                    if (!printerName) return;
+                    if (printerObj.destatus != 'succ') return;
+                    printTriggered = true;
+                    printed = true;
+                    printerObj.print.delay(10, printerObj, [{name:printerName}]);
+                }
+            }
+        }).send();
+    });
+}
 </script>

@@ -165,11 +165,11 @@ class ome_ctl_admin_shop extends desktop_controller {
             return;
         }
         
-        // 判断企业认证状态（参考 system.php）
+        // 判断系统节点注册状态（参考 system.php，与矩阵企业侧 ent_id 一致）
         $entId = base_enterprise::ent_id();
         $entAc = base_enterprise::ent_ac();
         $entEmail = base_enterprise::ent_email();
-        $is_certified = !empty($entId); // 企业认证状态：如果 ent_id 有值，就表示企业认证成功
+        $is_certified = !empty($entId); // 系统节点注册完成：ent_id 有值即视为已在矩阵完成注册
         // 系统节点与证书（展示用）
         $system_node_id = base_shopnode::node_id('ome');
         $system_certificate_id = base_certificate::get('certificate_id');
@@ -253,10 +253,10 @@ class ome_ctl_admin_shop extends desktop_controller {
         $this->pagedata['adapter_list'] = $adapter_list;
         $this->pagedata['has_node'] = $has_node;
         
-        // 计算当前步骤（现在有5步：0对接方式、1企业认证、2奇门授权（淘宝）/店铺绑定（非淘宝）、3店铺绑定（淘宝）、4完成）
-        // 注意：如果对接方式是 openapi（商家自研对接），不需要企业认证，跳过步骤1
+        // 计算当前步骤（现在有5步：0对接方式、1系统节点注册、2奇门授权（淘宝）/店铺绑定（非淘宝）、3店铺绑定（淘宝）、4完成）
+        // 注意：如果对接方式是 openapi（商家自研对接），不需要系统节点注册步骤，跳过步骤1
         // 注意：对于淘宝店铺，步骤2是奇门授权，步骤3是店铺绑定
-        $need_enterprise_auth = ($adapter != 'openapi'); // openapi 不需要企业认证
+        $need_enterprise_auth = ($adapter != 'openapi'); // openapi 不强制系统节点注册
         
         if (empty($adapter)) {
             $current_step = 0;
@@ -264,11 +264,11 @@ class ome_ctl_admin_shop extends desktop_controller {
             $step_text = '请选择对接方式';
             $bind_url = '';
         } elseif ($need_enterprise_auth && !$is_certified) {
-            // 需要企业认证且未认证
+            // 需要系统节点注册且尚未完成
             $current_step = 1;
-            $status_text = '未认证企业';
-            $step_text = '请先完成企业认证';
-            // 生成企业认证URL（参考 system.php）
+            $status_text = '系统节点未注册';
+            $step_text = '请先完成系统节点注册';
+            // 生成系统节点注册 URL（参考 system.php）
             $bind_url = base_enterprise::generate_auth_url();
         } elseif ($is_taobao && $need_qimen && !$is_qimen_binded) {
             // 淘宝店铺：步骤2是奇门授权
@@ -328,21 +328,21 @@ class ome_ctl_admin_shop extends desktop_controller {
             $step_text = '请选择对接方式';
             $bind_url = '';
         } elseif ($step == 1) {
-            // 第1步：企业认证
-            // 如果对接方式是 openapi，不需要企业认证
-            // 但是，如果用户直接点击步骤指示器中的"企业认证"，应该允许显示步骤1的内容
-            // 只有在点击"下一步"按钮时，才自动跳过步骤1
+            // 第1步：系统节点注册
+            // 如果对接方式是 openapi，不强制系统节点注册
+            // 但是，如果用户直接点击步骤指示器中的「系统节点注册」，应允许显示步骤1的内容
+            // 只有在点击「下一步」时，openapi 才会自动跳过步骤1
             // 这里直接显示步骤1的内容，允许用户查看
             $current_step = 1;
-            $status_text = '企业认证';
+            $status_text = '系统节点注册';
             if (!$need_enterprise_auth) {
-                // openapi 默认不强制企业认证，但应展示认证 iframe
-                $step_text = '当前对接方式为商家自研对接，企业认证可选；如需认证请完成下方流程';
-                // 生成企业认证URL（与矩阵一致）
+                // openapi 不强制注册，但仍展示矩阵注册页 iframe（可选完成）
+                $step_text = '当前对接方式为商家自研对接，系统节点注册为可选；如需注册请完成下方流程';
+                // 生成系统节点注册 URL（与矩阵一致）
                 $bind_url = base_enterprise::generate_auth_url();
             } else {
-                $step_text = '请完成企业认证';
-                // 生成企业认证URL（参考 system.php）
+                $step_text = '请完成系统节点注册';
+                // 生成系统节点注册 URL（参考 system.php）
                 $bind_url = base_enterprise::generate_auth_url();
             }
         } elseif ($step == 2) {
@@ -451,10 +451,10 @@ class ome_ctl_admin_shop extends desktop_controller {
                 $incomplete_steps[] = array('step' => 0, 'name' => '对接方式');
             }
             
-            // 步骤1：企业认证（如果不需要企业认证，跳过）
+            // 步骤1：系统节点注册（openapi 跳过）
             if ($need_enterprise_auth && !$is_certified) {
                 $all_steps_completed = false;
-                $incomplete_steps[] = array('step' => 1, 'name' => '企业认证');
+                $incomplete_steps[] = array('step' => 1, 'name' => '系统节点注册');
             }
             
             // 步骤2：对于淘宝店铺是奇门授权，对于非淘宝店铺是店铺绑定
@@ -513,7 +513,7 @@ class ome_ctl_admin_shop extends desktop_controller {
         }
         
         // 计算每个步骤的实际完成状态（用于步骤指示器显示）
-        // 如果对接方式是 openapi，步骤1（企业认证）自动标记为已完成
+        // 如果对接方式是 openapi，步骤1（系统节点注册）在流程上可跳过（完成态见 step_completed）
         // 对于淘宝店铺：步骤2是奇门授权，步骤3是店铺绑定
         // 对于非淘宝店铺：步骤2是店铺绑定，步骤3不存在
         // 注意：步骤3（店铺绑定）的完成状态只检查 node_id，不依赖奇门授权
@@ -530,7 +530,7 @@ class ome_ctl_admin_shop extends desktop_controller {
 
         $step_completed = array(
             0 => !empty($adapter), // 步骤0：对接方式已选择
-            // 不再将可选认证默认标绿，只有真实完成才标记完成
+            // 不再将可选注册默认标绿，只有真实完成才标记完成
             1 => $is_certified,
             2 => $step2_completed, // 步骤2：淘宝店铺是奇门授权（openapi 不自动完成），非淘宝店铺是店铺绑定
             3 => $is_taobao ? $is_node_binded : false, // 步骤3：淘宝店铺是店铺绑定（只检查 node_id），非淘宝店铺不存在
@@ -591,7 +591,7 @@ class ome_ctl_admin_shop extends desktop_controller {
         $this->pagedata['ent_ac'] = $entAc;
         $this->pagedata['ent_email'] = $entEmail;
         $this->pagedata['is_certified'] = $is_certified;
-        $this->pagedata['need_enterprise_auth'] = $need_enterprise_auth; // 是否需要企业认证（openapi 不需要）
+        $this->pagedata['need_enterprise_auth'] = $need_enterprise_auth; // 是否需要系统节点注册步骤（openapi 不强制）
         
         // 渲染模板
         $this->display('admin/shop/bind_guide.html');
@@ -907,6 +907,11 @@ class ome_ctl_admin_shop extends desktop_controller {
 
                 if ($diff_time > 8) {
                     $this->end(false, app::get('base')->_('只能下载7天之内的订单'));
+                }
+                foreach (kernel::servicelist('service.order') as $object => $instance) {
+                    if (method_exists($instance, 'update_order')) {
+                        $instance->notify_get_order($shop, $start_time, $end_time);
+                    }
                 }
                 $this->end(true, app::get('base')->_('同步成功'));
             } else {

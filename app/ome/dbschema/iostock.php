@@ -383,6 +383,28 @@ $db['iostock']=array (
           0 => 'business_bn',
         ),
     ),
+    'idx_bn_branchid_createtime_typeid_nums_inventorycost' => 
+    array(
+      'columns' =>
+        array (
+          'bn',
+          'branch_id',
+          'create_time',
+          'type_id',
+          'nums',
+          'inventory_cost',
+        ),
+    ),
+    'idx_typeid_branchid_bn_createtime' => 
+    array(
+      'columns' =>
+        array (
+          'type_id',
+          'branch_id',
+          'bn',
+          'create_time',
+        ),
+    ),
   ),
   'comment' => '出入库单',
   'engine' => 'innodb',

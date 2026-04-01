@@ -30,7 +30,7 @@ $db['dly_corp']=array (
     array (
       'type' => 'number',
       'required' => true,
-      'default' => 0,
+      'default' => 0, 
       'editable' => false,
     ),
     'all_branch' =>
@@ -45,6 +45,8 @@ $db['dly_corp']=array (
               'normal' => '普通快递',
               'instatnt' => '同城配送',
               'seller' => '商家配送',
+              'heavy' => '大件配送',
+              'pickup' => '自提',
           ),
           'editable' => false,
           'required' => true,
@@ -266,6 +268,30 @@ $db['dly_corp']=array (
           'in_list' => true,
           'default_in_list' => false,
       ),
+      
+        'contact_email' => array (
+            'type'            => 'text',
+            'label'         => '联系人邮箱',
+            'editable'        => false,
+            'in_list' => true,
+            'default_in_list' => true,
+        ),
+        'at_time'       => array(
+            'type'            => 'TIMESTAMP',
+            'label'           => '创建时间',
+            'default'         => 'CURRENT_TIMESTAMP',
+            'in_list'         => true,
+            'default_in_list' => true,
+            'order'           => 1000,
+        ),
+        'up_time'       => array(
+            'type'            => 'TIMESTAMP',
+            'label'           => '更新时间',
+            'default'         => 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+            'in_list'         => true,
+            'default_in_list' => true,
+            'order'           => 1010,
+        ),
   ),
     'index' =>
     array (

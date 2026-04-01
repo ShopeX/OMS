@@ -793,6 +793,9 @@
                         html += '<td class="buycounts" id="buy_'+obj_bn+'">' + orderObjects[obj_bn]['quantity'] + '</td>';
                     }
 
+                    //已拆分数量
+                    html += '<td class="splitcounts">&nbsp;</td>';
+
                     if (orderCount == 1 && is_o2o_split) {
                         
                         html += '<td class="leftnums"><input onchange="check_split_num(this);"  value='+orderObjects[obj_bn]['left_nums']+' max_left_nums='+orderObjects[obj_bn]['left_nums']+' id="dlv_'+obj_bn+'" obj_bn="'+obj_bn+'"';
@@ -864,6 +867,10 @@
                             html = html + '<td style="color: red">' + orderObjects[obj_bn]['cnService'] + '</td>';
                             <{/if}>
                             html = html + '<td>' + orderObjects[obj_bn]['order_items'][item_bn]['quantity'] + '</td>';
+
+                            //已拆分数量（子商品行显示空）
+                            html = html + '<td>' + orderObjects[obj_bn]['order_items'][item_bn]['split_num'] + '</td>';
+
                             html += '</tr>';
                         }
                     }
@@ -918,6 +925,9 @@
                         {
                             html += '<td class="buycounts" id="buy_'+obj_bn+'">' + orderObjects[obj_bn]['order_items'][item_bn]['quantity'] +'</td>';
                         }
+
+                        //已拆分数量
+                        html += '<td class="splitcounts">' + orderObjects[obj_bn]['order_items'][item_bn]['split_num'] + '</td>';
                         
                         if (orderCount == 1 && is_o2o_split) {
                             
@@ -1016,11 +1026,17 @@
                 orderObjects[obj_bn]['order_items'][product['bn']]['shop_product_id'] = product['shop_product_id'];
                 orderObjects[obj_bn]['order_items'][product['bn']]['item_type']       = product['item_type'];
                 orderObjects[obj_bn]['order_items'][product['bn']]['not_allow']       = product['not_allow'];
+
+                // 已拆分数量
+                orderObjects[obj_bn]['order_items'][product['bn']]['split_num']       = product['split_num'];
             } else {
                 orderObjects[obj_bn]['order_items'][product['bn']]['amount']    += parseFloat(product['amount']);
                 orderObjects[obj_bn]['order_items'][product['bn']]['quantity']  += parseFloat(product['quantity']);
                 orderObjects[obj_bn]['order_items'][product['bn']]['left_nums'] += parseFloat(product['left_nums']);
                 orderObjects[obj_bn]['order_items'][product['bn']]['sendnum']   += parseFloat(product['sendnum']);
+
+                // 已拆分数量
+                orderObjects[obj_bn]['order_items'][product['bn']]['split_num']   += parseFloat(product['split_num']);
             }
         }
     }

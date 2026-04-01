@@ -197,6 +197,13 @@ class ome_order_edit_gift{
                         $tmp_obj[$k]['quantity'] = intval($num[$n]);
                         $tmp_obj[$k]['pmt_price'] = 0.00;
                         $tmp_obj[$k]['delete'] = 'false';
+                        $tmp_obj[$k]['divide_order_fee'] = sprintf('%.2f', $objInfo['divide_order_fee'] * intval($num[$n]) / $objInfo['quantity']);
+                        $tmp_obj[$k]['settlement_amount'] = sprintf('%.2f', $objInfo['settlement_amount'] * intval($num[$n]) / $objInfo['quantity']);
+                        $tmp_obj[$k]['actually_amount'] = sprintf('%.2f', $objInfo['actually_amount'] * intval($num[$n]) / $objInfo['quantity']);
+                        $tmp_obj[$k]['platform_pay_amount'] = sprintf('%.2f', $tmp_obj[$k]['divide_order_fee'] - $tmp_obj[$k]['actually_amount']);
+                        $tmp_obj[$k]['platform_amount'] = sprintf('%.2f', $tmp_obj[$k]['settlement_amount'] - $tmp_obj[$k]['divide_order_fee']);
+                        $tmp_obj[$k]['part_mjz_discount'] = sprintf('%.2f', $tmp_obj[$k]['sale_price'] - $tmp_obj[$k]['divide_order_fee']);
+                        $tmp_obj[$k]['oid'] = $objInfo['oid'];
 
                     } else {
                         // 不存在 则进行删除

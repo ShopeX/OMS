@@ -80,7 +80,21 @@ class ome_order_edit_pkg{
            
             if (!$obj_) continue;
 
-            if ($obj_['quantity'] != $onum[$k] || $obj_['price'] != $oprice[$k] || $obj_['pmt_price'] != $obj_pmt_price[$k]){
+            // 检查是否有oid限制
+            $hasOidLimit = !empty($obj_['oid']) && $obj_['oid'] != '-1';
+            
+            // oid限制：验证数量只能改小
+            if ($hasOidLimit && isset($onum[$k]) && $onum[$k] > $obj_['quantity']) {
+                trigger_error('oid限制：数量不能大于原数量', E_USER_ERROR);
+            }
+            
+            // oid限制：禁止修改单价和优惠价格
+            if ($hasOidLimit) {
+                $oprice[$k] = $obj_['price'];
+                $obj_pmt_price[$k] = $obj_['pmt_price'];
+            }
+            
+            if ($obj_['quantity'] != $onum[$k] || ($obj_['price'] != $oprice[$k] && !$hasOidLimit) || ($obj_['pmt_price'] != $obj_pmt_price[$k] && !$hasOidLimit)){
                 $is_order_change = true;
                 $is_goods_modify = true;
             }
@@ -199,8 +213,32 @@ class ome_order_edit_pkg{
 
                 }
 
-                //$tmp_obj[$k]['sale_price']  = $tmp_obj[$k]['amount'] - $obj_pmt_price[$k] - $tmp_item_pmt_price;
-                $tmp_obj[$k]['sale_price']  = $tmp_obj[$k]['amount'] - $obj_pmt_price[$k];
+                // oid限制：按比例计算销售价和实付
+                if ($hasOidLimit && $obj_['quantity'] > 0) {
+                    $ratio = intval($onum[$k]) / $obj_['quantity'];
+                    $originalSalePrice = $obj_['sale_price'];
+                    $originalDivideOrderFee = $obj_['divide_order_fee'];
+                    
+                    $tmp_obj[$k]['sale_price'] = sprintf('%.2f', $originalSalePrice * $ratio);
+                    $tmp_obj[$k]['divide_order_fee'] = sprintf('%.2f', $originalDivideOrderFee * $ratio);
+                    
+                    // 重新计算商品优惠 = 单价 * 数量 - 销售价
+                    $obj_pmt_price[$k] = sprintf('%.2f', $tmp_obj[$k]['amount'] - floatval($tmp_obj[$k]['sale_price']));
+                    $total_pmt_goods -= $obj_pmt_price[$k]; // 先减去旧的
+                    $total_pmt_goods += floatval($obj_pmt_price[$k]); // 再加上新的
+                } else {
+                    //$tmp_obj[$k]['sale_price']  = $tmp_obj[$k]['amount'] - $obj_pmt_price[$k] - $tmp_item_pmt_price;
+                    $tmp_obj[$k]['sale_price']  = $tmp_obj[$k]['amount'] - $obj_pmt_price[$k];
+                    $tmp_obj[$k]['divide_order_fee'] = sprintf('%.2f', $obj_['divide_order_fee'] * $onum[$k] / $obj_['quantity']);
+                }
+                
+                $tmp_obj[$k]['settlement_amount'] = sprintf('%.2f', $obj_['settlement_amount'] * $onum[$k] / $obj_['quantity']);
+                $tmp_obj[$k]['actually_amount'] = sprintf('%.2f', $obj_['actually_amount'] * $onum[$k] / $obj_['quantity']);
+                $tmp_obj[$k]['platform_pay_amount'] = sprintf('%.2f', $tmp_obj[$k]['divide_order_fee'] - $tmp_obj[$k]['actually_amount']);
+                $tmp_obj[$k]['platform_amount'] = sprintf('%.2f', $tmp_obj[$k]['settlement_amount'] - $tmp_obj[$k]['divide_order_fee']);
+                // 均摊优惠 = 销售价 - 实付
+                $tmp_obj[$k]['part_mjz_discount'] = sprintf('%.2f', floatval($tmp_obj[$k]['sale_price']) - floatval($tmp_obj[$k]['divide_order_fee']));
+                $tmp_obj[$k]['oid'] = $obj_['oid'];
                 if ($obj_['sale_price'] != $tmp_obj[$k]['sale_price']){
                     $is_order_change = true;
                     $is_goods_modify = true;

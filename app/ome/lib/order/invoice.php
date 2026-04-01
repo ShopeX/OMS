@@ -69,6 +69,10 @@ class ome_order_invoice {
         if ($sdf['invoice_amount']) {
             $upData['invoice_amount'] = $sdf['invoice_amount'];
         }
+        // 更新发票抬头
+        if (isset($sdf['tax_title'])) {
+            $upData['tax_title'] = $sdf['tax_title'];
+        }
         app::get('ome')->model('order_invoice')->update($upData, array('id'=>$sdf['old_invoice']['id']));
         app::get('ome')->model('operation_log')->write_log('order_modify@ome', $sdf['order_id'], $memo);
         return kernel::single('invoice_order_front')->insertOrUpdateByOrder($sdf);

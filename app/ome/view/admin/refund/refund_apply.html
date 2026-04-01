@@ -14,6 +14,11 @@
   limitations under the License.
 -->
 
+<style>
+    .gridlist thead th {
+        background: none;
+    }
+</style>
 <form id="dorefund"  class="tableform" method='post' action='index.php?app=ome&ctl=<{$ctl}>&act=<{$act}>&finder_id=<{$env.get.finder_id}>'>
     <input type='hidden' name='order_id' id='order_id' value='<{$order.order_id}>'>
     <input type='hidden' name='shop_id' id='shop_id' value='<{$shop_id}>'>
@@ -80,6 +85,11 @@
     <td><span style="color:red;"><b><{$order.payed}></b></span></td>
   </tr>
   <tr>
+       <th><{t}>运费:<{/t}></th>
+    <td><span style="color:red;"><b><{$order.shipping.cost_shipping}></b></span></td>
+  </tr>
+  
+  <tr>
     <th><{t}>退款金额:<{/t}></th>
     <td colspan="3">
     
@@ -88,9 +98,7 @@
     <{else}>
         <{input  type='text' id='kuaidimoney' vtype="required&&unsigned" name='refund_money' value=$refund_money width="140"}><{input type='hidden' name='return_id' value=$return_id}>
     <{/if}>
-  
-    
-    
+        <em class="red">默认为实付金额小计，不含运费</em>
     </td>
     </tr>
   <tr <{if $remain_cancel_flag == 'true'}>style="display:none;"<{/if}>  >
@@ -102,21 +110,26 @@
       <input type='hidden' name='bncheckname' id='bncheckname'>
       <table>
         <thead>
+        <th><input type="checkbox" class="selectall" id="selectall" onclick="select_all(this)"></th>
           <th><{t}>基础物料编码<{/t}></th>
           <th><{t}>基础物料名称<{/t}></th>
 		   <th><{t}>数量<{/t}></th>
-		   <th><{t}>单价<{/t}></th>
+		   <th><{t}>实付(小计)<{/t}></th>
         </tr>
       </thead>
       <tbody>
         <{foreach from=$aItems item=aGoods name="item"}>
         <tr <{if $aGoods.delete == 'true'}>style="background-color: rgb(216, 216, 216);"<{/if}>>
+            <td>
+                <input type="checkbox" checked name="obj_id[]" onclick="sum_price()" value='<{$aGoods.obj_id}>'>
+            </td>
           <td><{$aGoods.bn}></td>
           <td class="textleft">
           <{$aGoods.name}>
           </td>
           <td><{$aGoods.quantity}></td>
-          <td><{$aGoods.price}></td>
+          <td><{$aGoods.divide_order_fee}></td>
+        <input type="hidden" id="<{$aGoods.obj_id}>_price" value="<{$aGoods.divide_order_fee}>">
         </tr>
         <{/foreach}>
       </tbody>
@@ -124,6 +137,14 @@
     </div>
   </div>
     <{/if}>
+    </td>
+    </tr>
+    <tr>
+    <th><{t}>是否退运费:<{/t}></th>
+    <td colspan="3">
+    
+    <input type="checkbox" class="cost_freight" name="cost_freight" value="<{$order.shipping.cost_shipping}>">
+     
     </td>
     </tr>
   <tr>
@@ -157,6 +178,13 @@ $$('input[name^=pay_type]').addEvent('click', function(){
             $('payment').disabled = '';
         }
     }});
+});
+
+
+$$('.cost_freight').addEvent('click',function(item){
+
+  
+sum_price();
 });
 
 $('ome_register_refund').addEvent('click',function(e){
@@ -259,5 +287,37 @@ $('selectAccount').addEvent('change', function(e){
 	       }
 	    }
 	});
+<{else}>
+    sum_price();
 <{/if}>
+function select_all(el){
+    var do_check = el.checked;
+    $$(document.getElementsByName("obj_id[]")).each(function (e) {
+        e.checked = do_check;
+    });
+    sum_price();
+}
+function sum_price() {
+    var input = document.getElementsByName("obj_id[]");
+    var sumPrice = 0;
+    for (var i = 0; i < input.length; i++)
+    {
+        var obj = input[i];
+        //判断是否是checkbox并且已经选中
+        if (obj.type == "checkbox" && obj.checked){
+            var obj_id = obj.value;//获取checkbox的值
+            var price = $(obj_id+'_price').value
+            sumPrice += parseFloat(price);
+        }
+    }
+    var cost_freight_money = 0;
+    $$('.cost_freight').each(function(item){
+        if(item.checked==true){
+            sumPrice+=parseFloat(item.value);
+        }
+  
+
+    });
+    $('kuaidimoney').value = sumPrice
+}
 </script>

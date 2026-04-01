@@ -60,9 +60,11 @@
                 <tr>
                   <th>快递模式：</th>
                   <td>
-                        <input type="radio" name="corp_model" value="normal" <{if $dt_info.corp_model != 'instatnt' && $dt_info.corp_model != 'seller'}>checked<{/if}> >普通快递&nbsp;&nbsp;
+                        <input type="radio" name="corp_model" value="normal" <{if $dt_info.corp_model != 'instatnt' && $dt_info.corp_model != 'seller' && $dt_info.corp_model != 'heavy' && $dt_info.corp_model != 'pickup'}>checked<{/if}> >普通快递&nbsp;&nbsp;
                         <input type="radio" name="corp_model" value="instatnt" <{if $dt_info.corp_model == 'instatnt'}>checked<{/if}> >同城配送&nbsp;&nbsp;
                         <input type="radio" name="corp_model" value="seller" <{if $dt_info.corp_model == 'seller'}>checked<{/if}> >商家配送&nbsp;&nbsp;
+                        <input type="radio" name="corp_model" value="heavy" <{if $dt_info.corp_model == 'heavy'}>checked<{/if}> >大件配送&nbsp;&nbsp;
+                        <input type="radio" name="corp_model" value="pickup" <{if $dt_info.corp_model == 'pickup'}>checked<{/if}> >提货物流&nbsp;&nbsp;
                   </td>
                   <td>&nbsp;</td>
                   <td>&nbsp;</td>
@@ -292,6 +294,11 @@
                     <th><{t}>状态：<{/t}></th>
                     <td><input name="disabled" type="radio" value="true" <{if $dt_info.disabled=='true'}>checked="checked"<{/if}> ><{t}>关闭<{/t}>
                                <input type="radio" name="disabled" value="false" <{if $dt_info.disabled=='false' || $dt_info.disabled==''}>checked="checked"<{/if}>><{t}>启用<{/t}><{help}>关闭后在选择物流公司的列表中不可见<{/help}></td>
+                </tr>
+                <tr>
+                    <th><{t}>联系人邮箱：<{/t}></th>
+                    <td><{input name="contact_email" type="textarea" value=$dt_info.contact_email  }><{help}>多个有限使用,间隔<{/help}></td>
+                </tr>
                 </tr>
             </table>
         </div>
@@ -632,9 +639,28 @@
             url += "&corp_model=instatnt";
         }else if($$('input[name=corp_model]:checked').get('value') == 'seller'){
             url += "&corp_model=seller";
+        }else if($$('input[name=corp_model]:checked').get('value') == 'pickup'){
+            url += "&corp_model=pickup";
         }
         
         new Dialog(url,{width:400,height:420,title:'物流公司选择'});
+    });
+
+    $$('input[name=corp_model]').addEvent('change',function(){
+        var val = this.get('value');
+        if(val == 'pickup'){
+            $('dly_name').set('value','提货物流');
+            $('dly_type').set('value','pickup');
+            $('dly_type').set('readonly','true');
+            $("btn-search").hide();
+        }else{
+            if($('dly_type').get('value') == 'pickup'){
+                $('dly_name').set('value','');
+                $('dly_type').set('value','');
+            }
+            $('dly_type').removeProperty('readonly');
+            $("btn-search").show();
+        }
     });
 
     /*var DialogExp ;

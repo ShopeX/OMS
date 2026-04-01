@@ -96,7 +96,10 @@ class inventorydepth_service_shop_factory
                 break;    
             case 'wxshipin':
                 return kernel::single('inventorydepth_service_shop_wxshipin');
-                break;    
+                break;
+            case 'weimobr':
+                return kernel::single('inventorydepth_service_shop_weimobr');
+                break;
             default:
                 return false;
                 break;

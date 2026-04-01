@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * 库存同步处理类
  * 
@@ -44,6 +43,7 @@ class inventorydepth_stock {
                 'branch_actual_stock'     => '仓库可售',
                 'md_actual_stock'     => '门店可售',
                 'shop_freeze'    => '店铺预占',
+                'sales_material_shop_freeze' => '销售物料店铺冻结',
                 //'globals_freeze' => '全局预占',
                 'actual_safe_stock'   => '可售库存-安全库存',
                 'branch_actual_safe_stock'     => '仓库可售-安全库存',
@@ -114,7 +114,123 @@ class inventorydepth_stock {
             cachecore::store($index, 1, 600);
         }
     }
-
+    
+    /**
+     * 运行公式
+     *
+     * @param Array $sku  商品明细
+     * @param String $result 公式
+     * @param String $msg 错信息
+     * @return void
+     * @author
+     **/
+    public function formulaRun($result,$sku=array(),&$msg,$type='')
+    {
+        if (is_numeric($result)) {
+            if ($result < 0) {
+                $msg = $this->app->_('库存已经小于零，请重新填写');
+                return false;
+            }
+            
+            return  (int)$result;
+        }
+        
+        # 过滤掉敏感字符
+        $dange = array('select', 'update', 'drop', 'delete', 'insert', 'alter');
+        $tmp = strtolower($result);
+        foreach ($dange as $val){
+            if (strpos($tmp, $val) !== false) {
+                $msg = $this->app->_('what are you doing? go away!');
+                return false;
+            }
+        }
+        
+        if (!$sku) {
+            foreach ($this->get_benchmark() as $key => $val) {
+                $result = str_replace('{'.$val.'}', '0', $result);
+            }
+            try {
+                $result = @kernel::database()->selectrow('select ' . $result . ' as val');
+            } catch (Exception $e) {
+                $msg = '公式错误';
+                return false;
+            }
+            if ($result !== false) $result = $result['val'];
+            
+            if (!is_numeric($result)) {
+                $msg = $this->app->_('公式错误，请重新填写。');
+                
+                return false;
+            }
+            
+            return true;
+        }
+        
+        //-------------------变量实际替换校验------------------//
+        preg_match_all('/{(.*?)}/',$result,$matches);
+        $benchmark = $this->get_benchmark();
+        
+        # 符合条件的所有货品
+        $calLib = kernel::single('inventorydepth_stock_calculation');
+        if($this->type == '3') {//代表门店库存回传
+            $calLib = kernel::single('inventorydepth_offline_calculation');
+        }
+        if($matches) {
+            
+            //按仓库级回写库存
+            if($sku['sync_mode'] == 'warehouse'){
+                $stock = call_user_func_array(array($calLib,'get_'.$type.'actual_stock'),$sku);
+                
+                if($stock === false) {
+                    $msg = $this->app->_('公式有误!');
+                    return false;
+                }
+                
+                return $stock; //以branch_bn仓库编码为下标的多维数组
+            }
+            $calLib->actual_stock_make = '';
+            $msg = 'quantity=' . $result;
+            foreach($matches[1] as $match){
+                $m = array_search($match,$benchmark);
+                
+                if(false === $m) {
+                    $msg = $this->app->_('公式错误!');
+                    return false;
+                }
+                
+                $stock = call_user_func_array(array($calLib,'get_'.$type.$m),$sku);
+                $result = str_replace('{'.$match.'}', $stock, $result);
+                $msg = str_replace('{'.$match.'}', $match.':'.$stock, $msg);
+            }
+            if (method_exists($calLib, 'get_'.$type.'actual_stock_make')) {
+                $msg .= ' 其中可售库存(' . call_user_func_array(array($calLib,'get_'.$type.'actual_stock_make'),$sku) . ')';
+            } elseif ($calLib->actual_stock_make) {
+                $msg .= $calLib->actual_stock_make;
+            }
+            
+        }
+        
+        # 验证 $result
+        $result = @kernel::database()->selectrow('select ' . $result . ' as val');
+        //@eval("\$result = $result;");
+        
+        if($result === false) {
+            $msg = $this->app->_('公式有误!');
+            return false;
+        }
+        
+        $result = $result['val'];
+        if (!is_numeric($result)) {
+            $msg = $this->app->_('计算结果异常：可能仓库未绑定店铺!');
+            return false;
+        }else if (floor($result) < 0) {
+            //$msg = $sku['shop_product_bn'] . ' ' . $this->app->_('调整后的库存已经小于零，请重新填写');
+            return 0;
+        }
+        
+        return (int)$result;
+    }
+    
     public function getNeedUpdateSku($shop_id, $bn) {
         $prefix = 'inventorydepth_stock-';
         $index = $prefix.$shop_id.'-'.$bn;

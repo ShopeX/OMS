@@ -175,6 +175,17 @@ class logisticsmanager_waybill_wxshipin
             'EMS'   => ['code' => 'EMS', 'name' => '中国邮政'],
             'CNSD'  => ['code' => 'CNSD', 'name' => '菜鸟速递(丹鸟)'],
             'DBKD'  => ['code' => 'DBKD', 'name' => '德邦快递'],
+            'SXJD'  => ['code' => 'SXJD', 'name' => '顺心捷达'],
+            'ZTOKY' => ['code' => 'ZTOKY', 'name' => '中通快运'],
+            'YDKY'  => ['code' => 'YDKY', 'name' => '韵达快运'],
+            'ANEKY' => ['code' => 'ANEKY', 'name' => '安能物流'],
+            'BTWYL' => ['code' => 'BTWYL', 'name' => '百世快运'],
+            'KYSY'  => ['code' => 'KYSY', 'name' => '跨越速运'],
+            'YMDD'  => ['code' => 'YMDD', 'name' => '壹米滴答'],
+            'RJTCSD' => ['code' => 'RJTCSD', 'name' => '锐界同城速递'],
+            'ZJS'   => ['code' => 'ZJS', 'name' => '宅急送'],
+            'XFEX'  => ['code' => 'XFEX', 'name' => '信丰物流'],
+            'JGSD'  => ['code' => 'JGSD', 'name' => '京广速递'],
         ];
 
         if (!empty($logistics_code)) {

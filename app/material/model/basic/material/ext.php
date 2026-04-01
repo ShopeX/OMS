@@ -17,15 +17,11 @@
 /**
  * 基础物料扩展模型层
  *
- * @author kamisama.xia@gmail.com
+ * @author kamisama.xia@gmail.com 
  * @version 0.1
  */
-class material_mdl_basic_material_ext extends dbeav_model{
 
-    /**
-     * templateColumn
-     * @return mixed 返回值
-     */
+class material_mdl_basic_material_ext extends dbeav_model{
 
     public function templateColumn(){
         $customcols = kernel::single('material_customcols')->getcolstemplate();
@@ -66,34 +62,20 @@ class material_mdl_basic_material_ext extends dbeav_model{
         '鞋型'=>'props/widthnm',
         '风格款式'=>'props/modelnm',
         '门店销售'=>'basic/is_o2o_sales',
-        '物料分类'=>'basic/cat_id',
+        '物料分类一级'=>'basic/cat_level_1',
+        '物料分类二级'=>'basic/cat_level_2',
+        '物料分类三级'=>'basic/cat_level_3',
+        '物料分类四级'=>'basic/cat_level_4',
+        '物料分类五级'=>'basic/cat_level_5',
     );
 
-    /**
-     * 获取TemplateColumn
-     * @return mixed 返回结果
-     */
     public function getTemplateColumn() {
         return array_keys($this->templateColumn());
     }
-    /**
-     * prepared_import_csv
-     * @return mixed 返回值
-     */
     public function prepared_import_csv(){
         $this->ioObj->cacheTime = time();
     }
 
-    /**
-     * prepared_import_csv_row
-     * @param mixed $row row
-     * @param mixed $title title
-     * @param mixed $tmpl tmpl
-     * @param mixed $mark mark
-     * @param mixed $newObjFlag newObjFlag
-     * @param mixed $msg msg
-     * @return mixed 返回值
-     */
     public function prepared_import_csv_row($row,&$title,&$tmpl,&$mark,&$newObjFlag,&$msg)
     {
         if(empty($row) || empty(array_filter($row))) return false;
@@ -130,6 +112,7 @@ class material_mdl_basic_material_ext extends dbeav_model{
             $msg['warning'][] = 'Line '.$this->nums.'：基础物料编码'.$arrData['material_bn'].'不存在！';
             return false;
         }
+        $material_bn = $arrData['material_bn'];
         unset($arrData['material_bn']);
         if(isset($this->nums)){
             $this->nums++;
@@ -142,6 +125,9 @@ class material_mdl_basic_material_ext extends dbeav_model{
         foreach ($arrData as $key => $value) {
             if(is_array($value)) {
                 foreach ($value as $k => $v) {
+                    if(in_array($k, ['cat_level_1', 'cat_level_2', 'cat_level_3', 'cat_level_4', 'cat_level_5'])) {
+                        continue;
+                    }
                     if($v != '') {
                         if(in_array($k, ['use_expire','use_expire_wms'])) {
                             $v = ($v == '是' ? '1' : '2');
@@ -154,30 +140,34 @@ class material_mdl_basic_material_ext extends dbeav_model{
                             $v = ($v == '是' ? 1 : 0);
                         }
                         $sdf[$key][$k] = $v;
-                        if(in_array($k,['cat_id'])){
-
-                            $cat_id = $v;
-                            $cats = $this->getCats($cat_id);
-
-                            if(!$cats){
-                                 $msg['warning'][] = 'Line '.$this->nums.$cat_name.'：不存在！';
-                                return false;
-                            }
-                            if($cats){
-                                $sdf[$key]['cat_id'] = $cats['cat_id'];
-                                $sdf[$key]['cat_path'] = $cats['cat_path'];
-                            }
-
-                        }
-                        
                     }
                 }
             }elseif($value != '') {
                 $sdf[$key] = $value;
             }
         }
+        if(isset($arrData['basic'])) {
+            $levelNames = [
+                isset($arrData['basic']['cat_level_1']) ? trim($arrData['basic']['cat_level_1']) : '',
+                isset($arrData['basic']['cat_level_2']) ? trim($arrData['basic']['cat_level_2']) : '',
+                isset($arrData['basic']['cat_level_3']) ? trim($arrData['basic']['cat_level_3']) : '',
+                isset($arrData['basic']['cat_level_4']) ? trim($arrData['basic']['cat_level_4']) : '',
+                isset($arrData['basic']['cat_level_5']) ? trim($arrData['basic']['cat_level_5']) : '',
+            ];
+            $hasAny = !empty(array_filter($levelNames));
+            if($hasAny) {
+                $cats = $this->getCatsByLevelNames($levelNames, $msg, $this->nums, $material_bn);
+                if($cats === false) {
+                    return false;
+                }
+                if(is_array($cats)) {
+                    $sdf['basic']['cat_id'] = $cats['cat_id'];
+                    $sdf['basic']['cat_path'] = $cats['cat_path'];
+                }
+            }
+        }
         if(empty($sdf)) {
-            $msg['warning'][] = 'Line '.$this->nums.'：属性不能都为空！';
+            $msg['warning'][] = '第'.$this->nums.'行：属性不能都为空！'.($material_bn ? ' 基础物料编码：'.$material_bn : '');
             return false;
         }
         $sdf['bm_id'] = $row['bm_id'];
@@ -201,10 +191,6 @@ class material_mdl_basic_material_ext extends dbeav_model{
         return null;
     }
 
-    /**
-     * finish_import_csv
-     * @return mixed 返回值
-     */
     public function finish_import_csv(){
         if(empty($this->import_data)) {
             return null;
@@ -232,13 +218,6 @@ class material_mdl_basic_material_ext extends dbeav_model{
         return null;
     }
 
-    /**
-     * import_run
-     * @param mixed $cursor_id ID
-     * @param mixed $params 参数
-     * @param mixed $errmsg errmsg
-     * @return mixed 返回值
-     */
     public function import_run(&$cursor_id,$params,&$errmsg) {
         $basicObj = app::get('material')->model('basic_material');
         $confObj = app::get('material')->model('basic_material_conf');
@@ -259,7 +238,7 @@ class material_mdl_basic_material_ext extends dbeav_model{
                             $log .= $basick . ',' . $oldBasic[$basick] . '->' . $basicv . ';';
                         }
                     }
-                    if(in_array($vv[$basick],array('cat_id','cat_path'))){
+                    if(isset($vv['cat_id']) && isset($vv['cat_path'])) {
                         $upBasic['cat_id'] = $vv['cat_id'];
                         $upBasic['cat_path'] = $vv['cat_path'];
                     }
@@ -367,16 +346,10 @@ class material_mdl_basic_material_ext extends dbeav_model{
         return false;
     }
 
-    /**
-     * 获取Cats
-     * @param mixed $cat_name cat_name
-     * @return mixed 返回结果
-     */
     public function getCats($cat_name){
         $basicMaterialCatObj        = app::get('material')->model('basic_material_cat');
-        $cat_id = intval($_POST['cat_id']);
         
-        $rs = $basicMaterialCatObj->dump(array('cat_name'=>$cat_name), 'cat_id,cat_path,min_price');
+        $rs = $basicMaterialCatObj->dump(array('cat_name'=>$cat_name, 'disabled'=>'false'), 'cat_id,cat_path,min_price');
         if ($rs) {
             $cat_id    = $rs['cat_id'];
             $cat_path  = substr($rs['cat_path'] . $cat_id, 1);
@@ -387,5 +360,49 @@ class material_mdl_basic_material_ext extends dbeav_model{
         }else{
             return false;
         }
+    }
+
+    /**
+     * 根据5级分类名称逐级精确匹配，解决同名分类歧义
+     * @param array $level_names [一级,二级,三级,四级,五级]，每项为 trim 后字符串
+     * @param array &$msg 错误信息引用
+     * @param int $lineNum 行号，用于错误提示
+     * @param string $material_bn 基础物料编码，用于错误提示便于排查
+     * @return array|false 成功返回 ['cat_id'=>leaf_id, 'cat_path'=>'id1,id2,...']，失败返回 false
+     */
+    public function getCatsByLevelNames($level_names, &$msg, $lineNum = 0, $material_bn = '') {
+        $basicMaterialCatObj = app::get('material')->model('basic_material_cat');
+        $parent_id = 0;
+        $path_ids = [];
+        $path_names = [];
+
+        for ($i = 0; $i < 5; $i++) {
+            $name = isset($level_names[$i]) ? trim($level_names[$i]) : '';
+            if ($name === '') {
+                if (!empty(array_filter(array_slice($level_names, $i)))) {
+                    $msg['warning'][] = '第' . $lineNum . '行：请从分类一级开始连续填写' . ($material_bn ? ' 基础物料编码：' . $material_bn : '');
+                    return false;
+                }
+                break;
+            }
+            $filter = ['parent_id' => $parent_id, 'cat_name' => $name, 'disabled' => 'false'];
+            $rs = $basicMaterialCatObj->dump($filter, 'cat_id,cat_path');
+            if (!$rs) {
+                $path_names[] = $name;
+                $pathStr = implode('/', $path_names);
+                $msg['warning'][] = '第' . $lineNum . '行：分类「' . $pathStr . '」不存在' . ($material_bn ? ' 基础物料编码：' . $material_bn : '');
+                return false;
+            }
+            $path_ids[] = $rs['cat_id'];
+            $path_names[] = $name;
+            $parent_id = $rs['cat_id'];
+        }
+
+        if (empty($path_ids)) {
+            return false;
+        }
+        $leaf_id = end($path_ids);
+        $cat_path = implode(',', $path_ids);
+        return ['cat_id' => $leaf_id, 'cat_path' => $cat_path];
     }
 }

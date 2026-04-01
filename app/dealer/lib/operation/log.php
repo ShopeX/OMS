@@ -46,8 +46,8 @@ class dealer_operation_log
             'dealer_sm_edit'     => ['name' => '销售物料编辑', 'type' => 'sales_material@dealer'],
             'dealer_series_on'   => ['name' => '产品线开启', 'type' => 'series@dealer'],
             'dealer_series_off'  => ['name' => '产品线关停', 'type' => 'series@dealer'],
-            'dealer_goods_price_add'  => ['name' => '经销商品价格新增', 'type' => 'goods_price@dealer'],
-            'dealer_goods_price_edit' => ['name' => '经销商品价格编辑', 'type' => 'goods_price@dealer'],
+            'dealer_goods_price_add'  => ['name' => '经销基础物料价格新增', 'type' => 'goods_price@dealer'],
+            'dealer_goods_price_edit' => ['name' => '经销基础物料价格编辑', 'type' => 'goods_price@dealer'],
             'dealer_goods_price_batch_update_start_time' => ['name' => '批量编辑生效时间', 'type' => 'goods_price@dealer'],
             'dealer_goods_price_batch_update_end_time' => ['name' => '批量编辑过期时间', 'type' => 'goods_price@dealer'],
         );

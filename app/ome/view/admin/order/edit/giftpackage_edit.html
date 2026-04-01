@@ -32,17 +32,19 @@
     </thead>
     <tbody>
       <{foreach from=$conf.objs item=obj}>
-      <tr id="tr_<{$obj.obj_id}>" oid="<{$obj.obj_id}>" <{if $obj.delete == 'true'}>style="background-color: #DBDBDB;" g-del="b"  class='disabled'<{else}>g-del="a"<{/if}> g-type="<{$obj.obj_type}>" g-pid="<{$obj.goods_id}>" g-shop-pid="<{$obj.shop_goods_id}>" aid="<{$obj.obj_id}>" g-bn="<{$obj.bn}>" g-pname="<{$obj.name}>" >
+      <tr id="tr_<{$obj.obj_id}>" oid="<{$obj.obj_id}>" <{if $obj.delete == 'true'}>style="background-color: #DBDBDB;" g-del="b"  class='disabled'<{else}>g-del="a"<{/if}> g-type="<{$obj.obj_type}>" g-pid="<{$obj.goods_id}>" g-shop-pid="<{$obj.shop_goods_id}>" aid="<{$obj.obj_id}>" g-bn="<{$obj.bn}>" g-pname="<{$obj.name}>" <{if !empty($obj.oid) && $obj.oid != '-1'}>data-oid="<{$obj.oid}>"<{/if}>>
         <td class="obj_bn <{$obj.obj_type}>class">
           <span class="number"><{$obj.bn}></span>
-          <input type="hidden" value="<{$obj.bn}>" name="bn_list[]" /></td>
+          <input type="hidden" value="<{$obj.bn}>" name="bn_list[]" />
+          <{if !empty($obj.oid) && $obj.oid != '-1'}><input type="hidden" name="giftpackage[oid][<{$obj.obj_id}>]" value="<{$obj.oid}>" /><{/if}></td>
         <td class="obj_name"><{$obj.name}><input name="giftpackage_ids[]" id="giftpackage_ids_<{$obj.obj_id}>" type="text" value="<{$obj.goods_id}>" style="display:none;" /></td>
         <td class="obj_num"><input type="hidden" value="<{$obj.obj_id}>" name="giftpackage[obj][<{$obj.obj_id}>][]" />
-          <input atype="num" aid="<{$obj.obj_id}>" name="giftpackage[num][<{$obj.obj_id}>]" type="text" size="5" value="<{$obj.quantity}>" vtype="required&&unsignedint" id="num_<{$obj.obj_id}>" <{if $obj.delete == 'true'}>disabled="true"<{/if}> onchange="changetotalgiftpackage(this);total();" onclick='edit_checked("<{$obj.obj_id}>","<{$obj.bn}>");' /></td>
-        <td class="obj_price"><input name="giftpackage[price][<{$obj.obj_id}>]" type="text" size="8" value="<{$obj.price}>" vtype="required&&unsigned" atype="price" id="pr_<{$obj.obj_id}>" aid="<{$obj.obj_id}>" <{if $obj.delete == 'true'}>disabled="true"<{/if}> onchange="changetotalgiftpackage(this);total();" onclick='edit_checked("<{$obj.obj_id}>","<{$obj.bn}>");' /></td>
-        <td class="obj_pmt"><input type="text" id="pmt_<{$obj.obj_id}>" aid="<{$obj.obj_id}>" vtype="unsigned" atype="pmt_price" value="<{$obj.pmt_price|default:0}>" class="giftpackage_pmt_price"  name="giftpackage[obj_pmt_price][<{$obj.obj_id}>]" size="6" <{if $obj.delete == 'true'}>disabled="true"<{/if}>  onchange="changetotalgiftpackage(this);total();" onclick='edit_checked("<{$obj.obj_id}>","<{$obj.bn}>");' /></td>
+          <input atype="num" aid="<{$obj.obj_id}>" name="giftpackage[num][<{$obj.obj_id}>]" type="text" size="5" value="<{$obj.quantity}>" vtype="required&&unsignedint" id="num_<{$obj.obj_id}>" <{if $obj.delete == 'true'}>disabled="true"<{elseif !empty($obj.oid) && $obj.oid != '-1'}>data-original-quantity="<{$obj.quantity}>"<{/if}> onchange="changetotalgiftpackage(this);total();" onclick='edit_checked("<{$obj.obj_id}>","<{$obj.bn}>");' /></td>
+        <td class="obj_price"><input name="giftpackage[price][<{$obj.obj_id}>]" type="text" size="8" value="<{$obj.price}>" vtype="required&&unsigned" atype="price" id="pr_<{$obj.obj_id}>" aid="<{$obj.obj_id}>" <{if $obj.delete == 'true'}>disabled="true"<{elseif !empty($obj.oid) && $obj.oid != '-1'}>readonly="readonly" style="color:#666;"<{/if}> onchange="changetotalgiftpackage(this);total();" onclick='edit_checked("<{$obj.obj_id}>","<{$obj.bn}>");' /></td>
+        <td class="obj_pmt"><input type="text" id="pmt_<{$obj.obj_id}>" aid="<{$obj.obj_id}>" vtype="unsigned" atype="pmt_price" value="<{$obj.pmt_price|default:0}>" class="giftpackage_pmt_price"  name="giftpackage[obj_pmt_price][<{$obj.obj_id}>]" size="6" <{if $obj.delete == 'true'}>disabled="true"<{elseif !empty($obj.oid) && $obj.oid != '-1'}>readonly="readonly" style="color:#666;"<{/if}>  onchange="changetotalgiftpackage(this);total();" onclick='edit_checked("<{$obj.obj_id}>","<{$obj.bn}>");' /></td>
         <td class="obj_total"><input type="text" class="giftpackagetotal" style="display:none" id="giftpackagetotal_<{$obj.obj_id}>" size="2" value="0" <{if $obj.delete == 'true'}>disabled="true"<{/if}> /><input type="text" size="5" id="giftpackagesalepr_<{$obj.obj_id}>" readonly="readonly" <{if $obj.delete == 'true'}>disabled="true"<{/if}> class="none_input<{if $obj.obj_type != 'gift' && $obj.order_items|@count == '1'}> giftpackagesaleprice<{/if}>" value="<{$obj.sale_price}>">
           <input type="hidden" size="5" id="giftpackagepmtpr_<{$obj.obj_id}>" readonly="readonly" <{if $obj.delete == 'true'}>disabled="true"<{/if}> class="none_input<{if $obj.obj_type != 'gift' && $obj.order_items|@count == '1'}> giftpackagepmtprice<{/if}>" value="<{$obj.pmt_order_price}>">
+          <input type="hidden" id="giftpackagepartmjz_<{$obj.obj_id}>" value="<{$obj.part_mjz_discount|default:0}>" />
         </td>
         <td class="item_op" objid="<{$obj.obj_id}>">
         <{if $obj.delete == 'false'}>
@@ -90,6 +92,7 @@
         <td class="obj_pmt"><input type="text" id="pmt_<{$obj.obj_id}>" aid="<{$obj.obj_id}>" vtype="unsigned" atype="pmt_price" value="<{$obj.pmt_price|default:0}>" class="giftpackage_pmt_price"  name="giftpackage[obj_pmt_price][<{$obj.obj_id}>]" size="6" <{if $obj.delete == 'true'}>disabled="true"<{elseif $obj.make_nums > 0}>readonly="readonly" style="color:#666;"<{else}>onchange="changetotalgiftpackage(this);total();"<{/if}> /></td>
         <td class="obj_total"><input type="text" class="giftpackagetotal" style="display:none" id="giftpackagetotal_<{$obj.obj_id}>" size="2" value="0" <{if $obj.delete == 'true'}>disabled="true"<{/if}> /><input type="text" size="5" id="giftpackagesalepr_<{$obj.obj_id}>" readonly="readonly" <{if $obj.delete == 'true'}>disabled="true"<{/if}> class="none_input<{if $obj.obj_type != 'gift' && $obj.order_items|@count == '1'}> giftpackagesaleprice<{/if}>" value="<{$obj.sale_price}>">
         <input type="hidden" size="5" id="giftpackagepmtpr_<{$obj.obj_id}>" readonly="readonly" <{if $obj.delete == 'true'}>disabled="true"<{/if}> class="none_input<{if $obj.obj_type != 'gift' && $obj.order_items|@count == '1'}> giftpackagepmtprice<{/if}>" value="<{$obj.pmt_order_price}>">
+        <input type="hidden" id="giftpackagepartmjz_<{$obj.obj_id}>" value="<{$obj.part_mjz_discount|default:0}>" />
         </td>
         <td class="item_op" objid="<{$obj.obj_id}>">
         <{if empty($obj.make_nums)}>

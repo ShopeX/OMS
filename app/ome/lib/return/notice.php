@@ -38,6 +38,10 @@ class ome_return_notice
         
         //获取退换货数据
         $data = kernel::single('ome_receipt_reship')->reship_create(array('reship_id'=>$reship_id));
+        if (empty($data)){
+            return true;
+        }
+
         $shop = app::get('ome')->model('shop')->db_dump(['shop_id'=>$data['shop_id']], 'delivery_mode');
         if($shop['delivery_mode'] == 'jingxiao') {
             $error_msg = '经销店铺退货单不能推送第三方';

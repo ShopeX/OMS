@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * 库存对账
  *
@@ -47,7 +46,7 @@ class erpapi_wms_response_process_stock
         $isFail = false;
         $msg = [];
         foreach ($items as $item) {
-            $uniqueBn = sha1($item['order_code'].'-|-'.$item['order_type'].'-|-'.$item['batch_code'].'-|-'.$item['warehouse'].'-|-'.$item['product_bn'].'-|-'.$item['wms_node_id'].'-|-'.$item['normal_num'].'-|-'.$item['defective_num']);
+            $uniqueBn = sha1($item['order_code'].'-|-'.$item['order_type'].'-|-'.$item['batch_code'].'-|-'.$item['warehouse'].'-|-'.$item['product_bn'].'-|-'.$item['wms_node_id'].'-|-'.$item['normal_num'].'-|-'.$item['defective_num'].'-|-'.$item['out_biz_code']);
             $item['unique_bn'] = $uniqueBn;
             
             if (!$item['change_time']){

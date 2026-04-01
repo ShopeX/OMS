@@ -57,12 +57,7 @@ class console_finder_material_package {
         return implode(' | ', $btn);
     }
 
-    public $detail_item = "货品详情";
-    /**
-     * detail_item
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
+    public $detail_item = "基础物料详情";
     public function detail_item($id){
         $render = app::get('console')->render();
         $items = app::get('console')->model('material_package_items')->getList('*', ['mp_id'=>$id]);

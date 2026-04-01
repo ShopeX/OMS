@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 $db['order_extend'] = array(
     'columns' => array(
         'order_id'             => array(
@@ -152,7 +151,7 @@ $db['order_extend'] = array(
             'default' => '0',
         ),
         'es_time'              => array(
-            'type'    => 'tinyint',
+            'type'    => 'int',
             'label'   => '物运时间',
             'default' => '0',
         ),

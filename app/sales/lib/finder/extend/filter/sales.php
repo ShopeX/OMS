@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class sales_finder_extend_filter_sales{
     function get_extend_colums(){
         $db['sales']=array (
@@ -66,8 +65,8 @@ class sales_finder_extend_filter_sales{
                         'filterdefault' => true,
                         'default_in_list'=>true,
                         'in_list'=>true,
-                        'label' => '货号',
-                        'comment' => '货号',
+                        'label' => '基础物料编码',
+                        'comment' => '基础物料编码',
                 ),
                 'product_name' =>array (
                         'type' => 'varchar(32)',
@@ -75,8 +74,8 @@ class sales_finder_extend_filter_sales{
                         'filterdefault' => true,
                         'default_in_list'=>true,
                         'in_list'=>true,
-                        'label' => '货品名称',
-                        'comment' => '货品名称',
+                        'label' => '基础物料名称',
+                        'comment' => '基础物料名称',
                 ),
 
                 

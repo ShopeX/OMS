@@ -51,11 +51,10 @@ class erpapi_shop_matrix_360buy_response_aftersalev2 extends erpapi_shop_respons
             }else if( in_array($status,array('3','9')) ){ //成功
                 $sdf['status'] = 'SUCCESS';
             }
-            if ($sdf['order']['pay_bn'] == 'deposit' && $sdf['refund_fee']<=0){
-                $sdf['refund_fee'] = $sdf['order']['payed'];
-            }
             if ($sdf['bool_type'] != ome_refund_bool_type::__PROTECTED_CODE && $params['partRefundType']!=1){
-                $sdf['refund_all_money'] = true;
+                $order = $this->getOrder('order_id,payed', $this->__channelObj->channel['shop_id'], $sdf['order_bn'],'aftersale');
+                $sdf['real_refund_amount'] = $params['refund_fee'];
+                $sdf['refund_fee'] = $order['payed'] ? : $params['refund_fee'];
             }
 
             if ($sdf['logistics_company'] == '自动审核' && in_array($status,array('1'))){
@@ -64,12 +63,13 @@ class erpapi_shop_matrix_360buy_response_aftersalev2 extends erpapi_shop_respons
         } 
       
         if ($sdf['extend_field']){
-          
-
             if($sdf['extend_field'] && $sdf['extend_field']['refundAmt']>0){
                 $sdf['jsrefund_flag']=1;
                 
             }
+        }
+        if($sdf['status'] == 'confirm_success') {
+            $sdf['jsrefund_flag'] = 1;
         }
 
         $sdf['pickware_type']       = $params['pickware_type'];
@@ -101,6 +101,37 @@ class erpapi_shop_matrix_360buy_response_aftersalev2 extends erpapi_shop_respons
             if(count($sdf['refund_item_list']['return_item']) == count($params['apply_detail_list']) 
                 && count($params['apply_detail_list'])== 1) {
                 $sdf['refund_item_list']['return_item'][0]['sku_uuid'] = $params['apply_detail_list'][0]['skuUuid'];
+            }
+
+            // 价保退款没有 sku_uuid，通过 item_id 与订单上的平台 skuid(shop_product_id) 匹配找出 oid，多条时用 PHP 取金额最大的子单，并回填 sku_uuid
+            if ($sdf['bool_type'] & ome_refund_bool_type::__PROTECTED_CODE) {
+                $order = $this->getOrder('order_id', $this->__channelObj->channel['shop_id'], $sdf['order_bn'], 'aftersale');
+                if ($order && $order['order_id']) {
+                    $db = kernel::database();
+                    foreach ($sdf['refund_item_list']['return_item'] as $k => $item) {
+                        if (!empty($item['item_id'])) {
+                            $item_id = $db->quote($item['item_id']);
+                            $order_id = intval($order['order_id']);
+                            $sql = "SELECT ob.oid, ob.sku_uuid, COALESCE(ob.divide_order_fee, ob.amount, 0) AS order_fee "
+                                . "FROM sdb_ome_order_objects ob "
+                                . "INNER JOIN sdb_ome_order_items oi ON ob.obj_id = oi.obj_id AND oi.delete = 'false' "
+                                . "WHERE ob.order_id = {$order_id} AND oi.shop_product_id = {$item_id} AND ob.delete = 'false'";
+                            $rows = $db->select($sql);
+                            if ($rows && is_array($rows)) {
+                                usort($rows, function ($a, $b) {
+                                    return bccomp((string)$b['order_fee'], (string)$a['order_fee'], 4);
+                                });
+                                $row = reset($rows);
+                                if (!empty($row['oid'])) {
+                                    $sdf['refund_item_list']['return_item'][$k]['oid'] = $row['oid'];
+                                    if (isset($row['sku_uuid']) && $row['sku_uuid'] !== '' && $row['sku_uuid'] !== null) {
+                                        $sdf['refund_item_list']['return_item'][$k]['sku_uuid'] = $row['sku_uuid'];
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     

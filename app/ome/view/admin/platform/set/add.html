@@ -1,0 +1,193 @@
+<div class="tableform">
+    <div class="division">
+        <form method="post" action="index.php?app=ome&ctl=admin_platform_set&act=save" id="frm">
+            <{input type="hidden" name="id" value=$data.id}>
+            <table border="0" cellspacing="0" cellpadding="0" >
+                <tbody>
+                    <tr>
+                        <th>平台编码：</th>
+                        <td><{input issearch="fuzzy-search" type="select" required="true" options=$optShopType name="shop_type" value=$data.shop_type id="shop_type" }></td>
+                    </tr>
+                    <tr>
+                        <th>场景：</th>
+                        <td>
+                            <select name="scene" id="scene" required="true">
+                                <option value="">请先选择平台</option>
+                            </select>
+                        </td>
+                    </tr>
+                </tbody>
+                <tbody id="scene_fields">
+                    <!-- 动态加载的场景相关字段 -->
+                </tbody>
+                <tbody>
+                    <tr>
+                        <th>备注：</th>
+                        <td><{input type="textarea" name="memo" value=$data.memo style="height: 100px;"}></td>
+                    </tr>
+                </tbody>
+            </table>
+        </form>
+    </div>
+</div>
+<{area inject=".mainFoot"}>
+<div class="table-action">
+    <table width="100%" cellspacing="0" cellpadding="0">
+        <tbody>
+            <tr>
+                <td>
+                    <{button type="button" id='submit_btn' class="btn-primary" label='保存' }>
+                    <{button type="button" id='close_btn' class="btn-secondary" label='关闭' isCloseDialogBtn="true"}>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<{/area}>
+<script type="text/javascript">
+    (function(){
+        var _form = $('frm');//表单ID 
+        var btn   = $('submit_btn');//按钮ID
+        var finder = finderGroup['<{$env.get.finder_id}>'];
+        var shopTypeSelect = $('shop_type');
+        var sceneSelect = $('scene');
+        var sceneFieldsContainer = $('scene_fields');
+        
+        // 根据平台获取场景列表
+        function loadScenes(shopType) {
+            if (!shopType) {
+                sceneSelect.innerHTML = '<option value="">请先选择平台</option>';
+                sceneFieldsContainer.innerHTML = '';
+                return;
+            }
+            
+            // 显示加载状态
+            sceneSelect.innerHTML = '<option value="">加载中...</option>';
+            sceneSelect.disabled = true;
+            
+            // 获取初始值（编辑时使用）
+            var initialScene = '<{$data.scene}>';
+            var initialKname = '<{$data.kname}>';
+            var initialKvalue = '<{$data.kvalue}>';
+            
+            // 异步请求获取场景列表
+            new Request({
+                url: 'index.php?app=ome&ctl=admin_platform_set&act=getScenes',
+                method: 'get',
+                data: {
+                    shop_type: shopType
+                },
+                onSuccess: function(response) {
+                    sceneSelect.innerHTML = '<option value="">请选择场景</option>' + response;
+                    sceneSelect.disabled = false;
+                    
+                    // 如果有初始值，设置场景并加载HTML
+                    if (initialScene) {
+                        sceneSelect.value = initialScene;
+                        loadSceneHtml(shopType, initialScene, initialKname, initialKvalue);
+                    }
+                },
+                onFailure: function() {
+                    sceneSelect.innerHTML = '<option value="">加载失败</option>';
+                    sceneSelect.disabled = false;
+                }
+            }).send();
+        }
+        
+        // 根据平台和场景获取HTML
+        function loadSceneHtml(shopType, scene, initialKname, initialKvalue) {
+            if (!shopType || !scene) {
+                sceneFieldsContainer.innerHTML = '';
+                return;
+            }
+            
+            // 显示加载状态
+            sceneFieldsContainer.innerHTML = '<tr><td colspan="2" style="text-align:center;color:#999;">加载中...</td></tr>';
+            
+            // 获取当前表单值（如果有），优先使用传入的初始值
+            var currentKname = initialKname || '';
+            var currentKvalue = initialKvalue || '';
+            var knameInput = $('kname');
+            var kvalueInput = $('kvalue');
+            if (knameInput && !currentKname) currentKname = knameInput.value;
+            if (kvalueInput && !currentKvalue) currentKvalue = kvalueInput.value;
+            
+            // 异步请求获取HTML
+            new Request({
+                url: 'index.php?app=ome&ctl=admin_platform_set&act=getSceneHtml',
+                method: 'get',
+                data: {
+                    shop_type: shopType,
+                    scene: scene,
+                    kname: currentKname,
+                    kvalue: currentKvalue
+                },
+                onSuccess: function(response) {
+                    sceneFieldsContainer.innerHTML = response;
+                },
+                onFailure: function() {
+                    sceneFieldsContainer.innerHTML = '<tr><td colspan="2" style="color:red;">加载失败，请刷新页面重试</td></tr>';
+                }
+            }).send();
+        }
+        
+        // 监听平台编码变化
+        if (shopTypeSelect) {
+            shopTypeSelect.addEvent('change', function(){
+                var selectedValue = this.value;
+                loadScenes(selectedValue);
+                sceneFieldsContainer.innerHTML = '';
+            });
+            
+            // 页面加载时，如果有初始值，加载场景
+            var initialShopType = shopTypeSelect.value;
+            if (initialShopType) {
+                loadScenes(initialShopType);
+            }
+        }
+        
+        // 监听场景变化
+        if (sceneSelect) {
+            sceneSelect.addEvent('change', function(){
+                var selectedScene = this.value;
+                var shopType = shopTypeSelect ? shopTypeSelect.value : '';
+                // 场景变化时，不传递初始值（使用空值，让用户重新输入）
+                loadSceneHtml(shopType, selectedScene, '', '');
+            });
+        }
+        
+        tail.select('select[issearch="fuzzy-search"]', {
+            search: true,
+            width: 150,
+            height: 660,
+            searchMinLength: 0
+        });
+        _form.store('target',{
+            onRequest:function(){
+                btn.setAttribute('disabled', 'disabled');
+            },
+            onComplete:function(){
+                btn.removeAttribute('disabled');
+            },
+            onSuccess:function(response){
+                var hash_res_obj = JSON.decode(response);
+                if (hash_res_obj.success != undefined && hash_res_obj.success != ""){
+                    try{
+                        var _dialogIns = btn.getParent('.dialog').retrieve('instance');
+                    }catch(e){}
+
+                    if(_dialogIns){
+                        setTimeout(finder.refresh(),30000);
+                        _dialogIns.close();
+                    }
+                }
+            }
+        });
+
+        btn.addEvent('click',function(){
+          _form.fireEvent('submit',{stop:$empty});
+        });
+
+    })();
+</script>
+

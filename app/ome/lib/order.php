@@ -22,27 +22,26 @@
 class ome_order {
 
     /**
-     * 订单编辑 iframe
-     * @access public
-     * @param Number $order_id 订单ID
-     * @param Bool $is_request 是否发起请求
-     * @param Array $ext 扩展参数
-     * @return Array
-     */
-
+    * 订单编辑 iframe
+    * @access public
+    * @param Number $order_id 订单ID
+    * @param Bool $is_request 是否发起请求
+    * @param Array $ext 扩展参数
+    * @return Array
+    */
     public function update_iframe($order_id,$is_request=true,$ext=array()){
         $instance = kernel::service('service.order');
         return $instance->update_iframe($order_id,$is_request,$ext);
     }
 
 
-   /**
-    * 更新订单同步状态
-    * @access public
-    * @param number $order_id 订单ID
-    * @param String $sync_status 编辑同步状态
-    * @return json
-    */
+    /**
+   * 更新订单同步状态
+   * @access public
+   * @param number $order_id 订单ID
+   * @param String $sync_status 编辑同步状态
+   * @return json
+   */
    public function set_sync_status($order_id,$sync_status=''){
         if (!empty($order_id) && in_array($sync_status,array('fail','success'))){
            $oOrder_sync = app::get('ome')->model('order_sync_status');
@@ -56,11 +55,11 @@ class ome_order {
     }
     
     /**
-     * 订单快照 （编辑前 订单存留）
-     * @access public
-     * @param Number $order_id 订单ID
-     * @return Array
-     */
+    * 订单快照 （编辑前 订单存留）
+    * @access public
+    * @param Number $order_id 订单ID
+    * @return Array
+    */
     public function order_photo($order_id){
         $oOrder = app::get('ome')->model('orders');
         $opObj = app::get('ome')->model('order_pmt');
@@ -75,11 +74,11 @@ class ome_order {
     }
 
     /**
-     * 获取子订单的订单号
-     * @access public 
-     * @param String $oid 子订单号
-     * @return String 订单号
-     */
+    * 获取子订单的订单号
+    * @access public 
+    * @param String $oid 子订单号
+    * @return String 订单号
+    */
     public function getOrderBnByoid($oid='',$node_id=''){
         if (empty($oid)) return NULL;
         
@@ -107,12 +106,12 @@ class ome_order {
     }
 
     /**
-     * 订单号是否存在
-     * @access public
-     * @param String $order_bn 订单号
-     * @param String $node_id 节点ID
-     * @return bool
-     */
+    * 订单号是否存在
+    * @access public
+    * @param String $order_bn 订单号
+    * @param String $node_id 节点ID
+    * @return bool
+    */
     public function order_is_exists($order_bn='',$node_id=''){
         if (empty($order_bn)) return false;
         
@@ -224,7 +223,7 @@ class ome_order {
 
     /**
      * 订单分派
-     * 
+     *
      * @return void
      * @author 
      */
@@ -313,12 +312,6 @@ class ome_order {
         return array($rs,$rs?'分派成功':'分派失败');
     }
 
-    /**
-     * 创建_order
-     * @param mixed $sdf sdf
-     * @param mixed $errmsg errmsg
-     * @return mixed 返回值
-     */
     public function create_order(&$sdf, &$errmsg = '')
     {
         if (in_array($sdf['status'], ['close', 'dead'])) {
@@ -345,7 +338,7 @@ class ome_order {
         }
         
         //开启事务，防止订单创建失败但是冻结却预占的问题
-        $orderObj->db->beginTransaction();
+        $transaction = $orderObj->db->beginTransaction();
 
         $regionLib = kernel::single('eccommon_regions');
         
@@ -357,9 +350,15 @@ class ome_order {
         $regionLib->region_validate($consigner_area);
         $sdf['consigner']['area'] = $consigner_area;
 
+        //计算实付
+        $this->create_divide_pay($sdf);
+        $sdf['actually_amount'] = $sdf['shipping']['cost_shipping'];
+        $sdf['settlement_amount'] = $sdf['shipping']['cost_shipping'];
         //格式化订单明细
         foreach($sdf['order_objects'] as $key=>$object){
             $object['bn'] = trim($object['bn']);
+            $sdf['actually_amount'] += $object['actually_amount'];
+            $sdf['settlement_amount'] += $object['settlement_amount'];
             if($object['order_items']){
                 foreach($object['order_items'] as $k=>$item){
                     $item['bn'] = trim($item['bn']);
@@ -378,9 +377,6 @@ class ome_order {
             
             $sdf['order_objects'][$key] = $object;
         }
-        
-        //计算实付
-        $this->create_divide_pay($sdf);
         
         //订单可合并标记hash生成
         $combieHashIdxInfo = $this->genOrderCombieHashIdx($sdf);
@@ -416,7 +412,7 @@ class ome_order {
             return false;
         }else{
             //事务确认
-            $orderObj->db->commit();
+            $orderObj->db->commit($transaction);
         }
         
 
@@ -499,10 +495,10 @@ class ome_order {
         }
         //修改预占库存流水
         $err = '';
-        $basicMStockFreezeLib->freezeBatch($branchBatchList, __CLASS__.'::'.__FUNCTION__, $err);
+        $rsFB = $basicMStockFreezeLib->freezeBatch($branchBatchList, __CLASS__.'::'.__FUNCTION__, $err);
 
         //增加订单创建日志
-        $logObj->write_log('order_create@ome',$sdf['order_id'],'订单创建成功');
+        $logObj->write_log('order_create@ome',$sdf['order_id'],'订单创建成功'.($rsFB ? '' : '，预占库存失败：'.$err));
         
         //判断是否jdl
         if(kernel::single('ome_order_bool_type')->isJDLVMI($sdf['order_bool_type'])){
@@ -533,11 +529,6 @@ class ome_order {
     }
 
     #子商品在商品中的占比
-    /**
-     * 获取SmBmRate
-     * @param mixed $order order
-     * @return mixed 返回结果
-     */
     public function getSmBmRate($order) {
         $smIds = array();
         $bmIds = array();
@@ -635,12 +626,10 @@ class ome_order {
         return $smBmRate;
     }
     
-    /**
-     * divide_objects_to_items
-     * @param mixed $order order
-     * @return mixed 返回值
-     */
     public function divide_objects_to_items($order) {
+        // 处理SET商品(pkg类型)固定价销售价计算
+        $order = $this->processSetFixedPrice($order);
+        
         $smBmRate = $this->getSmBmRate($order);
         foreach ($order['order_objects'] as $k => $object)
         {
@@ -655,65 +644,118 @@ class ome_order {
             //items
             $tmpOrderItems = $object['order_items'];
             $lkbOrderItems = [];
-            foreach ($tmpOrderItems as $i => $item)
-            {
-                $product_id = $item['product_id'];
-                if($product_id < 1) {
-                    continue 2;
-                }
-                
-                //福袋类型
-                if($obj_type == 'lkb'){
-                    $combine_id = $item['luckybag_id'];
-                    
-                    //福袋占比
-                    $total_ratio = $smBmRate[$goods_id][$combine_id]['total_ratio'];
-                    $total_ratio = ($total_ratio ? $total_ratio : 0);
-                    
-                    //基础物料占比
-                    $bm_ratio = $smBmRate[$goods_id][$combine_id][$product_id];
-                    $bm_ratio = ($bm_ratio ? $bm_ratio : 0);
-                    
-                    //object
-                    if(!isset($lkbOrderItems[$combine_id])){
-                        $lkbOrderItems[$combine_id] = $object;
-                        $lkbOrderItems[$combine_id]['combine_id'] = $combine_id;
-                        $lkbOrderItems[$combine_id]['porth_field'] = $total_ratio;
-                        
-                        //unset
-                        unset($lkbOrderItems[$combine_id]['order_items']);
+            
+            // 如果是pkg类型并且有固定价格，需要过滤掉固定价格的items
+            $fixedOrderItems = [];
+            $is_fixed_price = false;
+            if($obj_type == 'pkg' && $object['is_set_fixed_price']){
+                foreach ($tmpOrderItems as $i => $item)
+                {
+                    $product_id = $item['product_id'];
+                    if($product_id < 1) {
+                        continue 2;
                     }
                     
-                    //按福袋ID的纬度进行分摊比例
-                    $lkbOrderItems[$combine_id]['items'][$i] = $item;
-                    $lkbOrderItems[$combine_id]['items'][$i]['porth_field'] = $bm_ratio;
+                    // 过滤掉固定价的item商品明细
+                    if($item['is_fixed_price'] == 'true'){
+                        $is_fixed_price = true;
+                        $fixedOrderItems[$i] = $item;
+                        unset($tmpOrderItems[$i]);
+                        continue;
+                    }
                     
-                    //记录基础物料价格贡献比
-                    $lkbOrderItems[$combine_id]['items'][$i]['price_rate'] = $bm_ratio;
-                }else{
                     $tmpOrderItems[$i]['porth_field'] = $smBmRate[$goods_id][$product_id];
                 }
-            }
-            
-            //福袋
-            if($obj_type == 'lkb'){
-                //先按每个福袋占比分摊金额
-                $lkbOrderItems = $this->recalculate_items_proportion($lkbOrderItems, $object);
                 
-                //再按福袋下面的基础物料占比分摊金额
-                foreach ($lkbOrderItems as $combine_id => $lkbItemRow)
-                {
-                    $tempItemList = $lkbItemRow['items'];
-                    $tempItemList = $this->recalculate_items_proportion($tempItemList, $lkbItemRow);
-                    
-                    //覆盖order_items
-                    foreach ($tempItemList as $temp_i => $tempItemRow)
-                    {
-                        $tmpOrderItems[$temp_i] = $tempItemRow;
+                // 如果有固定价格，使用剩余金额进行分摊
+                $newOrderObjects = $object;
+                if($is_fixed_price){
+                    if(isset($object['true_sale_price']) && $object['true_sale_price'] >= 0){
+                        $newOrderObjects['sale_price'] = $object['true_sale_price'];
+                    }
+                    if(isset($object['true_amount']) && $object['true_amount'] >= 0){
+                        $newOrderObjects['amount'] = $object['true_amount'];
+                    }
+                    if(isset($object['true_divide_order_fee']) && $object['true_divide_order_fee'] >= 0){
+                        $newOrderObjects['divide_order_fee'] = $object['true_divide_order_fee'];
+                    }
+                    if(isset($object['true_actually_amount']) && $object['true_actually_amount'] >= 0){
+                        $newOrderObjects['actually_amount'] = $object['true_actually_amount'];
+                    }
+                    if(isset($object['true_settlement_amount']) && $object['true_settlement_amount'] >= 0){
+                        $newOrderObjects['settlement_amount'] = $object['true_settlement_amount'];
                     }
                 }
+                
+                // 对剩余items进行分摊
+                if($tmpOrderItems){
+                    $tmpOrderItems = $this->recalculate_items_proportion($tmpOrderItems, $newOrderObjects);
+                }
+                
+                // 合并固定价格的items
+                $tmpOrderItems = array_replace($tmpOrderItems, $fixedOrderItems);
             }else{
-                $tmpOrderItems = $this->recalculate_items_proportion($tmpOrderItems, $object);
+                // 没有基础物料有固定价格，按原来的逻辑处理
+                foreach ($tmpOrderItems as $i => $item)
+                {
+                    $product_id = $item['product_id'];
+                    if($product_id < 1) {
+                        continue 2;
+                    }
+                    
+                    //福袋类型
+                    if($obj_type == 'lkb'){
+                        $combine_id = $item['luckybag_id'];
+                        
+                        //福袋占比
+                        $total_ratio = $smBmRate[$goods_id][$combine_id]['total_ratio'];
+                        $total_ratio = ($total_ratio ? $total_ratio : 0);
+                        
+                        //基础物料占比
+                        $bm_ratio = $smBmRate[$goods_id][$combine_id][$product_id];
+                        $bm_ratio = ($bm_ratio ? $bm_ratio : 0);
+                        
+                        //object
+                        if(!isset($lkbOrderItems[$combine_id])){
+                            $lkbOrderItems[$combine_id] = $object;
+                            $lkbOrderItems[$combine_id]['combine_id'] = $combine_id;
+                            $lkbOrderItems[$combine_id]['porth_field'] = $total_ratio;
+                            
+                            //unset
+                            unset($lkbOrderItems[$combine_id]['order_items']);
+                        }
+                        
+                        //按福袋ID的纬度进行分摊比例
+                        $lkbOrderItems[$combine_id]['items'][$i] = $item;
+                        $lkbOrderItems[$combine_id]['items'][$i]['porth_field'] = $bm_ratio;
+                        
+                        //记录基础物料价格贡献比
+                        $lkbOrderItems[$combine_id]['items'][$i]['price_rate'] = $bm_ratio;
+                    }else{
+                        $tmpOrderItems[$i]['porth_field'] = $smBmRate[$goods_id][$product_id];
+                    }
+                }
+                
+                //福袋
+                if($obj_type == 'lkb'){
+                    //先按每个福袋占比分摊金额
+                    $lkbOrderItems = $this->recalculate_items_proportion($lkbOrderItems, $object);
+                    
+                    //再按福袋下面的基础物料占比分摊金额
+                    foreach ($lkbOrderItems as $combine_id => $lkbItemRow)
+                    {
+                        $tempItemList = $lkbItemRow['items'];
+                        $tempItemList = $this->recalculate_items_proportion($tempItemList, $lkbItemRow);
+                        
+                        //覆盖order_items
+                        foreach ($tempItemList as $temp_i => $tempItemRow)
+                        {
+                            $tmpOrderItems[$temp_i] = $tempItemRow;
+                        }
+                    }
+                }else{
+                    $tmpOrderItems = $this->recalculate_items_proportion($tmpOrderItems, $object);
+                }
             }
             
             //order_items
@@ -725,7 +767,7 @@ class ome_order {
     
     /**
      * 重新分摊计算订单object层下的items货品相关金额
-     * 
+     *
      * @param $tmpOrderItems 单个order_object关联的order_items明细列表
      * @param $object 单个order_object信息
      * @return void
@@ -768,19 +810,40 @@ class ome_order {
         //format
         foreach ($tmpOrderItems as $i => $v)
         {
-            //不保存，用完重置
-            $tmpOrderItems[$i]['porth_field'] = null;
-            
             //购买数量
             $num = $v['quantity'] ? : $v['nums'];
             
             //price
-            $tmpOrderItems[$i]['price'] = bcdiv(bcadd($v['sale_price'], $v['pmt_price'], 2), $num, 2);
+            $tmpOrderItems[$i]['price'] = sprintf('%.2f', ($v['sale_price'] + $v['pmt_price']) / $num);
             
             //divide_order_fee
-            $tmpOrderItems[$i]['divide_order_fee'] = bcsub($v['sale_price'], $v['part_mjz_discount'], 2);
+            $tmpOrderItems[$i]['divide_order_fee'] = sprintf('%.2f', $v['sale_price'] - $v['part_mjz_discount']);
         }
         
+        //settlement_amount
+        $options = array (
+            'part_total' => $object['settlement_amount'],
+            'part_field' => 'settlement_amount',
+            'porth_field' => 'porth_field',
+        );
+        $tmpOrderItems = $this->calculate_part_porth($tmpOrderItems, $options);
+        
+        //actually_amount
+        $options = array (
+            'part_total' => $object['actually_amount'],
+            'part_field' => 'actually_amount',
+            'porth_field' => 'porth_field',
+            'minuend_field' => 'divide_order_fee',
+        );
+        $tmpOrderItems = $this->calculate_part_porth($tmpOrderItems, $options);
+
+        foreach ($tmpOrderItems as $i => $v)
+        {
+            //不保存，用完重置
+            $tmpOrderItems[$i]['porth_field'] = null;
+            $tmpOrderItems[$i]['platform_pay_amount'] = sprintf('%.2f', $v['divide_order_fee'] - $v['actually_amount']);
+            $tmpOrderItems[$i]['platform_amount'] = sprintf('%.2f', $v['settlement_amount'] - $v['divide_order_fee']);
+        }
         return $tmpOrderItems;
     }
     
@@ -795,9 +858,11 @@ class ome_order {
         } else {
             $all_discount = $sdf['pmt_order'];
         }
+        
         $needCaculate = array();
         $saleAmount = 0;
         foreach ($sdf['order_objects'] as $k => $object) {
+            // check divide_order_fee
             if(floatval($object['divide_order_fee']) > 0){
                 $needCaculate = array();
                 break;
@@ -821,10 +886,21 @@ class ome_order {
             $needCaculate = $this->calculate_part_porth($needCaculate, $options);
             foreach ($needCaculate as $k => $object) {
                 $sdf['order_objects'][$k]['part_mjz_discount'] = $object['part_mjz_discount'];
-                $sdf['order_objects'][$k]['divide_order_fee'] = bcsub($object['sale_price'], $sdf['order_objects'][$k]['part_mjz_discount'], 2);
+                $sdf['order_objects'][$k]['divide_order_fee'] = sprintf('%.2f', $object['sale_price'] - $sdf['order_objects'][$k]['part_mjz_discount']);
             }
         }
+        foreach ($sdf['order_objects'] as $k => $object) {
+            if(!$object['settlement_amount']){
+                $sdf['order_objects'][$k]['settlement_amount'] = $object['divide_order_fee'];
+            }
+            if(!$object['actually_amount']){
+                $sdf['order_objects'][$k]['actually_amount'] = $object['divide_order_fee'];
+            }
+            $sdf['order_objects'][$k]['platform_pay_amount'] = sprintf('%.2f', $object['divide_order_fee'] - $sdf['order_objects'][$k]['actually_amount']);
+            $sdf['order_objects'][$k]['platform_amount'] = sprintf('%.2f', $sdf['order_objects'][$k]['settlement_amount'] - $object['divide_order_fee']);
+        }
         
+        // 计算订单items分摊金额
         $sdf = $this->divide_objects_to_items($sdf);
     }
 
@@ -835,79 +911,93 @@ class ome_order {
      * @return void
      */
     public function edit_divide_pay(&$rs, $post) {
-        if($post['discount'] < 0) {
-            $all_pmt_order = $post['pmt_order'] - $post['discount'];
-        } else {
-            $all_pmt_order = $post['pmt_order'];
-        }
-        $send_pmt_order = 0;
         $need_divide = array();
-        $need_divide_sale = 0;
         foreach ($rs['obj'] as $k => $obj) {
             if($obj['delete'] == 'true') {
                 continue;
             }
             if($obj['sale_price'] > 0) {
-                $need_divide_sale += $obj['sale_price'];
                 $obj['order_items'] = $obj['items'];
                 unset($obj['items']);
                 $need_divide['obj-'.$k] = $obj;
             } else {
                 $rs['obj'][$k]['part_mjz_discount'] = 0;
                 $rs['obj'][$k]['divide_order_fee'] = 0;
+                $rs['obj'][$k]['actually_amount'] = 0;
+                $rs['obj'][$k]['settlement_amount'] = 0;
+                $rs['obj'][$k]['platform_pay_amount'] = 0;
+                $rs['obj'][$k]['platform_amount'] = 0;
                 foreach ($obj['items'] as $i => $item) {
                     $rs['obj'][$k]['items'][$i]['part_mjz_discount'] = 0;
                     $rs['obj'][$k]['items'][$i]['divide_order_fee'] = 0;
+                    $rs['obj'][$k]['items'][$i]['actually_amount'] = 0;
+                    $rs['obj'][$k]['items'][$i]['settlement_amount'] = 0;
+                    $rs['obj'][$k]['items'][$i]['platform_pay_amount'] = 0;
+                    $rs['obj'][$k]['items'][$i]['platform_amount'] = 0;
                 }
             }
         }
         foreach ($rs['new'] as $k => $new) {
             if($new['sale_price'] > 0) {
-                $need_divide_sale += $new['sale_price'];
                 $new['order_items'] = $new['items'];
                 unset($new['items']);
                 $need_divide['new-'.$k] = $new;
             } else {
                 $rs['new'][$k]['part_mjz_discount'] = 0;
                 $rs['new'][$k]['divide_order_fee'] = 0;
+                $rs['new'][$k]['actually_amount'] = 0;
+                $rs['new'][$k]['settlement_amount'] = 0;
+                $rs['new'][$k]['platform_pay_amount'] = 0;
+                $rs['new'][$k]['platform_amount'] = 0;
                 foreach ($new['items'] as $i => $item) {
                     $rs['new'][$k]['items'][$i]['part_mjz_discount'] = 0;
                     $rs['new'][$k]['items'][$i]['divide_order_fee'] = 0;
+                    $rs['new'][$k]['items'][$i]['actually_amount'] = 0;
+                    $rs['new'][$k]['items'][$i]['settlement_amount'] = 0;
+                    $rs['new'][$k]['items'][$i]['platform_pay_amount'] = 0;
+                    $rs['new'][$k]['items'][$i]['platform_amount'] = 0;
                 }
             }
         }
-        $yu_pmt = $all_pmt_order;
-        $num = count($need_divide);
+        $rs['settlement_amount'] = 0;
+        $rs['actually_amount'] = 0;
         foreach ($need_divide as $n => $v) {
             list($type, $k) = explode('-', $n);
-            $num--;
-            if($num) {
-                $bcdivSaleNeedDivide = floatval($need_divide_sale) != 0 ? bcdiv($v['sale_price'], $need_divide_sale, 3) : '0.00';
-                $part_mjz_discount = bcmul($bcdivSaleNeedDivide, $all_pmt_order, 2);
-                $yu_pmt -= $part_mjz_discount;
-                $dof = bcsub($v['sale_price'], $part_mjz_discount, 2);
-                $rs[$type][$k]['part_mjz_discount'] = $part_mjz_discount;
-                $rs[$type][$k]['divide_order_fee'] = $dof;
-                $need_divide[$n]['part_mjz_discount'] = $part_mjz_discount;
-                $need_divide[$n]['divide_order_fee'] = $dof;
+            if($v['settlement_amount'] > 0 && !empty($v['oid']) && $v['oid'] != -1) {
+                $need_divide[$n]['part_mjz_discount'] = sprintf('%.2f', $v['sale_price'] - $v['divide_order_fee']);
+                $need_divide[$n]['platform_pay_amount'] = sprintf('%.2f', $v['divide_order_fee'] - $v['actually_amount']);
+                $need_divide[$n]['platform_amount'] = sprintf('%.2f', $v['settlement_amount'] - $v['divide_order_fee']);
             } else {
-                $dof = bcsub($v['sale_price'], $yu_pmt, 2);
-                $rs[$type][$k]['part_mjz_discount'] = $yu_pmt;
-                $rs[$type][$k]['divide_order_fee'] = $dof;
-                $need_divide[$n]['part_mjz_discount'] = $yu_pmt;
-                $need_divide[$n]['divide_order_fee'] = $dof;
+                $need_divide[$n]['part_mjz_discount'] = 0;
+                $need_divide[$n]['divide_order_fee'] = sprintf('%.2f', $v['sale_price']);
+                $need_divide[$n]['platform_pay_amount'] = 0;
+                $need_divide[$n]['platform_amount'] = 0;
+                $need_divide[$n]['actually_amount'] = $need_divide[$n]['divide_order_fee'];
+                $need_divide[$n]['settlement_amount'] = $need_divide[$n]['divide_order_fee'];
             }
+            $rs['settlement_amount'] += $need_divide[$n]['settlement_amount'];
+            $rs['actually_amount'] += $need_divide[$n]['actually_amount'];
         }
         $order = array('order_objects' => $need_divide);
         $order = $this->divide_objects_to_items($order);
         foreach ($order['order_objects'] as $n => $v) {
             list($type, $k) = explode('-', $n);
+            $rs[$type][$k]['part_mjz_discount'] = $v['part_mjz_discount'];
+            $rs[$type][$k]['divide_order_fee'] = $v['divide_order_fee'];
+            $rs[$type][$k]['actually_amount'] = $v['actually_amount'];
+            $rs[$type][$k]['settlement_amount'] = $v['settlement_amount'];
+            $rs[$type][$k]['platform_pay_amount'] = $v['platform_pay_amount'];
+            $rs[$type][$k]['platform_amount'] = $v['platform_amount'];
             foreach ($v['order_items'] as $i => $item) {
                 $rs[$type][$k]['items'][$i]['price'] = $item['price'];
                 $rs[$type][$k]['items'][$i]['pmt_price'] = $item['pmt_price'];
                 $rs[$type][$k]['items'][$i]['sale_price'] = $item['sale_price'];
                 $rs[$type][$k]['items'][$i]['part_mjz_discount'] = $item['part_mjz_discount'];
                 $rs[$type][$k]['items'][$i]['divide_order_fee'] = $item['divide_order_fee'];
+                $rs[$type][$k]['items'][$i]['actually_amount'] = $item['actually_amount'];
+                $rs[$type][$k]['items'][$i]['settlement_amount'] = $item['settlement_amount'];
+                $rs[$type][$k]['items'][$i]['platform_pay_amount'] = $item['platform_pay_amount'];
+                $rs[$type][$k]['items'][$i]['platform_amount'] = $item['platform_amount'];
             }
         }
     }
@@ -935,24 +1025,6 @@ class ome_order {
         
         //订单已全额退款
         if(isset($orderInfo['payed']) && $orderInfo['payed'] == 0 && $orderInfo['pay_status'] == '5'){
-            /*
-            //场景：平台更新订单全额退款状态与请求WMS取消发货单同分同秒;
-            //@todo：发货单撤消成功,订单是(全额退款+未发货+已拆分完)的状态;
-            if($orderInfo['ship_status'] == '0' && !in_array($orderInfo['process_status'], array('cancel'))){
-                //延迟10秒执行
-                $hold_time = 10;
-                $timing_confirm = time() + $hold_time;
-                
-                //放入misc_task任务里,延迟自动审单
-                $task = array(
-                    'obj_id' => $orderInfo['order_id'],
-                    'obj_type' => 'timing_cancel_order',
-                    'exec_time' => $timing_confirm,
-                );
-                app::get('ome')->model('misc_task')->saveMiscTask($task);
-            }
-            */
-            
             return false;
         }
         
@@ -1053,11 +1125,19 @@ class ome_order {
                 $operLogObj->write_log('order_modify@ome', $orderInfo['order_id'], $log_message);
             }
         }
+        
+        // data
+        $updateOrderData = $opData;
+        $updateOrderData['order_id'] = $orderInfo['order_id'];
+        
+        // [更新]预约订单的状态
+        $error_msg = '';
+        kernel::single('ome_order_reservation')->operateReservationOrder($updateOrderData, $error_msg);
     }
     
     /**
      * 系统自动审单
-     * 
+     *
      * @todo 前端店铺订单进入ERP时系统自动审单
      * @param intval $order_id
      * @author wangbiao@shopex.cn
@@ -1071,10 +1151,16 @@ class ome_order {
             return false;
         }
         
-        #是否开启_系统自动审单[默认:忽略可合并的订单 ]
+        // 是否延迟自动审核订单
+        $is_delay_confirm = false;
+        if($sdf['op_type'] == 'timing_confirm' && $sdf['timing_time'] && $sdf['cnAuto'] == 'true') {
+            $is_delay_confirm = true;
+        }
+        
+        //是否开启_系统自动审单[默认:忽略可合并的订单 ]
         $cfg_combine    = app::get('ome')->getConf('ome.order.is_auto_combine');
         $is_cnAuto   = app::get('ome')->getConf('ome.order.Auto');
-        if($cfg_combine != 'true'){
+        if($cfg_combine != 'true' && !$is_delay_confirm){
             if ( ($sdf['cnAuto'] == 'false' ||  $is_cnAuto=='false' || empty($sdf['cnAuto']))
                 && $sdf['offlineAuto'] != 'true' 
             ){
@@ -1122,8 +1208,16 @@ class ome_order {
         }
         
         // 查询订单状态
-        $order = app::get('ome')->model('orders')->db_dump($order_id, 'pay_status,status,order_type,is_cod,order_id,shop_type');
-
+        $order = app::get('ome')->model('orders')->db_dump($order_id, '*');
+        
+        //是否允许审核
+        if($order['is_not_combine'] > 0 && !$is_delay_confirm){
+            //logs
+            app::get('ome')->model('operation_log')->write_log('order_edit@ome', $order_id, '订单已被标记：不允许审核;');
+            
+            return false;
+        }
+        
         // 检测京东订单是否有微信支付先用后付的单据
         $use_before_payed = false;
         if ($order['shop_type'] == '360buy') {
@@ -1141,7 +1235,7 @@ class ome_order {
             return false;
         }
         
-        //千牛修改收货人地址后,延迟5分钟自动审核订单
+        //千牛修改收货人地址或者售前退款完成编辑订单删除商品,延迟5分钟自动审核订单
         if($sdf['op_type'] == 'timing_confirm' && $sdf['timing_time']) {
             $timing_time = $sdf['timing_time'];
             
@@ -1224,7 +1318,7 @@ class ome_order {
 
     /**
      * 货到付款订单签收后自动支付
-     * 
+     *
      * @param int $deliveryId 发货单ID
      * @author wangbiao@shopex.cn
      */
@@ -1309,11 +1403,6 @@ class ome_order {
         }
     }
 
-    /**
-     * genOrderCombieHashIdx
-     * @param mixed $params 参数
-     * @return mixed 返回值
-     */
     public function genOrderCombieHashIdx($params){
 
         $order_combine_hash = '';
@@ -1566,17 +1655,11 @@ class ome_order {
         // 如果jitx订单（包括省仓订单）有merged_code，combine_hash直接用merged_code
         $result['combine_hash'] = $use_vop_code ? $combine_hash : MD5($combine_hash);
         $result['combine_idx'] = CRC32($combine_idx);
+        
         return $result;
     }
     
     //格式化新建订单items层数据
-    /**
-     * format_order_items_data
-     * @param mixed $item_type item_type
-     * @param mixed $obj_number obj_number
-     * @param mixed $basicMInfos basicMInfos
-     * @return mixed 返回值
-     */
     public function format_order_items_data($item_type,$obj_number,$basicMInfos){
         $weight = 0;
         $order_items = array();
@@ -1641,7 +1724,7 @@ class ome_order {
     
     /**
      * 根据已拆分的发货单货品数量,判断订单的拆分状态
-     * 
+     *
      * @param int $order_id
      * @param string
      */
@@ -1676,13 +1759,6 @@ class ome_order {
         return $process_status;
     }
 
-    /**
-     * calculate_part_porth
-     * @param mixed $data 数据
-     * @param mixed $options 选项
-     * @param mixed $dotNum dotNum
-     * @return mixed 返回值
-     */
     public function calculate_part_porth($data, $options, $dotNum = 2) {
         $part_total = $options['part_total']; #需要分摊的总额
         $part_field = $options['part_field']; #需要分摊的字段
@@ -1777,7 +1853,7 @@ class ome_order {
     
     /**
      * 获取支持指定仓库发货的平台
-     * 
+     *
      * @param int $order_id
      * @param string $error_msg
      * @return bool
@@ -1791,7 +1867,7 @@ class ome_order {
     
     /**
      * 获取指定仓库发货
-     * 
+     *
      * @param int $order_id
      * @param string $error_msg
      * @return bool
@@ -2302,7 +2378,7 @@ class ome_order {
     
     /**
      * 虚拟商品拆单生成发货单,自动完成发货
-     * 
+     *
      * @param int $cursor_id
      * @param array $params
      * @param string $error_msg
@@ -2500,12 +2576,12 @@ class ome_order {
         //注销
         unset($deliveryInfo, $tempInfo, $update_order);
         
-        return true;
+        return false;
     }
     
     /**
      * WMS自动发货
-     * 
+     *
      * @param intval $order_id
      * @param string $logi_no
      * @param number $weight
@@ -2630,7 +2706,7 @@ class ome_order {
     
     /**
      * 补发订单复制原订单收件人敏感数据
-     * 
+     *
      * @param $orderInfo
      * @param $error_msg
      * @return false|void
@@ -2711,7 +2787,7 @@ class ome_order {
     
     /**
      * 通过订单item层明细ID,获取订单object层信息
-     * 
+     *
      * @param $itemIds
      * @return array
      */
@@ -2777,7 +2853,7 @@ class ome_order {
     
     /**
      * 根据订单object层实付金额获取items层明细对应的金额占比
-     * 
+     *
      * @param array $orderObjInfo
      * @param int $decimal 小数位,默认保留5位小数
      * @return void
@@ -2818,7 +2894,7 @@ class ome_order {
     
     /**
      * 通过order_bn获取根订单信息
-     * 
+     *
      * @param array $orderInfo 主要使用order_bn订单号
      * @return void
      */
@@ -2894,7 +2970,7 @@ class ome_order {
 
     /**
      * 获取预售订单过滤条件
-     * 
+     *
      * @param Array $order
      * @return Array
      */
@@ -2907,5 +2983,264 @@ class ome_order {
         }else {
             $presaleCombine = false;
         }
+    }
+    
+    /**
+     * 获取订单解密信息
+     *
+     * @param $sdf
+     * @return void
+     */
+    public function getEncryptOriginData(&$sdf)
+    {
+        if(kernel::single('ome_security_router',$sdf['shop_type'])->is_encrypt($sdf,'delivery')) {
+            $encryptData = [
+                'shop_id' => $sdf['shop_id'],
+                'order_bn' => current(explode('|', $sdf['order_bn'])),
+                'ship_name' => $sdf['consignee']['name'],
+                'ship_tel' => $sdf['consignee']['telephone'],
+                'ship_mobile' => $sdf['consignee']['mobile'],
+                'ship_addr' => $sdf['consignee']['addr'],
+            ];
+            $originalEncrypt = kernel::single('ome_security_router',$sdf['shop_type'])->get_encrypt_origin($encryptData, 'delivery');
+            
+            if($originalEncrypt['ship_name']) $sdf['consignee']['name'] = $originalEncrypt['ship_name'];
+            if($originalEncrypt['ship_tel']) $sdf['consignee']['telephone'] = $originalEncrypt['ship_tel'];
+            if($originalEncrypt['ship_mobile']) $sdf['consignee']['mobile'] = $originalEncrypt['ship_mobile'];
+            if($originalEncrypt['ship_addr']) $sdf['consignee']['addr'] = $originalEncrypt['ship_addr'];
+            
+            // 标识此订单为平台加密订单
+            if ($originalEncrypt){
+                $sdf['platform_encrypt'] = true;
+            }
+        }
+    }
+    
+    /**
+     * 处理SET商品(pkg类型)固定价销售价计算
+     *
+     * @param array $order 订单数据
+     * @return array 处理后的订单数据
+     */
+    public function processSetFixedPrice($order)
+    {
+        // 获取SET商品固定价信息
+        $fixedPriceData = $this->getSetFixedPriceData($order);
+        if (empty($fixedPriceData)) {
+            return $order;
+        }
+        
+        // 获取销售物料和基础物料占比
+        $smBmRate = $this->getSmBmRate($order);
+        
+        // order_objects
+        foreach ($order['order_objects'] as $k => $object)
+        {
+            $goods_id = $object['goods_id'];
+            
+            // check pkg
+            if(!in_array($object['obj_type'], ['pkg'])){
+                continue;
+            }
+            
+            // check rate
+            if (empty($smBmRate[$goods_id])) {
+                continue;
+            }
+            
+            // item
+            $tmpOrderItems = $object['order_items'];
+            
+            $remainingSalePrice = $object['sale_price'];
+            $remain_divide_order_fee = $object['divide_order_fee'];
+            $remain_amount = $object['amount'];
+            $remain_actually_amount = $object['actually_amount']; // 客户实付
+            $remain_settlement_amount = $object['settlement_amount']; // 结算金额
+            
+            $fixedObjSalePrice = $object['sale_price'];
+            $remainingItems = [];
+            $remainingRatio = 0;
+            
+            // 第一遍：处理有固定价的基础物料
+            foreach ($tmpOrderItems as $i => $item)
+            {
+                $product_id = $item['product_id'];
+                
+                // check
+                if (empty($product_id) || $product_id < 1) {
+                    continue;
+                }
+                
+                // 如果有固定价，直接计算销售价
+                if (isset($fixedPriceData[$goods_id][$product_id]) && $fixedPriceData[$goods_id][$product_id]['fixed_price'] >= 0) {
+                    $fixedPrice = $fixedPriceData[$goods_id][$product_id]['fixed_price'];
+                    
+                    // sale_price
+                    $itemSalePrice = $fixedPrice * $item['quantity'];
+                    
+                    // format
+                    if($fixedObjSalePrice < 0){
+                        $itemSalePrice = 0;
+                    }elseif($fixedObjSalePrice < $itemSalePrice){
+                        $itemSalePrice = $fixedObjSalePrice;
+                    }
+                    
+                    // pmt_price
+                    $pmt_price = 0;
+                    
+                    // amount
+                    $item_amount = bcadd($pmt_price, $itemSalePrice, 2);
+                    
+                    // 剩余销售价
+                    $remainingSalePrice -= $itemSalePrice;
+                    $fixedObjSalePrice -= $itemSalePrice;
+                    
+                    // 剩余实付金额
+                    $remain_divide_order_fee -= $itemSalePrice;
+                    $remain_amount -= $item_amount;
+                    $remain_actually_amount -= $itemSalePrice;
+                    $remain_settlement_amount -= $itemSalePrice;
+                    
+                    // 设置固定价计算的销售价
+                    $tmpOrderItems[$i]['price'] = $fixedPrice;
+                    $tmpOrderItems[$i]['pmt_price'] = $pmt_price;
+                    $tmpOrderItems[$i]['part_mjz_discount'] = 0;
+                    $tmpOrderItems[$i]['amount'] = $item_amount;
+                    $tmpOrderItems[$i]['sale_price'] = $itemSalePrice;
+                    $tmpOrderItems[$i]['divide_order_fee'] = $itemSalePrice;
+                    $tmpOrderItems[$i]['actually_amount'] = $itemSalePrice; // 客户实付
+                    $tmpOrderItems[$i]['settlement_amount'] = $itemSalePrice; // 结算金额
+                    $tmpOrderItems[$i]['porth_field'] = 0; // 固定价不需要贡献比
+                    
+                    // flag
+                    $tmpOrderItems[$i]['is_fixed_price'] = 'true';
+                    $tmpOrderItems[$i]['item_fixed_price'] = $fixedPrice;
+                } else {
+                    // 设置固定的金额
+                    $tmpOrderItems[$i]['pmt_price'] = 0;
+                    $tmpOrderItems[$i]['amount'] = 0;
+                    $tmpOrderItems[$i]['sale_price'] = 0;
+                    $tmpOrderItems[$i]['divide_order_fee'] = 0;
+                    $tmpOrderItems[$i]['actually_amount'] = 0;
+                    $tmpOrderItems[$i]['settlement_amount'] = 0;
+                    
+                    // flag
+                    $tmpOrderItems[$i]['is_fixed_price'] = 'false';
+                    $tmpOrderItems[$i]['item_fixed_price'] = '';
+                    
+                    // 收集没有固定价的基础物料
+                    $remainingItems[$i] = $tmpOrderItems[$i];
+                    $remainingRatio += $smBmRate[$goods_id][$product_id];
+                }
+            }
+            
+            // 第二遍：按贡献比分配剩余销售价
+            if ($remainingSalePrice > 0 && $remainingRatio > 0) {
+                foreach ($remainingItems as $i => $item)
+                {
+                    $product_id = $item['product_id'];
+                    $bm_ratio = $smBmRate[$goods_id][$product_id];
+                    
+                    // 按贡献比计算销售价
+                    $itemSalePrice = ($bm_ratio / $remainingRatio) * $remainingSalePrice;
+                    
+                    // 按贡献比计算实付金额
+                    $item_divide_order_fee = ($bm_ratio / $remainingRatio) * $remain_divide_order_fee;
+                    
+                    // 总金额
+                    $itemAmount = ($bm_ratio / $remainingRatio) * $remain_amount;
+                    $itemActuallyAmount = ($bm_ratio / $remainingRatio) * $remain_actually_amount;
+                    $itemSettlementAmount = ($bm_ratio / $remainingRatio) * $remain_settlement_amount;
+                    
+                    // price
+                    $price = bcdiv($itemSalePrice, $item['quantity'], 2);
+                    
+                    // format
+                    $tmpOrderItems[$i]['price'] = $price;
+                    $tmpOrderItems[$i]['amount'] = $itemAmount;
+                    $tmpOrderItems[$i]['divide_order_fee'] = $item_divide_order_fee;
+                    $tmpOrderItems[$i]['sale_price'] = $itemSalePrice;
+                    $tmpOrderItems[$i]['actually_amount'] = $itemActuallyAmount;
+                    $tmpOrderItems[$i]['settlement_amount'] = $itemSettlementAmount;
+                    
+                    $tmpOrderItems[$i]['porth_field'] = $bm_ratio;
+                }
+            }
+            
+            // object层减掉固定价，剩余可分摊的销售金额
+            $order['order_objects'][$k]['true_sale_price'] = ($remainingSalePrice > 0 ? $remainingSalePrice : 0);
+            $order['order_objects'][$k]['true_amount'] = ($remain_amount > 0 ? $remain_amount : 0);
+            $order['order_objects'][$k]['true_divide_order_fee'] = ($remain_divide_order_fee > 0 ? $remain_divide_order_fee : 0);
+            $order['order_objects'][$k]['true_actually_amount'] = ($remain_actually_amount > 0 ? $remain_actually_amount : 0);
+            $order['order_objects'][$k]['true_settlement_amount'] = ($remain_settlement_amount > 0 ? $remain_settlement_amount : 0);
+            
+            // 更新订单明细
+            $order['order_objects'][$k]['order_items'] = $tmpOrderItems;
+            
+            // flag
+            $order['order_objects'][$k]['is_set_fixed_price'] = true;
+        }
+        
+        return $order;
+    }
+    
+    /**
+     * 获取SET商品固定价数据
+     *
+     * @param array $order 订单数据
+     * @return array 销售物料包含的基础物料编码：固定价数据
+     */
+    private function getSetFixedPriceData($order)
+    {
+        $salesBasicMaterialMdl = app::get('material')->model('sales_basic_material');
+        
+        // order_objects
+        $bmIds = [];
+        $materialBns = [];
+        $fixedPriceData = [];
+        foreach ($order['order_objects'] as $object)
+        {
+            // check pkg
+            if(!in_array($object['obj_type'], ['pkg'])){
+                continue;
+            }
+            
+            $goods_id = $object['goods_id']; // 销售物料ID
+            
+            // order_items
+            foreach ($object['order_items'] as $item)
+            {
+                if ($item['product_id'] > 0) {
+                    $product_id = $item['product_id']; // 基础物料ID
+                    
+                    $bmIds[] = $product_id;
+                    $materialBns[$product_id] = $item['bn'];
+                }
+            }
+            
+            // 构建查询条件：需要匹配sm_id和bm_id的组合
+            $filter = array('sm_id'=>$goods_id, 'bm_id' => $bmIds);
+            $priceList = $salesBasicMaterialMdl->getList('sm_id,bm_id,fixed_price', $filter);
+            if($priceList){
+                foreach ($priceList as $priceKey => $priceVal)
+                {
+                    $sm_id = $priceVal['sm_id'];
+                    $bm_id = $priceVal['bm_id'];
+                    $fixed_price = $priceVal['fixed_price'];
+                    
+                    // check
+                    if (empty($fixed_price) && $fixed_price !== 0) {
+                        continue;
+                    }
+                    
+                    $fixedPriceData[$sm_id][$bm_id] = [
+                        'material_bn' => $materialBns[$bm_id],
+                        'fixed_price' => $fixed_price,
+                    ];
+                }
+            }
+        }
+        
+        return $fixedPriceData;
     }
 }

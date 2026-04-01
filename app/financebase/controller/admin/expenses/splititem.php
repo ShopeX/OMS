@@ -73,11 +73,12 @@ class financebase_ctl_admin_expenses_splititem extends desktop_controller {
             $modelName = 'financebase_mdl_expenses_split';
             if($view == 3) {
                 $params['base_filter'] = array('split_status' => ['1','2']);
-            } else if($view == 0) {
+            }
+            if($view == 0) {
                 $params['actions'][] = array(
-                    'label'  => '导入对账状态',
-                    'href'   => 'index.php?app=financebase&ctl=admin_expenses_splititem&act=importReconciled',
-                    'target' => "dialog::{width:500,height:200,title:'导入对账状态'}",
+                    'label'  => '导入记账',
+                    'href'   => $this->url.'&act=execlImportDailog&p[0]=expenses_split',
+                    'target' => 'dialog::{width:500,height:300,title:\'导入记账\'}',
                 );
             }
         }
@@ -181,74 +182,4 @@ class financebase_ctl_admin_expenses_splititem extends desktop_controller {
         echo json_encode($retArr),'ok.';exit;
     }
 
-    /**
-     * 导入对账状态页面
-     */
-    public function importReconciled()
-    {
-        $this->display('admin/expenses/import_reconciled.html');
-    }
-
-    /**
-     * 处理导入对账状态
-     */
-    public function doImportReconciled()
-    {
-        $this->begin('index.php?app=financebase&ctl=admin_expenses_splititem&act=index');
-
-        if (!$_FILES['import_file']['tmp_name']) {
-            $this->end(false, '请选择要导入的文件');
-        }
-
-        $file = fopen($_FILES['import_file']['tmp_name'], 'r');
-        if (!$file) {
-            $this->end(false, '文件打开失败');
-        }
-
-        // 读取标题行
-        $header = fgetcsv($file);
-        if (!$header || !in_array('id', $header) || !in_array('是否对账', $header)) {
-            fclose($file);
-            $this->end(false, '文件格式不正确，必须包含"id"和"是否对账"列');
-        }
-
-        // 获取列的索引
-        $idIndex = array_search('id', $header);
-        $reconciledIndex = array_search('是否对账', $header);
-
-        $mdl = app::get('financebase')->model('expenses_split');
-        $success = 0;
-        $error = 0;
-
-        while (($data = fgetcsv($file)) !== false) {
-            $id = $data[$idIndex];
-            $isReconciled = $data[$reconciledIndex];
-
-            // 验证数据
-            if (!$id || !in_array($isReconciled, ['是', '否'])) {
-                $error++;
-                continue;
-            }
-
-            // 更新数据
-            $result = $mdl->update(
-                ['confirm_status' => $isReconciled === '是' ? '1' : '0'],
-                ['id' => $id]
-            );
-
-            if ($result) {
-                $success++;
-            } else {
-                $error++;
-            }
-        }
-
-        fclose($file);
-
-        if ($success > 0) {
-            $this->end(true, sprintf('导入完成：成功 %d 条，失败 %d 条', $success, $error));
-        } else {
-            $this->end(false, '导入失败');
-        }
-    }
 }

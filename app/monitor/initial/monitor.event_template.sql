@@ -108,7 +108,32 @@ INSERT INTO `sdb_monitor_event_template`(`template_bn`, `template_name`, `event_
 VALUES ('order_360buy_delivery_error', '【京东】订单挂起不可以发货', 'order_360buy_delivery_error', 'workwx', '以下订单挂起不可以发货：
     >订单号：<font color=\"warning\">{order_bn}</font>', '1', 'system', '2024-05-08 10:22:23', '2024-05-08 10:22:23');
 
--- 库存回写监控模板
+INSERT INTO `sdb_monitor_event_template`(`template_bn`, `template_name`, `event_type`, `send_type`, `content`, `status`,
+                                         `source`, `disabled`, `at_time`, `up_time`)
+VALUES ('order_ship_refund_apply', '订单已发货仅退款发起申请', 'order_ship_refund_apply', 'email', '订单[{order_bn}]已发货，不可以退款。退款单号：{refund_apply_bn}，退款金额：{refund_fee}', '1', 'system', 'true', '2025-06-18 10:22:23', '2025-06-18 10:22:23');
+INSERT INTO `sdb_monitor_event_template`(`template_bn`, `template_name`, `event_type`, `send_type`, `content`, `status`,
+                                         `source`, `disabled`, `at_time`, `up_time`)
+VALUES ('order_unship_refund_apply', '订单未发货退款发起申请', 'order_unship_refund_apply', 'email', '订单[{order_bn}]未生成发货单，可以退款。退款单号：{refund_apply_bn}，退款金额：{refund_fee}', '1', 'system', 'true', '2025-06-18 10:22:23', '2025-06-18 10:22:23');
+INSERT INTO `sdb_monitor_event_template`(`template_bn`, `template_name`, `event_type`, `send_type`, `content`, `status`,
+                                         `source`, `disabled`, `at_time`, `up_time`)
+VALUES ('order_refund_apply_reback_fail', '订单退款发起申请发货单撤销失败', 'order_refund_apply_reback_fail', 'email', '订单[{order_bn}]对应发货单[{delivery_bn}]撤销失败，失败原因：{msg}。退款单号[{refund_apply_bn}]不可退款，退款金额：{refund_fee}', '1', 'system', 'true', '2025-06-18 10:22:23', '2025-06-18 10:22:23');
+INSERT INTO `sdb_monitor_event_template`(`template_bn`, `template_name`, `event_type`, `send_type`, `content`, `status`,
+                                         `source`, `disabled`, `at_time`, `up_time`)
+VALUES ('order_part_ship_refund_apply', '订单部分发货仅退款发起申请', 'order_part_ship_refund_apply', 'email', '订单[{order_bn}]对应发货单[{delivery_bn}]发货完成。退款单号[{refund_apply_bn}]不可退款，退款金额：{refund_fee}', '1', 'system', 'true', '2025-06-18 10:22:23', '2025-06-18 10:22:23');
+INSERT INTO `sdb_monitor_event_template`(`template_bn`, `template_name`, `event_type`, `send_type`, `content`, `status`,
+                                         `source`, `disabled`, `at_time`, `up_time`)
+VALUES ('order_refund_apply_reback_succ', '退款申请对应发货单均撤回', 'order_refund_apply_reback_succ', 'email', '退款单号[{refund_apply_bn}]对应子单号都已叫回，可退款。退款金额：{refund_fee}，订单号：{order_bn}', '1', 'system', 'true', '2025-06-18 10:22:23', '2025-06-18 10:22:23');
+INSERT INTO `sdb_monitor_event_template`(`template_bn`, `template_name`, `event_type`, `send_type`, `content`, `status`,
+                                         `source`, `disabled`, `at_time`, `up_time`)
+VALUES ('order_refund_apply_force_refund', '退款单强制退款', 'order_refund_apply_force_refund', 'email', '订单[{order_bn}]平台小二已介入强制退款，请尽快联系客户上门取件。', '1', 'system', 'true', '2025-06-18 10:22:23', '2025-06-18 10:22:23');
+
+INSERT INTO `sdb_monitor_event_template`(`template_bn`, `template_name`, `event_type`, `send_type`, `content`, `status`, `source`, `at_time`, `up_time`)
+VALUES ('order_delivery_timeliness', '订单发货时效提醒', 'order_delivery_timeliness', 'email', '订单发货时效提醒
+    >订单号：<font color=\"warning\">{order_bn}</font>
+    >平台：<font color=\"warning\">{shop_type}</font>
+    >支付时间：<font color=\"warning\">{paytime}</font>
+    >剩余时间：<font color=\"warning\">{remaining_hours}</font>小时', '1', 'system', '2025-01-20 00:00:00', '2025-01-20 00:00:00');
+    -- 库存回写监控模板
 INSERT INTO `sdb_monitor_event_template`(`template_bn`, `template_name`, `event_type`, `send_type`, `content`, `status`, `source`, `at_time`, `up_time`)
 VALUES ('inventory_calc_error', '库存计算异常报警', 'inventory_calc_error', 'email', '库存计算异常报警
     >时间：<font color=\"warning\">{datetime}</font>
@@ -118,3 +143,25 @@ VALUES ('inventory_calc_error', '库存计算异常报警', 'inventory_calc_erro
     >异常信息：<font color=\"warning\">{error_message}</font>
     >异常位置：<font color=\"warning\">{error_location}</font>
     >规则信息：<font color=\"warning\">{regulation_info}</font>', '1', 'system', '2024-12-19 00:00:00', '2024-12-19 00:00:00');
+
+INSERT INTO `sdb_monitor_event_template`(`template_bn`, `template_name`, `event_type`, `send_type`, `content`, `status`, `source`, `at_time`, `up_time`)
+VALUES ('order_delivery_platform_sync_error', '订单发货回写平台失败', 'order_delivery_platform_sync_error', 'email', '订单发货回写平台失败
+    >订单号：<font color=\"warning\">{order_bn}</font>
+    >发货单号：<font color=\"warning\">{delivery_bn}</font>
+    >平台：<font color=\"warning\">{platform}</font>
+    >店铺：<font color=\"warning\">{shop_name}</font>
+    >错误信息：<font color=\"warning\">{errmsg}</font>', '1', 'system', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+INSERT INTO `sdb_monitor_event_template`(`template_bn`, `template_name`, `event_type`, `send_type`, `content`, `status`, `source`, `at_time`, `up_time`)
+VALUES ('delivery_cancel_wms_notify', '发货单撤销WMS通知', 'delivery_cancel_wms', 'email', '{shop_type}平台{shop_name}店铺发货单号（{delivery_bn}）已撤销，明细如下，请WMS端及时取消出货，谢谢。
+    {detail_list}', '1', 'system', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+-- 订单缺货通知模板
+INSERT INTO `sdb_monitor_event_template`(`template_bn`, `template_name`, `event_type`, `send_type`, `content`, `status`, `source`, `at_time`, `up_time`)
+VALUES ('order_lack_notify', '订单缺货通知', 'order_lack_notify', 'email', '订单缺货通知
+    >订单号：<font color=\"warning\">{order_bn}</font>
+    >仓库：<font color=\"warning\">{branch_name}</font>
+    >缺货商品数量：<font color=\"warning\">{lack_count}</font>
+    >缺货商品详情：
+{lack_products}', '1', 'system', '2024-12-19 00:00:00', '2024-12-19 00:00:00');
+

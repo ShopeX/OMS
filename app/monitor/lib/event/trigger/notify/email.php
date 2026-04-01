@@ -71,7 +71,14 @@ class monitor_event_trigger_notify_email extends monitor_event_trigger_notify_co
                 $receiverInfo = $eventReceiverMdl->getList('receiver',['id'=>$receiverId]);
             }
         }else{
-            $receiverInfo[] = ['receiver'=>$notifyInfo['receiver']];
+            $receiverInfo = [];
+            if(is_array($notifyInfo['receiver'])) {
+                foreach($notifyInfo['receiver'] as $receiver) {
+                    $receiverInfo[] = ['receiver'=>$receiver];
+                }
+            }else{
+                $receiverInfo[] = ['receiver'=>$notifyInfo['receiver']];
+            }
         }
         // 安全检查：确保$receiverInfo有值且包含有效的receiver字段
         if (empty($receiverInfo) || !is_array($receiverInfo)) {

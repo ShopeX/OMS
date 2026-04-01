@@ -20,6 +20,29 @@
  */
 class erpapi_shop_matrix_tmall_request_maochao_aftersale extends erpapi_shop_request_aftersale {
 
+    public function returnGoodsSign($sdf){
+        $title = '售后签收货品['.$sdf['return_bn'].']';
+        
+        // 获取 extend_field 并解析 supplierId
+        $specialObj = app::get('ome')->model('return_product_tmall');
+        $ras = $specialObj->db_dump(array('return_id'=>$sdf['return_id']), 'extend_field');
+        $extend_field = $ras ? json_decode($ras['extend_field'], 1) : array();
+        
+        // 获取 reship 表的入库时间
+        $reship = app::get('ome')->model('reship')->db_dump(['return_id'=>$sdf['return_id']], 't_end');
+        
+        // 组装接口参数
+        $params = array(
+            // 逆向物流单号
+            'lg_order_code' => !empty($sdf['return_bn']) ? $sdf['return_bn'] : '',
+            // 供应商id
+            'supplier_id' => !empty($extend_field['supplierId']) ? $extend_field['supplierId'] : '',
+            // 入库时间
+            'order_confirm_time' => !empty($reship['t_end']) ? date('Y-m-d H:i:s', $reship['t_end']) : '',
+        );
+        
+        $this->__caller->call(SHOP_SUPPLIER_RETURN_GOOD_INSTORAGE_RESULT, $params, array(), $title, 10, $sdf['return_bn']);
+    }
     /**
      * 卖家确认收货
      * @param $data

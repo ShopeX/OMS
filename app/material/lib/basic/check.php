@@ -38,6 +38,17 @@ class material_basic_check
         //新增标记
         $is_new_add    = $params['edit'] ? false : true;
         unset($params['edit']);
+        
+        // 去除基础物料编码前后空格
+        if (isset($params['material_bn'])) {
+            $params['material_bn'] = trim($params['material_bn']);
+        }
+        if (isset($params['material_spu'])) {
+            $params['material_spu'] = trim($params['material_spu']);
+        }
+        if (isset($params['material_code'])) {
+            $params['material_code'] = trim($params['material_code']);
+        }
 
         //检查物料名称
         if(empty($params['material_name'])){
@@ -67,13 +78,16 @@ class material_basic_check
         if($is_new_add)
         {
             //判断物料编码和物料条码只能是由数字英文下划线组成
-            $reg_bn_code = "/^[0-9a-zA-Z\_\#\-\/]*$/";
-            if(!preg_match($reg_bn_code,$params["material_bn"])){
-                $err_msg = "物料编码只支持(数字、英文、_下划线、-横线、#井号、/斜杠)";
+            // 物料编号：支持数字、英文、下划线、横线、井号、斜杠、空格
+            $reg_bn = "/^[0-9a-zA-Z\_\#\-\/ ]*$/";
+            if(!preg_match($reg_bn,$params["material_bn"])){
+                $err_msg = "物料编码只支持(数字、英文、_下划线、-横线、#井号、/斜杠、空格)";
                 return false;
             }
-            if(!preg_match($reg_bn_code,$params["material_code"])){
-                $err_msg = "物料条码只支持[数字英文_-#\]组成";
+            // 物料条码：支持数字、英文、下划线、横线、井号、斜杠（不支持空格）
+            $reg_code = "/^[0-9a-zA-Z\_\#\-\/]*$/";
+            if(!preg_match($reg_code,$params["material_code"])){
+                $err_msg = "物料条码只支持(数字、英文、_下划线、-横线、#井号、/斜杠)组成";
                 return false;
             }
 

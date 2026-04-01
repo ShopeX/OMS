@@ -103,12 +103,14 @@ class omeauto_auto_type_customer extends omeauto_auto_type_abstract implements o
             foreach ($order['objects'] as $objKey => $objVal)
             {
                 $goods_id = $objVal['goods_id'];
+                
+                // goods ids
                 $goodsIds[$goods_id] = $goods_id;
             }
         }
         
         //获取销售物料
-        $tempList = $salesMaterialObj->getList('sm_id,sales_material_bn,sales_material_type,class_id', array('sm_id'=>$goods_id));
+        $tempList = $salesMaterialObj->getList('sm_id,sales_material_bn,sales_material_type,class_id', array('sm_id'=>$goodsIds));
         if(empty($tempList)){
             return false;
         }

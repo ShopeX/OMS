@@ -20,10 +20,6 @@ class wms_ctl_admin_consign extends desktop_controller{
     var $name = "发货处理";
     var $workground = "wms_delivery";
 
-    /**
-     * _views
-     * @return mixed 返回值
-     */
     public function _views()
     {
 
@@ -72,7 +68,7 @@ class wms_ctl_admin_consign extends desktop_controller{
     }
 
     /**
-     * 
+     *
      * 逐单发货的入口展示页
      */
     function index(){
@@ -110,7 +106,7 @@ class wms_ctl_admin_consign extends desktop_controller{
     }
 
     /**
-     * 
+     *
      * 批量发货的入口展示页
      */
     function batch(){
@@ -124,7 +120,7 @@ class wms_ctl_admin_consign extends desktop_controller{
     }
 
     /**
-     * 
+     *
      * 分组发货的入口展示页
      */
     function group_consign(){
@@ -199,7 +195,7 @@ class wms_ctl_admin_consign extends desktop_controller{
     }
 
     /**
-     * 
+     *
      * 发货前的发货单相关信息检查
      */
     function batchCheck(&$rs = false){
@@ -213,7 +209,7 @@ class wms_ctl_admin_consign extends desktop_controller{
 
         $dlyCheckLib = kernel::single('wms_delivery_check');
 
-        //逐个发货：发货判断，批量发货不做此过滤
+        // 先做系统业务校验（consignAllow），通过后再针对 pickup 且无 logi_no 时调官方提货
         if ($_GET['delivery_type'] == 'single'){
             $return_error = $dlyCheckLib->consignAllow('', $logi_nos, $weight);
             if ($return_error){
@@ -221,8 +217,16 @@ class wms_ctl_admin_consign extends desktop_controller{
                 echo json_encode($tmp);
                 die;
             }
+            $pickup_err=null;
+            $pickup_err = $this->_batchCheckPickupOfficial($logi_nos);
+            if ($pickup_err !== null) {
+                $tmp = array('status'=>'error','msg'=>$pickup_err);
+                echo json_encode($tmp);
+                die;
+            }
         }else{
             $logi_no_arr = array_unique(explode(',', $logi_nos));
+            $tmp = array();
             $delivery_list = array();
 
             if ($logi_no_arr){
@@ -240,12 +244,74 @@ class wms_ctl_admin_consign extends desktop_controller{
             }
         }
 
-        if ($tmp){
+        if (!empty($tmp)){
             echo json_encode($tmp); die;
         }
 
         $rs = true;#发货判断完成的标示,这个对校验完成即发货有用
+        if ($_GET['delivery_type'] == 'single') {
+            $dlyObj = app::get('wms')->model('delivery');
+            $deliveryBillLib = kernel::single('wms_delivery_bill');
+            $delivery_id = $deliveryBillLib->getDeliveryIdByPrimaryLogi($logi_nos);
+            if (empty($delivery_id)) {
+                $delivery_id = $deliveryBillLib->getDeliveryIdBySecondaryLogi($logi_nos);
+            }
+            if (empty($delivery_id)) {
+                $pickupDly = $dlyObj->dump(array('delivery_bn' => $logi_nos, 'delivery_model' => 'pickup'), 'delivery_id');
+                if (!empty($pickupDly)) {
+                    $delivery_id = $pickupDly['delivery_id'];
+                }
+            }
+            $is_pickup = false;
+            if ($delivery_id) {
+                $dly = $dlyObj->dump(array('delivery_id' => $delivery_id), 'delivery_model');
+                $is_pickup = (isset($dly['delivery_model']) && $dly['delivery_model'] === 'pickup');
+            }
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(array('status' => 'ok', 'is_pickup' => $is_pickup));
+            return;
+        }
         echo "";
+    }
+
+    /**
+     * pickup 单：仅当 logi_no 为空时调官方提货，已有 logi_no 则不请求；失败返回错误文案（兼容 PHP5.2，不用闭包）
+     * @param string $scan_val 扫描值（对应界面「输入快递单号」/ POST delivery_id，可为发货单号）
+     * @return string|null 失败时返回错误信息，否则 null
+     */
+    private function _batchCheckPickupOfficial($scan_val)
+    {
+        $deliveryBillLib = kernel::single('wms_delivery_bill');
+        $dlyObj = app::get('wms')->model('delivery');
+        $dlyBillObj = app::get('wms')->model('delivery_bill');
+
+        $delivery_id = $deliveryBillLib->getDeliveryIdByPrimaryLogi($scan_val);
+        if ($delivery_id === null) {
+            $delivery_id = $deliveryBillLib->getDeliveryIdBySecondaryLogi($scan_val);
+        }
+        if ($delivery_id === null) {
+            $pickupDly = $dlyObj->dump(array('delivery_bn' => $scan_val, 'delivery_model' => 'pickup'), 'delivery_id');
+            if ($pickupDly) {
+                $delivery_id = $pickupDly['delivery_id'];
+            }
+        }
+        if (empty($delivery_id)) {
+            return null;
+        }
+        $dly = $dlyObj->dump(array('delivery_id' => $delivery_id), 'delivery_id,delivery_model');
+        if (empty($dly) || !isset($dly['delivery_model']) || $dly['delivery_model'] !== 'pickup') {
+            return null;
+        }
+        $bill = $dlyBillObj->db_dump(array('delivery_id' => $delivery_id, 'type' => 1), 'logi_no');
+        // 已有 logi_no 则不请求官方提货，避免重复调用
+        if (!empty($bill['logi_no'])) {
+            return null;
+        }
+        $ret = kernel::single('wms_logistics')->officialPickup($delivery_id);
+        if (is_array($ret) && isset($ret['rsp']) && $ret['rsp'] === 'fail') {
+            return isset($ret['msg']) ? $ret['msg'] : '官方提货失败';
+        }
+        return null;
     }
 
     function batch_log_detail(){
@@ -263,7 +329,7 @@ class wms_ctl_admin_consign extends desktop_controller{
         $this->display('admin/delivery/batch_log_detail.html');
     }
 
-    /**
+	/**
      * 批量发货确认
      * 显示批量发货订单中有退款申请或已退款的订单，让管理员确认是否发货或不发货
      * @param json $data
@@ -276,7 +342,7 @@ class wms_ctl_admin_consign extends desktop_controller{
 
     /**
      * 发货处理
-     * 
+     *
      */
     function consign($is_from_check = false){
         if($is_from_check){
@@ -312,7 +378,15 @@ class wms_ctl_admin_consign extends desktop_controller{
                 $logi_no = $dlyBillInfo['logi_no'];
             }
         }
-        
+
+        // [提货物流] delivery_model='pickup' 运单号后取，扫描的是发货单号
+        if (empty($delivery_id)) {
+            $pickupDly = $dlyObj->dump(array('delivery_bn' => $logi_no, 'delivery_model' => 'pickup'), 'delivery_id');
+            if ($pickupDly) {
+                $delivery_id = $pickupDly['delivery_id'];
+            }
+        }
+
         if(!is_null($delivery_id)){
             $primary = true;
             $dly = $dlyObj->dump(array('delivery_id' => $delivery_id),'*',array('delivery_items'=>array('*')));
@@ -326,6 +400,14 @@ class wms_ctl_admin_consign extends desktop_controller{
 
         $logi_number = $dly['logi_number'];
         $delivery_logi_number =$dly['delivery_logi_number'];
+
+        // 确认出库成功后用于触发的快递单打印（仅 delivery_model=pickup 时返回，前端将拉取 toPrintExpre 同源数据并直接触发菜鸟打印）
+        $consignExtra = (isset($dly['delivery_model']) && $dly['delivery_model'] === 'pickup')
+            ? array(
+                'print_delivery_id' => $dly['delivery_id'],
+                'print_logi_id' => $dly['logi_id'],
+            )
+            : array();
 
         //检查前端订单是否退款,原有逻辑是否需要?
 
@@ -363,7 +445,7 @@ class wms_ctl_admin_consign extends desktop_controller{
 
             if(($logi_number==$delivery_logi_number)&&$dly['status'] != 3){
                 if ($dlyProcessLib->consignDelivery($dly['delivery_id'])){
-                     $this->end(true, '发货处理完成');
+                     $this->_endConsignSuccess($consignExtra);
                 }else {
                      $msg['delivery_bn'] = $dly['delivery_bn'];
                      $this->end(false, '发货未完成', '', array('msg'=>$msg));
@@ -375,13 +457,13 @@ class wms_ctl_admin_consign extends desktop_controller{
 
                 if($logi_number==($delivery_logi_number+1)){
                      if ($dlyProcessLib->consignDelivery($dly['delivery_id'])){
-                          $this->end(true, '发货处理完成');
+                          $this->_endConsignSuccess($consignExtra);
                      }else {
                           $msg['delivery_bn'] = $dly['delivery_bn'];
                           $this->end(false, '发货未完成', '', array('msg'=>$msg));
                      }
                 }else{
-                    $this->end(true, '发货处理完成');
+                    $this->_endConsignSuccess($consignExtra);
                 }
             }
         }else{
@@ -389,7 +471,7 @@ class wms_ctl_admin_consign extends desktop_controller{
             if($logi_number == 1){
                 if(($logi_number==$delivery_logi_number)&&$dly['status'] != 3){
                      if ($dlyProcessLib->consignDelivery($dly['delivery_id'])){
-                        $this->end(true, '发货处理完成');
+                        $this->_endConsignSuccess($consignExtra);
                      }else {
                         $msg['delivery_bn'] = $dly['delivery_bn'];
                         $this->end(false, '发货未完成', '', array('msg'=>$msg));
@@ -410,7 +492,7 @@ class wms_ctl_admin_consign extends desktop_controller{
                     $dlyObj->update($data,$filter);
 
                     if ($dlyProcessLib->consignDelivery($dly['delivery_id'])){
-                        $this->end(true, '发货处理完成');
+                        $this->_endConsignSuccess($consignExtra);
                     }else {
                         $msg['delivery_bn'] = $dly['delivery_bn'];
                         $this->end(false, '发货未完成', '', array('msg'=>$msg));
@@ -441,17 +523,17 @@ class wms_ctl_admin_consign extends desktop_controller{
 
                     if($logi_number==($delivery_logi_number+1)){
                         if ($dlyProcessLib->consignDelivery($dly['delivery_id'])){
-                            $this->end(true, '发货处理完成');
+                            $this->_endConsignSuccess($consignExtra);
                         }else {
                             $msg['delivery_bn'] = $dly['delivery_bn'];
                             $this->end(false, '发货未完成', '', array('msg'=>$msg));
                         }
                     }
-                    $this->end(true, '发货处理完成');
+                    $this->_endConsignSuccess($consignExtra);
                 //加入如果$logi_number==$delivery_logi_number 但是发货状态没有改变的判断
                 }elseif(($delivery_logi_number == $logi_number) && $dly['status'] != 3){
                     if ($dlyProcessLib->consignDelivery($dly['delivery_id'])){
-                        $this->end(true, '发货处理完成');
+                        $this->_endConsignSuccess($consignExtra);
                     }else {
                         $msg['delivery_bn'] = $dly['delivery_bn'];
                         $this->end(false, '发货未完成', '', array('msg'=>$msg));
@@ -464,7 +546,39 @@ class wms_ctl_admin_consign extends desktop_controller{
     }
 
     /**
-     * 
+     * 生成确认出库成功后的快递单打印页链接（与 admin_receipts_print toPrintExpre 参数一致）
+     * @param int|string $delivery_id wms 发货单 id
+     * @param int|string $logi_id 物流公司 id
+     * @return string
+     */
+    protected function _getConsignPrintExpreUrl($delivery_id, $logi_id) {
+        return 'index.php?app=wms&ctl=admin_receipts_print&act=toPrintExpre&status=3&logi_id=' . urlencode((string)$logi_id) . '&delivery_id=' . urlencode((string)$delivery_id);
+    }
+
+    /**
+     * consign 成功返回封装：
+     * - pickup 场景：返回纯 JSON，避免 desktop 的 splash/doCommand 触发 redirect 打断自动打印流程
+     * - 其他场景：保持原有 end() 行为
+     *
+     * @param array $consignExtra
+     */
+    protected function _endConsignSuccess($consignExtra = array())
+    {
+        if (is_array($consignExtra) && isset($consignExtra['print_delivery_id']) && $consignExtra['print_delivery_id']) {
+            // 先提交事务（与 end() 一致），再返回纯 JSON，避免 desktop 的 splash/redirect 打断自动打印
+            $this->endonly(true);
+            header('Content-Type: application/json; charset=utf-8');
+            $out = array_merge(array('success' => '成功：发货处理完成'), $consignExtra);
+            $out['redirect'] = 'index.php?app=wms&ctl=admin_consign&act=index';
+            echo json_encode($out);
+            exit;
+        }
+        // 非 pickup：保持原有 end()，框架会处理 splash/redirect
+        $this->end(true, '发货处理完成', null, $consignExtra);
+    }
+
+    /**
+     *
      * 分组发货执行方法
      */
     function ajaxDoGroupConsign(){
@@ -517,7 +631,11 @@ class wms_ctl_admin_consign extends desktop_controller{
             $fail = 0;
             $failInfo = array();
             foreach($deliverys as $value){
-                
+                if (isset($value['delivery_model']) && $value['delivery_model'] === 'pickup'){
+                    $fail++;
+                    $failInfo[] = $value['delivery_bn'] . '(提货单不支持分组发货)';
+                    continue;
+                }
                 $weight = $value['net_weight']>0 ? $value['net_weight'] : $group_weight;
                 $weight = $weight ? $weight : $minWeight;
 
@@ -615,7 +733,7 @@ class wms_ctl_admin_consign extends desktop_controller{
     }
 
     /**
-     * 
+     *
      * 补打物流单入口页
      */
     public function fill_delivery(){
@@ -623,7 +741,7 @@ class wms_ctl_admin_consign extends desktop_controller{
     }
 
     /**
-     * 
+     *
      * 补打物流单的详细页
      */
     public function fill_delivery_confirm(){
@@ -736,10 +854,10 @@ class wms_ctl_admin_consign extends desktop_controller{
         // die;
     }
 
-    /**
-     * 
-     * 删除子快递单
-     */
+	/**
+	 *
+	 * 删除子快递单
+	 */
     function del_deliveryBill(){
         $b_id = $_POST['b_id'];
         $delivery_id = $_POST['delivery_id'];
@@ -903,8 +1021,8 @@ class wms_ctl_admin_consign extends desktop_controller{
         }
     }
 
-    /**
-     * 
+	/**
+	 *
      * 快递单状态翻译显示
      */
     function statusinfo($status,$style=1){
@@ -929,9 +1047,9 @@ class wms_ctl_admin_consign extends desktop_controller{
     }
 
     /**
-     * 
+     *
      * 保存批量发货至记录队列表中
-     */
+	 */
     function doBatchConsign(){
         $goto_url = 'index.php?app=wms&ctl=admin_consign&act=batch';
         $ids = $_POST['delivery_id'];
@@ -971,8 +1089,8 @@ class wms_ctl_admin_consign extends desktop_controller{
     }
 
     /**
-     * 获取发货记录历史
-     */
+     *获取发货记录历史
+    */
     function batchConsignLog(){
         $blObj  = app::get('wms')->model('batch_log');
         $batchLogLib = kernel::single('wms_batch_log');
@@ -993,7 +1111,7 @@ class wms_ctl_admin_consign extends desktop_controller{
     }
 
     /**
-     * 
+     *
      * 更新处理中发货记录值
      */
     function updateBatchConsignLog(){
@@ -1019,8 +1137,8 @@ class wms_ctl_admin_consign extends desktop_controller{
 
 
     /**
-     * 商品重量报警判断
-     */
+    * 商品重量报警判断
+    */
     function weightWarn(){
         $type = $_GET['type'];
         $logi_no = $_POST['logi_no'];
@@ -1056,8 +1174,8 @@ class wms_ctl_admin_consign extends desktop_controller{
     }
 
     /**
-     * 发货重量报警页面提醒
-     */
+    * 发货重量报警页面提醒
+    */
     function showWeightWarn(){
 
         $logi_no = $_GET['logi_no'];
@@ -1122,7 +1240,7 @@ class wms_ctl_admin_consign extends desktop_controller{
 
     /**
      * 极速发货
-     * 
+     *
      * @param void
      * @return void
      */
@@ -1183,6 +1301,14 @@ class wms_ctl_admin_consign extends desktop_controller{
         $basicMaterialExtObj    = app::get('material')->model('basic_material_ext');
 
         $deliveryBill = $dlyBillMdl->db_dump(['logi_no' => $logi_no]);
+
+        // [提货物流] delivery_model='pickup' 运单号后取，扫描的是发货单号(delivery_bn)，按 delivery_bn 查主单
+        if (empty($deliveryBill)) {
+            $pickupDly = $dlyMdl->dump(array('delivery_bn' => $logi_no, 'delivery_model' => 'pickup'), 'delivery_id');
+            if ($pickupDly) {
+                $deliveryBill = $dlyBillMdl->db_dump(array('delivery_id' => $pickupDly['delivery_id'], 'type' => 1));
+            }
+        }
         
         //[同城配]商家配送支持配送员手机号搜索
         if(empty($deliveryBill) && strlen($logi_no) == 11){
@@ -1299,7 +1425,7 @@ class wms_ctl_admin_consign extends desktop_controller{
         //检查运单号是否属于同一个处理的发货单
         $deliveryBillLib = kernel::single('wms_delivery_bill');
         $db_logi_no = $deliveryBillLib->getPrimaryLogiNoById($dly_id);
-        if ($db_logi_no != $logi_no){
+        if ($db_logi_no != $logi_no && $dly['delivery_model'] != 'pickup'){
             $tmp = array('result'=>false,'msg'=>'扫描的快递单号与系统中的快递单号不对应');
             echo json_encode($tmp);die;
         }

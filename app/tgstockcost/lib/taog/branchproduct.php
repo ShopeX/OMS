@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * 仓库货品数据类
  * 
@@ -82,30 +81,87 @@ class tgstockcost_taog_branchproduct extends tgstockcost_common_branchproduct im
         $iostockModel = app::get('ome')->model('iostock');
         $db = $iostockModel->db;
 
-        $sql = 'SELECT SUM(nums) AS nums,SUM(inventory_cost) AS inventory_cost,branch_id,bn FROM ' . $iostockModel->table_name(1) . ' WHERE 1 ';
+        // 静态变量缓存索引检查结果（只检查一次，提升性能）
+        static $index_exists = null;
+        $table_name = $iostockModel->table_name(1);
+        
+        if ($index_exists === null) {
+            // 只检查一次索引是否存在（使用 SHOW INDEX 更可靠）
+            try {
+                $index_list = $db->select("SHOW INDEX FROM " . $table_name . " WHERE Key_name = 'idx_typeid_branchid_bn_createtime'");
+                $index_exists = !empty($index_list);
+            } catch (Exception $e) {
+                // 如果查询失败（表不存在等），认为索引不存在
+                $index_exists = false;
+            }
+        }
+        
+        if ($index_exists) {
+            // 索引存在，强制使用优化索引（已检查过索引存在，不会报错）
+            $sql = 'SELECT SUM(nums) AS nums,SUM(inventory_cost) AS inventory_cost,branch_id,bn FROM ' . $table_name . ' FORCE INDEX (idx_typeid_branchid_bn_createtime) WHERE 1 ';
+        } else {
+            // 索引不存在，让 MySQL 自动选择
+            $sql = 'SELECT SUM(nums) AS nums,SUM(inventory_cost) AS inventory_cost,branch_id,bn FROM ' . $table_name . ' WHERE 1 ';
+        }
 
         $filter = array();
+        
+        // 按照索引 idx_typeid_branchid_bn_createtime 的顺序：type_id -> branch_id -> bn -> create_time
+        // 1. type_id 条件（等值查询，索引第1列）
+        if ($type_id) {
+            // 如果指定了 type_id，直接使用它（更精确）
+            $filter[] = 'type_id='.$type_id;
+        } else {
+            // 否则使用 io_type 数组
+            $filter[] = 'type_id in(' . implode(',',(array) $io_type ) . ')';
+        }
+
+        // 2. branch_id 和 bn 条件（等值查询，索引第2、3列）
+        // 优化：将多个 OR 条件改为按 branch_id 分组的 IN 查询，提升性能
+        if ($branch_product) {
+            // 按 branch_id 分组，收集每个 branch_id 对应的 bn 列表
+            $branch_bn_map = array();
+            foreach ($branch_product as $key => $value) {
+                $bid = intval($value['branch_id']);
+                if (!isset($branch_bn_map[$bid])) {
+                    $branch_bn_map[$bid] = array();
+                }
+                $branch_bn_map[$bid][] = $db->quote($value['bn']);
+            }
+
+            // 构建优化的查询条件：按 branch_id 分组使用 IN 查询
+            $branch_filters = array();
+            $max_bn_count = 1000; // IN 查询的最大数量，超过此数量会分批处理
+            foreach ($branch_bn_map as $branch_id => $bn_list) {
+                if (!empty($bn_list)) {
+                    // 如果 bn 数量较少，使用 IN 查询；如果太多，分批处理
+                    if (count($bn_list) <= $max_bn_count) {
+                        $branch_filters[] = '(branch_id=' . $branch_id . ' AND bn IN (' . implode(',', $bn_list) . '))';
+                    } else {
+                        // 如果 bn 数量超过限制，分批查询
+                        $bn_chunks = array_chunk($bn_list, $max_bn_count);
+                        foreach ($bn_chunks as $chunk) {
+                            $branch_filters[] = '(branch_id=' . $branch_id . ' AND bn IN (' . implode(',', $chunk) . '))';
+                        }
+                    }
+                }
+            }
+
+            if ($branch_filters) {
+                // 如果只有一个过滤条件，直接使用；否则用 OR 连接
+                if (count($branch_filters) == 1) {
+                    $filter[] = $branch_filters[0];
+                } else {
+                    $filter[] = '(' . implode(' OR ', $branch_filters) . ')';
+                }
+            }
+
+            unset($branch_bn_map, $branch_filters);
+        }
+        
+        // 3. create_time 条件（范围查询，索引第4列，放在最后）
         $filter[] = 'create_time>=' . $start_time;
         $filter[] = 'create_time<' . $end_time;
-
-        if ($type_id) {
-            $filter[] = 'type_id='.$type_id;
-        }
-
-        $filter[] = 'type_id in(' . implode(',',(array) $io_type ) . ')';
-
-        if ($branch_product) {
-            $branch_product_filter = array();
-            foreach ($branch_product as $key => $value) {
-                $branch_product_filter[] = 'branch_id=' . $value['branch_id'] . ' AND bn=' . $db->quote($value['bn']);
-            }
-
-            if ($branch_product_filter) {
-                $filter[] = '((' . implode(') OR (' , $branch_product_filter) . '))';
-            }
-
-            unset($branch_product_filter);
-        }
 
         $sql .= ' AND ' . implode(' AND ',$filter) . ' GROUP BY branch_id,bn';
 

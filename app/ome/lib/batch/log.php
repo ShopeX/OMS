@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class ome_batch_log{
     function getStatus($status){
         $status_array = array(
@@ -49,16 +48,14 @@ class ome_batch_log{
         return $db->select($sql);
     }
 
-    /**
-     * combineAgain
-     * @param mixed $arrOrderId ID
-     * @return mixed 返回值
-     */
     public function combineAgain($arrOrderId) {
         $allNum = count($arrOrderId);
-        $orders = app::get('ome')->model('orders')->getList('order_id,order_combine_idx,order_combine_hash', array('order_id'=>$arrOrderId));
+        $orders = app::get('ome')->model('orders')->getList('order_id,process_status,order_combine_idx,order_combine_hash', array('order_id'=>$arrOrderId));
         $hashOrder = array();
         foreach ($orders as $key => $order) {
+            if(!in_array($order['process_status'], array('unconfirmed', 'confirmed', 'splitting'))){
+                continue;
+            }
             // $hashOrder[$order['order_combine_hash']]['hash'] = $order['order_combine_hash'];
             // $hashOrder[$order['order_combine_hash']]['idx'] = $order['order_combine_idx'];
             // $hashOrder[$order['order_combine_hash']]['orders'][] = $order['order_id'];
@@ -82,16 +79,14 @@ class ome_batch_log{
         $this->insertLogMq($params, array('all_num'=>$allNum, 'source'=>'combineagain'));
     }
 
-    /**
-     * split
-     * @param mixed $arrOrderId ID
-     * @return mixed 返回值
-     */
     public function split($arrOrderId) {
         $allNum = count($arrOrderId);
-        $orders = app::get('ome')->model('orders')->getList('order_id,order_combine_idx,order_combine_hash', array('order_id'=>$arrOrderId));
+        $orders = app::get('ome')->model('orders')->getList('order_id,process_status,order_combine_idx,order_combine_hash', array('order_id'=>$arrOrderId));
         $hashOrder = array();
         foreach ($orders as $key => $order) {
+            if(!in_array($order['process_status'], array('unconfirmed', 'confirmed', 'splitting'))){
+                continue;
+            }
             // $hashOrder[$order['order_combine_hash']]['hash'] = $order['order_combine_hash'];
             // $hashOrder[$order['order_combine_hash']]['idx'] = $order['order_combine_idx'];
             // $hashOrder[$order['order_combine_hash']]['orders'][] = $order['order_id'];
@@ -115,13 +110,10 @@ class ome_batch_log{
         $this->insertLogMq($params, array('all_num'=>$allNum, 'source'=>'split'));
     }
 
-    /**
-     * insertLogMq
-     * @param mixed $params 参数
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function insertLogMq($params, $data) {
+        if(empty($params)){
+            return;
+        }
         $allNum = $data['all_num'];
         $taskType = $data['task_type'] ? $data['task_type'] : 'ordertaking';
         $source = $data['source'] ? $data['source'] : 'direct';

@@ -33,11 +33,12 @@ class console_ctl_admin_delivery_back extends desktop_controller {
             'target' => 'dialog::{width:600,height:300,title:\'导出\'}'
         );
        $base_filter = array(
-            'type' => 'normal',
-            'pause' => 'false',
-            'parent_id' => 0,
-            'disabled' => 'false',
-            'status' => array('return_back'),
+           'parent_id' => 0,
+           'status' => array('return_back'),
+           'type' => 'normal',
+           'disabled' => 'false',
+           'pause' => 'false',
+           'sync|bthan' => 0,
         );
         $base_filter = array_merge($base_filter,$_GET);
 
@@ -65,16 +66,15 @@ class console_ctl_admin_delivery_back extends desktop_controller {
 
     function cancel_list()
     {
-        $user = kernel::single('desktop_user');
-        
         $actions = array();
        
         $base_filter = array(
-            'type' => 'normal',
-            'pause' => 'false',
             'parent_id' => 0,
-            'disabled' => 'false',
             'status' => array('cancel','back'),
+            'type' => 'normal',
+            'disabled' => 'false',
+            'pause' => 'false',
+            'sync|bthan' => 0,
         );
         $base_filter = array_merge($base_filter,$_GET);
 

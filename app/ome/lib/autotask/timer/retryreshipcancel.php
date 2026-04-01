@@ -110,6 +110,12 @@ class ome_autotask_timer_retryreshipcancel extends ome_autotask_timer_common
                     );
                     $reshipMdl->update($updateSdf, array('reship_id'=>$reship['reship_id']));
                     kernel::single('console_reship')->releaseChangeFreeze($reship['reship_id']);
+                    // 退货单取消后的service扩展点
+                    foreach(kernel::servicelist('console.service.reship.cancel.after') as $object) {
+                        if(method_exists($object, 'cancel_reship_after')) {
+                            $object->cancel_reship_after($reship['reship_id']);
+                        }
+                    }
                     $msg = "取消成功";
                 } elseif ($rs['rsp'] == 'fail'){
                     $msg = "取消失败，返回:".$rs['msg'];

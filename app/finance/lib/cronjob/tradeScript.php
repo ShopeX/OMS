@@ -120,6 +120,8 @@ class finance_cronjob_tradeScript
         $arrShop = app::get('ome')->model('shop')->getList('shop_id, shop_type, name');
         $arrShop = array_column($arrShop, null, 'shop_id');
         $init_time = app::get('finance')->getConf('finance_setting_init_time');
+        $orders = array();
+        $sales_items = array();
         if ($list) {
             foreach ($list as $k => $v) {
                 if($init_time['ying_shou'] == 'settlement') {
@@ -129,6 +131,9 @@ class finance_cronjob_tradeScript
                 } else {
                     $sale_amount = $v['sale_amount'];
                 }
+                // 计算平台承担金额 = 结算金额 - 客户实付金额
+                $platform_amount = bcsub($v['settlement_amount'], $v['actually_amount'], 3);
+                
                 $sales[$v['sale_id']] = array(
                     'sale_time'     => $v['sale_time'],
                     'delivery_time' => $v['ship_time'],
@@ -136,6 +141,7 @@ class finance_cronjob_tradeScript
                     'sale_amount'   => bcsub($sale_amount, $v['cost_freight'], 3), //$v['sale_amount'],
                     'delivery_cost' => $v['cost_freight'],
                     'actually_amount' => $v['actually_amount'],
+                    'platform_amount' => $platform_amount,
                     'sale_bn'       => $v['sale_bn'],
                     'iostock_type'  => &$orders[$v['order_id']]['iostock_type'],
                     'sales_items'   => &$sales_items[$v['sale_id']],
@@ -191,12 +197,16 @@ class finance_cronjob_tradeScript
                     } elseif($init_time['ying_shou'] == 'actually') {
                         $v['sales_amount'] = $v['actually_amount'];
                     }
+                    // 计算平台承担金额 = 结算金额 - 客户实付金额
+                    $item_platform_amount = bcsub($v['settlement_amount'], $v['actually_amount'], 3);
+                    
                     $sales_items[$v['sale_id']][] = array(
                         'bn'           => $v['bn'],
                         'name'         => $v['name'],
                         'nums'         => $v['nums'],
                         'sales_amount' => $v['sales_amount'],
                         'actually_amount' => $v['actually_amount'],
+                        'platform_amount' => $item_platform_amount,
                         'shop_name'    => $sales[$v['sale_id']]['shop_name'],
                         'shop_id'      => $sales[$v['sale_id']]['shop_id'],
                         'order_id'     => $sales[$v['sale_id']]['order_id'],
@@ -554,6 +564,9 @@ class finance_cronjob_tradeScript
                 !$relate_order_bn and $relate_order_bn = $sdf['diff_order_bn'];
                 !$relate_order_bn and $relate_order_bn = $sdf['order_bn'];
 
+                // 计算平台承担金额 = 结算金额 - 客户实付金额（退款为负数）
+                $platform_amount = sprintf('%.3f', ($sdf['settlement_amount'] - $sdf['actually_amount']) * -1);
+
                 $ar_data = array(
                     'ar_bn'                 => $oBillAr->gen_ar_bn(),
                     'trade_time'            => $sdf['aftersale_time'],
@@ -572,6 +585,7 @@ class finance_cronjob_tradeScript
                     'charge_time'           => time(),
                     'money'                 => $money,
                     'actually_money'        => sprintf('%.2f', $sdf['actually_amount'] * -1),
+                    'platform_amount'       => $platform_amount,
                     'serial_number'         => $sdf['aftersale_bn'],
                     'unique_id'             => md5($sdf['aftersale_bn']),
                     'ar_type'               => 1,
@@ -590,7 +604,7 @@ class finance_cronjob_tradeScript
                     throw new Exception('插入ar单据表失败');
                 }
 
-                $aftersale_items = $mdlSalesAftersaleItems->getList('bn,num,refunded,settlement_amount,actually_amount,product_name', array(
+                $aftersale_items = $mdlSalesAftersaleItems->getList('bn,num,refunded,settlement_amount,actually_amount,platform_amount,product_name', array(
                     'aftersale_id' => $sdf['aftersale_id'],
                     'return_type' => ['return','refunded','refuse'],
                 ));
@@ -605,6 +619,9 @@ class finance_cronjob_tradeScript
                         ));
                     }
                     foreach ($aftersale_items as $v) {
+                        // 计算平台承担金额 = 结算金额 - 客户实付金额（退款为负数）
+                        $item_platform_amount = sprintf('%.3f', ($v['settlement_amount'] - $v['actually_amount']) * -1);
+                        
                         $ar_item = array(
                             'ar_id' => $ar_id,
                             'bn'    => $v['bn'],
@@ -612,6 +629,7 @@ class finance_cronjob_tradeScript
                             'num'   => $v['num'],
                             'money' => sprintf('%.2f', $v['refunded'] * -1),
                             'actually_money' => sprintf('%.2f', $v['actually_amount'] * -1),
+                            'platform_amount' => $item_platform_amount,
                         );
                         if($init_time['ying_tui'] == 'settlement' && $sdf['return_type'] != 'refund') {
                             $ar_item['money'] = sprintf('%.2f', $v['settlement_amount'] * -1);

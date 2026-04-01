@@ -22,7 +22,11 @@ class ome_event_trigger_shop_data_delivery_xiaomi extends ome_event_trigger_shop
         $this->__sdf = parent::get_sdf($delivery_id);
 
         if ($this->__sdf) {
-            $this->_get_order_all_objects_sdf($delivery_id);
+            // $this->_get_order_all_objects_sdf($delivery_id);
+            $this->_get_order_objects_sdf($delivery_id);
+
+            $this->_get_delivery_items_sdf($delivery_id);
+
         }
 
         return $this->__sdf;

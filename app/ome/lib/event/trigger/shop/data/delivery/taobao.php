@@ -34,24 +34,26 @@ class ome_event_trigger_shop_data_delivery_taobao extends ome_event_trigger_shop
            
             $this->_get_split_sdf($delivery_id);
             $this->__sdf['is_virtual'] = $this->_order_is_all_virtual($delivery_id);
-            if($this->__sdf['oid_list']) {
-                $delivery = $this->__deliverys[$delivery_id];
-                $shipMent = app::get('ome')->model('shipment_log')->getList('deliveryCode,oid_list', ['shopId'=>$delivery['shop_id'], 'orderBn'=>$this->__sdf['orderinfo']['order_bn']]);
-                foreach ($shipMent as $value) {
-                   if(!$value['oid_list'] || $this->__sdf['logi_no'] == $value['deliveryCode']) {
-                       continue;
-                   }
-                   $oid_list = explode(',', $value['oid_list']);
-                   foreach ($this->__sdf['oid_list'] as $k => $v) {
-                       if(in_array($v, $oid_list)) {
-                           unset($this->__sdf['oid_list'][$k]);
-                       }
-                   }
-                   if(empty($this->__sdf['oid_list'])) {
-                       return false;
-                   }
-                }
-            }
+            
+//            if($this->__sdf['oid_list']) {
+//                $delivery = $this->__deliverys[$delivery_id];
+//                $shipMent = app::get('ome')->model('shipment_log')->getList('deliveryCode,oid_list', ['shopId'=>$delivery['shop_id'], 'orderBn'=>$this->__sdf['orderinfo']['order_bn']]);
+//                foreach ($shipMent as $value) {
+//                   if(!$value['oid_list'] || $this->__sdf['logi_no'] == $value['deliveryCode']) {
+//                       continue;
+//                   }
+//                   $oid_list = explode(',', $value['oid_list']);
+//                   foreach ($this->__sdf['oid_list'] as $k => $v) {
+//                       if(in_array($v, $oid_list)) {
+//                           unset($this->__sdf['oid_list'][$k]);
+//                       }
+//                   }
+//                   if(empty($this->__sdf['oid_list'])) {
+//                       return false;
+//                   }
+//                }
+//            }
+            
             $this->__sdf['order_extend'] = $this->_get_order_extend($delivery_id);
             // BN对应的OID
             $oidList      = [];

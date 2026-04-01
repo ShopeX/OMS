@@ -187,7 +187,7 @@
         </menugroup>
         <menugroup name="库存" en="stock">
             <!-- <menu controller='admin_stockaccount'  action='index' permission='console_admin_interface_account_index' display='true' order="10000001">库存对账查询</menu> -->
-            <menu controller='admin_stock' action='search' permission='console_storage_stock_search' display='true' order='10000002'>货品库存查询</menu>
+            <menu controller='admin_stock' action='search' permission='console_storage_stock_search' display='true' order='10000002'>基础物料库存查询</menu>
             <menu controller='admin_branch_product' action='index' permission='console_branch_storage_stock' display='true' order='10000003'>仓库库存列表</menu>
             <menu controller='admin_stock' action='index' permission='console_storage_stock' display='true' order='10000004'>总库存列表</menu>
             <menu controller='admin_interface_iostocksearchs'  action='index' permission='console_admin_interface_iostocksearchs_index' display='true' order="10000300">库存异动查询</menu>

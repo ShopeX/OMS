@@ -61,6 +61,14 @@ class ome_order_import  implements omecsv_data_split_interface
             if($v['lucky_falg']){
                 $luckyBagLib->saveLuckyBagUseLogs($v);
             }
+            
+            //[SAP创建]调用service进行SAP创建
+            foreach(kernel::servicelist('ome.service.order.create.after') as $object)
+            {
+                if(method_exists($object, 'after_create')){
+                    $object->after_create($v);
+                }
+            }
         }
         return false;
     }

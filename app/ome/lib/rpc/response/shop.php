@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
 /**
  * 前端店铺绑定关系处理
  * @author ome
@@ -198,9 +197,8 @@ class ome_rpc_response_shop extends ome_rpc_response
         $data     = $_POST;
         $certi_ac = $data['certi_ac'];
         unset($data['certi_ac']);
-        $sign  = base_certificate::getCertiAC($data, array(
-            'exclude_keys' => array('certi_ac', 'certificate_id')
-        ));
+        $token = base_certificate::get('token');
+        $sign  = $this->genSign($data, $token);
         if ($certi_ac != $sign) {
             echo json_encode(array('res' => 'fail', 'msg' => '签名错误'));
             exit;
@@ -222,6 +220,19 @@ class ome_rpc_response_shop extends ome_rpc_response
         exit;
     }
 
+    public function genSign($params, $token)
+    {
+        ksort($params);
+        $str = '';
+        foreach ($params as $key => $value) {
+
+            if ($key != 'certi_ac' && $key != 'certificate_id') {
+                $str .= $value;
+            }
+        }
+        $signString = md5($str . $token);
+        return $signString;
+    }
 
     private function _save_ipay_channel($shop_id, $node_id, $node_type, $status)
     {

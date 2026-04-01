@@ -84,6 +84,7 @@ $db['event_notify'] = array(
                 'sms'   => '短信',
                 'email' => '邮箱',
                 'workwx'=>'企微',
+                'zhannei'=>'站内',
             ),
             'default'         => 'email',
             'label'           => '发送类型',

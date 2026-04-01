@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 $db['aftersale_items'] = array(
   'columns' =>
   array(
@@ -47,19 +46,19 @@ $db['aftersale_items'] = array(
       'type' => 'varchar(200)',
       'editable' => false,
       'required' => false,
-      'comment' => '货号',
+      'comment' => '基础物料编码',
     ),
     'product_name' =>
     array(
       'type' => 'varchar(200)',
       'editable' => false,
-      'comment' => '货品名称',
+      'comment' => '基础物料名称',
     ),
     'product_id' =>
     array (
       'type' => 'int unsigned',
       'editable' => false,
-      'comment' => '货品ID',
+      'comment' => '基础物料ID',
     ),
     'apply_num' =>
     array(

@@ -48,7 +48,7 @@ $db['products']=array (
     'bn' =>
     array (
       'type' => 'varchar(30)',
-      'label' => '货号',
+      'label' => '基础物料编码',
       'width' => 150,
       'searchtype' => 'has',
       'filtertype' => 'normal',
@@ -62,7 +62,7 @@ $db['products']=array (
       'type' => 'varchar(200)',
       'required' => true,
       'default' => '',
-      'label' => '货品名称',
+      'label' => '基础物料名称',
       'width' => 190,
       'searchtype' => 'has',
       'filtertype' => 'normal',
@@ -278,7 +278,7 @@ $db['products']=array (
       ),
       'default' => 'normal',
       'width' => 100,
-      'label' => '货品类型',
+      'label' => '基础物料类型',
       'in_list' => true,
       'default_in_list' => true,
       'order' => '2',

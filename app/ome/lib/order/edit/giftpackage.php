@@ -182,6 +182,13 @@ class ome_order_edit_giftpackage{
                         $tmp_obj[$k]['delete'] = 'false';
                         $tmp_obj[$k]['obj_type'] = 'giftpackage';
                         $tmp_obj[$k]['goods_id'] = $objInfo['goods_id'];
+                        $tmp_obj[$k]['divide_order_fee'] = sprintf('%.2f', $objInfo['divide_order_fee'] * $num[$n] / $objInfo['quantity']);
+                        $tmp_obj[$k]['settlement_amount'] = sprintf('%.2f', $objInfo['settlement_amount'] * $num[$n] / $objInfo['quantity']);
+                        $tmp_obj[$k]['actually_amount'] = sprintf('%.2f', $objInfo['actually_amount'] * $num[$n] / $objInfo['quantity']);
+                        $tmp_obj[$k]['platform_pay_amount'] = sprintf('%.2f', $tmp_obj[$k]['divide_order_fee'] - $tmp_obj[$k]['actually_amount']);
+                        $tmp_obj[$k]['platform_amount'] = sprintf('%.2f', $tmp_obj[$k]['settlement_amount'] - $tmp_obj[$k]['divide_order_fee']);
+                        $tmp_obj[$k]['part_mjz_discount'] = sprintf('%.2f', $tmp_obj[$k]['sale_price'] - $tmp_obj[$k]['divide_order_fee']);
+                        $tmp_obj[$k]['oid'] = $objInfo['oid'];
 
                     }else {
                         if ($objInfo['delete'] == 'false'){

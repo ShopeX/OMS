@@ -246,7 +246,7 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
         
         // 退款申请单
         $refundApplyModel = app::get('ome')->model('refund_apply');
-        $refundApply = $refundApplyModel->getList('apply_id,return_id,refund_apply_bn,refund_refer,status,money,payment,memo,addon,outer_lastmodify,reship_id', array('refund_apply_bn'=>$refundApplyBn,'shop_id'=>$shopId), 0, 1);
+        $refundApply = $refundApplyModel->getList('apply_id,return_id,refund_apply_bn,refund_refer,status,money,payment,memo,addon,outer_lastmodify,reship_id,bool_type', array('refund_apply_bn'=>$refundApplyBn,'shop_id'=>$shopId), 0, 1);
         $sdf['refund_version_change'] = false;
         if($refundApply) {
             $sdf['refund_apply'] = $refundApply[0];
@@ -256,6 +256,10 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
             $refundApplyModel->update([
                 'source_status'   => kernel::single('ome_refund_func')->get_source_status($sdf['source_status'])], 
                 ['apply_id'=>$sdf['refund_apply']['apply_id']]);
+            //退款申请单被标记为仅退款不发起拦截
+            if($sdf['refund_to_returnProduct'] && ($sdf['refund_apply']['bool_type'] & ome_refund_bool_type::__ONLY_REFUND)) {
+                $sdf['refund_to_returnProduct'] = false;
+            }
         }
         
         // 退款单
@@ -333,7 +337,7 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
     protected function _returnProductReship($returnProductId, $orderId) {
         $rs = array();
         $oReship = app::get('ome')->model('reship');
-        $field = 'reship_id,reship_bn,return_id,is_check,return_logi_name,return_logi_no,outer_lastmodify,branch_id,return_type,status,change_order_id,jsrefund_flag';
+        $field = 'reship_id,reship_bn,return_id,is_check,return_logi_name,return_logi_no,outer_lastmodify,branch_id,return_type,status,change_order_id,jsrefund_flag,flag_type';
         $reship = $oReship->getList($field, array('return_id' => $returnProductId), 0, 1);
         if($reship) {
             $rs['reship'] = $reship[0];
@@ -407,6 +411,7 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
         if ($delivery) {
             $sdf['delivery_id'] = $delivery['delivery_id'];
             $sdf['branch_id'] = $delivery['branch_id'];
+            $sdf['delivery_logistics_no'] = $delivery['logi_no'];
             if($sdf['refund_to_returnProduct']) {
                 $sdf['logistics_company'] = $delivery['logi_name'];
                 $sdf['logistics_no'] = $delivery['logi_no'];

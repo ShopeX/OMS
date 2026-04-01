@@ -1,0 +1,13 @@
+<app>
+  <name>ticket</name>
+  <description>工单管理系统</description>
+  <author>
+    <name>shopex开发团队</name>
+    <email>dev@shopex.cn</email>
+    <url>https://www.shopex.cn</url>
+  </author>
+  <version>1.0</version>
+  <license>shopex license</license>
+  <parent_model_class>dbeav_model</parent_model_class>
+  <depends></depends>
+</app> 

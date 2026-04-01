@@ -29,62 +29,83 @@ class eccommon_regions_mainland
         $this->db = kernel::database();
     }
 
+    function insert_area_arr($area_arr){
+        $area_str = ""; $max_region_id = NULL;
+        foreach($area_arr as $k => $v){
+            $v[1] = "'".$v[1]."'";
+            $v[3] = "'".$v[3]."'";
+            $v[5] = "'".$v[5]."'";
+            $area_str .= "(".implode(",", $v)."),";
+
+            $max_region_id = max($max_region_id, $v[0]);
+        }
+        $area_str_sql = substr($area_str, 0, -1);
+        $sql = "REPLACE INTO `{$this->db->prefix}eccommon_regions` (`region_id`, `package`, `p_region_id`,`region_path`,`region_grade`, `local_name`, `haschild`) VALUES $area_str_sql";
+        $this->db->exec($sql);
+
+        // 清空非默认的
+        if (intval($max_region_id)) {
+            $this->db->exec("DELETE FROM `{$this->db->prefix}eccommon_regions` WHERE region_id > ".$max_region_id);
+            $affect_rows = $this->db->affect_row();
+        }
+
+    }
+
     function install(){
         $file = $this->app->app_dir.'/'.$this->setting['source'];
-        $basename = basename($file,'.txt');
-        if($handle = fopen($file,"r")){
-            $i = 0;
-            $sql = "INSERT INTO `sdb_eccommon_regions` (`region_id`, `package`, `p_region_id`,`region_path`,`region_grade`, `local_name`, `p_1`, `p_2`,`haschild`) VALUES ";
-            while ($data = fgets($handle, 1000)){
-                $data = trim($data);
-                if(substr($data, -2) == '::'){
-                    if($aSql){
-                        $sqlInsert = $sql.implode(',', $aSql).";";
-                        if(!$this->db->exec($sqlInsert)){
-                            trigger_error($this->db->errorinfo(),E_USER_ERROR);
-                            return false;
+        // 检查是否有实现地区安装扩展点的 service，并调用
+        foreach(kernel::servicelist('eccommon.service.regions.mainland.install') as $service){
+            if(method_exists($service, 'before_install')){
+                $new_file = $service->before_install($file);
+                // 如果返回了新路径，则使用新路径
+                if ($new_file && $new_file != $file) {
+                    $file = $new_file;
+                }
+            }
+        }
+
+        $content = file_get_contents($file);
+        preg_match("/---.*?---/", $content, $ret);
+        $json_string = str_replace($ret[0], "", $content);
+        $data = json_decode($json_string, true);
+        if($data){
+            $area_arr = array();
+            foreach($data as $p => $cities){
+                $province = explode(",", $p);
+                $province_id = $province[0];
+                $province_pid = "NULL";
+                $province_path = ','.$province[0].',';
+                $province_grade = 1;
+                $province_name = $province[1];
+                $province_haschild = 1;
+                $area_arr[] = array($province_id, 'mainland', $province_pid, $province_path, $province_grade, $province_name, $province_haschild);
+                foreach ($cities as $c => $qus){
+                    $city = explode(",", $c);
+                    $city_id = $city[0];
+                    $city_pid = $province_id;
+                    $city_path = ','.$province_id.','.$city[0].',';
+                    $city_grade = 2;
+                    $city_name = $city[1];
+                    if($qus){
+                        $city_haschild = 1;
+                        $area_arr[] = array($city_id, 'mainland', $city_pid, $city_path, $city_grade, $city_name, $city_haschild);
+                        foreach ($qus as $q => $v){
+                            $qu = explode(",", $q);
+                            $qu_id = $qu[0];
+                            $qu_pid = $city_id;
+                            $qu_path = ','.$province_id.','.$city[0].','.$qu[0].',';
+                            $qu_grade = 3;
+                            $qu_name = $qu[1];
+                            $qu_haschild = 0;
+                            $area_arr[] = array($qu_id, 'mainland', $qu_pid, $qu_path, $qu_grade, $qu_name, $qu_haschild);
                         }
-                        unset($path);
-                    }
-                    $i++;
-                    $path[]=$i;
-                    $regionPath=",".implode(",",$path).",";
-                    $aSql = array();
-                    $aTmp = explode('::', $data);
-                    $aSql[] = "(".$i.", '{$this->key}', NULL, '".$regionPath."', '".count($path)."', '".$aTmp[0]."', NULL, NULL,1)";
-                    $f_pid = $i;
-                }else{
-                    if(strstr($data, ':')){
-                        $i++;
-                        $aTmp = explode(':', $data);
-                        unset($sPath);
-                        $sPath[]=$f_pid;
-                        $sPath[]=$i;
-                        $regionPath=",".implode(",",$sPath).",";
-                        if(trim($aTmp[1])){
-                            $aSql[] = "(".$i.", '{$this->key}', ".intval($f_pid).", '".$regionPath."', '".count($sPath)."', '".$aTmp[0]."', NULL, NULL,1)";
-                        }else{
-                            $aSql[] = "(".$i.", '{$this->key}', ".intval($f_pid).", '".$regionPath."', '".count($sPath)."', '".$aTmp[0]."', NULL, NULL,0)";
-                        }
-                        if(trim($aTmp[1])){
-                            $pid = $i;
-                            $aTmp = explode(',', trim($aTmp[1]));
-                            foreach($aTmp as $v){
-                                $i++;
-                                $tmpPath=$regionPath.$i.",";
-                                $grade = count(explode(",",$tmpPath))-2;
-                                $aSql[] = "(".$i.", '{$this->key}', ".intval($pid).", '".$tmpPath."', '".$grade."', '".$v."', NULL, NULL,0)";
-                            }
-                        }
-                    }elseif($data){
-                        $i++;
-                        $tmpPath=$regionPath.$i.",";
-                        $grade = count(explode(",",$tmpPath))-2;
-                        $aSql[] = "(".$i.", '{$this->key}', ".intval($f_pid).", '".$tmpPath."','".$grade."','".$data."', NULL, NULL,0)";
+                    }else{
+                        $city_haschild = 0;
+                        $area_arr[] = array($city_id, 'mainland', $city_pid, $city_path, $city_grade, $city_name, $city_haschild);
                     }
                 }
             }
-            fclose($handle);
+            $this->insert_area_arr($area_arr);
             return true;
         }else{
             return false;

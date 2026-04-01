@@ -1,0 +1,44 @@
+<style type="text/css">
+    .gridlist tr th{width: 100px;height: 30px;text-align: right;}
+</style>
+<form action='index.php?app=financebase&ctl=admin_shop_settlement_import&act=doImport&act=treat' method='post' target="uploadframe" enctype="multipart/form-data" id="import_form" class="tableform">
+   
+    <h3>导入小红书账单</h3>
+    <div class="division" >
+        <table border="0" cellspacing="0" class="gridlist" cellpadding="0" style="width:98%">
+            <input type='hidden' name='type' value="xhs"/>
+            <tr>
+                <th width="10%">导入文件：</th>
+                <td width="15%">
+                    <input type='file' name='import_file' accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" id='ImportCSV'/>
+                </td>
+                <td width="15%">
+                    <select name="shop_id" vtype="required">
+                      <{foreach from=$shop_list_xhs item=item}>
+                        <option value="<{$item.shop_id}>"><{$item.name}></option>
+                        <{/foreach}>
+                    </select>
+                </td>
+                <td width="35%">
+                    <h4>上传文件,支持(
+                        <span style='color:red;font-size:16px;'>.csv</span>、
+                        <span style='color:red;font-size:16px;'>.xls</span>、
+                        <span style='color:red;font-size:16px;'>.xlsx</span>
+                        )格式！<br>
+                        <span style='color:blue;'>模板字段：订单号、国补金额、SKU、数量、账单日期</span>
+                    </h4>
+                </td>
+                <td class="table-action">
+                    <{if $init_time}>
+                        <a onclick="javascript:window.location.href='/app/financebase/statics/import/xhs.xlsx';" class="btn" style="margin-left:0px;padding-left:0px;"><span><span>导出模板</span></span></a>
+                        <br>
+                        <{button label=$___desktop="导入"|t:'desktop' id="ImportBtn" type="submit"}>
+                    <{else}>
+                        <a href="index.php?app=finance&ctl=setting_init&act=index" target="dialog::{width:550,height:400,resizeable:false,title:'账期设置'}" class="btn" style="margin-left:0px;padding-left:0px;"><span><span>请先账单设置</span></span></a>
+                    <{/if}>
+                </td>
+            </tr>
+        </table>
+        <{toinput from=$data}>
+    </div>
+</form>

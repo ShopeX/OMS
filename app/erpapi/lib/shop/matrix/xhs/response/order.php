@@ -136,6 +136,8 @@ class erpapi_shop_matrix_xhs_response_order extends erpapi_shop_response_order
         $author_info = [];
         // 订单达人
         foreach ($this->_ordersdf['order_objects'] as $ook => $oov) {
+            $arrField = explode('/', $this->_ordersdf['coupon_actuallypay_field']);
+            $this->_ordersdf['order_objects'][$ook]['actually_amount'] = current($oov['order_items'])[$arrField[0]][$arrField[1]] / $this->_ordersdf['coupon_actuallypay_field_unit'];
             foreach ($oov['order_items'] as $oik => $oiv) {
                 if (isset($oiv['extend_item_list']) && $oiv['extend_item_list']) {
                     if ($oiv['extend_item_list']['kol_id']) {
@@ -156,6 +158,80 @@ class erpapi_shop_matrix_xhs_response_order extends erpapi_shop_response_order
             $this->_ordersdf['extend_field']['is_host']     = true;
             $this->_ordersdf['extend_field']['author_info'] = $author_info;
         }
+
+        // 优惠券数据处理
+        $coupon = [];
+        $oidObject = [];
+        foreach ($this->_ordersdf['order_objects'] as $object) {
+            if ($object['divide_order_fee'] > 0) {
+                $oidObject[$object['oid']] = $object;
+            }
+        }
+
+        // 获取支付时间
+        $pay_time = '';
+        if (isset($this->_ordersdf['payment_detail']['pay_time'])) {
+            $pay_time = $this->_ordersdf['payment_detail']['pay_time'];
+        } elseif (isset($this->_ordersdf['pay_time'])) {
+            $pay_time = $this->_ordersdf['pay_time'];
+        }
+
+        // 优先从 coupon_field.items 中提取优惠信息
+        if (isset($this->_ordersdf['coupon_field']['items']) && is_array($this->_ordersdf['coupon_field']['items'])) {
+
+            // 处理销售单的平台优惠，将3.0置为1.0
+            if (isset($this->_ordersdf['extend_field']['version']) && $this->_ordersdf['extend_field']['version'] == '3.0') {
+                $this->_ordersdf['extend_field']['version'] = '1.0';
+                $this->_ordersdf['extend_field']['version_reset_memo'] = '处理销售单的平台优惠，将3.0置为1.0';
+            }
+            foreach ($this->_ordersdf['coupon_field']['items'] as $couponItem) {
+                // 优先使用 oid，如果没有则使用 sku_id
+                $oid = isset($couponItem['oid']) ? $couponItem['oid'] : (isset($couponItem['sku_id']) ? $couponItem['sku_id'] : '');
+                if (empty($oid)) {
+                    continue;
+                }
+                
+                $object = isset($oidObject[$oid]) ? $oidObject[$oid] : null;
+                // 如果通过 oid 找不到，尝试通过 sku_id 在 order_items 中查找
+                if (empty($object) && isset($couponItem['sku_id'])) {
+                    foreach ($this->_ordersdf['order_objects'] as $obj) {
+                        foreach ($obj['order_items'] as $item) {
+                            if (isset($item['sku_id']) && $item['sku_id'] == $couponItem['sku_id']) {
+                                $object = $obj;
+                                break 2;
+                            }
+                        }
+                    }
+                }
+                
+                if (empty($object)) {
+                    continue;
+                }
+
+                // 平台优惠
+                $platform_amount = isset($couponItem['platform_discount_detail']['total_amount']) 
+                    ? floatval($couponItem['platform_discount_detail']['total_amount']) 
+                    : 0;
+                if ($platform_amount > 0) {
+                    $coupon[] = array(
+                        'num'           => $object['quantity'],
+                        'material_bn'   => $object['bn'],
+                        'oid'           => $object['oid'],
+                        'material_name' => $object['name'],
+                        'type'          => 'pingTaiChengDanYouHuiQuan',
+                        'type_name'     => '小红书承担的优惠',
+                        'coupon_type'   => '1',
+                        'amount'        => $platform_amount / $object['quantity'],
+                        'total_amount'  => $platform_amount,
+                        'create_time'   => kernel::single('ome_func')->date2time($this->_ordersdf['createtime']),
+                        'pay_time'      => $pay_time ? kernel::single('ome_func')->date2time($pay_time) : 0,
+                        'shop_type'     => 'xhs',
+                        'source'        => 'push',
+                    );
+                }
+            }
+        }
+        $this->_ordersdf['coupon_data'] = $coupon;
     }
     
     /**

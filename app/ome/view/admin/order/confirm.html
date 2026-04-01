@@ -682,6 +682,12 @@
         // 更新选中的门店仓
         $('selected_store_name').set('text', store_name);
         
+        // 显示更多门店提示
+        var moreHint = $('more_stores_hint');
+        if(moreHint){
+            moreHint.setStyle('display', 'inline');
+        }
+        
         // 更新门店列的 data-storeid 与高亮
         var header = $('storeBranchHeader');
         if(header){
@@ -752,27 +758,33 @@
                          storeSelector.style.color = '#3367AC';
                      }
                      
-                     // 切换到大仓时，重置门店仓选择器为默认状态
-                     try{
-                         var storeSelector = $('store_branch_selector');
-                         if(storeSelector){
-                             // 重置门店仓选择器显示的名称
-                             $('selected_store_name').set('text', '可选择O2O门店');
-                             
-                             // 重置门店仓选择器的样式（蓝色文字）
-                             storeSelector.style.color = '#3367AC';
-                         }
-                         
-                         // 重置门店列的选中状态
-                         var header = $('storeBranchHeader');
-                         if(header){
-                             header.removeClass('selected');
-                             header.set('data-storeid', '');
-                         }
-                         
-                         // 重置门店库存列为0
-                         __resetStoreColumnToZero();
-                     }catch(e){}
+                    // 切换到大仓时，重置门店仓选择器为默认状态
+                    try{
+                        var storeSelector = $('store_branch_selector');
+                        if(storeSelector){
+                            // 重置门店仓选择器显示的名称
+                            $('selected_store_name').set('text', '可选择O2O门店');
+                            
+                            // 隐藏更多门店提示
+                            var moreHint = $('more_stores_hint');
+                            if(moreHint){
+                                moreHint.setStyle('display', 'none');
+                            }
+                            
+                            // 重置门店仓选择器的样式（蓝色文字）
+                            storeSelector.style.color = '#3367AC';
+                        }
+                        
+                        // 重置门店列的选中状态
+                        var header = $('storeBranchHeader');
+                        if(header){
+                            header.removeClass('selected');
+                            header.set('data-storeid', '');
+                        }
+                        
+                        // 重置门店库存列为0
+                        __resetStoreColumnToZero();
+                    }catch(e){}
                      var branch_id = $('dataNode').getParent().getElement('th.selected') ? $('dataNode').getParent().getElement('th.selected').get('data-storeid') : '';
                      // 切换到大仓后，重置门店库存列为 0
                      __resetStoreColumnToZero();
@@ -1371,6 +1383,12 @@
                                  var storeSelector = $('store_branch_selector');
                                  if(storeSelector){
                                      $('selected_store_name').set('text', storeName);
+                                     
+                                     // 显示更多门店提示
+                                     var moreHint = $('more_stores_hint');
+                                     if(moreHint){
+                                         moreHint.setStyle('display', 'inline');
+                                     }
                                      
                                      // 设置门店仓选择器的选中状态样式（白色文字）
                                      storeSelector.style.color = '#fff';

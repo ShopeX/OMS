@@ -56,7 +56,7 @@ class financebase_autotask_task_type_billImport extends financebase_autotask_tas
 
         if ($task_info['queue_data']['is_last'] && $begin_time = strtotime($task_info['queue_data']['bill_date'])) {
             // 打到对应的账期
-            finance_monthly_report::updateMonthlyAmount(array ('begin_time' => $begin_time));
+            finance_monthly_report::updateMonthlyAmount(array ('begin_time|nequal' => $begin_time));
         }
 
         if($errmsg){

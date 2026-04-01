@@ -27,6 +27,9 @@ class erpapi_shop_response_process_order
     //店铺ID
     public $_shop_id = null;
     
+    // 是否更新订单中的商品
+    protected $_is_update_change_goods = false;
+    
     /**
      * undocumented function
      * 
@@ -75,7 +78,6 @@ class erpapi_shop_response_process_order
         
         $errorinfo = '';
         $rs = app::get('ome')->model('orders')->create_order($ordersdf, $errorinfo);
-        
         if (!$rs) {
             if (!$errorinfo) {
                 $errorinfo = kernel::database()->errorinfo();
@@ -102,7 +104,7 @@ class erpapi_shop_response_process_order
         // 更新订单下载时间
         $shopModel = app::get('ome')->model('shop');
         $shopModel->update(array('last_download_time'=>time()), array('shop_id'=>$ordersdf['shop_id']));
-
+        
         if($service = kernel::servicelist('service.order')){
             foreach ($service as $instance){
                 if (method_exists($instance, 'after_add_order')){
@@ -110,8 +112,16 @@ class erpapi_shop_response_process_order
                 }
             }
         }
-
-        #抖音全链路 已转单
+        
+        //[SAP创建]调用service进行SAP创建
+        foreach(kernel::servicelist('ome.service.order.create.after') as $object)
+        {
+            if(method_exists($object, 'after_create')){
+                $object->after_create($ordersdf);
+            }
+        }
+        
+        // 抖音全链路 已转单
         kernel::single('ome_event_trigger_shop_order')->order_message_produce($ordersdf['order_id'],'build');
         
         # 闪购订单确认
@@ -163,7 +173,23 @@ class erpapi_shop_response_process_order
             $ordersdf['shop_id'] = $this->_shop_id;
         }
         
+        // [更新]预约订单的相关状态
+        $error_msg = '';
+        kernel::single('ome_order_reservation')->operateReservationOrder($ordersdf, $error_msg);
         
+        // 是否订单商品被修改
+        $is_change_order_goods = false;
+        if($this->_is_update_change_goods){
+            $is_change_order_goods = true;
+        }
+        
+        //[SAP更新]调用service进行SAP更新
+        foreach(kernel::servicelist('ome.service.order.update.after') as $object)
+        {
+            if(method_exists($object, 'afterUpdateOrder')){
+                $object->afterUpdateOrder($ordersdf['order_id'], $is_change_order_goods);
+            }
+        }
         return array('rsp' => 'succ','msg'=>$msg,);
     }
 
@@ -174,7 +200,7 @@ class erpapi_shop_response_process_order
      * @author 
      * */
     private function _afterUpdate($ordersdf)
-    {   
+    {
         $orderModel = app::get('ome')->model('orders');
 
         // 如果订单已经拆分
@@ -189,10 +215,47 @@ class erpapi_shop_response_process_order
         
         //shop_id
         $this->_shop_id = $tgorder['shop_id'];
+
+        //检测source_status变化，如果从WAIT_SELLER_SEND_GOODS变为其他状态，触发重新审单
+        // 注意：在luban/response/order.php的_operationSel()中，source_status已经被更新到数据库
+        // 所以这里需要从$ordersdf中获取更新前的old_source_status和更新后的new_source_status进行比较
+        if (isset($ordersdf['old_source_status']) && isset($ordersdf['new_source_status'])) {
+            $oldSourceStatus = $ordersdf['old_source_status'];
+            $newSourceStatus = $ordersdf['new_source_status'];
+            
+            // 只处理 Luban 订单
+            if ($tgorder['shop_type'] == 'luban' && $tgorder['createway'] == 'matrix') {
+                // 如果从 WAIT_SELLER_SEND_GOODS 变为其他状态
+                if ($oldSourceStatus == 'WAIT_SELLER_SEND_GOODS' 
+                    && $newSourceStatus != 'WAIT_SELLER_SEND_GOODS') {
+                    
+                    // 触发重新审单（延迟5分钟）
+                    if ($tgorder['status'] == 'active' 
+                        && in_array($tgorder['process_status'], array('unconfirmed', 'confirmed'))
+                        && $tgorder['pay_status'] == '1' 
+                        && $tgorder['ship_status'] == '0') {
+                        
+                        //订单恢复暂停状态
+                        $orderModel->renewOrder($tgorder['order_id'], '平台订单状态更新自动');
+                        
+                        //延迟5分钟自动重新路由审核订单
+                        $sdf = array(
+                            'op_type' => 'timing_confirm', 
+                            'timing_time' => strtotime('5 minutes'), 
+                            'memo' => '平台订单状态从WAIT_SELLER_SEND_GOODS更新为'.$newSourceStatus.'，触发重新路由', 
+                            'is_check_last_time' => true
+                        );
+                        kernel::single('ome_order')->auto_order_combine($tgorder['order_id'], $sdf);
+                    }
+                }
+            }
+        }
         
         //是否允许自动审核订单
         $is_review_order = false;
+        $cnAuto = 'false'; // 未开启自动审单的情况下是否允许自动审核订单
         $renewMemo = '';
+        
         // 写一下日志
         $write_log = array();
         if ($ordersdf['consignee']) {
@@ -204,7 +267,9 @@ class erpapi_shop_response_process_order
             );
             
             $is_review_order = true;
+            $is_change_address = true;
             $renewMemo .= '地址变更';
+            $cnAuto = 'true';
         }
 
         if ($ordersdf['mark_text']) {
@@ -238,6 +303,9 @@ class erpapi_shop_response_process_order
             );
             
             $is_review_order = false;
+            
+            // 订单商品信息修改
+            $this->_is_update_change_goods = true;
         }
 
         if ($ordersdf['order_bool_type'] & ome_order_bool_type::__UPDATEITEM_CODE) {
@@ -249,6 +317,7 @@ class erpapi_shop_response_process_order
             );
             
             $is_review_order = true;
+            $is_change_goods = true;
             $renewMemo .= 'sku替换';
         }
 
@@ -325,11 +394,12 @@ class erpapi_shop_response_process_order
                 $orderModel->rebackDeliveryByOrderId($tgorder['order_id']);
                 
                 //订单恢复暂停状态
-                $orderModel->renewOrder($tgorder['order_id']);
+                $orderModel->renewOrder($tgorder['order_id'], '平台更新订单,撤消发货单成功');
                 
                 //延迟5分钟自动重新路由审核订单
                 //@todo：防止有退款，并发导致明细未删除生成了发货单;
                 $sdf = array('op_type'=>'timing_confirm', 'timing_time'=>strtotime('5 minutes'), 'memo'=>'更新订单撤销发货单后重新路由', 'is_check_last_time'=>true);
+                $cnAuto == 'true' && $sdf['cnAuto'] = 'true';
                 kernel::single('ome_order')->auto_order_combine($tgorder['order_id'], $sdf);
                 
                 return true;
@@ -354,9 +424,20 @@ class erpapi_shop_response_process_order
                     //延迟5分钟自动重新路由审核订单
                     //@todo：防止有退款，并发导致明细未删除生成了发货单;
                     $sdf = array('op_type'=>'timing_confirm', 'timing_time'=>strtotime('5 minutes'), 'memo'=>'订单更新后重新路由', 'is_check_last_time'=>true);
+                    
+                    //@todo：当系统设置里未开启[是否开启系统自动审核]时，未调用延迟自动审核;
+                    $sdf['cnAuto'] = 'true';
+                    
                     kernel::single('ome_order')->auto_order_combine($tgorder['order_id'], $sdf);
                 }
             }
+        }
+        
+        // [大家电]收货人信息或SKU商品变更,重新进行预约
+        if($is_change_address){
+            kernel::single('ome_order_reservation')->againReservation($tgorder['order_id'], 'address_change');
+        }elseif($is_change_goods){
+            kernel::single('ome_order_reservation')->againReservation($tgorder['order_id'], 'goods_change');
         }
         
         return true;
@@ -581,6 +662,9 @@ class erpapi_shop_response_process_order
 
         kernel::single('ome_batch_order')->create_refund($sdf['order_id']);
         
+        // [更新]预约订单取消状态
+        $error_msg = '';
+        kernel::single('ome_order_reservation')->operateReservationOrder($sdf, $error_msg);
         
         $msg = '订单取消成功';
 

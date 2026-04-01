@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 $db['delivery']=array (
   'columns' =>
   array (
@@ -749,7 +748,7 @@ $db['delivery']=array (
       'editable' => false,
       'width' => 110,
       'in_list' => true,
-      'default_in_list' => true,
+      'default_in_list' => false,
     ),
     'is_wms_gift' => array(
         'type' => 'bool',

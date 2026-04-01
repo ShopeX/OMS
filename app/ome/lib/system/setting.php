@@ -71,7 +71,7 @@ class ome_system_setting{
             'ome.order.failtime',
             'ome.api_log.clean_time',
             'ome.order.unconfirmtime',
-        	'ome.product.serial.merge',
+            'ome.product.serial.merge',
             //'ome.delivery.consign',
             //'ome.delivery.check_type',
             'ome.delivery.check_show_type',
@@ -178,8 +178,15 @@ class ome_system_setting{
             'ome.reship.refund.only.reship',//未签收时售后仅退款转售后退货
             'stockdump.auto.finish', // 库内转储，同wms仓是否自动完成
             'ome.get.all.status.order',//获取全状态订单
+            'ome.combine.manual.merge', //是否手工合单
+            'ome.order.get.payment', //获取实付
+            'ome.call.mobile.group', //报备外呼主叫号码组
         );
-
+        
+        // setting
+        $setting = [];
+        
+        // loading
         @include(app::get('ome')->app_dir.'/setting.php');
 
         $all_settings = array_merge($all_settings, (array) array_keys($setting));

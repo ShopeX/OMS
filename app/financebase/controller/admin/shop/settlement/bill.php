@@ -61,53 +61,187 @@ class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
         kernel::single('financebase_base')->set_params($_POST)->display();
     }
 
+    /**
+     * 获取平台配置（统一配置，一处修改，处处生效）
+     * 
+     * 字段说明：
+     * - name: 平台显示名称，用于卡片标题和弹层标题
+     * - icon: 平台图标文字，显示在卡片中央
+     * - shop_filter: 店铺筛选条件数组，用于筛选店铺列表
+     *   - 格式：array('shop_type' => array(...), 'business_type' => array(...))
+     *   - shop_type: 店铺类型数组，如 array('taobao','tmall')
+     *   - business_type: 业务类型数组（可选），如 array('maochao')
+     *   - 'all': 特殊值，表示支持所有店铺类型
+     * - order: 排序权重，数值越小排序越靠前
+     * - template_file: 模板文件配置
+     *   - 单个模板：字符串格式，如 'alipay.xlsx'
+     *   - 多个模板：数组格式，如 array('下载正向模版' => 'xxx.xlsx', '下载逆向模版' => 'yyy.xlsx')
+     *   - 数组格式时，key 为下载链接显示文字，value 为模板文件名
+     * - template_fields: 模板字段说明（可选），显示在弹层顶部
+     * - file_format: 支持的文件格式（可选），只配置括号内容，如 '.xls、 .xlsx'
+     */
+    private function getPlatformConfig() {
+        return array(
+            'alipay' => array(
+                'name' => '支付宝账单导入',
+                'icon' => '支付宝',
+                'shop_filter' => array('shop_type' => array('taobao','tmall')),
+                'order' => '100',
+                'template_file' => 'alipay.xlsx'
+            ),
+            'jd' => array(
+                'name' => '京东日账单导入',
+                'icon' => '京东日账单',
+                'shop_filter' => array('shop_type' => array('360buy')),
+                'order' => '200',
+                'template_file' => '360buy.xlsx'
+            ),
+            'luban' => array(
+                'name' => '抖音账单导入',
+                'icon' => '抖音',
+                'shop_filter' => array('shop_type' => array('luban')),
+                'order' => '600',
+                'template_file' => 'luban.xlsx'
+            ),
+            'youzan' => array(
+                'name' => '有赞账单导入',
+                'icon' => '有赞',
+                'shop_filter' => array('shop_type' => array('youzan')),
+                'order' => '700',
+                'template_file' => 'youzan.xlsx'
+            ),
+            'pinduoduo' => array(
+                'name' => '拼多多账单导入',
+                'icon' => '拼多多',
+                'shop_filter' => array('shop_type' => array('pinduoduo')),
+                'order' => '800',
+                'template_file' => 'pinduoduo.xlsx'
+            ),
+            'wechatpay' => array(
+                'name' => '微信账单导入',
+                'icon' => '微信',
+                'shop_filter' => array('shop_type' => array('wx','weixinshop','website','youzan')),
+                'order' => '900',
+                'template_file' => 'wechatpay.xlsx'
+            ),
+            'wxpay' => array(
+                'name' => '微信小店账单导入',
+                'icon' => '微信小店',
+                'shop_filter' => array('shop_type' => array('wx','youzan','wxshipin')),
+                'order' => '1300',
+                'template_file' => 'wxpay.xlsx'
+            ),
+            'jdwallet' => array(
+                'name' => '京东钱包导入',
+                'icon' => '京东钱包',
+                'shop_filter' => array('shop_type' => array('360buy')),
+                'order' => '1400',
+                'template_file' => 'jdwallet.xlsx',
+                'template_fields' => '注意：文件必须包含"结算表"和"资金表"两个工作表',
+                'file_format' => '.xls、 .xlsx',
+            ),
+            'guobu' => array(
+                'name' => '国补金额导入',
+                'icon' => '国补',
+                'shop_filter' => 'all', // 特殊处理，使用所有店铺类型
+                'order' => '1500',
+                'template_file' => 'guobu.xlsx',
+                'template_fields' => '模板字段：订单号、国补金额、SKU、数量、账单日期',
+            ),
+            'xhs' => array(
+                'name' => '小红书账单导入',
+                'icon' => '小红书',
+                'shop_filter' => array('shop_type' => array('xhs')),
+                'order' => '1600',
+                'template_file' => 'xhs.xlsx'
+            ),
+            'miaosuda' => array(
+                'name' => '喵速达账单导入',
+                'icon' => '喵速达',
+                'shop_filter' => array('shop_type' => array('taobao'), 'business_type' => array('maochao')),
+                'order' => '1700',
+                'template_file' => 'miaosuda.xlsx'
+            ),
+            'tmyp' => array(
+                'name' => '天猫优品结算单导入',
+                'icon' => '天猫优品',
+                'shop_filter' => array('shop_type' => array('taobao'), 'tbbusiness_type' => array('B')),
+                'order' => '1800',
+                'template_file' => 'tianmaoyoupin.xlsx'
+            ),
+            'jdecard' => array(
+                'name' => '京东E卡结算单导入',
+                'icon' => '京东E卡',
+                'shop_filter' => array('shop_type' => array('360buy')),
+                'order' => '1900',
+                'template_file' => 'jdecard.xlsx'
+            ),
+            'jdguobu' => array(
+                'name' => '京东国补结算单导入',
+                'icon' => '京东国补',
+                'shop_filter' => array('shop_type' => array('360buy')),
+                'order' => '2000',
+                'template_file' => 'jdguobu.xlsx'
+            ),
+            'weimobr' => array(
+                'name' => '微盟零售账单导入',
+                'icon' => '微盟零售',
+                'shop_filter' => array('shop_type' => array('weimobr')),
+                'order' => '2100',
+                'template_file' => array(
+                    '下载正向模版' => 'weimobr/sales.xlsx',
+                    '下载逆向模版' => 'weimobr/refunds.xlsx'
+                )
+            ),
+        );
+    }
+
     //收支单导入 - 账单导入
     /**
      * bill_import
      * @return mixed 返回值
      */
     public function bill_import(){
-        // 显示tab
-        $settingTabs = array(
-            array('name' => '支付宝账单导入', 'file_name' => 'admin/bill/import/alipay.html', 'type' => 'alipay','order'=>'100'),
-            array('name' => '京东日账单导入', 'file_name' => 'admin/bill/import/360buy.html', 'type' => 'jd','order'=>'200'),
-            array('name' => '抖音账单导入', 'file_name' => 'admin/bill/import/luban.html', 'type' => 'luban','order'=>'600'),
-            array('name' => '有赞账单导入', 'file_name' => 'admin/bill/import/youzan.html', 'type' => 'youzan','order'=>'700'),
-            array('name' => '拼多多账单导入', 'file_name' => 'admin/bill/import/pinduoduo.html', 'type' => 'pinduoduo','order'=>'800'),
-            array('name' => '微信账单导入', 'file_name' => 'admin/bill/import/wechatpay.html', 'type' => 'wechatpay','order'=>'900'),
-            // array('name' => '一号店账单导入', 'file_name' => 'bill/import/yihaodian.html', 'app' => 'finance','order'=>'300'),
-            // array('name' => '销售实收账单', 'file_name' => 'bill/import/normal.html', 'app' => 'finance','order'=>'400'),
-            // array('name' => '销售应收账单', 'file_name' => 'bill/import/ar.html', 'app' => 'finance','order'=>'500'),
-            array('name' => '微信小店账单导入', 'file_name' => 'admin/bill/import/wxpay.html', 'type' => 'wxpay','order'=>'1300'),
-            array('name' => '京东钱包导入', 'file_name' => 'admin/bill/import/jdwallet.html', 'type' => 'jdwallet','order'=>'1400'),
-        );
-        // 定位到具体的TAB
-        if (isset($_GET['tab']) && isset($settingTabs[intval($_GET['tab'])])) $settingTabs[intval($_GET['tab'])]['current'] = true;
-        $this->pagedata['settingTabs'] = $settingTabs;
-
-        /*$get = kernel::single('base_component_request')->get_get();
-
-        $this->pagedata['ctler'] = 'financebase_mdl_bill';
-        $this->pagedata['add'] = 'financebase';
-
-        unset($get['app'],$get['ctl'],$get['act'],$get['add'],$get['ctler']);
-        $this->pagedata['data'] = $get;
-
-        $ioType = array();
-        foreach( kernel::servicelist('omecsv_io') as $aIo ){
-            $ioType[$aIo->io_type_name] = '.'.$aIo->io_type_name;
-        }
-
+        $platformConfig = $this->getPlatformConfig();
         
-        $this->pagedata['ioType'] = $ioType;*/
-        $this->pagedata['init_time'] = app::get('finance')->getConf('finance_setting_init_time');
-        $this->pagedata['shop_list_alipay'] = financebase_func::getShopList(array('taobao','tmall'));
-        $this->pagedata['shop_list_360buy'] = financebase_func::getShopList('360buy');
-        $this->pagedata['shop_list_luban'] = financebase_func::getShopList('luban');
-        $this->pagedata['shop_list_youzan'] = financebase_func::getShopList('youzan');
-        $this->pagedata['shop_list_pinduoduo'] = financebase_func::getShopList('pinduoduo');
-        $this->pagedata['shop_list_wechatpay'] = financebase_func::getShopList(['wx','weixinshop','website','youzan']);
-        $this->pagedata['shop_list_wxpay'] = financebase_func::getShopList(['wx','youzan','wxshipin']);
+        // 生成卡片配置
+        $settingTabs = array();
+        foreach($platformConfig as $type => $config) {
+            $settingTabs[] = array(
+                'name' => $config['name'],
+                'type' => $type,
+                'icon' => $config['icon'],
+                'order' => $config['order'],
+                'template_file' => $config['template_file'],
+                'template_fields' => isset($config['template_fields']) ? $config['template_fields'] : '',
+                'file_format' => isset($config['file_format']) ? $config['file_format'] : '.csv、 .xls、 .xlsx'
+            );
+        }
+        
+        // 按order排序
+        usort($settingTabs, function($a, $b) {
+            return intval($a['order']) - intval($b['order']);
+        });
+        
+        $this->pagedata['settingTabs'] = $settingTabs;
+        
+        // 检查账期设置
+        // app::get('finance')->setConf('finance_setting_init_time',[]);
+        $init_time = app::get('finance')->getConf('finance_setting_init_time');
+        $this->pagedata['init_time'] = $init_time;
+        
+        // 将平台配置传递给前端，统一配置管理
+        $this->pagedata['platformConfig'] = $platformConfig;
+        
+        // 直接输出JavaScript配置，避免Smarty模板问题
+        $this->pagedata['platformConfigJs'] = json_encode($platformConfig);
+        
+        // 获取 finder_id 并传递给模板（用于权限验证）
+        // 使用与 desktop_controller::page() 相同的逻辑生成 finder_id
+        $_GET['finder_id'] || $_GET['finder_id'] = ($_GET['_finder']['finder_id'] ? : ($_GET['find_id'] ? : substr(md5($_SERVER['QUERY_STRING']),5,6)));
+        $this->pagedata['finder_id'] = $_GET['finder_id'];
+
+        // 卡片布局不再需要预先加载店铺列表，改为按需通过AJAX加载
         $this->page('admin/bill/import.html');
     }
 
@@ -303,8 +437,8 @@ class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
             exit;
         }
         
-        //data
-        $dataList = app::get('financebase')->model('base')->getList('id,unique_id,shop_id,trade_no', $filter, $offset, $limit, 'id asc');
+        //data - 获取数据时包含 platform_type 字段
+        $dataList = app::get('financebase')->model('base')->getList('id,unique_id,shop_id,trade_no,platform_type', $filter, $offset, $limit, 'id asc');
         
         //check
         if(empty($dataList)){
@@ -315,18 +449,25 @@ class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
         //count
         $retArr['itotal'] = count($dataList);
     
-        $oFunc = kernel::single('financebase_func');
-        $node_type_ref = $oFunc->getConfig('node_type');
-        $shopInfo = app::get('ome')->model('shop')->getList('shop_id,shop_type',array('shop_id'=>array_unique(array_column($dataList, 'shop_id'))));
-        $shopInfo = array_column($shopInfo, null, 'shop_id');
-        //list
+        //list - 直接使用 platform_type 来定位 worker 类
         foreach ($dataList as $key => $value) {
-            if(empty($node_type_ref[$shopInfo[$value['shop_id']]['shop_type']])) {
+            // 检查 platform_type 是否存在
+            if(empty($value['platform_type'])) {
                 $retArr['ifail'] ++;
-                $retArr['err_msg'][] = $value['trade_no'].':缺少店铺类型';
+                $retArr['err_msg'][] = $value['trade_no'].':缺少平台类型';
                 continue;
             }
-            $worker = "financebase_data_bill_".$node_type_ref[$shopInfo[$value['shop_id']]['shop_type']];
+            
+            // 使用 platform_type 直接拼接 worker 类名
+            $worker = "financebase_data_bill_".$value['platform_type'];
+            
+            // 检查类是否存在
+            if (!ome_func::class_exists($worker)) {
+                $retArr['ifail'] ++;
+                $retArr['err_msg'][] = $value['trade_no'].':平台类型['.$value['platform_type'].']无此类型的方法';
+                continue;
+            }
+            
             $params = [];
             $params['shop_id'] = $value['shop_id'];
             $params['ids'] = [$value['unique_id']];
@@ -485,6 +626,39 @@ class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
 
         }
  
+    }
+
+    // 获取店铺列表（用于弹层）
+    public function getShopList(){
+        $type = $_GET['type'];
+        
+        if(!$type) {
+            echo 'Error: 缺少类型参数';
+            return;
+        }
+        
+        $platformConfig = $this->getPlatformConfig();
+        
+        if(!isset($platformConfig[$type])) {
+            echo 'Error: 不支持的类型';
+            return;
+        }
+        
+        $config = $platformConfig[$type];
+        
+        // 根据配置获取店铺列表
+        if($config['shop_filter'] === 'all') {
+            $shopList = financebase_func::getShopList(financebase_func::getShopType());
+        } else {
+            $shop_type = isset($config['shop_filter']['shop_type']) ? $config['shop_filter']['shop_type'] : '';
+            // 将整个 shop_filter 作为第三个参数传递，支持更灵活的筛选条件
+            $shopList = financebase_func::getShopList($shop_type, '', $config['shop_filter']);
+        }
+        
+        // 直接输出店铺选项HTML
+        foreach($shopList as $shop) {
+            echo '<option value="' . $shop['shop_id'] . '">' . $shop['name'] . '</option>';
+        }
     }
 
     // 导入未匹配订单号

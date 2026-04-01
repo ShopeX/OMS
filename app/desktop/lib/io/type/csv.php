@@ -337,7 +337,7 @@ class desktop_io_type_csv extends desktop_io_io{
 
 		if(function_exists('iconv')){
 			//excel 2007 读取utf8乱码bug。
-			$string =  iconv('UTF-8', 'GB2312//IGNORE', $rs)."\n";
+			$string =  iconv('UTF-8', 'GBK//IGNORE', $rs)."\n";
 		}else{
 			$string =  $this->charset->utf2local( $rs )."\n";
 		}

@@ -92,11 +92,12 @@ $db['order_front'] = array(
         ),
         'status'         => array(
             'type'            => array(
+                'active' => '活动',
                 'acitve' => '活动',
                 'finish' => '已签收',
                 'close' => '已作废',
             ),
-            'default'         => 'acitve',
+            'default'         => 'active',
             'required'        => true,
             'label'           => '业务状态',
             'in_list'         => true,

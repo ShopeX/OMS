@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class ome_ctl_admin_return_rchange extends desktop_controller
 {
 
@@ -2057,11 +2056,18 @@ class ome_ctl_admin_return_rchange extends desktop_controller
             } else {
                 //拒绝
                 $Oreship->update(array('is_check'=>'5','t_end'=>time()),array('reship_id'=>$reship_id));
-                
+
                 // 退货单取消成功通知
                 $reshipInfo = $Oreship->dump($reship_id, 'reship_bn,branch_id');
                 if ($reshipInfo) {
                     kernel::single('ome_reship')->sendReshipCancelSuccessNotify($reshipInfo, $memo);
+                }
+
+                // 退货单取消后的service扩展点
+                foreach(kernel::servicelist('console.service.reship.cancel.after') as $object) {
+                    if(method_exists($object, 'cancel_reship_after')) {
+                        $object->cancel_reship_after($reship_id);
+                    }
                 }
             }
             
@@ -2242,17 +2248,20 @@ class ome_ctl_admin_return_rchange extends desktop_controller
         # 进行数量判断
         if (isset($post['return']['goods_bn']) && is_array($post['return']['goods_bn'])) {
             foreach ($post['return']['goods_bn'] as $pbn) {
+                // 获取基础物料号，如果不存在则使用order_item_id作为后备
+                $material_bn = isset($post['return']['bn'][$pbn]) ? $post['return']['bn'][$pbn] : $pbn;
+                
                 if ($is_check == '11') {
                     if ($post['return']['normal_num'][$pbn] > $post['return']['effective'][$pbn]) {
                         $error = array(
-                            'error' => "货品【{$pbn}】的入库数量大于可退入数量!",
+                            'error' => "货品【{$material_bn}】的入库数量大于可退入数量!",
                         );
                         break;
                     }
                 } else {
                     if ($post['return']['num'][$pbn] > $post['return']['effective'][$pbn]) {
                         $error = array(
-                            'error' => "货品【{$pbn}】的申请数量大于可退入数量!",
+                            'error' => "货品【{$material_bn}】的申请数量大于可退入数量!",
                         );
                         break;
                     }
@@ -2466,6 +2475,9 @@ class ome_ctl_admin_return_rchange extends desktop_controller
                 $this->end(false, $this->app->_('更新物流单号失败或者物流单号没有变化!'));
             }
         }
+
+        // 物流单号重复检测打标（flag_type 位）
+        kernel::single('ome_reship')->markDuplicateReturnLogiNo($reship_id, $return_logi_no);
         
         //[京东一件代发]同步退回物流单号给WMS仓储
         if($wms_type == 'yjdf'){
@@ -2501,7 +2513,11 @@ class ome_ctl_admin_return_rchange extends desktop_controller
         //log
         $memo = '更改退回物流单号(' . $post['return_logi_no'] . '),退回物流公司(' . $post['return_logi_name'] . ')';
         $oOperation_log->write_log('reship@ome', $reship_id, $memo);
-        
+        foreach(kernel::servicelist('erpapi.service.aftersale.update.reship.logistics.after') as $object) {
+            if(method_exists($object, 'after_update_logistics')){
+                $object->after_update_logistics($reship_id);
+            }
+        }
         $this->end(true, $this->app->_('更新成功!'));
     }
 
@@ -2854,7 +2870,7 @@ class ome_ctl_admin_return_rchange extends desktop_controller
                     'branch_id'     =>  $reship_detail['branch_id'],
                 );
                 $result = kernel::single('console_event_trigger_reship')->cancel($wms_id, $data, true);
-                if($result['rsp'] != 'succ'  && !$_POST['forced_cancel']){
+                if(!in_array($result['rsp'],array('succ','success')) && !$_POST['forced_cancel']){
                     $this->end(false, '拒绝退换货单失败：'.$result['msg']);
                 }
             }
@@ -2887,7 +2903,7 @@ class ome_ctl_admin_return_rchange extends desktop_controller
                     'branch_id'     =>  $reship_detail['branch_id'],
                 );
                 $result = kernel::single('console_event_trigger_reship')->cancel($wms_id, $data, true);
-                if(!in_array($result['rsp'],array('succ','success')) && !$_POST['forced_cancel']){
+                if($result['rsp'] != 'succ'  && !$_POST['forced_cancel']){
                     $this->end(false, '拒绝退换货单失败：'.$result['msg']);
                 }
             }
@@ -2930,14 +2946,20 @@ class ome_ctl_admin_return_rchange extends desktop_controller
         
         //更新退货单拒绝状态
         $reshipObj->update(array('is_check'=>'5', 't_end'=>time()), array('reship_id'=>$reship_id));
-        
+
         // 退货单取消成功报警通知
         kernel::single('ome_reship')->sendReshipCancelSuccessNotify($reship_detail, $_POST['refuse_message'] ?: '');
+
         
         //log
         $log_msg = '手工拒绝退换货单成功'. ($_POST['refuse_message'] ? '('.$_POST['refuse_message'].')' : '');
         $operLobMdl->write_log('reship@ome', $reship_id, $log_msg);
-        
+        // 退货单取消后的service扩展点
+        foreach(kernel::servicelist('console.service.reship.cancel.after') as $object) {
+            if(method_exists($object, 'cancel_reship_after')) {
+                $object->cancel_reship_after($reship_id);
+            }
+        }
         $this->end(true, '拒绝成功');
     }
 
@@ -2975,6 +2997,7 @@ class ome_ctl_admin_return_rchange extends desktop_controller
         set_time_limit(0);
 
         $reshipLib = kernel::single('ome_reship');
+        $reshipObj = app::get('ome')->model('reship');
 
         $result = array('rsp' => 'fail', 'error_msg' => '');
 
@@ -2984,6 +3007,26 @@ class ome_ctl_admin_return_rchange extends desktop_controller
             $result['error_msg'] = '无效操作!';
             echo (json_encode($result));
             exit;
+        }
+
+        //检查物流单号
+        $reshipInfo = $reshipObj->dump(array('reship_id' => $reship_id), 'reship_id,reship_bn,return_logi_no');
+        if (empty($reshipInfo)) {
+            $result['error_msg'] = '退换货单不存在!';
+            echo (json_encode($result));
+            exit;
+        }
+
+        //自动审核是否需要有回退物流单号
+        $mstLogiApprove = app::get('ome')->getConf('return.logi_auto_approve');
+        if ($mstLogiApprove == 'on') {
+            if (empty($reshipInfo['return_logi_no'])) {
+                //返回错误信息（包含退货单号）
+                $reship_bn = !empty($reshipInfo['reship_bn']) ? $reshipInfo['reship_bn'] : $reship_id;
+                $result['error_msg'] = '批量审核失败：缺少回退物流单号 (退换货单号：' . $reship_bn . ')';
+                echo (json_encode($result));
+                exit;
+            }
         }
 
         //执行审核
@@ -3381,7 +3424,7 @@ class ome_ctl_admin_return_rchange extends desktop_controller
         
         //update
         $reshipObj->update(array('is_check'=>'5', 't_end'=>time()), array('reship_id'=>$reship_id));
-        
+
         // 退货单取消成功报警通知
         kernel::single('ome_reship')->sendReshipCancelSuccessNotify($reshipInfo, '批量拒绝退换货单');
         
@@ -3902,7 +3945,7 @@ class ome_ctl_admin_return_rchange extends desktop_controller
             
             //branch
             $wms_id = $branchLib->getWmsIdById($reshipInfo['branch_id']);
-            $branch = $branchLib->getBranchInfo($reshipInfo['branch_id'], 'branch_bn,storage_code');
+            $branch = $branchLib->getBranchInfo($reshipInfo['branch_id'], 'branch_bn,storage_code,owner_code');
             
             //request
             $data   = array(
@@ -3910,6 +3953,7 @@ class ome_ctl_admin_return_rchange extends desktop_controller
                 'reship_id' => $reshipInfo['reship_id'],
                 'reship_bn' => $reshipInfo['reship_bn'],
                 'branch_bn' => $branch['branch_bn'],
+                'owner_code' => $branch['owner_code'],
             );
             $result = kernel::single('console_event_trigger_reship')->cancel($wms_id, $data, true);
             if($result['rsp'] != 'succ'){
@@ -3925,9 +3969,16 @@ class ome_ctl_admin_return_rchange extends desktop_controller
                 
                 //update
                 $reshipObj->update(array('is_check'=>'5', 'status'=>'cancel', 't_end'=>time()), array('reship_id'=>$reship_id));
-                
+
                 // 退货单取消成功报警通知
                 kernel::single('ome_reship')->sendReshipCancelSuccessNotify($reshipInfo, '批量手工请求WMS取消退换货单');
+
+                // 退货单取消后的service扩展点
+                foreach(kernel::servicelist('console.service.reship.cancel.after') as $object) {
+                    if(method_exists($object, 'cancel_reship_after')) {
+                        $object->cancel_reship_after($reship_id);
+                    }
+                }
             }
             
             //log
@@ -4044,7 +4095,7 @@ class ome_ctl_admin_return_rchange extends desktop_controller
             //请求WMS取消
             if(in_array($reshipInfo['is_check'], array('1','2')) || $reshipInfo['sync_status'] == '3'){
                 $wms_id = $branchLib->getWmsIdById($reshipInfo['branch_id']);
-                $branch = $branchLib->getBranchInfo($reshipInfo['branch_id'], 'branch_bn,storage_code');
+                $branch = $branchLib->getBranchInfo($reshipInfo['branch_id'], 'branch_bn,storage_code,owner_code');
                 
                 //request
                 $data   = array(
@@ -4052,6 +4103,7 @@ class ome_ctl_admin_return_rchange extends desktop_controller
                     'reship_id' => $reshipInfo['reship_id'],
                     'reship_bn' => $reshipInfo['reship_bn'],
                     'branch_bn' => $branch['branch_bn'],
+                    'owner_code' => $branch['owner_code'],
                 );
                 $result = kernel::single('console_event_trigger_reship')->cancel($wms_id, $data, true);
                 if($result['rsp'] != 'succ'){
@@ -4068,10 +4120,16 @@ class ome_ctl_admin_return_rchange extends desktop_controller
             
             //update
             $reshipObj->update(array('is_check'=>'5', 'status'=>'cancel', 't_end'=>time()), array('reship_id'=>$reship_id));
-            
+
             // 退货单取消成功报警通知
             kernel::single('ome_reship')->sendReshipCancelSuccessNotify($reshipInfo, '人工手动强制取消退换货单');
             
+            // 退货单取消后的service扩展点
+            foreach(kernel::servicelist('console.service.reship.cancel.after') as $object) {
+                if(method_exists($object, 'cancel_reship_after')) {
+                    $object->cancel_reship_after($reship_id);
+                }
+            }
             //log
             $operLogObj->write_log('reship@ome', $reship_id, '人工手动强制取消退换货单!');
             

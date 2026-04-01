@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class console_ctl_admin_inventory_apply extends desktop_controller{
     var $workground = "console_center";
     function index(){
@@ -31,6 +30,16 @@ class console_ctl_admin_inventory_apply extends desktop_controller{
     function do_confirm($apply_id=0){
         $objInAp = app::get('console')->model('inventory_apply');
         $main = $objInAp->db_dump(['inventory_apply_id'=>$apply_id], '*');
+        if (empty($main)) {
+            header("content-type:text/html; charset=utf-8");
+            echo "<script>alert('盘点单不存在');window.close();</script>";
+            exit;
+        }
+        if ($main['status'] == 'confirmed') {
+            header("content-type:text/html; charset=utf-8");
+            echo "<script>alert('盘点单已确认');window.close();</script>";
+            exit;
+        }
         $branch = app::get('ome')->model('branch')->db_dump(['branch_id'=>$main['branch_id']], 'name');
         if(empty($branch)) {
             header("content-type:text/html; charset=utf-8");
@@ -61,6 +70,11 @@ class console_ctl_admin_inventory_apply extends desktop_controller{
     function finish_confirm(){
         $this->begin($this->url);
         $apply_id = (int) $_POST['inventory_apply_id'];
+        $objInAp = app::get('console')->model('inventory_apply');
+        $main = $objInAp->db_dump(['inventory_apply_id'=>$apply_id], 'status');
+        if (!empty($main) && $main['status'] == 'confirmed') {
+            $this->end(true, '已确认');
+        }
         list($rs, $rsData) = kernel::single('console_inventory_apply')->confirm($apply_id);
         $this->end($rs, $rsData['msg']);
     }

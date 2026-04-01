@@ -86,6 +86,12 @@ class erpapi_shop_matrix_alibaba_response_order extends erpapi_shop_response_ord
             
         }
         
+        // 官方提货物流
+        if ($this->_ordersdf['officialPickUp']) {
+            $this->_ordersdf['official_pickup'] = 'true';
+            $this->_ordersdf['shipping']['shipping_name'] = 'pickup';
+        }
+
         // 判断是否有退款
         if ($this->_ordersdf['payed'] > $this->_ordersdf['total_amount']) {
             $this->_ordersdf['pay_status'] = '6';

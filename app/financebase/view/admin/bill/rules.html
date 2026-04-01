@@ -77,10 +77,7 @@
                               <{if $key ==  0}>
                                 <a href="javascript:void(0);" onclick="addRule(<{$rule_key}>);">[&nbsp;+&nbsp;]</a>
                               <{/if}>
-                              <{if $rule_key == 0 and $key ==  0}>
-                              <{else}>
-                                <a href="javascript:void(0);" onclick="removeRule(this);">[&nbsp;-&nbsp;]</a>
-                              <{/if}>
+                              <a href="javascript:void(0);" onclick="removeRule(this);">[&nbsp;-&nbsp;]</a>
                             </div>
                           <{/foreach}>
                       </td>

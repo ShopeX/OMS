@@ -14,17 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class ome_ctl_admin_refund_apply extends desktop_controller
 {
     public $name       = "退款单";
     public $workground = "finance_center";
 
-    /**
-     * index
-     * @param mixed $is_jingxiao is_jingxiao
-     * @return mixed 返回值
-     */
     public function index($is_jingxiao = false)
     {
         $base_filter = array();
@@ -51,6 +45,11 @@ class ome_ctl_admin_refund_apply extends desktop_controller
                         'submit' => 'index.php?app=ome&ctl=admin_refund_apply&act=batchAgreeRefund&view=' . $_GET['view'],
                         'target' => "dialog::{width:700,height:490,title:'批量退款'}",
                 ),
+                'refundonly' => array(
+                        'label'  => '确认为仅退款',
+                        'submit' => 'index.php?app=ome&ctl=admin_refund_apply&act=batchRefundOnly&view=' . $_GET['view'],
+                        'target' => "dialog::{width:700,height:490,title:'确认为仅退款'}",
+                ),
                 
         );
         
@@ -63,10 +62,18 @@ class ome_ctl_admin_refund_apply extends desktop_controller
                 $action[] = $buttonList['accept'];
                 $action[] = $buttonList['refuse'];
                 $action[] = $buttonList['agree'];
+                $action[] = $buttonList['refundonly'];
                 break;
             case '3':
                 $action[] = $buttonList['refuse'];
                 $action[] = $buttonList['agree'];
+                $action[] = $buttonList['refundonly'];
+                break;
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+                $action[] = $buttonList['refundonly'];
                 break;
         }
 
@@ -104,20 +111,12 @@ class ome_ctl_admin_refund_apply extends desktop_controller
         ));
     }
 
-    /**
-     * jingxiao
-     * @return mixed 返回值
-     */
     public function jingxiao()
     {
         $is_jingxiao = true;
         return $this->index($is_jingxiao);
     }
 
-    /**
-     * _views
-     * @return mixed 返回值
-     */
     public function _views()
     {
         $mdl_refund_apply = $this->app->model('refund_apply');
@@ -161,12 +160,6 @@ class ome_ctl_admin_refund_apply extends desktop_controller
         return $sub_menu;
     }
 
-    /**
-     * request
-     * @param mixed $order_id ID
-     * @param mixed $return_id ID
-     * @return mixed 返回值
-     */
     public function request($order_id, $return_id = 0)
     {
         $result = kernel::single('ome_refund_apply')->show_refund_html($order_id, $return_id);
@@ -177,11 +170,6 @@ class ome_ctl_admin_refund_apply extends desktop_controller
         }
     }
 
-    /**
-     * accept
-     * @param mixed $apply_id ID
-     * @return mixed 返回值
-     */
     public function accept($apply_id)
     {
         $url = "index.php?ctl=admin_refund_apply&act=accept&app=ome&p[0]=" . $apply_id;
@@ -245,7 +233,11 @@ class ome_ctl_admin_refund_apply extends desktop_controller
                     $_POST['shop_id']             = $order_detail['shop_id'];
                     $_POST['return_id']           = $apply_detail['return_id'];
                     $_POST['oid']                 = $apply_detail['oid'];
-
+                    $_POST['product_data']                 = $apply_detail['product_data'];
+                    
+                    // 补充reship_id, 用于判断是否退货退款
+                    $_POST['reship_id'] = $apply_detail['reship_id'];
+                    
                     //检查当前订单的状态，标记天猫售前退款的取消发货标记
                     if (in_array($order_detail['process_status'], array('unconfirmed', 'confirmed'))) {
                         $_POST['cancel_dly_status'] = 'SUCCESS';
@@ -372,6 +364,7 @@ class ome_ctl_admin_refund_apply extends desktop_controller
                     $refunddata['status']  = "succ"; #支付状态
                     $refunddata['memo']    = $apply_detail['memo'];
                     $refunddata['org_id']  = $apply_detail['org_id'];
+                    $refunddata['product_data']  = $apply_detail['product_data'];
 
                     $oRefund->save($refunddata);
 
@@ -398,7 +391,16 @@ class ome_ctl_admin_refund_apply extends desktop_controller
                     if ($is_full_refund) {
                         kernel::single('ome_order_order')->fullRefund_order_revoke($apply_detail['order_id']);
                     }
-
+                    kernel::single('ome_refund_apply')->updateOrderObjectsPayStatusByItemIds($apply_id);
+                    // 增加service扩展点，允许外部service在退款成功后做自定义处理
+                    $services = kernel::servicelist('ome.service.refund.apply.accept.refund.after');
+                    if ($services) {
+                        foreach ($services as $service) {
+                            if (method_exists($service, 'after_refund')) {
+                                $service->after_refund($apply_id);
+                            }
+                        }
+                    }
                     $this->end(true, '申请退款成功', 'index.php?app=ome&ctl=admin_refund_apply&act=index');
                 }
             }
@@ -465,12 +467,11 @@ class ome_ctl_admin_refund_apply extends desktop_controller
     }
 
     /*add by hujie 添加退款申请*/
-
     public function showRefund()
     {
         if ($_POST) {
-
             $source_url = $_POST['back_url'];
+            $error_msg = '';
 
             if ($source_url != 'order_confirm') {
                 $begin_url = "index.php?ctl=admin_refund_apply&act=request&app=ome&p[0]=" . $_POST['order_id'];
@@ -488,7 +489,6 @@ class ome_ctl_admin_refund_apply extends desktop_controller
             $is_update_order       = true; //是否更新订单付款状态
             $return                = kernel::single('ome_refund_apply')->createRefundApply($_POST, $is_update_order, $error_msg);
             if (!$return) {
-
                 //创建失败
                 if ($source_url != 'order_confirm') {
                     $this->end(false, $error_msg, $back_url);
@@ -496,7 +496,15 @@ class ome_ctl_admin_refund_apply extends desktop_controller
                     $this->end(false, $error_msg);
                 }
             }
-
+            
+            // 订单支付状态发生变化
+            // [更新]预约订单的相关状态
+            $orderSdf = [
+                'order_id' => $_POST['order_id'],
+                'pay_status' => '6', //退款申请中
+            ];
+            kernel::single('ome_order_reservation')->operateReservationOrder($orderSdf, $error_msg);
+            
             //创建成功
             if ($source_url != 'order_confirm') {
                 $this->end(true, $return['msg'], $back_url);
@@ -506,10 +514,6 @@ class ome_ctl_admin_refund_apply extends desktop_controller
         }
     }
 
-    /**
-     * do_export
-     * @return mixed 返回值
-     */
     public function do_export()
     {
         $selected   = $_POST['apply_id'];
@@ -665,11 +669,6 @@ class ome_ctl_admin_refund_apply extends desktop_controller
         }
     }
 
-    /**
-     * file_download2
-     * @param mixed $apply_id ID
-     * @return mixed 返回值
-     */
     public function file_download2($apply_id)
     {
         $oProduct = $this->app->model('return_product');
@@ -897,10 +896,6 @@ class ome_ctl_admin_refund_apply extends desktop_controller
     }
 
     //批量更新
-    /**
-     * ajax_batch
-     * @return mixed 返回值
-     */
     public function ajax_batch()
     {
         set_time_limit(0);
@@ -919,12 +914,6 @@ class ome_ctl_admin_refund_apply extends desktop_controller
     }
 
     //更新退款单状态
-    /**
-     * do_updateApply
-     * @param mixed $apply_id ID
-     * @param mixed $status status
-     * @return mixed 返回值
-     */
     public function do_updateApply($apply_id, $status)
     {
         $oRefund_apply      = app::get('ome')->model('refund_apply');
@@ -937,10 +926,6 @@ class ome_ctl_admin_refund_apply extends desktop_controller
     }
 
     //批量同步退款申请单状态
-    /**
-     * batch_get_refund_detial
-     * @return mixed 返回值
-     */
     public function batch_get_refund_detial()
     {
         $oRefund_apply    = app::get('ome')->model('refund_apply');
@@ -1306,6 +1291,8 @@ class ome_ctl_admin_refund_apply extends desktop_controller
                     //生成售后单
                     kernel::single('sales_aftersale')->generate_aftersale($apply_id, 'refund');
                 }
+                // 调用方法更新order_objects表的pay_status
+                kernel::single('ome_refund_apply')->updateOrderObjectsPayStatusByItemIds($apply_id);
 
                 $operation_log_obj->write_log('refund_accept@ome', $refund_data['refund_id'], "退款成功，生成退款单" . $refund_data['refund_bn']);
                 if (!empty($return_id)) {
@@ -1313,16 +1300,73 @@ class ome_ctl_admin_refund_apply extends desktop_controller
                     $Oreturn_product = $this->app->model('return_product');
                     $Oreturn_product->update_status($return_data);
                 }
+                // 增加service扩展点，允许外部service在退款成功后做自定义处理
+                $services = kernel::servicelist('ome.service.refund.apply.accept.refund.after');
+                if ($services) {
+                    foreach ($services as $service) {
+                        if (method_exists($service, 'after_refund')) {
+                            $service->after_refund($apply_id);
+                        }
+                    }
+                }
             }
         }
 
         $this->end(true, app::get('base')->_('申请退款成功'), 'index.php?app=ome&ctl=admin_refund_apply&act=index');
     }
 
-    /**
-     * intercept
-     * @return mixed 返回值
-     */
+    public function batchRefundOnly() {
+        $model = app::get('ome')->model('refund_apply');
+        $baseFilter = array('status|nequal' => '0', 'disabled' => 'false', );
+        $pageData = array(
+            'billName' => '退款申请单',
+            'request_url' => $this->url.'&act=dealBatchRefundOnly',
+            'maxProcessNum' => 20,
+            'close' => true
+        );
+        $this->pagedata['notice'] = '设置仅退款后，不发起发货单拦截！';
+        $this->selectToPageRequest($model, $pageData, $baseFilter);
+    }
+
+    public function dealBatchRefundOnly() {
+        $ids = explode(';', $_POST['ajaxParams']);
+        $retArr = array(
+            'total' => count($ids),
+            'succ' => 0,
+            'fail' => 0,
+            'fail_msg' => array()
+        );
+        $model = app::get('ome')->model('refund_apply');
+        $rows = $model->getList('apply_id,refund_apply_bn,bool_type,reship_id', array('apply_id'=>$ids));
+        foreach ($rows as $row) { 
+            if($row['bool_type'] & ome_refund_bool_type::__ONLY_REFUND) {
+                continue;
+            }
+            if($row['reship_id'] > 0) {
+                $retArr['fail']++;
+                $retArr['fail_msg'][] = ['obj_bn'=>$row['refund_apply_bn'],'msg'=>'有退货单，不能仅退款！'];
+                continue;
+            }
+            $upData = [
+                'bool_type' => ome_refund_bool_type::__ONLY_REFUND | $row['bool_type']
+            ];
+            $rs = $model->update($upData, ['apply_id'=>$row['apply_id'], 'bool_type'=>$row['bool_type']]);
+            if(is_bool($rs)) {
+                $retArr['fail']++;
+                $retArr['fail_msg'][] = ['obj_bn'=>$row['refund_apply_bn'],'msg'=>'仅退款状态更新失败！'];
+                continue;
+            }
+            app::get('ome')->model('operation_log')->write_log('refund_apply@ome', $row['apply_id'], "设置仅退款");
+            foreach(kernel::servicelist('ome.service.refund.apply.refundonly.after') as $object) {
+                if(method_exists($object, 'after_refund_only')){
+                    $object->after_refund_only($row['apply_id']);
+                }
+            }
+        }
+        $retArr['succ'] = $retArr['total'] - $retArr['fail'];
+        echo json_encode($retArr);
+    }
+
     public function intercept() {
         $apply_id = (int) $_POST['apply_id'];
         $refund_version = $_POST['refund_version'];
@@ -1336,10 +1380,6 @@ class ome_ctl_admin_refund_apply extends desktop_controller
         echo json_encode($rsp);
     }
 
-    /**
-     * negotiatereturnRender
-     * @return mixed 返回值
-     */
     public function negotiatereturnRender() {
         $apply_id = (int) $_POST['apply_id'];
         $refund_version = $_POST['refund_version'];
@@ -1355,10 +1395,6 @@ class ome_ctl_admin_refund_apply extends desktop_controller
         $this->display('admin/refund/negotiatereturn.html');
     }
 
-    /**
-     * negotiatereturn
-     * @return mixed 返回值
-     */
     public function negotiatereturn() {
         $sdf = [
             'refund_id' => $_POST['refund_id'],
@@ -1376,6 +1412,27 @@ class ome_ctl_admin_refund_apply extends desktop_controller
         kernel::single('ome_refund_flag')->update($_POST['apply_id'], '协商退货退款');
             app::get('ome')->model('operation_log')->write_log('refund_apply@ome',$_POST['apply_id'],"发起协商退货退款");
         $this->splash('success', $this->url, '操作成功');
+    }
+
+    public function transfer_reship($apply_id) {
+        $url = $this->url.'&act=index';
+        
+        // 获取退款申请详情
+        $refundApplyModel = app::get('ome')->model('refund_apply');
+        $refundApply = $refundApplyModel->db_dump(['apply_id' => $apply_id], '*');
+        
+        if (!$refundApply) {
+            $this->splash('error', $url, '退款申请不存在');
+        }
+        
+        // 调用qzRefundToLJRK方法
+        $result = kernel::single('console_reship')->qzRefundToLJRK($refundApply);
+        
+        if ($result[0] === false) {
+            $this->splash('error', $url, $result[1]['msg']);
+        }
+        
+        $this->splash('success', $url, '转退货单成功');
     }
 
     /**

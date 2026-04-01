@@ -519,46 +519,80 @@
       line-height: 40px;
       background: #f5f7fa;
       margin: 0;
-      /* padding-left: 15px; */
       border-bottom: 1px solid #ebeef5;
       box-sizing: border-box;
       color: #000;
       font-size: 0;
   }
   .transfer-wrap .transfer-panel .transfer-panel__header >div {
-    /* line-height: 40px !important; */
     border-bottom-width: 0 !important;
   }
-  .transfer-wrap .transfer-panel .colum1, .transfer-wrap .transfer-panel .colum2,.transfer-wrap .transfer-panel .colum4, .transfer-wrap .transfer-panel .colum3 {
+  /* Header 中的列样式 */
+  .transfer-wrap .transfer-panel .transfer-panel__header .colum1 {
     display: inline-block;
+    width: 35px;
+    min-width: 35px;
+    max-width: 35px;
+    height: 40px;
+    line-height: 40px;
+    border-right: 1px solid #ebeef5;
+    text-align: center;
+    padding: 0;
+    box-sizing: border-box;
+    vertical-align: top;
+    font-size: 0;
+  }
+  .transfer-wrap .transfer-panel .transfer-panel__header .colum4 {
+    display: inline-block;
+    width: calc(100% - 35px);
+    min-width: 0;
+    height: 40px;
+    line-height: 40px;
     padding-left: 10px;
     box-sizing: border-box;
     vertical-align: top;
-    height: 100%;
-    line-height: 39px;
-    border-bottom: 1px solid #ebeef5;
     font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .transfer-wrap .transfer-panel .colum1 {
+  /* Body 中的列样式 */
+  .transfer-wrap .transfer-panel .transfer-panel__body .transfer-panel__item {
+      height: 40px;
+      font-size: 0;
+      border-bottom: 1px solid #ebeef5;
+      box-sizing: border-box;
+  }
+  .transfer-wrap .transfer-panel .transfer-panel__body .transfer-panel__item:last-child {
+      border-bottom: none;
+  }
+  .transfer-panel__item .colum1 {
+    display: inline-block;
     width: 35px;
+    min-width: 35px;
+    max-width: 35px;
+    height: 40px;
+    line-height: 40px;
     border-right: 1px solid #ebeef5;
-  }
-  .transfer-wrap .transfer-panel .colum2 {
-    width: 130px;
-    border-right: 1px solid #ebeef5;
-  }
-  .transfer-wrap .transfer-panel .colum4 {
-    width: 180px;
-    border-right: 1px solid #ebeef5;
-  }
-  .transfer-wrap .transfer-panel .colum3 {
-    width: calc(100% - 155px);
+    text-align: center;
+    padding: 0;
+    box-sizing: border-box;
+    vertical-align: top;
+    font-size: 0;
   }
   .transfer-panel__item .colum4 {
-    width: 180px; /* 假设这是你想要限制的宽度 */
-    white-space: nowrap; /* 防止文本换行 */
-    overflow: hidden; /* 隐藏超出的内容 */
-    text-overflow: ellipsis; /* 显示省略号 */
+    display: inline-block;
+    width: calc(100% - 35px);
+    min-width: 0;
+    height: 40px;
+    line-height: 40px;
+    padding-left: 10px;
+    box-sizing: border-box;
+    vertical-align: top;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   /* 
   .transfer-panel__item:hover .colum4 {
@@ -568,12 +602,9 @@
   }*/
   .transfer-wrap .transfer-panel .transfer-panel__body {
       height: 260px; 
-      /* padding: 0 15px; */
       overflow-y: scroll;
+      overflow-x: hidden;
       font-size: 0;
-  }
-  .transfer-wrap .transfer-panel .transfer-panel__body .transfer-panel__item {
-      height: 40px;
   }
   .transfer-wrap .transfer-buttons {
       line-height: 300px;

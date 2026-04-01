@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class ome_iostock{
     const PURCH_STORAGE = 1;   //采购入库Purchasing storage
     const PURCH_RETURN = 10;   //采购退货Purchase Returns
@@ -80,10 +79,10 @@ class ome_iostock{
                     '1000'=>array('code'=>'DC','info'=>'转仓入库','is_new'=>true,'io'=>1),
     );
 
-    /**
-     * 功能插入数据
-     * (已废弃)
-     * */
+	/**
+	*功能插入数据
+	*(已废弃)
+	**/
     function set($iostock_bn,&$data,$type,&$msg=null,$io=1)
     {
         $basicMaterialObj = app::get('material')->model('basic_material');
@@ -285,7 +284,7 @@ class ome_iostock{
         if($operator == '-'){
              $sql = "UPDATE sdb_material_basic_material_stock SET store=IF(store<".$num.",0,store-$num),last_modified=" . time().",real_store_lastmodify=" .time(). ",max_store_lastmodify=" .time(). " WHERE bm_id='" . $product_id . "'";
         } else {
-             $sql = "UPDATE sdb_material_basic_material_stock SET store=store+" . $num . ",last_modified=" . time().",real_store_lastmodify=" .time(). ",max_store_lastmodify=" .time(). " WHERE bm_id='" . $product_id . "'";
+             $sql = "UPDATE sdb_material_basic_material_stock SET store=store+" . $num . ",last_modified=" . time().",real_store_lastmodify=" .time(). ",max_store_lastmodify=" .time(). ",inc_store_lastmodify=" . time() . " WHERE bm_id='" . $product_id . "'";
         }
         return kernel::database()->exec($sql);
     }
@@ -301,8 +300,8 @@ class ome_iostock{
 
     /**
      * 检验必填字段是否全部填写
-     * 
-     * */
+     *
+     **/
     function check_required($data,&$msg){
         $msg = array();
         $arrFrom = array('branch_id','bn','iostock_price','nums','operator');

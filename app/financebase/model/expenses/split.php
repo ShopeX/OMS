@@ -157,4 +157,10 @@ class financebase_mdl_expenses_split extends dbeav_model {
         }
         return $primary_ids;
     }
+
+    public function gen_id() {
+        $prefix = 'SP'.date("ymd");
+        $sign   = kernel::single('eccommon_guid')->incId('expenses_split', $prefix, 8);
+        return $sign;
+    }
 }

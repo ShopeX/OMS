@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class  financebase_mdl_base extends dbeav_model{
 
 
@@ -26,30 +25,16 @@ class  financebase_mdl_base extends dbeav_model{
 
 
 
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
     public function table_name($real=false){
         $tableName = 'bill';
         return $real ? kernel::database()->prefix.'financebase_'.$tableName : $tableName;
 
     }
 
-    /**
-     * 搜索Options
-     * @return mixed 返回值
-     */
     public function searchOptions(){
         return array();
     }
 
-    /**
-     * modifier_shop_id
-     * @param mixed $val val
-     * @return mixed 返回值
-     */
     public function modifier_shop_id($val)
     {
         if(!isset($this->shop_name[$val])){
@@ -64,22 +49,23 @@ class  financebase_mdl_base extends dbeav_model{
         return $this->shop_name[$val];
     }
 
-    /**
-     * modifier_bill_category
-     * @param mixed $col col
-     * @return mixed 返回值
-     */
     public function modifier_bill_category($col) {
         return $col ? : '未识别类型';
     }
 
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
+    public function modifier_ar_verify_status($val) {
+        $status_map = array(
+            '1' => '已核对AR',
+            '2' => '需核对AR',
+            '3' => '无需核对AR'
+        );
+        return isset($status_map[$val]) ? $status_map[$val] : '未知状态';
+    }
+
+    public function modifier_disabled($val) {
+        return $val === 'true' ? '失败' : '成功';
+    }
+
     public function _filter($filter, $tableAlias = NULL, $baseWhere = NULL){
         if(isset($filter['time_from']) && $filter['time_from']){
             $where .= ' AND `trade_time` >='.strtotime($filter['time_from']);
@@ -137,11 +123,6 @@ class  financebase_mdl_base extends dbeav_model{
         return parent::_filter($filter, $tableAlias, $baseWhere).$where;
     }
 
-    /**
-     * 获取Total
-     * @param mixed $filter filter
-     * @return mixed 返回结果
-     */
     public function getTotal($filter) {
         $sql = 'select sum(case when money>0 then money end) total_positive,
                     sum(case when money<0 then money end) total_negative

@@ -17,19 +17,13 @@
 /**
  * 退货单推送
  *
- * @category
- * @package
+ * @category 
+ * @package 
  * @author chenping<chenping@shopex.cn>
  * @version $Id: Z
  */
 class erpapi_wms_matrix_qimen_request_reship extends erpapi_wms_request_reship
 {
-    /**
-     * reship_cancel
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
-
     public function reship_cancel($sdf){
         $title = $this->__channelObj->wms['channel_name'].'退货单取消';
         
@@ -96,6 +90,7 @@ class erpapi_wms_matrix_qimen_request_reship extends erpapi_wms_request_reship
                     'item_remark'    => '',// TODO: 商品备注
                     'inventory_type' => $sdf['branch_type'] == 'damaged' ? '101' : '1',// TODO: 库存类型1可销售库存101类型用来定义残次品201冻结类型库存301在途库存
                     'ownerCode'      => $sdf['owner_code'],
+                    'sn'             => $v['sn'] ? ['sn' => $v['sn']] : '',
                 );
             }
         }

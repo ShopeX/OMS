@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
  *
@@ -14,14 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/**
- * ============================
- * @Author:   yaokangming
- * @Version:  1.0
- * @DateTime: 库存调整单
- * @describe: 类
- * ============================
- */
 class console_finder_adjust {
     function __construct(){
         if(in_array($_REQUEST['action'], ['exportcnf', 'to_export', 'export'])){
@@ -34,12 +27,6 @@ class console_finder_adjust {
     public $column_edit = "操作";
     public $column_edit_width = "80";
     public $column_edit_order = "-1";
-    /**
-     * column_edit
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
-
     public function column_edit($row) {
         $confirmBtn = '<a class="lnk" target="dialog::{width:550,height:250,title:\'单据确认\'}" 
                 href="index.php?app=console&ctl=admin_adjust&act=singleConfirm&p[0]='.$row['id'].'&finder_id='.$_GET['_finder']['finder_id'].'">
@@ -53,12 +40,7 @@ class console_finder_adjust {
         return '';
     }
 
-    public $detail_item = "货品详情";
-    /**
-     * detail_item
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
+    public $detail_item = "基础物料详情";
     public function detail_item($id){
         $render = app::get('console')->render();
         $items = app::get('console')->model('adjust_items')->getList('*', ['adjust_id'=>$id]);
@@ -67,11 +49,6 @@ class console_finder_adjust {
     }
 
     public $detail_oplog = "操作记录";
-    /**
-     * detail_oplog
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function detail_oplog($id){
         $render = app::get('console')->render();
         $opObj  = app::get('ome')->model('operation_log');
@@ -84,11 +61,6 @@ class console_finder_adjust {
     }
 
     public $detail_useful = "有效期列表";
-    /**
-     * detail_useful
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function detail_useful($id){
         $render = app::get('console')->render();
         $itemsObj = app::get('console')->model('adjust_items');
@@ -112,12 +84,6 @@ class console_finder_adjust {
     public $column_branch_bn = "仓库编码";
     public $column_branch_bn_width = 100;
     public $column_branch_bn_order = 15;
-    /**
-     * column_branch_bn
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_branch_bn($row, $list)
     {
         if (empty($row['branch_id'])) {

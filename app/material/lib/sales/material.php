@@ -143,7 +143,7 @@ class material_sales_material{
      * @return Boolean
      */
     public function getBasicMBySalesMId($sm_id){
-        $salesBasicMInfos = $this->_salesBasicMaterialObj->getList('bm_id,sm_id,number,rate',array('sm_id'=>$sm_id), 0, -1);
+        $salesBasicMInfos = $this->_salesBasicMaterialObj->getList('*',array('sm_id'=>$sm_id), 0, -1);
         if($salesBasicMInfos){
             foreach($salesBasicMInfos as $k => $salesBasicMInfo){
                 $bmIds[] = $salesBasicMInfo['bm_id'];

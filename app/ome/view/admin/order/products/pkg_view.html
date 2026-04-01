@@ -14,94 +14,181 @@
   limitations under the License.
 -->
 
+<style>
+.pkg_head_div {
+    width: 100%;
+    overflow-x: hidden;
+    overflow-y: hidden;
+}
+
+.pkg_main_div {
+    width: 100%;
+    height: 300px;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.pkg_head_div table,
+.pkg_main_div table {
+    table-layout: fixed;
+    border-collapse: collapse;
+    min-width: 100%;
+}
+
+.pkg_head_div th,
+.pkg_main_div td {
+    word-wrap: break-word;
+    word-break: break-all;
+    white-space: normal;
+    padding: 5px;
+    box-sizing: border-box;
+}
+
+/* 为每列设置固定宽度 */
+.pkg_head_div th.width_100px,
+.pkg_main_div td.width_100px { width: 100px; }
+
+.pkg_head_div th.width_120px,
+.pkg_main_div td.width_120px { width: 120px; }
+
+.pkg_head_div th.width_160px,
+.pkg_main_div td.width_160px { width: 160px; }
+
+.pkg_head_div th.width_180px,
+.pkg_main_div td.width_180px { width: 180px; }
+
+.pkg_head_div th.width_200px,
+.pkg_main_div td.width_200px { width: 200px; }
+
+.pkg_head_div th.width_230px,
+.pkg_main_div td.width_230px { width: 230px; }
+
+.pkg_main_div table {
+  cursor: pointer;
+}
+</style>
+
 <div class="division">
    <h4><{t}>促销类商品<{/t}></h4>
-      <table width="100%" class="gridlist" border="0" cellspacing="0" cellpadding="0">
+   
+   <!-- 标题行区域 -->
+   <div id="pkg_head_div" class="pkg_head_div">
+      <table class="gridlist" border="0" cellspacing="0" cellpadding="0" id="pkg_head_table">
         <thead>
         <tr>
-          <th><{t}>物料编码<{/t}></th>
-          <th><{t}>物料名称<{/t}></th>
-          <th><{t}>规格<{/t}></th>
-          <th><{t}>单位<{/t}></th>
-          <{if $is_consign}>
-            <th><{t}>代销价<{/t}></th>
+          <{if $is_sap_reserved_times}>
+          <th class="width_120px"><{t}>SAP预约时间<{/t}></th>
           <{/if}>
-          <th><{t}>原价<{/t}></th>
-          <th><{t}>销售价<{/t}></th>
-          <th><{t}>优惠额<{/t}></th>
-          <th><{t}>实付金额<{/t}></th>
-          <th><{t}>优惠分摊<{/t}></th>
-          <th><{t}>购买量<{/t}></th>
-          <th><{t}>已发货量<{/t}></th>
-          <th><{t}>已退货量<{/t}></th>
-          <th><{t}>已拆分量<{/t}></th>
-          <th><{t}>hold单时限<{/t}></th>
-          <th><{t}>是否预售<{/t}></th>
-          <th><{t}>预选仓<{/t}></th>
-          <th><{t}>子单号<{/t}></th>
-          <th><{t}>关联子单号<{/t}></th>
-          <th><{t}>平台商品ID<{/t}></th>
-           <th><{t}>行号<{/t}></th>
-  
+
+          <th class="width_160px"><{t}>物料编码<{/t}></th>
+          <th class="width_230px"><{t}>物料名称<{/t}></th>
+          <th class="width_120px"><{t}>规格<{/t}></th>
+          <th class="width_100px"><{t}>单位<{/t}></th>
+          <{if $is_consign}>
+            <th class="width_100px"><{t}>代销价<{/t}></th>
+          <{/if}>
+          <th class="width_100px"><{t}>原价<{/t}></th>
+          <th class="width_100px"><{t}>销售价<{/t}></th>
+          <th class="width_100px"><{t}>优惠额<{/t}></th>
+          <th class="width_100px"><{t}>实付金额<{/t}></th>
+          <th class="width_100px"><{t}>优惠分摊<{/t}></th>
+          <{if $order.settlement_amount > 0}>
+          <th class="width_100px"><{t}>客户实付<{/t}></th>
+          <th class="width_100px"><{t}>商家结算<{/t}></th>
+          <{/if}>
+          <th class="width_100px"><{t}>购买量<{/t}></th>
+          <th class="width_100px"><{t}>已发货量<{/t}></th>
+          <th class="width_100px"><{t}>已退货量<{/t}></th>
+          <th class="width_100px"><{t}>已拆分量<{/t}></th>
+          <th sclass="width_180px"><{t}>hold单时限<{/t}></th>
+          <th class="width_100px"><{t}>是否预售<{/t}></th>
+          <th class="width_120px"><{t}>预选仓<{/t}></th>
+          <th sclass="width_180px"><{t}>子单号<{/t}></th>
+          <th sclass="width_180px"><{t}>关联子单号<{/t}></th>
+          <th sclass="width_180px"><{t}>平台商品ID<{/t}></th>
+          <th class="width_160px"><{t}>行号<{/t}></th>
+          
           <{if $is_host}>
-          <th><{t}>达人ID<{/t}></th>
-          <th><{t}>达人名称<{/t}></th>
-          <th><{t}>直播间ID<{/t}></th>
+          <th class="width_120px"><{t}>达人ID<{/t}></th>
+          <th class="width_160px"><{t}>达人名称<{/t}></th>
+          <th class="width_160px"><{t}>直播间ID<{/t}></th>
           <{/if}>
         </tr>
       </thead>
+      </table>
+   </div>
+
+   <!-- 内容行区域 -->
+   <div id="pkg_main_div" class="pkg_main_div">
+      <table class="gridlist" border="0" cellspacing="0" cellpadding="0" id="pkg_main_table">
       <tbody>
         <{foreach from=$objs item=obj}>
         <tr>
-          <td><strong><{$obj.bn}></strong></td>
-          <td>
+          <{if $is_sap_reserved_times}>
+          <td class="width_120px"><{$obj.sap_reserved_times}></td>
+          <{/if}>
+
+          <td class="width_160px"><strong><{$obj.bn}></strong></td>
+          <td class="width_230px">
             <{if $obj.is_price_protect == 'true'}><span style="color: red">【价保】</span><{/if}>
             <{if $obj.s_type=='dx'}><span style="color:#66ccff">【代销】</span><{/if}>
             <{if $obj.is_sh_ship=='true'}><span style="color:#800002">【禁发】</span><{/if}>
             <strong><{$obj.name}></strong>
           </td>
-          <td>捆绑商品&nbsp;</td>
-          <td>-</td>
+          <td class="width_120px">捆绑商品&nbsp;</td>
+          <td class="width_100px">-</td>
           <{if $is_consign}>
-            <td>-</td>
-          <{/if}>          
-          <td><strong><{$obj.price}></strong></td>
-          <td><strong><{$obj.sale_price/$obj.quantity|cur}></strong></td>
-          <td><strong><{$obj.pmt_price/$obj.quantity|cur}></strong></td>
-          <td><{$obj.divide_order_fee|cur}></td>
-          <td><{$obj.part_mjz_discount|cur}></td>
-          <td><strong><{$obj.quantity}></strong></td>
-          <td>&nbsp;</td>
-          <td>&nbsp;</td>
-          <td>&nbsp;</td>
-          <td><{if $obj.estimate_con_time < 1}>-<{elseif $obj.estimate_con_time == $maxHoldTime}>手工操作<{else}><{$obj.estimate_con_time|cdate}><{/if}></td>
-          <td><{if $obj.presale_status == 1}>是<{else}>否<{/if}></td>
-          <td><{$obj.store_code}></td>
-          <td><{$obj.oid}></td>
-          <td><{$obj.main_oid}></td>
-          <td><{$obj.shop_goods_id}></td>
-          <td><{$obj.sku_uuid}></td>
-  
+            <td class="width_100px">-</td>
+          <{/if}>
+          <td class="width_100px"><strong><{$obj.price}></strong></td>
+          <td class="width_100px"><strong><{$obj.sale_price/$obj.quantity|cur}></strong></td>
+          <td class="width_100px"><strong><{$obj.pmt_price/$obj.quantity|cur}></strong></td>
+          <td class="width_100px"><{$obj.divide_order_fee|cur}></td>
+          <td class="width_100px"><{$obj.part_mjz_discount|cur}></td>
+          <{if $order.settlement_amount > 0}>
+          <td class="width_100px"><{$obj.actually_amount|cur}></td>
+          <td class="width_100px"><{$obj.settlement_amount|cur}></td>
+          <{/if}>
+          <td class="width_100px"><strong><{$obj.quantity}></strong></td>
+          <td class="width_100px">&nbsp;</td>
+          <td class="width_100px">&nbsp;</td>
+          <td class="width_100px">&nbsp;</td>
+          <td class="width_180px"><{if $obj.estimate_con_time < 1}>-<{elseif $obj.estimate_con_time == $maxHoldTime}>手工操作<{else}><{$obj.estimate_con_time|cdate}><{/if}></td>
+          <td class="width_100px"><{if $obj.presale_status == 1}>是<{else}>否<{/if}></td>
+          <td class="width_120px"><{$obj.store_code}></td>
+          <td class="width_180px"><{$obj.oid}></td>
+          <td class="width_180px"><{$obj.main_oid}></td>
+          <td class="width_180px"><{$obj.shop_goods_id}></td>
+          <td class="width_160px"><{$obj.sku_uuid}></td>
+
           <{if $is_host}>
-          <td></td>
-          <td></td>
-          <td></td>
+          <td class="width_120px"></td>
+          <td class="width_160px"></td>
+          <td class="width_160px"></td>
           <{/if}>
         </tr>
+
         <{foreach from=$obj.order_items item=item}>
         <tr class="ColColorBlue" <{if $item.delete == 'true'}>style="background-color: rgb(216, 216, 216);"<{elseif $obj.pay_status == '5'}>style="background-color: #ffe3e7;"<{/if}> >
+          <{if $is_sap_reserved_times}>
+          <td><{$item.sap_reserved_times}></td>
+          <{/if}>
           <td><{$item.bn}></td>
           <td><{$item.name}></td>
           <td><{$item.addon}></td>
           <td><{$item.unit}></td>
           <{if $is_consign}>
           <td><{$item.buyer_payment}></td>
-          <{/if}>          
+          <{/if}>
           <td><{$item.price}></td>
         <td><{if $show_sale_price}><{$item.sale_price/$item.quantity|cur}><{else}>-<{/if}></td>
         <td><{if $show_sale_price}><{$item.pmt_price/$item.quantity|cur}><{else}>-<{/if}></td>
           <td><{if $show_sale_price}><{$item.divide_order_fee|cur}><{else}>-<{/if}></td>
           <td><{if $show_sale_price}><{$item.part_mjz_discount|cur}><{else}>-<{/if}></td>
+          <{if $order.settlement_amount > 0}>
+          <td><{if $show_sale_price}><{$item.actually_amount|cur}><{else}>-<{/if}></td>
+          <td><{if $show_sale_price}><{$item.settlement_amount|cur}><{else}>-<{/if}></td>
+          <{/if}>
           <td><{$item.quantity}></td>
           <td><{$item.sendnum}></td>
           <td><{$item.return_num}></td>
@@ -124,4 +211,42 @@
         <{/foreach}>
       </tbody>
      </table>
+   </div>
 </div>
+
+<script type="text/javascript">
+(function() {
+    // 同步横向滚动
+    var mainDiv = document.getElementById('pkg_main_div');
+    var headDiv = document.getElementById('pkg_head_div');
+    
+    if (mainDiv && headDiv) {
+        mainDiv.addEventListener('scroll', function() {
+            headDiv.scrollLeft = mainDiv.scrollLeft;
+        });
+    }
+    
+    // 页面加载完成后，调整表格最小宽度以支持所有列
+    window.addEventListener('load', function() {
+        var headTable = document.getElementById('pkg_head_table');
+        var mainTable = document.getElementById('pkg_main_table');
+        
+        if (headTable && mainTable) {
+            // 计算所有列的总宽度
+            var thElements = headTable.querySelectorAll('th');
+            var totalWidth = 0;
+            
+            for (var i = 0; i < thElements.length; i++) {
+                var thWidth = window.getComputedStyle(thElements[i]).width;
+                totalWidth += parseFloat(thWidth);
+            }
+            
+            // 如果总宽度大于容器宽度，设置表格最小宽度
+            if (totalWidth > headDiv.offsetWidth) {
+                headTable.style.minWidth = totalWidth + 'px';
+                mainTable.style.minWidth = totalWidth + 'px';
+            }
+        }
+    });
+})();
+</script>

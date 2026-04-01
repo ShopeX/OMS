@@ -1156,7 +1156,30 @@ class inventorydepth_ctl_regulation_apply extends desktop_controller
         $apply_detail            = $applyObj->dump(array('id' => $id), '*');
         $apply_detail['heading'] = str_replace('%', '', $apply_detail['heading']);
         $data['name']            = $apply_detail['heading'] . '货品列表';
-        $csvObj->export_header($data, $applyObj);
+        
+        // 设置正确的 Content-Type（包含 charset）
+        header("Content-Type: text/csv; charset=UTF-8");
+        
+        // 设置文件下载响应头
+        $filename = $data['name'] . ".csv";
+        $encoded_filename = urlencode($filename);
+        $encoded_filename = str_replace("+", "%20", $encoded_filename);
+        $ua = $_SERVER["HTTP_USER_AGENT"];
+        if (preg_match("/MSIE/", $ua)) {
+            header('Content-Disposition: attachment; filename="' . $encoded_filename . '"');
+        } else if (preg_match("/Firefox\/8/", $ua)) {
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+        } else if (preg_match("/Firefox/", $ua)) {
+            header('Content-Disposition: attachment; filename*="utf8\'\'' . $filename . '"');
+        } else {
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+        }
+        header('Cache-Control:must-revalidate,post-check=0,pre-check=0');
+        header('Expires:0');
+        header('Pragma:public');
+        
+        // 添加 UTF-8 BOM 标记，解决 Office 打开 CSV 乱码问题
+        echo "\xEF\xBB\xBF";
         
         $title              = ['*:销售物料编码', '*:销售物料名称', '*:销售物料类型'];
         $salesMaterialCsv[] = '"' . implode('","', $title) . '"';

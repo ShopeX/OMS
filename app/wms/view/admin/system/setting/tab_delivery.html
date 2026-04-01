@@ -77,7 +77,7 @@
         <div class="form-field">
             <span class="form-field-label">发货校验商品数量设置：</span>
             <input class="form-input" placeholder="请输入发货校验商品数量设置" type="text" name="set[wms.delivery.check]"  value="<{$setData.wms_delivery_check}>" vtype="required&&unsignedint" />
-            <span class="form-remark">同一货品数量大于设置数量时可以通过录入数量来批量检验</span>
+            <span class="form-remark">同一基础物料数量大于设置数量时可以通过录入数量来批量检验</span>
         </div>
         <div class="form-field">
             <span class="form-field-label">逐单发货是否称重：</span>
@@ -118,14 +118,14 @@
         </div>
         <div class="form-field weightwarn_on">
             <span class="form-field-label">逐单发货称重报警设置：</span>
-            包裹称重重量比系统中货品净重多出<input class="form-input" style="width: 5%"  type="text"  name="set[wms.delivery.max_weightwarn]" value="<{$setData.wms_delivery_max_weightwarn|default:0}>" vtype="required&&unsignedint" />
+            包裹称重重量比系统中基础物料净重多出<input class="form-input" style="width: 5%"  type="text"  name="set[wms.delivery.max_weightwarn]" value="<{$setData.wms_delivery_max_weightwarn|default:0}>" vtype="required&&unsignedint" />
             <span id='warnunit1' style="width:20px;"><{if $setData.wms_delivery_maxpercent=='1'}>%<{else}>g<{/if}></span>
             <input type="hidden" id="maxpercent" name="set[wms.delivery.maxpercent]" value="<{$setData.wms_delivery_maxpercent|default:0}>">&nbsp;&nbsp;以上,进行报警
             <input type="checkbox" class='weightpercent' value="1" <{if $setData.wms_delivery_maxpercent=='1'}>checked<{/if}>>按百分比计算
         </div>
         <div class="form-field weightwarn_on1">
             <span class="form-field-label"></span>
-            包裹称重重量比系统中货品净重少了<input class="form-input" style="width: 5%"  type="text"  name="set[wms.delivery.min_weightwarn]" value="<{$setData.wms_delivery_min_weightwarn|default:0}>" vtype="required&&unsignedint" />
+            包裹称重重量比系统中基础物料净重少了<input class="form-input" style="width: 5%"  type="text"  name="set[wms.delivery.min_weightwarn]" value="<{$setData.wms_delivery_min_weightwarn|default:0}>" vtype="required&&unsignedint" />
             <span id='warnunit2' ><{if $setData.wms_delivery_minpercent=='1'}>%<{else}>g<{/if}></span>
             <input type="hidden" id="minpercent" name="set[wms.delivery.minpercent]" value="<{$setData.wms_delivery_minpercent|default:0}>">&nbsp;&nbsp;以上,进行报警
             <input type="checkbox" class='weightpercent1' value="2" <{if $setData.wms_delivery_minpercent=='1'}>checked<{/if}>>按百分比计算

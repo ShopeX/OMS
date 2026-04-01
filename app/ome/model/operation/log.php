@@ -43,7 +43,7 @@ class ome_mdl_operation_log extends dbeav_model{
      * */
     public function batch_write_log2($logs)
     {
-        $opinfo = $this->_get_op_info($opinfo);
+        $opinfo = $this->_get_op_info();
         $ip = kernel::single("base_request")->get_remote_addr();
         foreach ($logs as $key => $value) {
             $_operations = $this->_get_operations($value['operation']);

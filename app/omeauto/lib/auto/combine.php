@@ -101,9 +101,9 @@ class omeauto_auto_combine
     public function process($group)
     {
         if (!is_array($group) || empty($group)) {
-
             return null;
         }
+        
         $this->_instanceItemObjectFrom = 'process';
         
         //初始化订单组结构
@@ -127,7 +127,7 @@ class omeauto_auto_combine
                 }
             }
         }
-        
+
         //按发组类型开始审单
         $result = array('total' => 0, 'succ' => 0, 'fail' => 0);
         foreach ($orderFilters as $orderGroup) {
@@ -233,11 +233,12 @@ class omeauto_auto_combine
             $filter->setConfig($type);
             $filters[] = $filter;
         }
+        
         //增加缺省订单分组
-
         $filter = new omeauto_auto_group();
         $filter->setDefault();
         $filters[] = $filter;
+        
         //返回订单组
         return $filters;
     }
@@ -252,10 +253,16 @@ class omeauto_auto_combine
     {
         //准备数据
         $ids  = $this->_mergeGroup($group);
-        $rows = app::get(self::__ORDER_APP)->model('orders')->getList('*', array('order_id' => $ids, 'process_status' => array('unconfirmed', 'confirmed', 'splitting', 'remain_cancel')));
+        $filter = array(
+            'order_id' => $ids,
+            'process_status' => array('unconfirmed', 'confirmed', 'splitting', 'remain_cancel'),
+            'is_not_combine' => 0,
+        );
+        $rows = app::get(self::__ORDER_APP)->model('orders')->getList('*', $filter);
         if (!$rows) {
             return;
         }
+        
         $orders = [];
         foreach ($rows as $order) {
             //[标识]是否系统自动审单
@@ -312,6 +319,7 @@ class omeauto_auto_combine
             }
             $orders[$object['order_id']]['objects'][$object['obj_id']] = $object;
         }
+        
         //增加物流升级服务
         $orderExt = app::get(self::__ORDER_APP)->model('order_extend')->getList('order_id,cpup_service,extend_field',array('order_id'=>$ids));
         if ($orderExt) {
@@ -478,17 +486,13 @@ class omeauto_auto_combine
      */
     public static function getCnf($name)
     {
-
         if (empty(self::$cnf)) {
-
             self::$cnf = kernel::single('omeauto_config_setting')->getAutoCnf();
         }
 
         if (isset(self::$cnf[$name])) {
-
             return self::$cnf[$name];
         } else {
-
             return '';
         }
     }
@@ -501,7 +505,6 @@ class omeauto_auto_combine
      */
     private function _getBufferTime()
     {
-
         return time() - self::getCnf('bufferTime') * 60;
     }
 
@@ -514,37 +517,19 @@ class omeauto_auto_combine
     public function getBufferGroup($filter = array())
     {
         $bufferTime = $this->_getBufferTime();
-
-        /*
-        //区分分销类型，生成不同的HASH。生成一下直销订单 hash
-        kernel::database()->exec("UPDATE sdb_ome_orders SET order_combine_hash=MD5(CONCAT(IFNULL(member_id,order_id),'-',shop_id,'-',ship_name,'-',ship_mobile,'-',ship_area,'-',ship_addr,'-',is_cod)), order_combine_idx= CRC32(CONCAT(IFNULL(member_id,order_id),'-',shop_id,'-',ship_name,'-',ship_mobile,'-',ship_area,'-',ship_addr,'-',is_cod)) WHERE op_id IS NULL AND group_id IS NULL AND ((shop_type<>'shopex_b2b' AND shop_type<>'dangdang' AND shop_type<>'taobao' AND shop_type<>'amazon') or shop_type is null)");
-
-        //当当订单如果是货到付款不合并
-        kernel::database()->exec("UPDATE sdb_ome_orders SET order_combine_hash=MD5(CONCAT(IFNULL(member_id,order_id),'-',shop_id,'-',ship_name,'-',ship_mobile,'-',ship_area,'-',ship_addr,'-',IF(is_cod='true',order_id,is_cod),'-',ship_tel,'-',shop_type)), order_combine_idx= CRC32(CONCAT(IFNULL(member_id,order_id),'-',shop_id,'-',ship_name,'-',ship_mobile,'-',ship_area,'-',ship_addr,'-',is_cod,'-',ship_tel,'-',shop_type)) WHERE op_id IS NULL AND group_id IS NULL AND shop_type='dangdang'");
-        //亚马逊如果是非自发货订单不合并
-        kernel::database()->exec("UPDATE sdb_ome_orders SET order_combine_hash=MD5(CONCAT(IFNULL(member_id,order_id),'-',shop_id,'-',ship_name,'-',ship_mobile,'-',ship_area,'-',ship_addr,'-',IF(self_delivery='false',order_id,self_delivery),'-',ship_tel,'-',shop_type)), order_combine_idx= CRC32(CONCAT(IFNULL(member_id,order_id),'-',shop_id,'-',ship_name,'-',ship_mobile,'-',ship_area,'-',ship_addr,'-',is_cod,'-',ship_tel,'-',shop_type)) WHERE op_id IS NULL AND group_id IS NULL AND shop_type='amazon'");
-        //淘宝代销订单不合并
-        kernel::database()->exec("UPDATE sdb_ome_orders SET order_combine_hash=MD5(CONCAT(IFNULL(member_id,order_id),'-',shop_id,'-',ship_name,'-',ship_mobile,'-',ship_area,'-',ship_addr,'-',IF(order_source='tbdx',order_id,order_source),'-',ship_tel,'-',shop_type)), order_combine_idx= CRC32(CONCAT(IFNULL(member_id,order_id),'-',shop_id,'-',ship_name,'-',ship_mobile,'-',ship_area,'-',ship_addr,'-',is_cod,'-',ship_tel,'-',shop_type)) WHERE op_id IS NULL AND group_id IS NULL AND shop_type='taobao'");
-
-        //生成一下分销订单 hash
-        kernel::database()->exec("UPDATE sdb_ome_orders SET order_combine_hash=MD5(CONCAT(IFNULL(member_id,order_id),'-',shop_id,'-',ship_name,'-',ship_mobile,'-',ship_area,'-',ship_addr,'-',is_cod,'-',ship_tel,'-',shop_type)), order_combine_idx= CRC32(CONCAT(IFNULL(member_id,order_id),'-',shop_id,'-',ship_name,'-',ship_mobile,'-',ship_area,'-',ship_addr,'-',is_cod,'-',ship_tel,'-',shop_type)) WHERE op_id IS NULL AND group_id IS NULL AND shop_type='shopex_b2b'");
-         */
-
+        
         $bufferFilter                         = $this->_getBufferFilter();
         $bufferFilter['timing_confirm|sthan'] = time();
+        
         if ($filter['shop_id'] && $filter['shop_id'] != 'all') {
             $bufferFilter['shop_id'] = $filter['shop_id'];
         }
-
         
         //订单类型
         if ($filter['order_type'] && $filter['order_type'] != 'all') {
             $bufferFilter['order_type'] = $filter['order_type'];
         }
-
-        // //获取所有可处理订单
-        // $this->bufferOrder = app::get(self::__ORDER_APP)->model('orders')->getList('order_id, order_combine_hash, order_combine_idx, pay_status, is_cod, createtime, paytime', $bufferFilter, 0, 1500, 'createtime ASC');
-
+        
         //获取所有可处理订单
         $cols     = 'order_id, order_combine_hash, order_combine_idx, pay_status, is_cod, createtime, paytime,step_trade_status';
         $subquery = "SELECT `order_id` 
@@ -567,12 +552,10 @@ class omeauto_auto_combine
                 $orderGroup[$idx]['orders'][$key] = $row['order_id'];
                 $orderGroup[$idx]['cnt'] += 1;
             }
-
-
+            
              //合并订单条数限制
             $orderGroup = $this->_restrictCombineLimit($orderGroup);
-
-
+            
             //去除无效数据
             foreach ($orderGroup as $key => $group) {
                 if ($this->vaildBufferGroup($group['orders'], $bufferTime)) {
@@ -582,6 +565,7 @@ class omeauto_auto_combine
                 }
             }
         }
+        
         return $orderGroup;
     }
 
@@ -608,6 +592,7 @@ class omeauto_auto_combine
                 $orderGroup[$key]['orders'] = join(',', $group['orders']);
             }
         }
+        
         return $orderGroup;
     }
 
@@ -620,7 +605,6 @@ class omeauto_auto_combine
      */
     private function vaildBufferGroup($orders, $bufferTime)
     {
-
         $gOrder = array();
         foreach ($orders as $idx => $ordersId) {
             $gOrder[$ordersId] = $this->bufferOrder[$idx];
@@ -640,15 +624,11 @@ class omeauto_auto_combine
      */
     private function _getBufferFilter()
     {
-
         if(kernel::single('ome_order_func')->checkPresaleOrder()){
-
-            return array('order_confirm_filter' => '(op_id IS NULL AND group_id IS NULL AND ((is_cod=\'true\' and pay_status=\'0\')  or (pay_status in(\'3\') AND step_trade_status in(\'FRONT_PAID_FINAL_NOPAID\')) or pay_status in (\'1\',\'4\')))', 'status' => 'active', 'ship_status' => '0', 'f_ship_status' => '0', 'confirm' => 'N', 'abnormal' => 'false', 'is_auto' => 'false', 'is_fail' => 'false', 'pause' => 'false', 'order_type|in' => kernel::single('ome_order_func')->get_normal_order_type());
-
+            return array('order_confirm_filter' => '(op_id IS NULL AND group_id IS NULL AND ((is_cod=\'true\' and pay_status=\'0\')  or (pay_status in(\'3\') AND step_trade_status in(\'FRONT_PAID_FINAL_NOPAID\')) or pay_status in (\'1\',\'4\')))', 'status' => 'active', 'ship_status' => '0', 'f_ship_status' => '0', 'confirm' => 'N', 'abnormal' => 'false', 'is_auto' => 'false', 'is_fail' => 'false', 'pause' => 'false', 'is_not_combine'=>0, 'order_type|in' => kernel::single('ome_order_func')->get_normal_order_type());
         }else{
-            return array('order_confirm_filter' => '(op_id IS NULL AND group_id IS NULL AND ((is_cod=\'true\' and pay_status=\'0\') or pay_status in (\'1\')))', 'status' => 'active', 'ship_status' => '0', 'f_ship_status' => '0', 'confirm' => 'N', 'abnormal' => 'false', 'is_auto' => 'false', 'is_fail' => 'false', 'pause' => 'false', 'order_type|in' => kernel::single('ome_order_func')->get_normal_order_type());
+            return array('order_confirm_filter' => '(op_id IS NULL AND group_id IS NULL AND ((is_cod=\'true\' and pay_status=\'0\') or pay_status in (\'1\')))', 'status' => 'active', 'ship_status' => '0', 'f_ship_status' => '0', 'confirm' => 'N', 'abnormal' => 'false', 'is_auto' => 'false', 'is_fail' => 'false', 'pause' => 'false', 'is_not_combine'=>0, 'order_type|in' => kernel::single('ome_order_func')->get_normal_order_type());
         }
-        
     }
 
     /**
@@ -660,26 +640,21 @@ class omeauto_auto_combine
      */
     public function fetchAlertMsg($staus, $order)
     {
-
         if ($staus == 0) {
-
             return array();
         }
+        
         $result = array();
         foreach ($this->_plugins as $plug) {
-
             $obj = $this->_instancePlugin($plug);
-
             if (is_object($obj)) {
-
                 $_msg = $obj->getMsgFlag();
                 if (($staus & $_msg) > 0) {
                     $result[] = $obj->getAlertMsg($order);
                 }
             }
         }
-
-        $mResult = array();
+        
         $mark    = kernel::single('omeauto_auto_group_mark');
         $mResult = $mark->fetchAlertMsg($staus, $order);
         $result  = array_merge($result, $mResult);
@@ -695,13 +670,10 @@ class omeauto_auto_combine
      */
     public function getErrorFlags()
     {
-
         $result = array();
         foreach ($this->_plugins as $plug) {
-
             $obj = $this->_instancePlugin($plug);
             if (is_object($obj)) {
-
                 $_msg          = $obj->getMsgFlag();
                 $result[$_msg] = $obj->getTitle();
             }
@@ -782,7 +754,9 @@ class omeauto_auto_combine
         $consignee['r_time']    = $o['r_time'];
         $consignee['email']     = $o['ship_email'];
         $consignee['zip']       = $o['ship_zip'];
+        
         $o['consignee']         = $consignee;
+        
         //读取店铺名称
         $shop           = app::get(self::__ORDER_APP)->model('shop')->getList('name', array('shop_id' => $o['shop_id']), 0, 1);
         $o['shop_name'] = $shop[0]['name'];
@@ -800,11 +774,8 @@ class omeauto_auto_combine
 
         //转换数据  addon
         foreach ($o['items'] as $type => $item) {
-
             foreach ($item as $objId => $object) {
-
                 foreach ($object['order_items'] as $pid => $product) {
-
                     $o['items'][$type][$objId]['order_items'][$pid]['bn']            = preg_replace('/^:::/is', '', $o['items'][$type][$objId]['order_items'][$pid]['bn']);
                     $o['items'][$type][$objId]['order_items'][$pid]['max_left_nums'] = $product['left_nums'];
 
@@ -891,14 +862,16 @@ class omeauto_auto_combine
 
         if ($ship_address == '0') {
             $filter['ship_name'] = $order['ship_name'];
-
             $filter['ship_area'] = $order['ship_area'];
             $filter['ship_addr'] = $order['ship_addr'];
+            
             if($order['shop_type'] == 'taobao' && strpos($order['ship_name'], '>>') !== false) {
                 unset($filter['ship_addr']);
             }
+            
             $filter['no_encrypt'] = true;
         }
+        
         if ($mobile == '0') {
             $filter['ship_mobile'] = $order['ship_mobile'];
             $filter['no_encrypt'] = true;
@@ -909,13 +882,11 @@ class omeauto_auto_combine
 
     private function _getCombineConf(&$combine_member_id, &$combine_shop_id)
     {
-
         if (strval(app::get('ome')->getConf('ome.combine.member_id')) == '0') {
-
             $combine_member_id = false;
         }
+        
         if (strval(app::get('ome')->getConf('ome.combine.shop_id')) == '0') {
-
             $combine_shop_id = false;
         }
     }
@@ -928,13 +899,16 @@ class omeauto_auto_combine
      */
     public function fetchCombineOrder($order)
     {
-
         //初始化变量
         $ids               = array();
         $orders            = array();
         $combine_member_id = true;
         $combine_shop_id   = true;
-
+        
+        // 是否支持手工合单（On：开启，Off：关闭）
+        //@todo：手工审单界面才会有此字段;
+        $is_manual_merge = isset($order['is_manual_merge']) ? $order['is_manual_merge'] : null;
+        
         //统一查询收获相关信息，以免抛进来的不一致
         $order     = app::get(self::__ORDER_APP)->model('orders')->getList('*', array('order_id' => $order['order_id']));
         $order     = $order[0];
@@ -943,10 +917,13 @@ class omeauto_auto_combine
 
         //新增合单逻辑
         $this->_getCombineConf($combine_member_id, $combine_shop_id);
-
+        
         //基础过滤条件[增加部分发货、部分退货 可继续审单
         $filter = array('ship_status' => array(0, 2, 3), 'process_status' => array('unconfirmed', 'confirmed', 'splitting'), 'status' => 'active', 'order_bn|noequal' => '0', 'is_cod' => $order['is_cod']);
-
+        
+        // 过滤不允许审核的订单
+        $filter['is_not_combine'] = 0;
+        
         if ($order['shop_type'] == 'shopex_b2b') {
             //分销单,对支持跨店合的参数无视,直接内置规则处理
             if ($combine_member_id) {
@@ -972,7 +949,7 @@ class omeauto_auto_combine
                 }
             }
         } else if ($order['shop_type'] == 'dangdang' && $order['is_cod'] == 'true') {
-//当当，且是货到付款不合并
+            //当当，且是货到付款不合并
             $filter['order_id'] = $order['order_id'];
         } else if (($order['shop_type'] == 'amazon') && $order['self_delivery'] == 'false') {
             //如果店铺类型是亚马逊，且不是自发货的不合并
@@ -982,7 +959,6 @@ class omeauto_auto_combine
             $filter['order_id'] = $order['order_id'];
         } else if ($order['shop_type'] == 'taobao' && $order['order_source'] == 'tbdx') {
             //淘宝代销订单不合并 823修改淘代销走B2B逻辑
-            //$filter['order_id'] = $order['order_id'];
             if ($combine_member_id) {
                 //需判断同一用户，因分销没有实际客户信息，以无用户信息方式处理
                 if (empty($order['member_id'])) {
@@ -1027,7 +1003,7 @@ class omeauto_auto_combine
                 //判定地址
                 $filter = array_merge($filter, $this->_getAddrFilter($order));
             }
-
+            
             if ($combine_shop_id) {
                 $filter['shop_id'] = $order['shop_id'];
             }
@@ -1059,11 +1035,14 @@ class omeauto_auto_combine
         }elseif($order['betc_id'] && $order['cos_id']){
             //分销一件代发订单,不允许合单
             $filter['order_id'] = $order['order_id'];
+        }elseif($is_manual_merge == 'Off'){
+            // 不允许手工合单（配置项：系统设置--》订单规则--》支持手工合单）
+            $filter['order_id'] = $order['order_id'];
         }
         
         //获取相关订单
         $row = app::get(self::__ORDER_APP)->model('orders')->getList('*', $filter);
-
+        
         if (!empty($order['member_id'])) {
             if ($order['shop_type'] == 'shopex_b2b') {
                 $tmp = array();
@@ -1083,10 +1062,16 @@ class omeauto_auto_combine
             } elseif ($order['shop_type'] == 'jd' && kernel::single('ome_bill_label')->getBillLabelInfo($order['order_id'], 'order', kernel::single('ome_bill_label')->isSomsGxd())) {
                 // 京东厂直 工小达 未接合单
                 $tmp = array();
+            } elseif($is_manual_merge == 'Off'){
+                // 人工审单界面：不允许手工合单
+                $tmp = array();
             } else {
-                #拆单_增加确认状态('splitting')与发货状态(ship_status=2)部分发货条件
+                // 拆单_增加确认状态('splitting')与发货状态(ship_status=2)部分发货条件
                 $tmp_filter = array('member_id' => $order['member_id'], 'shop_id' => $order['shop_id'], 'status' => 'active', 'process_status' => array('unconfirmed', 'confirmed', 'splitting'), 'ship_status' => array(0, 2), 'f_ship_status' => '0', 'order_bn|noequal' => '0', 'is_cod' => $order['is_cod']);
-
+                
+                // 过滤不允许审核的订单
+                $tmp_filter['is_not_combine'] = 0;
+                
                 $tmp = app::get(self::__ORDER_APP)->model('orders')->getList('*', $tmp_filter);
 
                 $row = array_merge($row, $tmp);
@@ -1148,15 +1133,20 @@ class omeauto_auto_combine
 
         return $result;
     }
-
+    
     /**
      * 生成发货单
      *
-     * @param Array $orders 订单数组
-     * @return Boolean
-     * @param $splitting_product 拆分的商品列表
+     * @param $orderIds
+     * @param $consignee
+     * @param $corpId
+     * @param $splitting_product
+     * @param $errmsg
+     * @param $split_auto
+     * @param $extendInfo 扩展信息：例如指定发货单号['delivery_bn'=>'****']
+     * @return bool|void
      */
-    public function mkDelivery($orderIds, $consignee, $corpId, $splitting_product = array(), &$errmsg, $split_auto = array())
+    public function mkDelivery($orderIds, $consignee, $corpId, $splitting_product = array(), &$errmsg=null, $split_auto = array(), $extendInfo=array())
     {
         $orderIds = is_array($orderIds) ? $orderIds : [$orderIds];
         if($corpId == 'auto') {
@@ -1164,8 +1154,14 @@ class omeauto_auto_combine
         } else {
             $corp = app::get('ome')->model('dly_corp')->dump($corpId, 'corp_id, name, type, is_cod, weight');
         }
-        $rows = app::get(self::__ORDER_APP)->model('orders')->getList('*', array('order_id' => $orderIds));
-
+        
+        // orders
+        $rows = app::get(self::__ORDER_APP)->model('orders')->getList('*', array('order_id'=>$orderIds, 'is_not_combine'=>0));
+        if(empty($rows)){
+            $errmsg = '没有可生成发货单的订单!';
+            return false;
+        }
+        
         $shop_group      = array();
         $createway_group = array();
         foreach ($rows as $order) {
@@ -1183,6 +1179,7 @@ class omeauto_auto_combine
                 $extends[$ev['order_id']] = $ev;
             }
         }
+        
         $is_check_channel = false;
         foreach ($rows as $order) {
             // 验证发货数据
@@ -1217,6 +1214,7 @@ class omeauto_auto_combine
                 $errmsg = '部分支付不可以审单';
                 return false;
             }
+            
             $is_part_split = false;
             if($order['process_status'] == 'splitting') $is_part_split  = true;
 
@@ -1265,17 +1263,15 @@ class omeauto_auto_combine
             
             // 判读是否是指定仓
             if (kernel::single('ome_order_bool_type')->isJDLVMI($order['order_bool_type']) ) {
-                
-
                 if(empty($consignee['waybillCode']) || !isset($consignee['waybillCode'])){
                     $consignee['waybillCode'] = $extends[$order['order_id']]['platform_logi_no'];
                 }
-                // // 不允许合单
+                
+                // 不允许合单
                  if (count($rows) >= 2) {
-                   return false;
+                    return false;
                  }
-
-
+                 
                 $store_code = app::get('ome')->model('order_objects')->db_dump(array ('order_id' => $order['order_id']), 'store_code');
 
                 if ($store_code['store_code']) {
@@ -1291,7 +1287,7 @@ class omeauto_auto_combine
             }
         }
         
-
+        // order_objects
         $objects = app::get(self::__ORDER_APP)->model('order_objects')->getList('*', array('order_id' => $orderIds, 'is_sh_ship' => 'false'));
         foreach ($objects as $object) {
             $object['addon'] = @json_decode($object['addon'], 1);
@@ -1316,8 +1312,9 @@ class omeauto_auto_combine
             if ($type_filter) {
                 $filter_sql[] = '(' . implode(' OR ', $type_filter) . ')'; //过滤删除的商品
             }
-
         }
+        
+        // filter
         $filter = array(
             'order_id'   => $orderIds,
             'obj_id'     => array_column($objects, 'obj_id'),
@@ -1342,17 +1339,17 @@ class omeauto_auto_combine
         //重组数据
         $orderSplitLib = kernel::single('ome_order_split');
         $orders        = $orderSplitLib->format_mkDelivery($orders, $tmp_objects, $items, $splitting_product);
-
+        
         // 过滤掉没有明细的订单
         foreach ($orders as $order_id => $order) {
             foreach ($order['objects'] as $ok => $object) {
                 if (empty($object['items'])) {
                     unset($orders[$order_id]['objects'][$ok]);
                 } else {
-                    #nums变成可拆分数量 split_num需要重置为0
+                    // nums变成可拆分数量 split_num需要重置为0
                     foreach ($object['items'] as $ik => $iv) {
                         $orders[$order_id]['objects'][$ok]['items'][$ik]['split_num'] = 0;
-                    	//震坤行不支持按行拆分
+                        // 震坤行不支持按行拆分
                         if ($rows[0]['shop_type'] == 'zkh') {
                             if ($iv['nums'] > 0 && $iv['original_num'] != $iv['nums']) {
                                 $errmsg = '震坤行订单不支持按数量拆分订单！';
@@ -1368,11 +1365,12 @@ class omeauto_auto_combine
                         return false;
                     }
                 }
-
             }
+            
             if (empty($orders[$order_id]['objects'])) {
                 unset($orders[$order_id]);
             }
+            
             if($orders[$order_id]) {
                 list($rs, $rsData) = kernel::single('ome_order_refund')->checkRefundStatus($orders[$order_id]);
                 if($rs) {
@@ -1381,6 +1379,7 @@ class omeauto_auto_combine
                 }
             }
         }
+        
         unset($rows);
 
         //没有可操作的有效订单(例如：订单没有商品明细)
@@ -1403,23 +1402,28 @@ class omeauto_auto_combine
                 }
             }
         }
+        
         list($rs, $rsData) = kernel::single('material_basic_material_stock_freeze')->deleteOrderBranchFreeze(array_column($orders, 'order_id'));
         if(!$rs) {
             $errmsg = '错误：'.$rsData['msg'];
             return false;
         }
+        
+        // canMkDelivery
         $group = new omeauto_auto_group_item($orders);
-
         if ($group->canMkDelivery()) {
             if (!empty($corp)) {
                 $branchId = $consignee['branch_id'];
-                #菜鸟的智选物流，会返回物流单号
+                
+                // 菜鸟的智选物流，会返回物流单号
                 $waybill_arr = explode(',', $consignee['waybillCode']);
                 $group->setWaybillCode($waybill_arr[0]);
                 $group->setSubWaybillCode(array_slice($waybill_arr, 1));
+                
                 unset($consignee['branch_id'], $consignee['waybillCode']);
+                
                 $errmsg = '库存不足，生成发货单失败';
-
+                
                 foreach ($orders as $o_k => $o_v) {
                     if ($o_v['shop_type'] == 'kuaishou') {
                         kernel::single('omeauto_auto_plugin_checksplitgift')->process($group);
@@ -1451,9 +1455,18 @@ class omeauto_auto_combine
                     } else {
                         $group->setBranchId($branchId);
                         $group->setDlyCorp($corp);
+                        
+                        // 指定的发货单号
+                        $group->setAssignDeliveryBn($extendInfo);
+                        
+                        // 设置发货单扩展信息
+                        $group->setDeliveryExtendInfo($extendInfo);
+                        
+                        // 生成发货单位
                         $rs = $group->mkDelivery($consignee);
                     }
                 }
+                
                 if ($rs['rsp'] == 'fail') {
                     $errmsg = $rs['msg'] ? $rs['msg'] : '审单操作失败：'.$errmsg;
                     return false;
@@ -1574,9 +1587,6 @@ class omeauto_auto_combine
      */
     public function getCombineShopMemberCount($orders)
     {
-        /*
-         *新增合单逻辑
-         */
         $combine_member_id = true;
         $combine_shop_id   = true;
         $this->_getCombineConf($combine_member_id, $combine_shop_id);
@@ -1614,7 +1624,6 @@ class omeauto_auto_combine
             $filter['order_id'] = $orders['order_id'];
         } else if ($orders['shop_type'] == 'taobao' && $orders['order_source'] == 'tbdx') {
             //823修改淘分销走b2b流程
-            //$filter['order_id'] = $orders['order_id'];
             if ($combine_member_id) {
                 //需判断同一用户，因分销没有实际客户信息，以无用户信息方式处理
                 if (empty($orders['member_id'])) {
@@ -1657,6 +1666,7 @@ class omeauto_auto_combine
             }
             $filter['filter_sql'] = "(shop_type IS NOT NULL AND order_source<>'tbdx' and shop_type<>'shopex_b2b' and (is_cod='false' or (shop_type<>'dangdang' AND is_cod='true')) and (self_delivery='true' or (shop_type<>'amazon' and self_delivery='false')) OR shop_type IS NULL)";
         }
+        
         if (!isset($orders['shipping_name']) && !isset($orders['store_code']) && !isset($orders['cpup_service'])) {
             $row = app::get(self::__ORDER_APP)->model('orders')->count($filter);
         }else{
@@ -1695,7 +1705,6 @@ class omeauto_auto_combine
         }
         
         //group
-        $retOrderGroup = array();
         foreach ($orderGroup as $key => $group)
         {
             if(count($group['orders']) <= $combine_merge_limit) {
@@ -1724,7 +1733,6 @@ class omeauto_auto_combine
                 
                 $groupNum++;
                 
-                //$newGroupKey = $key . $groupPage;
                 $newGroupKey = sprintf('%s||%s', $combine_hash.'-'.$groupPage, $combine_idx . $groupPage);
                 
                 $orderGroup[$newGroupKey]['orders'][$order_key] = $order_id;
@@ -1734,6 +1742,4 @@ class omeauto_auto_combine
         
         return $orderGroup;
     }
-
-
 }

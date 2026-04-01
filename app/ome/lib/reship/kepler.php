@@ -436,7 +436,12 @@ class ome_reship_kepler
         $this->__reshipObj->update($updateSdf, array('reship_id'=>$this->_reship_id));
         
         kernel::single('console_reship')->releaseChangeFreeze($this->_reship_id);
-        
+        // 退货单取消后的service扩展点
+        foreach(kernel::servicelist('console.service.reship.cancel.after') as $object) {
+            if(method_exists($object, 'cancel_reship_after')) {
+                $object->cancel_reship_after($this->_reship_id);
+            }
+        }
         //logs
         $memo = '自动拒绝退货单('. $this->__inputParams['afsResultType'] .')';
         $this->__operLogObj->write_log('reship@ome', $this->_reship_id, $memo);

@@ -20,6 +20,7 @@
  * @author kamisama.xia@gmail.com
  * @version 0.1
  */
+
 class material_mdl_basic_material extends dbeav_model{
     //是否有导出配置
     var $has_export_cnf = true;
@@ -32,9 +33,8 @@ class material_mdl_basic_material extends dbeav_model{
     /**
      * 基础物料列表项扩展字段
      */
-
     function extra_cols(){
-        return array(
+        return array_merge(array(
             'column_cost' => array('label'=>'成本价','width'=>'75','func_suffix'=>'cost'),
             'column_retail_price' => array('label'=>'零售价','width'=>'75','func_suffix'=>'retail_price'),
             'column_weight' => array('label'=>'重量','width'=>'75','func_suffix'=>'weight'),
@@ -50,7 +50,7 @@ class material_mdl_basic_material extends dbeav_model{
             'column_gendernm' => array('label'=>'适用对象','width'=>'120','func_suffix'=>'gendernm'),
             'column_widthnm' => array('label'=>'鞋型','width'=>'120','func_suffix'=>'widthnm'),
             'column_modelnm' => array('label'=>'风格款式','width'=>'120','func_suffix'=>'modelnm'),
-        );
+        ), $this->cat_level_finder_cols());
     }
 
     /**
@@ -143,6 +143,139 @@ class material_mdl_basic_material extends dbeav_model{
     function extra_modelnm($rows){
         return kernel::single('material_extracolumn_basicmaterial_modelnm')->process($rows);
     }
+
+    /**
+     * 列表与导出共用的五级分类列（func_suffix 均为 cat_levels）。
+     * 列键须为 column_cat_level_*，使 Finder SQL 为「1 as column_cat_level_n」，
+     * 与 console getListStock 里 strpos($col,'as column') 的虚拟列识别一致（不能用 cat_level_n 作别名）。
+     */
+    private function cat_level_finder_cols() {
+        return array(
+            'column_cat_level_1' => array('label' => '物料分类一级', 'width' => '100', 'func_suffix' => 'cat_levels'),
+            'column_cat_level_2' => array('label' => '物料分类二级', 'width' => '100', 'func_suffix' => 'cat_levels'),
+            'column_cat_level_3' => array('label' => '物料分类三级', 'width' => '100', 'func_suffix' => 'cat_levels'),
+            'column_cat_level_4' => array('label' => '物料分类四级', 'width' => '100', 'func_suffix' => 'cat_levels'),
+            'column_cat_level_5' => array('label' => '物料分类五级', 'width' => '100', 'func_suffix' => 'cat_levels'),
+        );
+    }
+
+    /**
+     * 导出时额外扩展的5级分类列（与 extra_cols 中定义一致，供导出配置合并）
+     */
+    public function export_extra_cols() {
+        return $this->cat_level_finder_cols();
+    }
+
+    /**
+     * 按 bm_id → cat_id → 分类路径 填充 cat_level_1~5
+     */
+    private function fillCatLevelColumns($list) {
+        if (empty($list)) {
+            return $list;
+        }
+        $bmIds = array_filter(array_unique(array_column($list, 'bm_id')));
+        if (empty($bmIds)) {
+            return $list;
+        }
+        $catMap = $this->getList('bm_id,cat_id', array('bm_id|in' => $bmIds));
+        $catMap = array_column($catMap, 'cat_id', 'bm_id');
+        $catMdl = app::get('material')->model('basic_material_cat');
+        $pathCache = array();
+        foreach ($list as $k => $row) {
+            $catId = isset($catMap[$row['bm_id']]) ? intval($catMap[$row['bm_id']]) : 0;
+            $list[$k]['column_cat_level_1'] = $list[$k]['column_cat_level_2'] = $list[$k]['column_cat_level_3'] = $list[$k]['column_cat_level_4'] = $list[$k]['column_cat_level_5'] = '';
+            if (!$catId) {
+                continue;
+            }
+            if (!isset($pathCache[$catId])) {
+                $path = $catMdl->getPath($catId);
+                $pathCache[$catId] = is_array($path) ? $path : array();
+            }
+            $path = $pathCache[$catId];
+            for ($i = 1; $i <= 5; $i++) {
+                $idx = $i;
+                if (isset($path[$idx]['title'])) {
+                    $list[$k]['column_cat_level_' . $i] = $path[$idx]['title'];
+                }
+            }
+        }
+        return $list;
+    }
+
+    /**
+     * 列表页：五级分类列批量填充（finder 对每个 cat_level_x 都会调一次 extra_cat_levels，故只执行一次）
+     */
+    private $_list_extra_cat_levels_done = false;
+
+    public function extra_cat_levels($rows) {
+        if ($this->_list_extra_cat_levels_done || empty($rows)) {
+            return $rows;
+        }
+        $rows = $this->fillCatLevelColumns($rows);
+        $this->_list_extra_cat_levels_done = true;
+        return $rows;
+    }
+
+    /**
+     * 导出时批量填充 cat_level_1~5（每个 cat_level_x 列都会触发，内部只执行一次）
+     */
+    private $_export_extra_cat_levels_done = false;
+
+    public function export_extra_cat_levels($list) {
+        if ($this->_export_extra_cat_levels_done || empty($list)) {
+            return $list;
+        }
+        $list = $this->fillCatLevelColumns($list);
+        $this->_export_extra_cat_levels_done = true;
+        return $list;
+    }
+
+    /**
+     * 自定义导出入口：预处理字段后委托 desktop_finder_export
+     * 将 cat_id/cat_path 替换为五级分类列，并确保 cat_level_1~5 始终包含
+     *
+     * @param string $fields 逗号分隔导出列
+     * @param array $filter 过滤条件（分片任务下含 bm_id 等）
+     * @param int $has_detail 是否含明细
+     * @param int $curr_sheet 当前分片序号
+     * @param int $start 分片起始（primary_key 分片时未使用）
+     * @param int $end 分片条数（primary_key 分片时未使用）
+     * @param int $op_id 操作员
+     * @return array
+     */
+    public function getExportDataByCustom($fields, $filter, $has_detail, $curr_sheet, $start, $end, $op_id)
+    {
+        $fieldsArr = array_map('trim', explode(',', $fields));
+        $replaceCat = array('cat_id', 'cat_path');
+        $catLevels = array('column_cat_level_1', 'column_cat_level_2', 'column_cat_level_3', 'column_cat_level_4', 'column_cat_level_5');
+
+        foreach ($replaceCat as $r) {
+            if (($idx = array_search($r, $fieldsArr)) !== false) {
+                unset($fieldsArr[$idx]);
+                foreach ($catLevels as $c) {
+                    if (!in_array($c, $fieldsArr)) {
+                        $fieldsArr[] = $c;
+                    }
+                }
+            }
+        }
+        foreach ($catLevels as $c) {
+            if (!in_array($c, $fieldsArr)) {
+                $fieldsArr[] = $c;
+            }
+        }
+        $fields = implode(',', array_values($fieldsArr));
+
+        $params = array(
+            'fields'     => $fields,
+            'filter'     => $filter,
+            'has_detail' => $has_detail,
+            'curr_sheet' => $curr_sheet,
+            'op_id'      => $op_id,
+        );
+        return kernel::single('desktop_finder_export')->work('material_mdl_basic_material', $params);
+    }
+
     /**
      * 物料类型字段格式化
      * @param string $row 物料类型字段
@@ -190,20 +323,32 @@ class material_mdl_basic_material extends dbeav_model{
             return '关闭';
         }
     }
-
-    //导出字段配置 移除不需要的字段
+    
     /**
-     * disabled_export_cols
-     * @param mixed $cols cols
-     * @return mixed 返回值
+     * 是否管控库存
+     *
+     * @param $row
+     * @return string
      */
+    function modifier_is_ctrl_store($row){
+        if($row == 2){
+            return '否';
+        }else{
+            return '是';
+        }
+    }
+
+    // column_cat_level_1~5 由 extra_cat_levels / export_extra_cat_levels 写入行数据；不设 modifier_column_cat_level_*，避免覆盖已填充值。
+
+    //导出字段配置 移除不需要的字段，并将「分类」「分类路径」替换为五级分类列
     public function disabled_export_cols(&$cols){
         unset($cols['column_edit']);
+        unset($cols['cat_id'], $cols['cat_path']);
     }
 
     /**
      * 导入模板的标题
-     * 
+     *
      * @param Null
      * @return Array
      */
@@ -216,7 +361,7 @@ class material_mdl_basic_material extends dbeav_model{
 
     /**
      * 导入导出的标题
-     * 
+     *
      * @param Null
      * @return Array
      */
@@ -309,10 +454,6 @@ class material_mdl_basic_material extends dbeav_model{
         '物料分类'=>'material_sort',
     );
 
-    /**
-     * templateColumn
-     * @return mixed 返回值
-     */
     public function templateColumn(){
         $customcols = kernel::single('material_customcols')->getcolstemplate();
         $templateColumn = $this->defaulttemplateColumn;
@@ -326,10 +467,6 @@ class material_mdl_basic_material extends dbeav_model{
         return $templateColumn;
 
     }
-    /**
-     * 获取TemplateColumn
-     * @return mixed 返回结果
-     */
     public function getTemplateColumn() {
         
        
@@ -342,7 +479,7 @@ class material_mdl_basic_material extends dbeav_model{
 
     /**
      * 准备导入的参数定义
-     * 
+     *
      * @param Null
      * @return Null
      */
@@ -352,7 +489,7 @@ class material_mdl_basic_material extends dbeav_model{
 
     /**
      * 准备导入的数据主体内容部分检查和处理
-     * 
+     *
      * @param Array $data
      * @param Boolean $mark
      * @param String $tmpl
@@ -365,7 +502,7 @@ class material_mdl_basic_material extends dbeav_model{
 
     /**
      * 准备导入的数据明细内容部分检查和处理
-     * 
+     *
      * @param Array $row
      * @param String $title
      * @param String $tmpl
@@ -716,7 +853,7 @@ class material_mdl_basic_material extends dbeav_model{
 
     /**
      * 完成基础物料的导入
-     * 
+     *
      * @param Null
      * @return Null
      */
@@ -908,11 +1045,6 @@ class material_mdl_basic_material extends dbeav_model{
     }
 
 
-    /**
-     * 检查Customcols
-     * @param mixed $cols cols
-     * @return mixed 返回验证结果
-     */
     public function checkCustomcols($cols){
 
         $customcolsMdl = app::get('desktop')->model('customcols');

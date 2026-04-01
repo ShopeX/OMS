@@ -1,0 +1,17 @@
+<services>
+  <service id="operation_log">
+    <class>ticket_operation_log</class>
+  </service>
+  <service id="desktop_finder.ticket_mdl_workflow_template">
+    <class>ticket_finder_workflow_template</class>
+  </service>
+  <service id="desktop_finder.ticket_mdl_workflow_node">
+    <class>ticket_finder_workflow_node</class>
+  </service>
+  <service id="desktop_finder.ticket_mdl_workflow_case">
+    <class>ticket_finder_workflow_case</class>
+  </service>
+  <service id="desktop_finder.ticket_mdl_workflow_record">
+    <class>ticket_finder_workflow_record</class>
+  </service>
+</services> 

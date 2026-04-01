@@ -338,7 +338,14 @@ class desktop_user{
                     }
                     $finderId = app::get('desktop')->router()->getFinderVid($menu['menu_path'].$query);
                     $menu['menu_path'] = $menu['menu_path'].$query.'&finder_vid='.$finderId;
-                    $menu['route_path'] = '/m-'.str_replace('_','',$menu['workground']).'/'.$menu['en'].'/'.$menu['menu_id'];
+                    
+                    // 如果target有值且以"/"开头，使用target作为route_path，如：/audit-template-list（审批流模板列表）
+                    if(!empty($menu['target']) && strpos($menu['target'], '/') === 0){
+                        $menu['route_path'] = $menu['target'];
+                    } else {
+                        $menu['route_path'] = '/m-'.str_replace('_','',$menu['workground']).'/'.$menu['en'].'/'.$menu['menu_id'];
+                    }
+                    
                     $aData['menu'][$k1][$k2][$k3] = $menu;
                 }
             }

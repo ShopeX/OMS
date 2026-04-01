@@ -601,7 +601,15 @@ class erpapi_shop_request_logistics extends erpapi_shop_request_abstract
         
         return $result;
     }
-    
 
-
+    /**
+     * 官方提货（提货物流）
+     * 子类可重写实现具体平台逻辑
+     * @param array $sdf 参数
+     * @return mixed
+     */
+    public function officialPickup($sdf = [])
+    {
+        return null;
+    }
 }

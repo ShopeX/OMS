@@ -21,7 +21,7 @@ class logisticsmanager_waybill_jdalpha {
             'template_name' => '京东',
             'shop_name' => '京东',
             'print_url' => 'http://prod-oms-app-cprt.jdwl.com/OpenCloudPrint/setup.exe',
-            'template_url' => 'https://open.jd.com/home/home#/index',
+            'template_url' => 'https://template-design.jd.com/?o=1#/home/templates',
             'shop_type' => ['360buy','jd'],
             'control_type' => 'jd',
             'request_again' => true

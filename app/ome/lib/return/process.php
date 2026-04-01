@@ -14,13 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class ome_return_process{
 	
-	function do_iostock($por_id,$io,&$msg){
+	public function do_iostock($por_id,$io,&$msg){
     	//生成出入库明细
 		$allow_commit = false;
-        kernel::database()->beginTransaction();
+        $trans = kernel::database()->beginTransaction();
 
         $iostockData = $this->get_iostock_data($por_id);
         foreach ($iostockData as $iostock){
@@ -33,13 +32,11 @@ class ome_return_process{
             }
         }
         if ($allow_commit == true){
-            kernel::database()->commit();
+            kernel::database()->commit($trans);
             return true;
         }else{
             
             kernel::database()->rollBack();
-
-            $msg = $iostock_msg;
             return false;
         }
     }
@@ -88,11 +85,6 @@ class ome_return_process{
     }
     
     //根据reship_id获取发货信息
-    /**
-     * 获取_delivery_list_by_reship_id
-     * @param mixed $reship_id ID
-     * @return mixed 返回结果
-     */
     public function get_delivery_list_by_reship_id($reship_id){
         $mdl_ome_reship = app::get('ome')->model('reship');
         $lib_archive_interface_delivery = kernel::single('archive_interface_delivery');
@@ -145,7 +137,6 @@ class ome_return_process{
      * @param bool $isCheckNum 是否检查校验数量与退货数量的关系
      * @return array
      */
-
     public function qualityCheckItemsSave($arrItemUpData, $returnProcess, $isCheckNum = true) {
         $modelItems = app::get('ome')->model('return_process_items');
         $items = $modelItems->getList('*', array('por_id'=>$returnProcess['por_id']));

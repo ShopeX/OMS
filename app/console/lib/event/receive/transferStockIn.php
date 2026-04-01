@@ -133,7 +133,6 @@ class console_event_receive_transferStockIn extends console_event_response{
                 'diff_reason'   => $value['diff_reason'],
                 'diff_memo'     => '',
                 'diff_status'   => '1',
-                'handle_type'   => '',
                 'handle_bn'     => '',
                 'operator'      => $operator,
                 'product_id'    => $value['product_id'],

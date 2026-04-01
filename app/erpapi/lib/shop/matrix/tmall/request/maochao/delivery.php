@@ -35,7 +35,11 @@ class erpapi_shop_matrix_tmall_request_maochao_delivery extends erpapi_shop_requ
 
         $order_id = $sdf['orderinfo']['order_id'];
         $isGuobu  = kernel::single('ome_bill_label')->getBillLabelInfo($order_id, 'order', 'SOMS_GB');
-
+        
+        // 喵速达
+        $isMiaosuda = kernel::single('ome_bill_label')->getBillLabelInfo($order_id, 'order', 'SOMS_ASCP');
+        
+        // sdf
         $order = $sdf['orderinfo'];
         $orderExtend = $sdf['order_extend'];
         $extend_field = @json_decode($orderExtend['extend_field'], 1);
@@ -46,8 +50,17 @@ class erpapi_shop_matrix_tmall_request_maochao_delivery extends erpapi_shop_requ
             'company_name' => $sdf['logi_name'],
             'tms_items' => []
         ];
+        
+        $storeCodes = [];
         $productOidNum =[];//捆绑商品只取其中一个为维度
         foreach ($sdf['order_objects'] as $v) {
+            $obj_oid = $v['oid'];
+            
+            // 过滤编辑订单添加的商品
+            if(empty($v['oid']) || $v['oid'] == '0'){
+                continue;
+            }
+            
             $order_items[] = [
                 'sub_order_code' => $v['oid'],
                 'sc_item_id' => $v['shop_goods_id'],
@@ -67,7 +80,24 @@ class erpapi_shop_matrix_tmall_request_maochao_delivery extends erpapi_shop_requ
                     $_tmp['sn'] = implode(',', $sdf['serial_number'][$item['product_id']]['sn']);
                 }
             }
-
+            
+            // store_code
+            $store_code = $v['store_code'];
+            
+            // 如果 store_code 为空，且是喵速达订单，则从 extend_info 中获取
+            if(empty($store_code) && $isMiaosuda && isset($isMiaosuda['extend_info']) && $isMiaosuda['extend_info'] && $obj_oid){
+                $extendInfo = json_decode($isMiaosuda['extend_info'], true);
+                if(is_array($extendInfo) && isset($extendInfo['storeCodeMap']) && is_array($extendInfo['storeCodeMap'])){
+                    if(isset($extendInfo['storeCodeMap'][$obj_oid])){
+                        $store_code = $extendInfo['storeCodeMap'][$obj_oid];
+                    }
+                }
+            }
+            
+            if($store_code){
+                $storeCodes[] = $store_code;
+            }
+            
             $one_tms_orders['tms_items'][] = $_tmp;
         }
         $tms_orders = [];
@@ -88,6 +118,12 @@ class erpapi_shop_matrix_tmall_request_maochao_delivery extends erpapi_shop_requ
                     ];
                 }
                 foreach ($productOidNum[$value['product_id']] as $oid => $pon) {
+                    
+                    // 过滤编辑订单添加的商品
+                    if(empty($oid) || $oid == '0'){
+                        continue;
+                    }
+                    
                     $tms_orders[$value['logi_no']]['tms_items'][] = [
                         'sub_order_code' => $oid,
                         'sc_item_id' => $pon['shop_goods_id'],
@@ -130,14 +166,23 @@ class erpapi_shop_matrix_tmall_request_maochao_delivery extends erpapi_shop_requ
                 'sender_mobile' => $branch['mobile'],
             ];
         }
-
+        
+        // store_code
+        if($isMiaosuda && $storeCodes){
+            // 喵速达：取平台推送的store_code
+            $store_code = $storeCodes[0];
+        }else{
+            $store_code = $sdf['branch']['branch_bn'];
+        }
+        
+        // params
         $params = [
             'tmall_type' => 'direct_marketing',
             "supplier_id"=> $extend_field['supplierId'],
             "biz_order_code"=> $order['order_bn'],
             "business_model"=> $extend_field['businessModel'],
             "out_biz_id" => $sdf['delivery_bn'],
-            "store_code" => $sdf['branch']['branch_bn'],
+            "store_code" => $store_code,
             "order_items" => json_encode($order_items),
             "tms_orders" => json_encode(array_values($tms_orders)),
             "sender_info" => json_encode($sender_info),

@@ -37,6 +37,7 @@ class erpapi_shop_response_process_bookingrefund{
                 return array('rsp'=>'succ', 'msg'=>'订单暂停成功');
             }
         }
+        
         //发起暂停订单
         $pause_status = false;
         if ($orderInfo["status"] == "active" && $orderInfo["ship_status"] == "0"){
@@ -82,6 +83,26 @@ class erpapi_shop_response_process_bookingrefund{
         }
     }
 
+    public function fxordermsg($params){
+        // shopbee供销供应商订单信息同步
+        $order_bn = $params['order_bn'];
+        $orderModel = app::get('ome')->model('orders');
+        $orderInfo = $orderModel->dump(array('order_bn' => $order_bn, 'shop_id'=>$params['shop_id']), 'order_id,order_bn,shop_id,status,ship_status,order_bool_type,payed,org_id');
+        if(!$orderInfo || !$orderInfo['order_id']){
+            return array('rsp'=>'fail', 'msg'=>'订单不存在');
+        }
+        
+        // 暂时只处理sellerComments添加到订单备注
+        if (!empty($params['sellerComments'])) {
+            list($success, $message) = kernel::single('ome_order_marktext')->add($orderInfo['order_id'], $params['sellerComments'], '供销供应商');
+            if (!$success) {
+                return array('rsp' => 'fail', 'msg' => $message);
+            }
+        }
+        
+        return array('rsp' => 'succ', 'msg' => '订单信息同步成功');
+    }
+
     protected function ordermsg_back($orderInfo, $params) {
         $orderExtend = app::get('ome')->model('order_extend')->db_dump($orderInfo['order_id'], 'extend_field');
         $sdf = [
@@ -107,10 +128,10 @@ class erpapi_shop_response_process_bookingrefund{
             'memo'          => '平台已经完成退款且关闭了交易订单',
             'trade_no'      => $sdf['order_bn'],
             'modifiey'      => time(),
-            'payment'       => '',
+            'payment'       => 0,
             't_ready'       => time(),
             't_sent'        => time(),
-            't_received'    => '',
+            't_received'    => 0,
             'org_id'    => $sdf['org_id'],
             'refund_refer' => '0', //退款来源
         );
@@ -146,4 +167,6 @@ class erpapi_shop_response_process_bookingrefund{
         
         return $rsp;
     }
+    
+
 }

@@ -165,9 +165,10 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
             $this->dlyCorp_tab = 'hidden';
         }
         
-        //同城配送&&商家配送
+        //同城配送&&商家配送&&官方物流提货
         $is_instatnt = false;
         $is_seller = false;
+        $is_pickup = false;
         
         $logi_id = intval($_GET['logi_id']);
         if($logi_id){
@@ -176,6 +177,8 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
                 $is_instatnt = true;
             }elseif($dlyCorpInfo['corp_model'] == 'seller'){
                 $is_seller = true;
+            }elseif($dlyCorpInfo['corp_model'] == 'pickup'){
+                $is_pickup = true;
             }
         }
         
@@ -411,12 +414,22 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
             
             unset($params['actions']['orderbycreatetime']);
         }elseif($is_seller){
-            //同城配送
+            //商家配送
             $params['actions']['deliveryman'] = array(
                 'label' => '批量填写商家配送',
                 'submit' => 'index.php?app=wms&ctl=admin_receipts_print&act=batchDeliveryman' . $attach,
                 'target' => 'dialog::{title:\'批量填写商家配送信息\',width:500,height:300}',
             );
+            
+            unset($params['actions']['orderbycreatetime']);
+        }elseif($is_pickup){
+            //官方物流提货
+           /* $params['actions']['stock'] = array(
+                'label' => '官方物流提货',
+             
+                'submit' => 'index.php?app=wms&ctl=admin_receipts_print&act=toPrintStock' . $attach,
+                'target' => "_blank",
+            );*/
             
             unset($params['actions']['orderbycreatetime']);
         }else{
@@ -1734,6 +1747,11 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
                     $dly[$k]['_memo_'][1] = "发货单商品信息打印（打印模板： $current_otmpl_name ）";
                     break;
             }
+
+            // 官方物流提货：自动补上快递单打印状态
+            if ($delivery['delivery_model'] == 'pickup' && $type != 'express') {
+                $dly[$k]['print_status'] = $dly[$k]['print_status'] | 4;
+            }
         }
         $opObj = app::get('ome')->model('operation_log');
         foreach ($dly as $k => $v) {
@@ -1823,6 +1841,8 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
             $this->message($msg['warn_msg']);
             exit;
         }
+
+       
 
         $PrintStockLib = kernel::single('wms_delivery_print_stock');
         $format_data = $PrintStockLib->format($print_data, $sku,$_err);
@@ -2816,6 +2836,221 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
         // 御城河 END
 
         $objExpress->setParams($params)->getTmpl();
+    }
+
+    /**
+     * 发货流程页：无需打开打印页面，直接获取快递单打印数据（与 toPrintExpre 同源逻辑）
+     *
+     * 返回结构用于 app/logisticsmanager/statics/js/printer.js 的 CaiNiaoPrinter：
+     * - data: 由 wms.service.template 组织出的数组（含 json_packet 等字段）
+     * - template / custom_template_url / custom_data: 与 template_cainiao_web.html 一致
+     */
+    public function ajaxGetPrintExpreData()
+    {
+        @ini_set('memory_limit','1024M');
+
+        $req = kernel::single('base_component_request');
+        $delivery_id = $req->get_post('delivery_id');
+        if ($delivery_id === null || $delivery_id === '') {
+            $delivery_id = $req->get_get('delivery_id');
+        }
+        $delivery_id = trim((string)$delivery_id);
+        if ($delivery_id === '') {
+            echo json_encode(array('status' => 'error', 'msg' => '参数错误：delivery_id'));
+            return;
+        }
+        // 支持数字为 delivery_id，非数字时按 pickup 的发货单号(delivery_bn)解析
+        if (!ctype_digit($delivery_id)) {
+            $dlyObj = app::get('wms')->model('delivery');
+            $pickupDly = $dlyObj->dump(array('delivery_bn' => $delivery_id, 'delivery_model' => 'pickup'), 'delivery_id');
+            if (empty($pickupDly)) {
+                echo json_encode(array('status' => 'error', 'msg' => '未找到提货单或非提货单'));
+                return;
+            }
+            $delivery_id = $pickupDly['delivery_id'];
+        }
+        $delivery_id = intval($delivery_id);
+        if ($delivery_id <= 0) {
+            echo json_encode(array('status' => 'error', 'msg' => '参数错误：delivery_id'));
+            return;
+        }
+
+        $_err = 'false';
+        $sku = $req->get_get('sku');
+        $sku = $sku ? $sku : '';
+        $afterPrint = true;
+        $now_print_type = 'ship';
+
+        $msg = array();
+        $PrintLib = kernel::single('wms_delivery_print');
+        $filter_condition = array('filter' => array('delivery_id' => array($delivery_id)));
+        $print_data = $PrintLib->getPrintDatas($filter_condition, $now_print_type, $sku, $afterPrint, $msg);
+        if (!$print_data) {
+            $errMsg = isset($msg['error_msg']) ? $msg['error_msg'] : '获取打印数据失败';
+            echo json_encode(array('status' => 'error', 'msg' => $errMsg));
+            return;
+        }
+        if (isset($msg['warn_msg']) && $msg['warn_msg']) {
+            echo json_encode(array('status' => 'error', 'msg' => $msg['warn_msg']));
+            return;
+        }
+
+        $deliveryObj = app::get('wms')->model('delivery');
+        $dlyBillObj = app::get('wms')->model('delivery_bill');
+        $channelObj = app::get("logisticsmanager")->model("channel");
+        $ids = $print_data['ids'];
+
+        // 防止并发打印重复获取运单号（单笔也保持一致行为）
+        $_inner_key = sprintf("print_ids_%s", md5(implode(',', (array)$ids)));
+        $aData = cachecore::fetch($_inner_key);
+        if ($aData === false) {
+            cachecore::store($_inner_key, 'printed', 5);
+        } else {
+            echo json_encode(array('status' => 'error', 'msg' => '该发货单正在准备打印数据，请稍后重试'));
+            return;
+        }
+
+        // 复用 toPrintExpre 的关键组织逻辑：组装 $expressDelivery、处理电子面单、产出 $mydata
+        $expressDelivery = array();
+        $logiId = null;
+        $existTB = false;
+        $existPDD = false;
+        $existDY = false;
+        foreach ((array)$print_data['deliverys'] as $val) {
+            empty($logiId) && $logiId = $val['logi_id'];
+            $orderSource = current($val['orders']);
+            if ($val['shop_type'] == 'taobao' && $orderSource['source'] == 'matrix') {
+                $existTB = true;
+            }
+            if ($val['shop_type'] == 'pinduoduo' && $orderSource['source'] == 'matrix') {
+                $existPDD = true;
+            }
+            if ($val['shop_type'] == 'luban' && $orderSource['source'] == 'matrix') {
+                $existDY = true;
+            }
+            foreach ($val as $dk => $dv) {
+                if (!is_array($dv)) {
+                    $expressDelivery[$val['delivery_id']][$dk] = $dv;
+                }
+            }
+        }
+
+        $corp = app::get('ome')->model('dly_corp')->dump($logiId);
+        if (!$corp) {
+            echo json_encode(array('status' => 'error', 'msg' => '获取物流公司信息失败'));
+            return;
+        }
+
+        // 同城配校验（保持与 toPrintExpre 一致）
+        if (in_array($corp['corp_model'], array('instatnt', 'seller'))) {
+            $billList = $dlyBillObj->getList('*', array('delivery_id' => array($delivery_id)));
+            foreach ($billList as $billVal) {
+                if (empty($billVal['logi_no'])) {
+                    echo json_encode(array('status' => 'error', 'msg' => '同城配请先填写物流信息或配送员信息'));
+                    return;
+                }
+            }
+        }
+
+        app::get('ome')->model('dly_corp_channel')->getChannel($corp, $expressDelivery);
+        if (!$corp['channel_id'] && $corp['tmpl_type'] == 'electron') {
+            echo json_encode(array('status' => 'error', 'msg' => '对应多个电子面单来源，无法打印'));
+            return;
+        }
+
+        // 电子面单处理：与 toPrintExpre 一致的模板/控件校验 + dealElectron
+        if ($corp['tmpl_type'] == 'electron') {
+            $channelInfo = $channelObj->db_dump(array('channel_id' => $corp['channel_id']), 'channel_type,logistics_code');
+            $expressTmpl = app::get("logisticsmanager")->model('express_template')->dump($corp['prt_tmpl_id'], 'template_type,control_type');
+            if ($channelInfo['channel_type'] == 'hqepay' && $channelInfo['logistics_code'] == 'SF' && $expressTmpl['control_type'] == 'lodop') {
+                $existTB = $existPDD = $existDY = false;
+            }
+            if ($existTB === true && !in_array($expressTmpl['template_type'], array('cainiao_standard', 'cainiao_user'))) {
+                echo json_encode(array('status' => 'error', 'msg' => '淘宝订单请使用菜鸟控件、菜鸟模板'));
+                return;
+            }
+            if ($existPDD === true && !in_array($expressTmpl['template_type'], array('pdd_standard', 'pdd_user'))) {
+                echo json_encode(array('status' => 'error', 'msg' => '拼多多订单请使用拼多多控件、拼多多模板'));
+                return;
+            }
+            if ($existDY === true && !in_array($expressTmpl['template_type'], array('douyin_standard', 'douyin_user'))) {
+                echo json_encode(array('status' => 'error', 'msg' => '抖音订单请使用抖音控件、抖音模板'));
+                return;
+            }
+            $eleRet = kernel::single('wms_delivery_electron')->dealElectron($expressDelivery, $corp['channel_id'], $afterPrint, $this);
+            if (isset($eleRet['id_bn']) && count($eleRet['id_bn'])) {
+                // 单笔接口，直接返回首条错误
+                $first = current($eleRet['id_bn']);
+                $errMsg = isset($first['msg']) ? $first['msg'] : '电子面单处理失败';
+                echo json_encode(array('status' => 'error', 'msg' => $errMsg));
+                return;
+            }
+        }
+
+        foreach ((array)$print_data['deliverys'] as $dk => $dv) {
+            if (isset($expressDelivery[$dk]['logi_no']) && $expressDelivery[$dk]['logi_no']) {
+                $print_data['deliverys'][$dk]['logi_no'] = $expressDelivery[$dk]['logi_no'];
+            }
+        }
+
+        $PrintShipLib = kernel::single('wms_delivery_print_ship');
+        $format_data = $PrintShipLib->format($print_data, $sku, $_err);
+
+        $express_company_no = strtoupper($corp['type']);
+        $objExpress = ome_print_tmpl_express::instance($express_company_no, $this);
+        if (!$objExpress->getExpressTpl($corp)) {
+            $msg = $objExpress->msg ? $objExpress->msg : '获取打印模板失败';
+            echo json_encode(array('status' => 'error', 'msg' => $msg));
+            return;
+        }
+        $printTpl = $objExpress->printTpl;
+
+        $mydata = array();
+        if (isset($format_data['delivery']) && $format_data['delivery']) {
+            foreach ($format_data['delivery'] as $val) {
+                $val['printTpl']['template_type'] = $printTpl['template_type'];
+                $val['printTpl']['control_type'] = $printTpl['control_type'];
+
+                $data = array();
+                foreach (kernel::servicelist('wms.service.template') as $object => $instance) {
+                    $tmp = array();
+                    if (method_exists($instance, 'getElementContent')) {
+                        $tmp = $instance->getElementContent($val);
+                    }
+                    $data = array_merge($data, $tmp);
+                }
+                $mydata[] = $data;
+            }
+        }
+
+        // 发货流程页只触发打 1 份面单，避免队列里出现多单
+        if (count($mydata) > 1) {
+            $mydata = array_slice($mydata, 0, 1);
+        }
+
+        // JSON 输出给前端直接调用 printer.js
+        $custom_data = array();
+        if (isset($printTpl['template_select']) && $printTpl['template_select']) {
+            $decoded = json_decode($printTpl['template_select'], true);
+            if (is_array($decoded)) {
+                $custom_data = $decoded;
+            }
+        }
+
+        $printer_type = (isset($printTpl['control_type']) && $printTpl['control_type'] !== '') ? $printTpl['control_type'] : 'cainiao';
+        echo json_encode(array(
+            'status' => 'success',
+            'printer_type' => $printer_type,
+            'options' => array(
+                'data' => $mydata,
+                'template' => isset($printTpl['template_data']) ? str_replace('url:', '', $printTpl['template_data']) : '',
+                'custom_template_url' => isset($printTpl['custom_area_url']) ? $printTpl['custom_area_url'] : '',
+                'custom_data' => $custom_data,
+            ),
+            'express_company_no' => $express_company_no,
+            'err' => $_err,
+        ));
+        return;
     }
 
     function covertNullToString(&$items) {

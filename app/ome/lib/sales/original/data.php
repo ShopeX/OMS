@@ -14,16 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class ome_sales_original_data
 {
     private $appName = 'ome';
     
-    /**
-     * 设置AppName
-     * @param mixed $appName appName
-     * @return mixed 返回操作结果
-     */
     public function setAppName($appName) {
         $this->appName = $appName;
         return $this;
@@ -74,6 +68,7 @@ class ome_sales_original_data
                 if($item['delete'] == 'true'){
                     $is_item_delete = true;
                     unset($order_info['order_objects'][$key]['order_items'][$k]);
+                    unset($items[$k]);
                     $item_delete_flag++;
                 }
                 if (!$is_item_delete){
@@ -97,7 +92,8 @@ class ome_sales_original_data
                     }
                     $tmp_sale_price = $tmp_sale_price-$item['refund_money'];
 
-                    $order_info['order_objects'][$key]['order_items'][$k]['sale_price'] = $tmp_sale_price;
+                    // 格式化避免浮点数精度问题导致科学计数法
+                    $order_info['order_objects'][$key]['order_items'][$k]['sale_price'] = floatval(sprintf('%.2f', $tmp_sale_price));
 
                     $tmp_item_pmt_price_all += $tmp_item_pmt_price;
                 }
@@ -113,8 +109,12 @@ class ome_sales_original_data
                 $order_info['order_objects'][$key]['pmt_price'] = $tmp_obj_pmt_price;
 
                 $tmp_obj_sale_price = ($obj['sale_price'] > 0) ? $obj['sale_price'] : ((($tmp_obj_amount-$tmp_obj_pmt_price-$tmp_item_pmt_price_all) > 0) ? ($tmp_obj_amount-$tmp_obj_pmt_price-$tmp_item_pmt_price_all) : 0.000);
-                $order_info['order_objects'][$key]['sale_price'] = $tmp_obj_sale_price;
+                // 格式化避免浮点数精度问题导致科学计数法，使用三位小数与原始代码保持一致
+                $order_info['order_objects'][$key]['sale_price'] = floatval(sprintf('%.3f', $tmp_obj_sale_price));
 
+                if($order_info['settlement_amount'] > 0) {
+                    continue;
+                }
                 $platformAmount = $couponPlatform->getPlatformAmount($obj);
                 $order_info['order_objects'][$key]['platform_amount'] = $platformAmount;
                 $order_info['order_objects'][$key]['settlement_amount'] = $platformAmount + $obj['divide_order_fee'];
@@ -220,7 +220,8 @@ class ome_sales_original_data
             $sum -= abs($data['discount']);
         }
 
-        $sum = $sum - $data['pmt_goods'] - $data['pmt_order'];
+        // 使用 bcmath 进行精确计算，避免浮点数精度问题
+        $sum = bcsub(bcsub($sum, $data['pmt_goods'], 3), $data['pmt_order'], 3);
         $data['total_amount'] = $data['total_amount']-$data['service_price']-$data['refund_money'];
         if(bccomp($data['total_amount'], $sum, 3) == 0){
             return true;

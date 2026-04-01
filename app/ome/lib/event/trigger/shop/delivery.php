@@ -79,7 +79,13 @@ class ome_event_trigger_shop_delivery
         $deliveryModel = app::get('ome')->model('delivery');
         $delivery = $this->_getDelivery($delivery_id);
 
-        if (empty($delivery['logi_no'])) return ['rsp'=>'fail', 'msg'=>'运单号为空'];
+        if (empty($delivery['logi_no'])) {
+            // 提货物流允许 logi_no 为空，运单号由平台接口返回
+            $corpInfo = app::get('ome')->model('dly_corp')->dump($delivery['logi_id'], 'corp_model');
+            if ($corpInfo['corp_model'] != 'pickup') {
+                return ['rsp'=>'fail', 'msg'=>'运单号为空'];
+            }
+        }
         if ($delivery['is_bind'] == 'true') { //  合单
             $children_delivery_id = array();
 

@@ -282,6 +282,7 @@ class base_application_manage{
                 $app->setConf($set['key'],$set['value']);
             }
         }
+        kernel::single('base_initial', $app_id)->init();
 
         $app->runtask('post_install',$options);
 

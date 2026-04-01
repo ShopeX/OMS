@@ -52,6 +52,14 @@
         <class>financebase_finder_bill_fee_type</class>
     </service>
 
+    <service id="desktop_finder.financebase_mdl_account_chart">
+        <class>financebase_finder_account_chart</class>
+    </service>
+
+    <service id="desktop_finder.financebase_mdl_gap">
+        <class>financebase_finder_gap</class>
+    </service>
+
     <service id="bill_category_rules_set">
         <class>financebase_data_bill_category_rules</class>
     </service>
@@ -59,6 +67,10 @@
     <service id="desktop_finder.financebase_mdl_bill_import">
         <class>financebase_finder_cainiao</class>
     </service>
+    
+    <!-- <service id="desktop_finder.financebase_mdl_bill_import_jdbill">
+        <class>financebase_finder_jdbill_import</class>
+    </service> -->
     
     <service id="desktop_finder.financebase_mdl_expenses_split">
         <class>financebase_finder_expenses_split</class>
@@ -77,10 +89,13 @@
         <class>financebase_finder_bill_import_sku</class>
     </service>
 
+    <!-- <service id="desktop_finder.financebase_mdl_bill_import_jdbill_detail">
+        <class>financebase_finder_jdbill_detail</class>
+    </service> -->
+
     <service id="extend_filter_financebase_mdl_bill_import">
         <class>financebase_finder_extend_filter_bill_import</class>
     </service>
-
 
     <service id="extend_filter_financebase_mdl_bill_import_order">
         <class>financebase_finder_extend_filter_bill_import_order</class>
@@ -98,5 +113,9 @@
 
     <service id="extend_filter_financebase_mdl_expenses_unsplit">
         <class>financebase_finder_extend_filter_expenses_unsplit</class>
+    </service>
+
+    <service id="operation_log">
+        <class>financebase_operation_log</class>
     </service>
 </services>

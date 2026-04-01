@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
 class ome_ctl_admin_order_fail extends desktop_controller
 {
     public $name       = "订单中心";
@@ -356,7 +355,14 @@ class ome_ctl_admin_order_fail extends desktop_controller
                 kernel::database()->exec('DELETE FROM `sdb_ome_tbjz_orders` WHERE order_id='.$o['order_id']);
                 kernel::database()->exec('DELETE FROM `sdb_ome_order_selling_agent` WHERE order_id='.$o['order_id']);
                 kernel::database()->exec('DELETE FROM `sdb_ome_order_preprocess` WHERE preprocess_order_id='.$o['order_id']);
-
+                
+                // 删除订单后，service扩展触发其他服务
+                foreach(kernel::servicelist('ome.service.order.fail.delete.after') as $service) {
+                    if(method_exists($service, 'after_order_delete')) {
+                        $service->after_order_delete($o['order_id']);
+                    }
+                }
+                
                 if(app::get('invoice')->is_installed()){
                     kernel::database()->exec('DELETE FROM `sdb_invoice_order` WHERE order_id='.$o['order_id']);
                 }

@@ -1,0 +1,113 @@
+<div class="tableform">
+    <h4>追加补寄留言</h4>
+    <div class="division">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+            <tr>
+                <th>
+                    <{t}>补寄申请单号：<{/t}>
+                </th>
+                <td>
+                    <{$reshipping.reshipping_bn}>
+                </td>
+                <th>
+                    <{t}>关联订单号：<{/t}>
+                </th>
+                <td><{$reshipping.order_bn|default:'-'}></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="division">
+        <form method="post" action="index.php?app=ome&ctl=admin_return_reshipping&act=doAddMessage"
+            id="add_message_form" enctype="multipart/form-data">
+            <input type="hidden" name="reshipping_id" value="<{$reshipping.reshipping_id}>">
+            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                    <th width="120">
+                        <{t}>留言内容：<{/t}><span style="color:red;">*</span>
+                    </th>
+                    <td>
+                        <textarea name="content" rows="5" cols="50" style="width:300px;height: 100px;" required
+                            placeholder="请输入留言内容"></textarea>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th>
+                        <{t}>凭证图片：<{/t}>
+                    </th>
+                    <td>
+                        <input type="file" name="message_pics" accept="image/*">
+                        <div style="color:#999;margin-top:5px;">可选，只能上传一张图片</div>
+                    </td>
+                </tr>
+            </table>
+        </form>
+    </div>
+</div>
+
+<{area inject=".mainFoot" }>
+    <div class="table-action">
+        <table width="100%" cellspacing="0" cellpadding="0">
+            <tbody>
+                <tr>
+                    <td>
+                        <{button type="button" id='submit_btn' class="btn-primary" label='保存' }>
+                            <{button type="button" id='close_btn' class="btn-secondary" label='关闭'
+                                isCloseDialogBtn="true" }>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+<{/area}>
+
+<script type="text/javascript">
+    (function () {
+        var _form = $('add_message_form');
+        var btn = $('submit_btn');
+
+        if (!_form || !btn) {
+            return;
+        }
+
+        // 表单提交配置
+        _form.store('target', {
+            onRequest: function () {
+                btn.setAttribute('disabled', 'disabled');
+            },
+            onComplete: function (response) {
+                btn.removeAttribute('disabled');
+                var hash_res_obj = JSON.decode(response);
+                if (hash_res_obj.rsp == 'succ') {
+                    MessageBox.success('追加留言成功');
+                    // 刷新父页面的留言列表
+                    if (window.loadMessages && typeof window.loadMessages === 'function') {
+                        window.loadMessages();
+                    }
+                    try {
+                        var _dialogIns = btn.getParent('.dialog').retrieve('instance');
+                    } catch (e) { }
+
+                    if (_dialogIns) {
+                        _dialogIns.close();
+                    }
+                } else {
+                    MessageBox.error(hash_res_obj.msg || '追加留言失败');
+                }
+            }
+        });
+
+        // 按钮点击事件
+        btn.addEvent('click', function () {
+            // 验证表单
+            var content = _form.getElement('textarea[name="content"]');
+            if (!content || !content.value.trim()) {
+                alert('留言内容不能为空');
+                return;
+            }
+
+            _form.fireEvent('submit', { stop: $empty });
+        });
+    })();
+</script>

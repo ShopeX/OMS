@@ -26,20 +26,22 @@ class erpapi_shop_matrix_xiaomi_request_delivery extends erpapi_shop_request_del
     protected function get_confirm_params($sdf)
     {
         $logistics_list = array();
-        foreach ($sdf['orderinfo']['order_objects'] as $object) {
-            $item = current($object['order_items']);
-            if ($object['shop_goods_id'] && $object['shop_goods_id'] > 0) {
-                $logistics_list[] = array(
-                    'bn'=>$item['shop_product_id'],
-                    'company_code' => $sdf['logi_type'], // 物流编号
-                    'logistics_no' => $sdf['logi_no'], // 运单号
+        foreach ($sdf['delivery_items'] as $item) {
+            if ($item['shop_goods_id'] && $item['shop_goods_id'] != '-1') {
+                 $logistics_list[] = array(
+
+                    'bn'    =>  $item['product_bn'],
+                    'num'   =>  $item['number'],
+                    'shop_goods_id' => $item['shop_goods_id'],
                 );
             }
 
         }
         $param = array(
             'tid'          => $sdf['orderinfo']['order_bn'], // 订单号
-            'logistics_list' => json_encode($logistics_list)
+            'company_code' => $sdf['logi_type'], // 物流编号
+            'logistics_no' => $sdf['logi_no'], // 运单号
+            'item_list' => json_encode($logistics_list)
         );
         
         return $param;

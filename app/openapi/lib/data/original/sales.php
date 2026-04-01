@@ -16,13 +16,6 @@
  */
 
 class openapi_data_original_sales{
-    /**
-     * 获取List
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $limit limit
-     * @return mixed 返回结果
-     */
     public function getList($filter,$offset=0,$limit=100){
         $sqlstr = '1';
         $shopObj = app::get('ome')->model('shop');
@@ -450,14 +443,32 @@ class openapi_data_original_sales{
     }
 
     /**
-     * SalesAmount
-     * @param mixed $start_time start_time
-     * @param mixed $end_time end_time
-     * @param mixed $offset offset
-     * @param mixed $limit limit
-     * @param mixed $shop_bn shop_bn
-     * @return mixed 返回值
+     * 返回所有备注内容
+     * @param string $mark_text 序列化的备注数据
+     * @return string 所有op_content内容，用||连接
+     * @access  public
      */
+    function getAllMarkText($mark_text)
+    {
+        if (empty($mark_text)) {
+            return '';
+        }
+        
+        $mark = @unserialize($mark_text);
+        if (!is_array($mark) || empty($mark)) {
+            return '';
+        }
+        
+        $opContents = array();
+        foreach ($mark as $item) {
+            if (is_array($item) && isset($item['op_content']) && !empty($item['op_content'])) {
+                $opContents[] = $item['op_content'];
+            }
+        }
+        
+        return implode('||', $opContents);
+    }
+
     public function SalesAmount($start_time,$end_time,$offset=0,$limit=100,$shop_bn = false){
         if(empty($start_time) || empty($end_time)){
             return false;
@@ -534,11 +545,11 @@ class openapi_data_original_sales{
 
     /**
      * 销售发货明细
-     * 
+     *
      * @return array
      * @author CP
      * @version 4.3.9 2021-08-14T10:54:17+08:00
-     * */
+     **/
     public function getDeliveryList($filter, $offset = 0, $limit = 100)
     {
         $saleDelivMdl = app::get('sales')->model('delivery_order');
@@ -583,7 +594,7 @@ class openapi_data_original_sales{
         $materialExtList = array_column($materialExtList, null, 'bm_id');
         //获取订单支付方式
         $orderIds = array_column($itemTmpList, 'order_id');
-        $orders = app::get('ome')->model('orders')->getList('order_id,platform_order_bn,payment,relate_order_bn,order_type',['order_id'=>$orderIds]);
+        $orders = app::get('ome')->model('orders')->getList('order_id,platform_order_bn,payment,relate_order_bn,order_type,mark_text',['order_id'=>$orderIds]);
         $orders = array_column($orders, null, 'order_id');
         $sales_arr = app::get('ome')->model('sales')->getList('sale_id,order_id,sale_bn',array('order_id'=>$orderIds),0,-1);
         $sales_arr = array_column($sales_arr, null, 'order_id');
@@ -651,6 +662,7 @@ class openapi_data_original_sales{
                 'order_item_id'=>$value['order_item_id'],
                 'cost_tax' => $cost_tax,
                 'pay_method' => (string) $orders[$value['order_id']]['payment'],
+                'mark_text' => $this->getAllMarkText($orders[$value['order_id']]['mark_text']),
                 'batchs' => $this->_getBatchs($useLifeLog_arr, $value),
                 'props' => $this->_getProps($doiPropsItems[$value['id']]),
             ];

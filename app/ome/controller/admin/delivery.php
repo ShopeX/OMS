@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class ome_ctl_admin_delivery extends desktop_controller{
     var $name = "发货单";
     var $workground = "console_center";
@@ -226,7 +225,7 @@ class ome_ctl_admin_delivery extends desktop_controller{
     }
 
     /**
-     * [拆单]编辑订单时,显示发货单货品详情
+     * [拆单]编辑订单时,显示发货单基础物料详情
      */
     public function show_delivery_items()
     {

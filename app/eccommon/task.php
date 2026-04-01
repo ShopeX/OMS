@@ -14,19 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
 class eccommon_task
 {
 
-    /**
-     * post_install
-     * @return mixed 返回值
-     */
     public function post_install()
     {
         kernel::log('Initial eccommon');
-        kernel::single('base_initial', 'eccommon')->init();
+        //kernel::single('base_initial', 'eccommon')->init();
 
         kernel::log('Initial Regions');
         kernel::single('eccommon_regions_mainland')->install();

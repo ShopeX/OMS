@@ -27,14 +27,16 @@
                                     <table cellspacing="0" cellpadding="0" border="0">
 
                                         <tbody>
-                                        <tr>
-                                            <th>店铺名称：</th>
-                                            <td><{$info.shop_name}></td>
-                                        </tr>
-                                        <tr>
-                                            <th>消息内容：</th>
-                                            <td><{$info.msg}></td>
-                                        </tr>
+                                            <{if $info.shop_name}>
+                                            <tr>
+                                                <th>店铺名称：</th>
+                                                <td><{$info.shop_name}></td>
+                                            </tr>
+                                            <{/if}>
+                                            <tr>
+                                                <th>消息内容：</th>
+                                                <td><{$info.msg}></td>
+                                            </tr>
                                         </tbody>
                                     </table>
 

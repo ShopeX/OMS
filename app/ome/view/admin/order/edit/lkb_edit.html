@@ -40,20 +40,21 @@
         <{assign var='lkb_del' value="false"}>
         <{/if}>
         <{/foreach}>
-        <tr class="bindtitle" lkb-type="lkb" g-id="<{$obj.goods_id}>" lkb-id="<{$obj.goods_id}>" <{if $lkb_del=='true'}>style="background-color: #D8D8D8;" lkb-del='b'<{else}> lkb-del="a"<{/if}>>
-          <td class="goods_bn"><{$obj.bn}></td>
+        <tr class="bindtitle" lkb-type="lkb" g-id="<{$obj.goods_id}>" lkb-id="<{$obj.goods_id}>" <{if $lkb_del=='true'}>style="background-color: #D8D8D8;" lkb-del='b'<{else}> lkb-del="a"<{/if}> <{if !empty($obj.oid) && $obj.oid != '-1'}>data-oid="<{$obj.oid}>"<{/if}>>
+          <td class="goods_bn"><{$obj.bn}><{if !empty($obj.oid) && $obj.oid != '-1'}><input type="hidden" name="lkb[oid][<{$obj.obj_id}>]" value="<{$obj.oid}>" /><{/if}></td>
           <td class="goods_name"><{$obj.name}></td>
           <td class="goods_num">
-              <input type="text" id="lkbnum_<{$obj.goods_id}>" lkb-id="<{$obj.goods_id}>" aid="<{$obj.goods_id}>" vtype="required&&unsignedint" atype="num_obj" value="<{$obj.quantity}>" name="lkb[num][<{$obj.obj_id}>]" size="4" <{if $lkb_del == 'true'}>disabled="true"<{/if}> onchange="changetotallkb(this);total();" />
+              <input type="text" id="lkbnum_<{$obj.goods_id}>" lkb-id="<{$obj.goods_id}>" aid="<{$obj.goods_id}>" vtype="required&&unsignedint" atype="num_obj" value="<{$obj.quantity}>" name="lkb[num][<{$obj.obj_id}>]" size="4" <{if $lkb_del == 'true'}>disabled="true"<{elseif !empty($obj.oid) && $obj.oid != '-1'}>data-original-quantity="<{$obj.quantity}>"<{/if}> onchange="changetotallkb(this);total();" />
           </td>
           <td class="goods_price"><span id="lkbpr_<{$obj.goods_id}>"><{$obj.price}></span><input type="hidden" name="lkb[price][<{$obj.obj_id}>]" value="<{$obj.price}>"/></td>
           <td class="goods_num">
-            <input type="text" id="lkbpmtpr_<{$obj.goods_id}>" lkb-id="" aid="<{$obj.goods_id}>" atype="pmt_price_obj" value="<{$obj.pmt_price|default:0}>" vtype="unsigned" class="goods_pmt_price"  name="lkb[obj_pmt_price][<{$obj.obj_id}>]" size="6" <{if $lkb_del == 'true'}>disabled="true"<{/if}> onchange="changetotallkb(this);total();" />
+            <input type="text" id="lkbpmtpr_<{$obj.goods_id}>" lkb-id="" aid="<{$obj.goods_id}>" atype="pmt_price_obj" value="<{$obj.pmt_price|default:0}>" vtype="unsigned" class="goods_pmt_price"  name="lkb[obj_pmt_price][<{$obj.obj_id}>]" size="6" <{if $lkb_del == 'true'}>disabled="true"<{elseif !empty($obj.oid) && $obj.oid != '-1'}>readonly="readonly" style="color:#666;"<{/if}> onchange="changetotallkb(this);total();" />
           </td>
           <td class="goods_num">
             <input type="text" class="lkbtotal" style="display:none" id="lkbtotal_<{$obj.goods_id}>" size="2" value="0" <{if $lkb_del == 'true'}>disabled="true"<{/if}> />
             <input type="text" size="5" id="lkbsalepr_<{$obj.goods_id}>" class="none_input lkbsaleprice" readonly="readonly" value="<{$obj.sale_price}>" <{if $lkb_del == 'true'}>disabled="true"<{/if}> >
             <input type="hidden" size="5" id="lkbpmtorderpr_<{$obj.goods_id}>" class="none_input lkbpmtorderprice" readonly="readonly" value="<{$obj.pmt_order_price}>">
+            <input type="hidden" id="lkbpartmjz_<{$obj.goods_id}>" value="<{$obj.part_mjz_discount|default:0}>" />
           </td>
           <td class="goods_op">
           <{if empty($item.make_nums)}>
@@ -128,6 +129,7 @@
              <input type="text" class="lkbtotal" style="display:none" id="lkbtotal_<{$obj.goods_id}>" size="2" value="0" <{if $item.delete == 'true'}>disabled="true"<{/if}> />
             <input type="text" size="5" id="lkbsalepr_<{$obj.goods_id}>" class="none_input lkbsaleprice" readonly="readonly" value="<{$obj.sale_price}>" <{if $item.delete == 'true'}>disabled="true"<{/if}> >
             <input type="hidden" size="5" id="lkbpmtorderpr_<{$obj.goods_id}>" class="none_input lkbpmtorderprice" readonly="readonly" value="<{$obj.pmt_order_price}>">
+            <input type="hidden" id="lkbpartmjz_<{$obj.goods_id}>" value="<{$obj.part_mjz_discount|default:0}>" />
           </td>
 
           <td class="goods_op">

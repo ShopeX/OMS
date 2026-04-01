@@ -13,19 +13,36 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-
+<div style="margin:5px 0;">
 <{foreach from=$temps item=item name="_s"}>
-<input type="radio" name="extemp_id" class="extemp_id" vtype="requiredradio" value="<{$item.et_id}>" <{if $smarty.foreach._s.first}>checked="checked"<{/if}> /><label><{$item.et_name}></label>
+    <input type="radio" name="extemp_id" class="extemp_id" vtype="requiredradio" value="<{$item.et_id}>" <{if $smarty.foreach._s.first}>checked="checked"<{/if}> />
+    <label style="display:inline;margin-left:3px;"><{$item.et_name}></label>
+    <a href="javascript:void(0);" class="delete-temp-btn" data-et-id="<{$item.et_id}>" title="删除此模板" style="margin-left:5px;display:inline-block;"><{img src="bundle/delete.gif" app="desktop" class="pointer btn-delete-item"}></a>
 <{/foreach}>
+</div>
 <div id="expmbdetail">
 </div>
 <script>
+    // 获取 type 参数
+    var exportType = '<{$type}>' || '<{$smarty.get.type}>';
+    if(!exportType){
+        // 如果模板变量中没有，尝试从 URL 中获取
+        var urlParams = window.location.search.substring(1).split('&');
+        for(var i = 0; i < urlParams.length; i++){
+            var param = urlParams[i].split('=');
+            if(param[0] == 'type'){
+                exportType = decodeURIComponent(param[1]);
+                break;
+            }
+        }
+    }
+
     $ES('.extemp_id').each(function(e){
         if(e.checked){
             var extemp_id = e.value;
             new Request.HTML({
                 update:'expmbdetail',
-                url:'index.php?index.php?app=desktop&ctl=export&act=getTempDetail&tp_id='+extemp_id,
+                url:'index.php?app=desktop&ctl=export&act=getTempDetail&tp_id='+extemp_id,
             }).send();
         }
 
@@ -33,8 +50,68 @@
             var extemp_id = this.value;
             new Request.HTML({
                 update:'expmbdetail',
-                url:'index.php?index.php?app=desktop&ctl=export&act=getTempDetail&tp_id='+extemp_id,
+                url:'index.php?app=desktop&ctl=export&act=getTempDetail&tp_id='+extemp_id,
             }).send();
         })
     });
+
+// 删除模板功能
+if($ES('.delete-temp-btn')){
+    $ES('.delete-temp-btn').each(function(btn){
+        btn.addEvent('click', function(e){
+            e.stop();
+            if(!confirm('确定要删除该模板吗？')){
+                return;
+            }
+
+            var et_id = this.get('data-et-id');
+            var _this = this;
+
+            new Request({
+                url: 'index.php?app=desktop&ctl=export&act=deleteTemp',
+                method: 'post',
+                data: {
+                    et_id: et_id
+                },
+                onComplete: function(response){
+                    try{
+                        var result = JSON.decode(response);
+                        // 检查删除是否成功：splash() 方法返回格式为 {success: "...", redirect: "...", splash: true}
+                        if(result.success || result.splash === true || result.rsp == 'succ'){
+                            // 删除成功，刷新模板列表
+                            if(exportType){
+                                var url = 'index.php?app=desktop&ctl=export&act=getTemps&type=' + exportType;
+                                // 查找父容器 expmbnormal（当前内容被加载到这个容器中）
+                                var parentContainer = $('expmbnormal');
+                                if(parentContainer){
+                                    new Request.HTML({
+                                        update: parentContainer,
+                                        url: url,
+                                        onComplete: function(){
+                                            // 清空详情区域
+                                            if($('expmbdetail')){
+                                                $('expmbdetail').set('html', '');
+                                            }
+                                        }
+                                    }).send();
+                                } else {
+                                    // 如果找不到父容器，刷新当前页面
+                                    location.reload();
+                                }
+                            } else {
+                                location.reload();
+                            }
+                        } else {
+                            // 失败情况：可能有 error 字段或 msg 字段
+                            var errorMsg = result.error || result.msg || result.message || '删除失败';
+                            alert(errorMsg);
+                        }
+                    } catch(e){
+                        alert('删除失败：' + e.message);
+                    }
+                }
+            }).send();
+        });
+    });
+}
 </script>

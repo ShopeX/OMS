@@ -475,15 +475,16 @@ class ome_mdl_orders extends dbeav_model{
                 'label_id'=>$filter['order_label'],
                 'bill_type'=>'order',
             );
+            
+            // unset
+            // @todo：必须放到 $this->_filter($filter, 'o') 调用之前,否则会死循环;
             unset($filter['order_label']);
-
+            
+            //sql
             $sql = "select bill_id from sdb_ome_bill_label bl 
                 left join sdb_ome_orders o on bl.bill_id=o.order_id
                 where ".$ordLabelObj->_filter($labelFilter, 'bl')." and ".$this->_filter($filter, 'o');
-
-
             $where .= ' AND order_id IN ('. $sql .')';
-            
         }
 
         // 最晚发货时间
@@ -505,6 +506,42 @@ class ome_mdl_orders extends dbeav_model{
             unset($filter['latest_delivery_time']);
 
             $where .= ' AND order_id IN ('. $sql .')';
+        }
+        
+        // 销售人员编码
+        if(isset($filter['seller_code']) || isset($filter['seller_name'])){
+            $sellerFilter = [];
+            if($filter['seller_code']){
+                $sellerFilter['seller_code'] = htmlspecialchars($filter['seller_code']);
+                $sellerFilter['seller_code'] = str_replace(["\r", "\n", '"', "'", '“', '”', '‘', '’', "\t", "*"], '', $sellerFilter['seller_code']);
+            }
+            
+            if($filter['seller_name']){
+                $sellerFilter['seller_name'] = htmlspecialchars($filter['seller_name']);
+                $sellerFilter['seller_name'] = str_replace(["\r", "\n", '"', "'", '“', '”', '‘', '’', "\t", "*"], '', $sellerFilter['seller_name']);
+            }
+            
+            // 订单扩展属性
+            if($sellerFilter){
+                $sellerMdl = app::get('material')->model('seller');
+                
+                // 销售人员列表
+                $sellerList = $sellerMdl->getList('id,seller_code', $sellerFilter);
+                if($sellerList){
+                    $sellerCodes = array_column($sellerList, 'seller_code');
+                    
+                    $props_sql = "SELECT order_id FROM sdb_ome_order_props WHERE props_col='seller_code' AND props_value IN('". implode("','", $sellerCodes) ."')";
+                    
+                    $where .= ' AND order_id IN ('. $props_sql .')';
+                }else{
+                    $where .= ' AND order_id=-1';
+                }
+            }else{
+                $where .= ' AND order_id=-1';
+            }
+            
+            // unset
+            unset($filter['seller_code'], $filter['seller_name']);
         }
         
         return $where ." AND ".parent::_filter($filter,$tableAlias,$baseWhere);
@@ -901,7 +938,12 @@ class ome_mdl_orders extends dbeav_model{
                     }
                     
                     $oOperation_log->write_log('delivery_modify@ome',$deliveryInfo['delivery_id'], $log_msg .'订单暂停后触发发货单撤销成功');
-
+                    // 发货单取消后的service扩展点
+                    foreach(kernel::servicelist('ome.service.delivery.cancel.after') as $object) {
+                        if(method_exists($object, 'cancel_delivery_after')) {
+                            $object->cancel_delivery_after($deliveryInfo['delivery_id']);
+                        }
+                    }
                     //是否是合并发货单
                     if($deliveryInfo['is_bind'] == 'true'){
                         //取关联发货单号进行暂停
@@ -931,8 +973,8 @@ class ome_mdl_orders extends dbeav_model{
                                 $order['pause'] = 'true';
                                 //订单回到未分派
                                 if($order_group_id == '16777215'){
-                                    $order['group_id'] = '';
-                                    $order['op_id'] = '';
+                                    $order['group_id'] = 0;
+                                    $order['op_id'] = 0;
                                 }
                                 
                                 //[拆单]获取订单对应有效的发货单
@@ -960,8 +1002,8 @@ class ome_mdl_orders extends dbeav_model{
                         $order['pause'] = 'true';
                         //订单回到未分派
                         if($order_group_id == '16777215'){
-                            $order['group_id'] = '0';
-                            $order['op_id'] = '0';
+                            $order['group_id'] = 0;
+                            $order['op_id'] = 0;
                         }
                         
                         //[拆单]获取订单对应有效的发货单
@@ -1113,7 +1155,12 @@ class ome_mdl_orders extends dbeav_model{
                         }
                         
                         $oOperation_log->write_log('delivery_modify@ome',$deliveryInfo['delivery_id'], $log_msg .'订单暂停后触发发货单撤销成功');
-                        
+                        // 发货单取消后的service扩展点
+                        foreach(kernel::servicelist('ome.service.delivery.cancel.after') as $object) {
+                            if(method_exists($object, 'cancel_delivery_after')) {
+                                $object->cancel_delivery_after($deliveryInfo['delivery_id']);
+                            }
+                        }
                         //是否是合并发货单
                         if($deliveryInfo['is_bind'] == 'true'){
                             //取关联发货单号进行暂停
@@ -1454,7 +1501,7 @@ class ome_mdl_orders extends dbeav_model{
     //分派时间
     function modifier_dispatch_time($row){
        if ($row){
-           $tmp = date('Y年m月d日 H点',$row);
+           $tmp = date('Y年m月d日 H点i分',$row);
            return $tmp;
        }
     }
@@ -1648,6 +1695,75 @@ class ome_mdl_orders extends dbeav_model{
             }
         }
 
+        return true;
+    }
+
+    /**
+     * 删除全额退款的订单对象并扣除金额
+     * 用于发货单撤销等场景，当order_objects为全额退款(pay_status=5)时，需要删除对象并扣除订单金额
+     * 
+     * @param int $obj_id order_objects的obj_id
+     * @param string $log_msg 日志消息
+     * @return bool 是否成功
+     */
+    public function deleteRefundObject($obj_id, $log_msg = '发货单取消')
+    {
+        if (empty($obj_id)) {
+            return false;
+        }
+        
+        $orderObjectsObj = app::get('ome')->model('order_objects');
+        
+        // 获取order_objects信息（必须是pay_status=5且delete=false）
+        $obj = $orderObjectsObj->dump($obj_id, '*');
+        
+        if (empty($obj) || $obj['pay_status'] != '5' || $obj['delete'] == 'true') {
+            return false;
+        }
+        
+        $order_id = $obj['order_id'];
+        
+        // 检查该obj_id下的order_items是否有split_num>0的记录，如果有则不允许删除
+        $orderItemsObj = app::get('ome')->model('order_items');
+        $checkItems = $orderItemsObj->getList('item_id', array(
+            'obj_id' => $obj_id, 
+            'delete' => 'false',
+            'split_num|than' => 0
+        ));
+        
+        if (!empty($checkItems)) {
+            return false;
+        }
+        
+        // 更新order_objects的delete状态
+        $affectedRows = $orderObjectsObj->update(
+            array('delete' => 'true'), 
+            array('obj_id' => $obj_id)
+        );
+        
+        // 必须严格等于1才继续
+        if ($affectedRows !== 1) {
+            return false;
+        }
+        
+        // 批量标记关联的order_items为已删除（前面已经验证过没有split_num>0的记录）
+        $orderItemsObj->update(array('delete' => 'true'), array('obj_id' => $obj_id, 'delete' => 'false'));
+        
+        // 扣除订单金额
+        $sql = "UPDATE sdb_ome_orders SET
+                pmt_goods = pmt_goods - " . floatval($obj['pmt_price'] ?: 0) . ",
+                pmt_order = pmt_order - " . floatval($obj['part_mjz_discount'] ?: 0) . ",
+                cost_item = cost_item - " . floatval($obj['amount'] ?: 0) . ",
+                total_amount = total_amount - " . floatval($obj['divide_order_fee'] ?: 0) . ",
+                final_amount = final_amount - " . floatval($obj['divide_order_fee'] ?: 0) . "
+                WHERE order_id = " . $order_id;
+        kernel::database()->exec($sql);
+        
+        // 记录日志
+        $opObj = app::get('ome')->model('operation_log');
+        $opObj->write_log('order_modify@ome', $order_id, 
+            $log_msg . ',扣除金额' . floatval($obj['divide_order_fee'] ?: 0));
+        
         return true;
     }
 
@@ -1936,6 +2052,13 @@ class ome_mdl_orders extends dbeav_model{
                         
                         //撤消成功的订单
                         $cancel_orders[$order_id] = $order_id;
+                        
+                        // 发货单取消后的service扩展点
+                        foreach(kernel::servicelist('ome.service.delivery.cancel.after') as $object) {
+                            if(method_exists($object, 'cancel_delivery_after')) {
+                                $object->cancel_delivery_after($delivery_id);
+                            }
+                        }
                     }else{
                         $rs['rsp'] = 'fail';
                         $rs['msg']    .= $res['msg'] . ';';
@@ -2532,7 +2655,8 @@ class ome_mdl_orders extends dbeav_model{
      * @param sdf $sdf
      * @return sdf
      */
-    function create_order(&$sdf, &$msg = ''){
+    function create_order(&$sdf, &$msg = '')
+    {
         //订单创建基础处理Lib
         $res = kernel::single('ome_order')->create_order($sdf, $msg);
         if(!$res){
@@ -2549,14 +2673,22 @@ class ome_mdl_orders extends dbeav_model{
         if($rs) {
             $objRetrial->monitorAbnormal($sdf['order_id'], $msg);
         }
-
+        
         //保存订单发票信息
         if(app::get('invoice')->is_installed()){
             kernel::single('ome_order_invoice')->insertInvoice($sdf);
         }
-
+        
+        // 订单打标识
+        $error_msg = '';
+        kernel::single('ome_preprocess_label')->process($sdf['order_id'], $error_msg);
+        
+        //hold
         kernel::single('omeauto_auto_hold')->process($sdf['order_id']);
-
+        
+        // 订单预约信息
+        kernel::single('ome_order_reservation')->createReservation($sdf);
+        
         return true;
     }
 
@@ -2677,7 +2809,7 @@ class ome_mdl_orders extends dbeav_model{
                 //订单取消释放基础物料上的冻结，以及销售物料店铺冻结
                 $this->unfreez($order_id);
                 
-                $order = $this->db_dump(['order_id'=>$order_id], 'order_bn,shop_id,order_bool_type,createtime');
+                $order = $this->db_dump(['order_id'=>$order_id], '*');
                 if($order['createtime'] > (time() - 600)) {
                     //如果10分钟内取消，则订单需要发起库存回写
                     kernel::single('inventorydepth_stock')->storeNeedUpdateSku($order_id, $order['shop_id']);
@@ -2690,8 +2822,18 @@ class ome_mdl_orders extends dbeav_model{
                 );
                 kernel::single('invoice_order_front_router', 'b2c')->operateTax($arr_create_invoice);
                 
+                // [更新]预约订单的取消状态
+                $error_msg = '';
+                kernel::single('ome_order_reservation')->operateReservationOrder($order, $error_msg);
+                
                 //logs
                 $operLogMdl->write_log('order_modify@ome',$order_id,$memo);
+
+                // 订单取消成功，触发订单取消事件
+                $instance = kernel::service('ome.service.order.cancel.after');
+                if($instance && method_exists($instance, 'cancel_order_after')){
+                    $instance->cancel_order_after($order_id);
+                }
             }
         }else{
             //取消失败，但有取消成功的情况下重置订单状态为部分拆分
@@ -4617,12 +4759,19 @@ class ome_mdl_orders extends dbeav_model{
         }
         $loop = 1;
         $goods_count = count($tmp_goods);
+        // PHP8 下避免 BCMath ValueError：比例改用 bc 计算，并保护分母为 0 的场景。
+        $has_apportion_pmt = '0.00';
         foreach($tmp_goods as $key => $goods){
             if($tmp_goods[$key]['price_worth'] > 0){
                 if($goods_count == $loop){
                     $tmp_goods[$key]['apportion_pmt'] = bcsub($all_discount,$has_apportion_pmt,2);
                 }else{
-                    $tmp_goods[$key]['apportion_pmt'] = bcmul($all_discount/$all_goods_sale_price,$tmp_goods[$key]['price_worth'],2);
+                    if (bccomp((string)$all_goods_sale_price, '0', 6) <= 0) {
+                        $tmp_goods[$key]['apportion_pmt'] = '0.00';
+                    } else {
+                        $ratio = bcdiv((string)$all_discount, (string)$all_goods_sale_price, 8);
+                        $tmp_goods[$key]['apportion_pmt'] = bcmul($ratio, (string)$tmp_goods[$key]['price_worth'], 2);
+                    }
                     $has_apportion_pmt = bcadd($has_apportion_pmt,$tmp_goods[$key]['apportion_pmt'],2);
                 }
             }else{
@@ -5092,12 +5241,12 @@ HTML;
     public function orderItemsExportTitle()
     {
         $items_title = array(
-            '详情商品货号'   => 'bn',
-            '详情商品名称'   => 'name',
+            '详情基础物料编码'   => 'bn',
+            '详情基础物料名称'   => 'name',
             '关联销售物料编码'   => 'sm_bn',
             '关联销售物料名称'   => 'sm_name',
             '详情购买单位'   => 'unit',
-            '详情商品规格'   => 'spec_info',
+            '详情基础物料规格'   => 'spec_info',
             '详情购买数量'   => 'nums',
             '详情商品原价'   => 'price',
             '详情销售价'    => 'sale_price',
@@ -5198,7 +5347,7 @@ HTML;
         }
 
         $listV2 = $tmp_order_id = [];
-        $items = $orderItemsMdl->getList('*', ['order_id|in' => $order_id_arr]);
+        $items = $orderItemsMdl->getList('*', ['order_id|in' => $order_id_arr, 'delete'=>'false']);
 
         // 获取基础物料品牌名称
         $bmIds = array_column($items, 'product_id');

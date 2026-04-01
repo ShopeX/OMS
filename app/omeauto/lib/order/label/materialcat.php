@@ -36,15 +36,15 @@ class omeauto_order_label_materialcat extends omeauto_order_label_abstract imple
         
         $basicMaterialObj = app::get('material')->model('basic_material');
         
+        //基础物料分类
+        $cat_id = intval($this->content['cat_id']);
+        $find_type = $this->content['find_type'];
         
-        //包含或不包含基础物料分类：大家电、小家电
-        
-        
-        
-        
-        
-        //基础物料类型
-        $material_type = intval($this->content['material_type']);
+        //check
+        if(empty($cat_id) || empty($find_type)){
+            $error_msg = '基础物料分类或者筛选范围条件，不能为空!';
+            return false;
+        }
         
         //获取订单明细中的基础物料
         $arrProductId = array();
@@ -76,20 +76,29 @@ class omeauto_order_label_materialcat extends omeauto_order_label_abstract imple
         
         //获取虚拟商品
         $virtualBns = array();
-        $tempList = $basicMaterialObj->getList('bm_id,material_bn,type', array('bm_id'=>$arrProductId));
+        $tempList = $basicMaterialObj->getList('bm_id,material_bn,type,cat_id', array('bm_id'=>$arrProductId));
         foreach ($tempList as $key => $val)
         {
             $bm_id = $val['bm_id'];
             
             //check
-            if($val['type'] == $material_type){
+            if($val['cat_id'] == $cat_id){
                 $virtualBns[$bm_id] = $val['material_bn'];
             }
         }
         
-        if(empty($virtualBns)){
-            $error_msg = '没有符合条件的基础物料';
-            return false;
+        //场景一：[不包含]指定基础物料分类
+        if($find_type == 'not_include'){
+            if($virtualBns){
+                $error_msg = '基础物料编码：'. implode('、', $virtualBns).'包含了指定基础物料分类';
+                return false;
+            }
+        }else{
+            //场景二：[包含]指定基础物料分类
+            if(empty($virtualBns)){
+                $error_msg = '订单明细没有包含指定基础物料分类';
+                return false;
+            }
         }
         
         return true;

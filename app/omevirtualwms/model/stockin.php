@@ -14,16 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class omevirtualwms_mdl_stockin extends dbeav_model{
     public $queue = [];
 
-    /**
-     * count
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
-    public function count($filter=null){
+     public function count($filter=null){
         $branch_ids = $this->app->model('allocate')->getBranchidByselfwms();
         $sqlstr = '';
         if ($branch_ids)
@@ -32,7 +26,7 @@ class omevirtualwms_mdl_stockin extends dbeav_model{
          }
          $purchase_sql = "select count(*) as _count from sdb_purchase_po where eo_status not in('3') and po_status='1' and check_status='2' and ".$this->_filter($filter).$sqlstr;
 
-         $allocate_sql = "select count(*) as _count from sdb_taoguaniostockorder_iso where iso_status not in('3','4') and check_status='2' and type_id in('4','50','70','200','400','11') and ".$this->_filter($filter).' and iso_bn not in (select bn from sdb_omevirtualwms_data_status where status != \'PARTIN\' AND type=\'stockin\' and create_time >='.(time()-(WAIT_TIME*60)).')';
+         $allocate_sql = "select count(*) as _count from sdb_taoguaniostockorder_iso where iso_status not in('3','4') and check_status='2' and type_id in('4','50','70','200','400','11','800') and ".$this->_filter($filter).' and iso_bn not in (select bn from sdb_omevirtualwms_data_status where status != \'PARTIN\' AND type=\'stockin\' and create_time >='.(time()-(WAIT_TIME*60)).')';
          $sql = sprintf('select sum(c._count) as _count from (%s UNION ALL %s) as c',$purchase_sql,$allocate_sql);
 
          $row = $this->db->selectrow($sql);
@@ -48,7 +42,7 @@ class omevirtualwms_mdl_stockin extends dbeav_model{
          }
         $purchase_sql = "select po_bn AS bn,check_operator AS operator,purchase_time AS create_time,1 as type_id from sdb_purchase_po where eo_status not in('3') and po_status='1' and check_status='2' and ".$this->_filter($filter).$sqlstr;
 
-        $allocate_sql = "select iso_bn AS bn,operator,create_time,type_id from sdb_taoguaniostockorder_iso where iso_status not in('3','4') and check_status='2' and type_id in('4','50','70','200','400','11') and ".$this->_filter($filter).$sqlstr;
+        $allocate_sql = "select iso_bn AS bn,operator,create_time,type_id from sdb_taoguaniostockorder_iso where iso_status not in('3','4') and check_status='2' and type_id in('4','50','70','200','400','11','800') and ".$this->_filter($filter).$sqlstr;
 
         $sql = sprintf('%s UNION ALL %s order by create_time desc',$purchase_sql,$allocate_sql);
 
@@ -57,10 +51,6 @@ class omevirtualwms_mdl_stockin extends dbeav_model{
         return $rows;
     }
 
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema(){
         $schema = array (
             'columns' => array (

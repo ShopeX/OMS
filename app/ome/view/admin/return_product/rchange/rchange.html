@@ -183,14 +183,16 @@
                         <{/if}>
                     </span>
                 </div>
+                
                 <div class="form-field" style="width: 100%">
                     <span class="form-field-label">退换货类型：</span>
-                    <div class="form-radios">
+                    <select name="problem_id" class="form-input">
                         <{foreach from=$problem_type item=item key=key}>
-                            <label style=" font-weight:bold; color:#3C5283;"><input name="problem_id" type="radio" <{if $reship_data.problem_id eq $item.problem_id}>checked<{elseif $key eq 0}>checked<{/if}> value="<{$item.problem_id}>"  ><{$item.problem_name}></label>
+                            <option value="<{$item.problem_id}>" <{if $reship_data.problem_id eq $item.problem_id}>selected<{elseif $key eq 0}>selected<{/if}>><{$item.problem_name}></option>
                         <{/foreach}>
-                    </div>
+                    </select>
                 </div>
+                
                 <div class="form-field" style="width: 50%">
                     <span class="form-field-label">备注：</span>
                     <textarea class="x-input form-input" style="height: 100px" placeholder="请输入" name="memo" cols="190" rows="2" ><{$reship_data.memo}></textarea>
@@ -526,6 +528,17 @@
 <{if $reship_data.return_type}>
 $$('.tabs-wrap .bill-info').setStyle('display','block');
 <{/if}>
+
+if ($defined($E('select[name="problem_id"]')))
+{
+    tail.select('select[name="problem_id"]', {
+        search: true,
+        width: 260,
+        height: 660,
+        searchMinLength: 0
+    });
+}
+
 var branchtype ="<{$branchtype}>";
 display_shipping_info("<{$reship_data.return_type|default:'return'}>");
 function display_shipping_info(return_type){

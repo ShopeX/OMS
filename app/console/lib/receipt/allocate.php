@@ -21,7 +21,7 @@ class console_receipt_allocate
     /**
      * 保存调拔单出库数据
      * 并冻结对应商品库存
-     * 
+     *
      */
     public function to_savestore($adata, $appropriation_type, $memo, $op_name, &$msg)
     {
@@ -130,7 +130,7 @@ class console_receipt_allocate
     }
 
     /**
-     * 
+     *
      * 调拔单出库
      * @param  appropriation_id
      * @param  $msg
@@ -290,7 +290,7 @@ class console_receipt_allocate
     }
 
     /**
-     * 
+     *
      * 生成调拨单出入库明细
      * @param  $appropriation_id
      * @param
@@ -391,8 +391,14 @@ class console_receipt_allocate
     #生成16位的调拨单号
     private function gen_appropriation_no()
     {
-        $i                = rand(0, 9);
-        $appropriation_no = 'S' . date('YmdHis') . $i;
+//        $i                = rand(0, 9);
+//        $appropriation_no = 'S' . date('YmdHis') . $i;
+        
+        // 生成16位调拨单号,并且保证唯一性
+        $type = 'APPROPORATION';
+        $prefix = 'S'.date('Ymd'); //S + 年月日
+        $appropriation_no = kernel::single('eccommon_guid')->incId($type, $prefix, 6, true);
+        
         return $appropriation_no;
     }
 

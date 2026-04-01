@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
 *
 */
@@ -41,33 +40,50 @@ class inventorydepth_mdl_shop_skus extends dbeav_model
 
     public function initTaogBn($bnList) 
     {
-        if ($bnList) {
-            self::$taog_products = self::$taog_pkg = self::$taog_pko = array();
-            $salesMaterialObj = app::get('material')->model('sales_material');
-            
-            //普通
-            $list = $salesMaterialObj->getList('sm_id,sales_material_name,sales_material_bn,shop_id,sales_material_type',array('sales_material_bn'=>$bnList, 'sales_material_type'=>1, 'is_bind'=>1));
-            foreach ($list as $key=>$value) {
-                self::$taog_products[$value['sales_material_bn']] = $value;
-            }
-            $products = $list ? $list : array();
-            
-            //[促销]销售物料(sales_material_type：2组合商品,7福袋组合)
-            $list = $salesMaterialObj->getList('sm_id,sales_material_name,sales_material_bn,shop_id,sales_material_type',array('sales_material_bn'=>$bnList, 'sales_material_type'=>array(2, 7), 'is_bind'=>1));
-            foreach ($list as $key=>$value) {
-                self::$taog_pkg[$value['sales_material_bn']] = $value;
-            }
-            $products_pkg    = $list? $list : array();
-            
-            //[多选一]销售物料
-            $list = $salesMaterialObj->getList('sm_id,sales_material_name,sales_material_bn,shop_id,sales_material_type',array('sales_material_bn'=>$bnList, 'sales_material_type'=>5, 'is_bind'=>1));
-            foreach($list as $key=>$value){
-                self::$taog_pko[$value['sales_material_bn']] = $value;
-            }
-            $products_pko = $list? $list : array();
-            
-            unset($list,$products,$products_pkg,$products_pko);
+        $salesMaterialObj = app::get('material')->model('sales_material');
+        
+        // check
+        if(empty($bnList)){
+            return false;
         }
+        
+        // 初始化
+        self::$taog_products = self::$taog_pkg = self::$taog_pko = [];
+        
+        // list
+        $filter = array('sales_material_bn'=>$bnList, 'is_bind'=>1);
+        $materialList = $salesMaterialObj->getList('sm_id,sales_material_name,sales_material_bn,shop_id,sales_material_type', $filter);
+        
+        // check
+        if(empty($materialList)){
+            return false;
+        }
+        
+        // format
+        foreach ($materialList as $key => $value)
+        {
+            $sales_material_bn = $value['sales_material_bn'];
+            
+            // type
+            switch ($value['sales_material_type'])
+            {
+                case '2':
+                case '7':
+                    // pkg捆绑、lkb福袋组合
+                    self::$taog_pkg[$sales_material_bn] = $value;
+                break;
+                case '5':
+                    // 多选一
+                    self::$taog_pko[$sales_material_bn] = $value;
+                    break;
+                default:
+                    // 普通、赠品、礼盒
+                    self::$taog_products[$sales_material_bn] = $value;
+            }
+        }
+        
+        // unset
+        unset($materialList);
     }
 
     /**
@@ -245,7 +261,10 @@ class inventorydepth_mdl_shop_skus extends dbeav_model
         foreach ($skus['sku'] as $sku) {
             $bnList[] = $sku['outer_id'];
         }
-        $this->initTaogBn($bnList); $shop_id = $shop['shop_id']; $shop_bn = $shop['shop_bn'];
+        
+        $this->initTaogBn($bnList);
+        
+        $shop_id = $shop['shop_id']; $shop_bn = $shop['shop_bn'];
         unset($bnList);
 
        $spbn = array();
@@ -449,7 +468,9 @@ class inventorydepth_mdl_shop_skus extends dbeav_model
                 $taog_id[] = $id;
             }
         }
+        
         $this->initTaogBn($bnList); $shop_id = $shop['shop_id']; $shop_bn = $shop['shop_bn'];
+        
         unset($bnList);
 
         $shopSkuLib = kernel::single('inventorydepth_shop_skus');
@@ -462,8 +483,8 @@ class inventorydepth_mdl_shop_skus extends dbeav_model
             $request[$row['id']] = $row['request'];
         }
         unset($rows,$taog_id);
-
-        $VALUES = array();  $delSku = array(); $data = array();
+        
+        $data = array();
         
         $line_i = 0;
         foreach ($items as $key => $item) {
@@ -473,7 +494,8 @@ class inventorydepth_mdl_shop_skus extends dbeav_model
             if (isset($item['skus']['sku'])) {
              # 多规格   
                 foreach ($item['skus']['sku'] as $sku) {
-                    $shop_product_bn = $sku['outer_id']; $spbn[] = $shop_product_bn;
+                    $shop_product_bn = $sku['outer_id'];
+                    $spbn[] = $shop_product_bn;
                     $shop_product_bn_crc32 = $shopSkuLib->crc32($shop_product_bn);
                     
                     //sales_material_type
@@ -482,7 +504,7 @@ class inventorydepth_mdl_shop_skus extends dbeav_model
                     //mapping
                     $mapping = $this->getMapping($shop_product_bn,$shop['shop_id'],$bind, $sales_material_type);
                     $download_time = time();
-
+                    
                     if ($bind == 1) {
                         $pkgFlag[] = $shop_product_bn;
                     }elseif($bind == 2){
@@ -536,7 +558,7 @@ class inventorydepth_mdl_shop_skus extends dbeav_model
                     $line_i++;
                 }
             }else{
-             # 单商品
+                // 单商品
                 $shop_product_bn       = $item['outer_id']; $spbn[] = $shop_product_bn;
                 $shop_product_bn_crc32 = $shopSkuLib->crc32($shop_product_bn);
                 
@@ -546,7 +568,6 @@ class inventorydepth_mdl_shop_skus extends dbeav_model
                 //mapping
                 $mapping = $this->getMapping($shop_product_bn,$shop['shop_id'],$bind, $sales_material_type);
                 $download_time = time();
-                $shop_properties_name = '';
                 
                 if ($bind == 1) {
                     $pkgFlag[] = $shop_product_bn;
@@ -557,9 +578,7 @@ class inventorydepth_mdl_shop_skus extends dbeav_model
                 }
 
                 $release_stock = 0;
-
-                #$id = md5($shop['shop_id'].$iid); $delSku[] = $id;
-
+                
                 $data[$line_i] = array(
                     'shop_id' => $shop['shop_id'],
                     'shop_bn' => $shop['shop_bn'],
@@ -595,11 +614,12 @@ class inventorydepth_mdl_shop_skus extends dbeav_model
                 $line_i++;
             }
 
-            # 商品的实际库存
+            // 商品的实际库存
             $item_actual_stock = 0;
 
             $stores[strval($iid)]['taog_store'] = $item_actual_stock;
         }
+        
         //商品同步到优仓
         kernel::single('dchain_event_trigger_dchain_product')->addProduct($data,$bnList,$shop);
         if($data) {

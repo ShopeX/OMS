@@ -135,6 +135,47 @@ class erpapi_shop_matrix_kuaishou_response_order extends erpapi_shop_response_or
             $this->_ordersdf['extend_field']['author_info'] = $author_info;
         }
 
+        // 按 coupon_field 矩阵重置明细客户实付与结算金额
+        if (isset($this->_ordersdf['extend_field']['version']) && $this->_ordersdf['extend_field']['version'] >= 3 && !empty($this->_ordersdf['order_objects']) && is_array($this->_ordersdf['order_objects'])
+            && isset($this->_ordersdf['coupon_field']) && is_array($this->_ordersdf['coupon_field'])) {
+            $oidActuallyPayMap = array();
+            $oidPlatformAmountMap = array();
+            $this->_ordersdf['coupon_oid_field'] = 'oid';
+            foreach ($this->_ordersdf['coupon_field'] as $couponRow) {
+                if (!is_array($couponRow) || empty($couponRow['oid'])) {
+                    continue;
+                }
+                $oid = (string)$couponRow['oid'];
+                if (isset($couponRow['calcActuallyPay']) && is_numeric($couponRow['calcActuallyPay'])) {
+                    $oidActuallyPayMap[$oid] = isset($oidActuallyPayMap[$oid]) ? $oidActuallyPayMap[$oid] + floatval($couponRow['calcActuallyPay']) : floatval($couponRow['calcActuallyPay']);
+                }
+                if (!empty($couponRow['pmt_info']) && is_array($couponRow['pmt_info'])) {
+                    foreach ($couponRow['pmt_info'] as $pmtInfo) {
+                        if (!is_array($pmtInfo)) {
+                            continue;
+                        }
+                        if (!isset($pmtInfo['coupon_type']) || (string)$pmtInfo['coupon_type'] !== '1') {
+                            continue;
+                        }
+                        $pmtAmount = isset($pmtInfo['pmt_amount']) && is_numeric($pmtInfo['pmt_amount']) ? floatval($pmtInfo['pmt_amount']) : 0;
+                        $oidPlatformAmountMap[$oid] = isset($oidPlatformAmountMap[$oid]) ? $oidPlatformAmountMap[$oid] + $pmtAmount : $pmtAmount;
+                    }
+                }
+            }
+            foreach ($this->_ordersdf['order_objects'] as $objectKey => $object) {
+                if (!is_array($object) || empty($object['oid'])) {
+                    continue;
+                }
+                $oid = (string)$object['oid'];
+                $diviFee = isset($object['divide_order_fee']) && is_numeric($object['divide_order_fee']) ? floatval($object['divide_order_fee']) : 0;
+                if (isset($oidActuallyPayMap[$oid])) {
+                    $this->_ordersdf['order_objects'][$objectKey]['actually_amount'] = sprintf('%.2f', $oidActuallyPayMap[$oid]);
+                }
+                $platformAmount = isset($oidPlatformAmountMap[$oid]) ? $oidPlatformAmountMap[$oid] : 0;
+                $this->_ordersdf['order_objects'][$objectKey]['settlement_amount'] = sprintf('%.2f', $diviFee + $platformAmount);
+            }
+        }
+
         if ($this->_ordersdf['cn_info']) {
             if ($this->_ordersdf['cn_info']['promise_collect_time']) {
                 $this->_ordersdf['cn_info']['promise_delivery_time']= $this->_ordersdf['cn_info']['promise_collect_time'];

@@ -168,7 +168,11 @@ class erpapi_shop_matrix_pinduoduo_response_aftersalev2 extends erpapi_shop_resp
         }
         
         // 获取与订单相关的对象列表
-        $objectList = $orderObjectModel->getList('obj_id,order_id,quantity', ['order_id' => $order['order_id']]);
+        $filter = [
+            'order_id'   => $order['order_id'],
+            'filter_sql' => " ((obj_type != 'gift' OR oid != 0)) ", // 排除掉本地赠品
+        ];
+        $objectList = $orderObjectModel->getList('obj_id,order_id,quantity', $filter);
         
         // 检查是否只有一个订单明细项且商品数量为1
         if (count($objectList) != 1 || $objectList[0]['quantity'] != 1) {

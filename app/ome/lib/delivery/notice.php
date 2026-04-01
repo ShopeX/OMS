@@ -32,19 +32,29 @@ class ome_delivery_notice{
      * @return void
      */
     static public function create($delivery_id) {
-
         $operationLogObj = app::get('ome')->model('operation_log');
         $operationLogObj->write_log('delivery_modify@ome',$delivery_id,"发货通知单推送仓库开始");
         
+        // 生成发货数据
+        $nodeStart = microtime(true);
         $original_data = kernel::single('ome_event_data_delivery')->generate($delivery_id);
+        $nodeTime = microtime(true) - $nodeStart;
+        
+        // 记录generate性能数据
+        ome_api_log::add_message('node', 'generate_delivery_data', $nodeTime, array(
+            'delivery_id' => $delivery_id
+        ));
+        
         if (empty($original_data)){
-            return true;
+            return array(true);
         }
 
+        // 更新同步状态
         $consoleDlyLib = kernel::single('console_delivery');
         $consoleDlyLib->update_sync_status($delivery_id, 'send');
 
-        //根据仓库识别是否门店仓还是电商仓
+        // 根据仓库识别是否门店仓还是电商仓
+        $channelSelectStartTime = microtime(true);
         $store_id = kernel::single('ome_branch')->isStoreBranch($original_data['branch_id']);
         if($store_id){
             $channel_type = 'store';
@@ -54,39 +64,76 @@ class ome_delivery_notice{
             list($rs, $rsData) = self::_get_electron_logi_no($wms_id,$original_data);
             if(!$rs) {
                 $consoleDlyLib->update_sync_status($delivery_id, 'send_fail', $rsData['msg']);
-                return true;
+                return array(true);
             }
 
             $channel_type = 'wms';
             $channel_id = $wms_id;
         }
+        $channelSelectTime = microtime(true) - $channelSelectStartTime;
+        
+        // 记录运单号获取性能数据
+        ome_api_log::add_message('logistics', 'get_waybill_code', $channelSelectTime, array(
+            'delivery_id' => $delivery_id,
+            'branch_id' => $original_data['branch_id'],
+            'channel_type' => $channel_type,
+            'channel_id' => $channel_id
+        ));
 
+        // 创建发货通知
+        $nodeStart = microtime(true);
         $dlyTriggerLib = kernel::single('ome_event_trigger_delivery');
         $result = $dlyTriggerLib->create($channel_type,$channel_id,$original_data,false);
+        $nodeTime = microtime(true) - $nodeStart;
+        
+        // 记录create性能数据
+        ome_api_log::add_message('node', 'create_delivery_trigger', $nodeTime, array(
+            'delivery_id' => $delivery_id,
+            'channel_type' => $channel_type,
+            'channel_id' => $channel_id
+        ));
+        
         if($result['rsp'] == 'fail'){
             $msg = "失败. 原因:".$result['msg'];
         }else{
             $msg ="成功.";
 
+            // WMS相关操作（订单码处理 + 通知）
+            $wmsProcessStartTime = microtime(true);
+            
+            // 处理WMS订单码
             if (isset($result['data']['wms_order_code'])) {
                 $dlyExtObj = app::get('console')->model('delivery_extension');
                 $ext_data['delivery_bn'] = $original_data['outer_delivery_bn'];
                 $ext_data['original_delivery_bn'] = $result['data']['wms_order_code'];
                 $dlyExtObj->create($ext_data);
             }
+            
+            // WMS通知
             kernel::single('ome_wms')->notify($original_data['outer_delivery_bn']);
+            
+            $wmsProcessTime = microtime(true) - $wmsProcessStartTime;
+            
+            // 记录WMS处理性能数据
+            ome_api_log::add_message('wms', 'wms_process', $wmsProcessTime, array(
+                'delivery_id' => $delivery_id,
+                'outer_delivery_bn' => $original_data['outer_delivery_bn'],
+                'wms_order_code' => $result['data']['wms_order_code'] ?? ''
+            ));
         }
 
         if(isset($result['msg_id'])){
             $msg .=" msg_id:".$result['msg_id'];
         }
 
+        // 更新最终同步状态
         if ($result['rsp'] != 'running') {
             $consoleDlyLib->update_sync_status($delivery_id, $result['rsp'] == 'succ' ? 'send_succ' : 'send_fail');
         }
 
-
         $operationLogObj->write_log('delivery_modify@ome',$delivery_id,"推送结果:".$msg);
+        
+        return array(true);
     }
 
     static public function isAutoNoticeWms($delivery_id) {
@@ -228,6 +275,10 @@ class ome_delivery_notice{
                     }
                 }
             }
+            
+            // 发送发货单撤销WMS通知邮件
+            self::_sendDeliveryCancelWmsNotify($dly_id);
+
         } else {
             kernel::single('console_delivery')->update_sync_status($dly_id, 'cancel_fail', $rs['msg']);
         }
@@ -702,4 +753,72 @@ class ome_delivery_notice{
             return array();
         }
     }
+    
+    /**
+     * 发送发货单撤销WMS通知邮件
+     * 
+     * @param int $delivery_id 发货单ID
+     * @return void
+     */
+    static public function _sendDeliveryCancelWmsNotify($delivery_id) {
+        try {
+            // 获取发货单信息
+            $deliveryObj = app::get('ome')->model('delivery');
+            $deliveryInfo = $deliveryObj->db_dump(['delivery_id' => $delivery_id], 'delivery_bn,branch_id,shop_type,shop_id');
+            
+            if (empty($deliveryInfo)) {
+                return;
+            }
+            
+            // 获取仓库信息，包括邮箱
+            $branchObj = app::get('ome')->model('branch');
+            $branchInfo = $branchObj->db_dump(['branch_id' => $deliveryInfo['branch_id']], 'name,email');
+            
+            // 获取发货单明细
+            $deliveryItemsObj = app::get('ome')->model('delivery_items');
+            $items = $deliveryItemsObj->getList('bn,product_name,number', ['delivery_id' => $delivery_id]);
+            
+            if (empty($items)) {
+                return;
+            }
+            
+            // 构建明细列表字符串
+            $detail_list = '';
+            foreach ($items as $index => $item) {
+                $seq = $index + 1;
+                $product_bn = $item['bn'];
+                $product_name = $item['product_name'];
+                $quantity = $item['number'];
+                
+                $detail_list .= "\r\n<br/>序号：<font color=\"warning\">{$seq}</font>，物料号：<font color=\"warning\">{$product_bn}</font>，物料名称：<font color=\"warning\">{$product_name}</font>，数量：<font color=\"warning\">{$quantity}</font>";
+            }
+            
+            // 获取店铺信息
+            $shopObj = app::get('ome')->model('shop');
+            $shopInfo = $shopObj->dump($deliveryInfo['shop_id'], 'name');
+            $shop_name = $shopInfo['name'] ?? '';
+            
+            // 构建通知参数
+            $notifyParams = [
+                'delivery_bn' => $deliveryInfo['delivery_bn'],
+                'shop_type' => ome_shop_type::shop_name($deliveryInfo['shop_type']),
+                'shop_name' => $shop_name,
+                'detail_list' => $detail_list,
+                'branch_name' => $branchInfo['name'] ?? '',
+            ];
+            
+            // 如果仓库有邮箱，将仓库邮箱作为收件人
+            if (!empty($branchInfo['email'])) {
+                $notifyParams['receiver'] = explode(',', $branchInfo['email']);
+            }
+            
+            // 发送通知
+            $monitorNotifyObj = kernel::single('monitor_event_notify');
+            $monitorNotifyObj->addNotify('delivery_cancel_wms', $notifyParams, true);
+            
+        } catch (Exception $e) {
+            // 记录错误日志，但不影响主流程
+        }
+    }
+    
 }

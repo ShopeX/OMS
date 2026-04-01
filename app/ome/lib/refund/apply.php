@@ -14,8 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
+/**
+ * 退款申请类
+ * @access public
+ * @copyright www.shopex.cn 2010.12.1
+ * @author ome
+ */
 class ome_refund_apply
 {
     
@@ -119,7 +123,14 @@ class ome_refund_apply
        $memberid = $render->pagedata['order']['member_id'];
        $oMember = &$render->app->model('members');
        $render->pagedata['member'] = $oMember->member_detail($memberid);
-       $render->pagedata['aItems'] = $orefapply->getItemList($order_id);
+
+       $objects = $orefapply->order_objects($order_id);
+        foreach ($objects as $key => $val) {
+            if ($val['delete'] == 'true') {
+                unset($objects[$key]);
+                continue;
+            }
+        }
        switch ($addon['from']){
            case 'order_edit'://订单编辑
                $render->pagedata['ctl'] = 'admin_order';
@@ -138,7 +149,8 @@ class ome_refund_apply
                $render->pagedata['ctl'] = 'admin_refund_apply';
                $render->pagedata['act'] = 'showRefund';
        }
-       $render->pagedata['pay_status'] = kernel::single('ome_order_status')->pay_status();
+        $render->pagedata['aItems'] = $objects;
+        $render->pagedata['pay_status'] = kernel::single('ome_order_status')->pay_status();
        return $render->display('admin/refund/refund_apply.html');
     }
     
@@ -727,7 +739,63 @@ class ome_refund_apply
         {
             return false;
         }
-        
+        //退款明细
+        if ($data['obj_id'] && $source == 'local' && !isset($data['product_data'])) {
+            $objList = app::get('ome')->model('order_objects')->getList('*',['order_id'=>$data['order_id']]);
+            $order_items = app::get('ome')->model('order_items')->getList('*',['order_id'=>$data['order_id']]);
+    
+            if ($order_items){
+                $tmp_items = array();
+                foreach ($order_items as $i_key=>$i_val){
+                    $tmp_items[$i_val['obj_id']][] = $i_val;
+                }
+                $order_items = NULL;
+            }
+    
+            if ($objList){
+                foreach ($objList as $o_key=>&$o_val){
+                    $o_val['order_items'] = $tmp_items[$o_val['obj_id']];
+                }
+            }
+            $productData = [];
+            foreach ($objList as $key => $val) {
+                if ($val['delete'] == 'true' || !in_array($val['obj_id'],$data['obj_id'])) {
+                    unset($objList[$key]);
+                    continue;
+                }
+                foreach ($val['order_items'] as $itemKey => $itemVal) {
+                    $item = [];
+                    $item['order_item_id'] = $itemVal['item_id'];
+                    $item['num'] = $itemVal['nums'];
+                    $item['product_id'] = $itemVal['product_id'];
+                    $item['bn'] = $itemVal['bn'];
+                    $item['name'] = $itemVal['name'];
+                    $item['price'] = $itemVal['price'];
+                    $item['oid'] = $val['oid'];
+                    $item['item_type'] = $itemVal['item_type'];
+                    $item['obj_id'] = $itemVal['obj_id'];
+                    $item['divide_order_fee'] = $itemVal['divide_order_fee'];
+                    $productData[] = $item;
+                }
+            }
+            if (!empty($productData)) {
+                $orderLib = kernel::single('ome_order');
+                $options = array(
+                    'part_total'  => $data['money'] ? $data['money'] : $data['refund_money'],
+                    'part_field'  => 'amount',
+                    'porth_field' => 'divide_order_fee',
+                );
+                $productData = $orderLib->calculate_part_porth($productData, $options);
+                foreach ($productData as $k => $item) {
+                    $productData[$k]['price'] = sprintf('%.2f', $item['amount'] / $item['num']);
+                }
+            }
+            $data['bn']  = implode(',', array_column((array)$objList, 'bn'));
+            $data['obj_id']  = implode(',', array_column((array)$objList, 'obj_id'));
+            $data['oid'] = implode(',', array_column((array)$objList, 'oid'));
+            $data['product_data'] = serialize($productData);
+        }
+
         //店铺类型
         $shopObj    = app::get('ome')->model('shop');
         // $shop_type  = $shopObj->getShoptype($orderData['shop_id']);
@@ -780,7 +848,11 @@ class ome_refund_apply
                 'oid' => $data['oid'],
                 'bool_type'=>$data['bool_type'],
                 'source_status'=>$data['source_status'],
+                'cost_freight' =>0, 
         );
+        if($data['cost_freight']){
+            $sdf['cost_freight'] = $data['cost_freight'];
+        }
 
         // 经销店铺的单据，delivery_mode冗余到退款单申请表
         if ($shop_info['delivery_mode'] == 'jingxiao') {
@@ -1051,5 +1123,152 @@ class ome_refund_apply
         }
 
         return [true];
+    }
+
+    /**
+     * 根据退款申请单ID更新sdb_ome_order_objects表的pay_status
+     * @param int $apply_id 退款申请单ID
+     * @return bool 更新是否成功
+     */
+    public function updateOrderObjectsPayStatusByItemIds($apply_id)
+    {
+        if (empty($apply_id)) {
+            return false;
+        }
+
+        $refundApplyMdl = app::get('ome')->model('refund_apply');
+        $orderItemMdl = app::get('ome')->model('order_items');
+        $orderObjectMdl = app::get('ome')->model('order_objects');
+
+        // 获取退款申请单信息
+        $refundApply = $refundApplyMdl->db_dump($apply_id);
+        if (empty($refundApply)) {
+            return false;
+        }
+
+        $order_id = $refundApply['order_id'];
+        $status = $refundApply['status'];
+        $refunded = $refundApply['refunded']; // 已退款金额
+
+        // 获取退款申请单关联的order_item_ids
+        $order_item_ids = array();
+        if (!empty($refundApply['product_data'])) {
+            $product_data = unserialize($refundApply['product_data']);
+            if (is_array($product_data)) {
+                foreach ($product_data as $item) {
+                    if (!empty($item['order_item_id'])) {
+                        $order_item_ids[] = $item['order_item_id'];
+                    }
+                }
+            }
+        }
+
+        if (empty($order_item_ids)) {
+            return false;
+        }
+
+        // 获取对应的obj_id列表
+        $filter = array('item_id' => $order_item_ids, 'order_id' => $order_id);
+        $orderItems = $orderItemMdl->getList('obj_id', $filter);
+
+        if (empty($orderItems)) {
+            return false;
+        }
+
+        $obj_ids = array_column($orderItems, 'obj_id');
+        $divide_order_fee_sum = 0;
+        $objects = $orderObjectMdl->getList('divide_order_fee', array('obj_id' => $obj_ids));
+        foreach ($objects as $obj) {
+            $divide_order_fee_sum = bcadd($divide_order_fee_sum, $obj['divide_order_fee'], 3);
+        }
+
+        // 根据退款申请单状态和金额确定pay_status
+        $pay_status = 1; // 默认已支付
+
+        switch ($status) {
+            case 0: // 未审核
+            case 1: // 审核中
+            case 2: // 已接受申请
+                $pay_status = 6; // 退款申请中
+                break;
+
+            case 3: // 已拒绝
+            case 10: // 卖家拒绝退款
+                $pay_status = 1; // 已支付
+                break;
+
+            case 4: // 已退款
+                if (bccomp($refunded, $divide_order_fee_sum, 3) >= 0) {
+                    $pay_status = 5; // 全额退款
+                } else {
+                    $pay_status = 4; // 部分退款
+                }
+                break;
+
+            case 5: // 退款中
+            case 6: // 退款失败
+                $pay_status = 7; // 退款中
+                break;
+
+            default:
+                $pay_status = 1; // 已支付
+                break;
+        }
+
+        // 更新order_objects表的pay_status
+        $update_data = array('pay_status' => $pay_status);
+        $update_filter = array('obj_id' => $obj_ids, 'pay_status|notin' => ['5']);
+
+        $result = $orderObjectMdl->update($update_data, $update_filter);
+
+        // 记录操作日志
+        if (!is_bool($result)) {
+            $status_names = array(
+                0 => '未审核',
+                1 => '审核中',
+                2 => '已接受申请',
+                3 => '已拒绝',
+                4 => '已退款',
+                5 => '退款中',
+                6 => '退款失败',
+                10 => '卖家拒绝退款'
+            );
+            $pay_status_names = array(
+                1 => '已支付',
+                4 => '部分退款',
+                5 => '全额退款',
+                6 => '退款申请中',
+                7 => '退款中'
+            );
+
+            $log_msg = sprintf(
+                '根据退款申请单:%s(状态:%s)更新商品pay_status为%s',
+                $refundApply['refund_apply_bn'],
+                $status_names[$status] ?? '未知',
+                $pay_status_names[$pay_status] ?? '未知'
+            );
+            app::get('ome')->model('operation_log')->write_log('order_edit@ome', $order_id, $log_msg);
+        }
+        
+        // 订单支付状态发生变化
+        if(in_array($pay_status, [4, 5, 6, 7])){
+            $orderSdf = [
+                'order_id' => $order_id,
+                'pay_status' => $pay_status,
+            ];
+            
+            // [更新]预约订单的相关状态
+            $error_msg = '';
+            kernel::single('ome_order_reservation')->operateReservationOrder($orderSdf, $error_msg);
+        }
+        
+        // 增加service调用，便于扩展
+        foreach (kernel::servicelist('ome.service.refund.apply.objectspaystatus.after') as $service) {
+            if (method_exists($service, 'afterUpdateOrderObjectsPayStatus')) {
+                $service->afterUpdateOrderObjectsPayStatus($order_id);
+            }
+        }
+
+        return !is_bool($result);
     }
 }

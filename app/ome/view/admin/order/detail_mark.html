@@ -57,6 +57,8 @@
       </td>
     </tr>
     <{/if}>
+
+    <{if $is_prohibit_submit !== 'true'}>
       <tr>
           <th align='right'><{t}>常用备注：<{/t}></th>
           <td align='left'>
@@ -74,6 +76,8 @@
       <th>&nbsp;</th>
       <td><{button type="submit" label="保存" }></td>
     </tr>
+    <{/if}>
+
     </table>  
 </div>
 </form>

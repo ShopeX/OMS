@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class ome_ctl_admin_setting extends desktop_controller{
     var $name = "基本设置";
     var $workground = "setting_tools";
@@ -28,10 +27,6 @@ class ome_ctl_admin_setting extends desktop_controller{
     );
     
     //列表分栏菜单
-    /**
-     * _views
-     * @return mixed 返回值
-     */
     public function _views()
     {
         $sub_menu = array();
@@ -43,10 +38,6 @@ class ome_ctl_admin_setting extends desktop_controller{
         return $sub_menu;
     }
     
-    /**
-     * _viewsProblem
-     * @return mixed 返回值
-     */
     public function _viewsProblem()
     {
         $problemObj = $this->app->model('return_product_problem');
@@ -71,10 +62,6 @@ class ome_ctl_admin_setting extends desktop_controller{
         if($arr1["order"] == $arr2["order"])return 0;return $arr1["order"] > $arr2["order"] ? 1 : -1;
     }
     
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index()
     {
         $basicMaterialObj    = app::get('material')->model('basic_material');
@@ -204,6 +191,47 @@ class ome_ctl_admin_setting extends desktop_controller{
             }
             if( !isset($settins['ome.order.sales_multiple']['flag'])){
                 $settins['ome.order.sales_multiple']['flag'] = 0;
+            }
+            
+            // 报备外呼主叫号码组验证
+            if(isset($settins['ome.call.mobile.group'])){
+                $mobileGroup = trim($settins['ome.call.mobile.group']);
+                if(!empty($mobileGroup)){
+                    $lines = explode("\n", $mobileGroup);
+                    $validMobiles = [];
+                    $mobilePattern = '/^1[3-9]\d{9}$/'; // 手机号正则：11位，1开头，第二位3-9
+                    
+                    foreach($lines as $line){
+                        $line = trim($line);
+                        if(!empty($line)){
+                            if(preg_match($mobilePattern, $line)){
+                                $validMobiles[] = $line;
+                            } else {
+                                $this->end(false, '手机号格式错误：'. $line .'（请输入11位手机号，1开头，第二位3-9）');
+                            }
+                        }
+                    }
+                    
+                    // 保存时去除重复并重新组合
+                    $beforeCount = count($validMobiles);
+                    $validMobiles = array_unique($validMobiles);
+                    $afterCount = count($validMobiles);
+                    
+                    // 去重后重新检查数量限制
+                    if($afterCount > 80){
+                        $this->end(false, '报备外呼主叫号码组最多只能添加80个手机号，当前已输入'. $afterCount .'个（去重后）');
+                    }
+                    
+                    // 如果有重复，记录日志提示
+                    if($beforeCount > $afterCount){
+                        $duplicateCount = $beforeCount - $afterCount;
+                        // 可以记录日志，但不阻止保存
+                    }
+                    
+                    $settins['ome.call.mobile.group'] = implode("\n", $validMobiles);
+                } else {
+                    $settins['ome.call.mobile.group'] = '';
+                }
             }
             
             // 开票配置
@@ -711,10 +739,6 @@ class ome_ctl_admin_setting extends desktop_controller{
         $this->page('admin/system/bank_account.html');
     }
 
-    /**
-     * do_add_bank_account
-     * @return mixed 返回值
-     */
     public function do_add_bank_account()
     {
         $bank_acount = $this->app->model('bank_account');
@@ -886,11 +910,6 @@ class ome_ctl_admin_setting extends desktop_controller{
         $this->end(true, app::get('base')->_('同步成功'), 3);
     }
     
-    /**
-     * problemSetDefaulted
-     * @param mixed $problem_id ID
-     * @return mixed 返回值
-     */
     public function problemSetDefaulted($problem_id)
     {
         $finder_id = $_REQUEST['finder_id'];
@@ -918,11 +937,6 @@ class ome_ctl_admin_setting extends desktop_controller{
         exit;
     }
 
-    /**
-     * problemWipeDefaulted
-     * @param mixed $problem_id ID
-     * @return mixed 返回值
-     */
     public function problemWipeDefaulted($problem_id)
     {
         $finder_id = $_REQUEST['finder_id'];

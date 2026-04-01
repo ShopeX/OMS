@@ -162,4 +162,109 @@ class erpapi_shop_matrix_tmall_request_order extends erpapi_shop_request_order
         $params['receiver_zip']      = $order['consignee']['zip']?$order['consignee']['zip']:'';
         return $params;
     }
+    
+    /**
+     * [淘宝700虚拟号]隐私号G组更新：报备外呼主叫号码组
+     *
+     * @param array $params
+     * @return array
+     */
+    public function bindSecretMobiles($params)
+    {
+        $title = '隐私号G组更新';
+        
+        $original_bn = $params['order_bn'];
+        
+        // check
+        if(empty($original_bn) || empty($params['oaid']) || empty($params['mobile_list'])){
+            return $this->error('请检查order_bn、oaid、mobile_list是否为空');
+        }
+        
+//        // 请求的数据
+//        $requestData = [
+//            'mobile_list' => $params['mobile_list'], // 手机号列表(json)
+//            'operate_type' => 'ADD_GXB_GROUP', // 操作类型（DELETE_GXB_GROUP/ADD_GXB_GROUP）
+//            'oaid' => $params['oaid'], // 收件人ID (Open Addressee ID)，长度在128个字符之内
+//        ];
+//
+//        $requestParams= [
+//            'secret_order_g_group_update_external_request' => $requestData
+//        ];
+//
+//        // params
+//        $params = array(
+//            'api' => 'taobao.top.secret.group.update',
+//            'data' => json_encode($requestParams, JSON_UNESCAPED_UNICODE), // Json格式化
+//        );
+//
+//        // callback
+//        $callback = array();
+//
+//        // 使用矩阵透传接口请求淘宝
+//        $result = $this->__caller->call(TAOBAO_COMMON_TOP_SEND, $params, $callback, $title, 10, $original_bn);
+        
+        // mobile_list
+        if(is_array($params['mobile_list'])){
+            $json_mobile = json_encode($params['mobile_list'], JSON_UNESCAPED_UNICODE);
+        }else{
+            $json_mobile = $params['mobile_list'];
+        }
+        
+        // params
+        $params = array(
+            'operate_type' => 'ADD_GXB_GROUP', // ADD_GXB_GROUP: 添加，DELETE_GXB_GROUP: 删除
+            'tid' => $params['order_bn'], //订单号
+            'mobile_list' => $json_mobile, // JSON格式
+            'virtual_id' => $params['oaid'], // 收件人ID (Open Addressee ID)，长度在128个字符之内
+        );
+        
+        // callback
+        $callback = array();
+        
+        // 使用矩阵透传接口请求淘宝
+        $result = $this->__caller->call(STORE_VIRTUAL_NUMBER_GROUP_UPDATE, $params, $callback, $title, 10, $original_bn);
+        
+        return $result;
+    }
+    
+    /**
+     * [淘宝700虚拟号]隐私号G组查询：查询报备外呼主叫号码组
+     *
+     * @param array $params
+     * @return array
+     */
+    public function querySecretMobiles($params)
+    {
+        $title = '隐私号G组查询';
+        
+        $original_bn = $params['order_bn'];
+        
+        // check
+        if(empty($params['oaid'])){
+            return $this->error('没有提供oaid进行查询');
+        }
+        
+        // 请求的数据
+        $requestData = [
+            'oaid' => $params['oaid'], // 收件人ID (Open Addressee ID)，长度在128个字符之内
+        ];
+        
+        $requestParams= [
+            'secret_order_g_group_query_external_request' => $requestData
+        ];
+        
+        // params
+        $params = array(
+            'api' => 'taobao.top.secret.group.query',
+            'data' => json_encode($requestParams, JSON_UNESCAPED_UNICODE), // Json格式化
+        );
+        
+        // callback
+        $callback = array();
+        
+        // 使用矩阵透传接口请求淘宝
+        $result = $this->__caller->call(TAOBAO_COMMON_TOP_SEND, $params, $callback, $title, 10, $original_bn);
+        
+        return $result;
+    }
 }

@@ -633,8 +633,8 @@ class finance_mdl_ar extends dbeav_model{
             );
             $new_titles['items'] = array(
                 'serial_number' => '*:业务流水号',
-                'bn' => '*:商品货号',
-                'name' => '*:商品名称',
+                'bn' => '*:销售物料编码',
+                'name' => '*:销售物料名称',
                 'nums' => '*:数量',
                 'money' => '*:金额'
              );
@@ -706,8 +706,8 @@ class finance_mdl_ar extends dbeav_model{
             foreach($_items as $_k=>$_v){
                 $items = array();
                 $items['*:业务流水号'] = "\t".$data_ar['serial_number'];
-                $items['*:商品货号'] = "\t".$_v['bn'];
-                $items['*:商品名称'] = $_v['name'];
+                $items['*:销售物料编码'] = "\t".$_v['bn'];
+                $items['*:销售物料名称'] = $_v['name'];
                 $items['*:数量'] = $_v['num'];
                 $items['*:金额'] = $_v['money'];
                 $data['content']['items'][] = $this->charset->utf2local('"'.implode( '","', $items ).'"');

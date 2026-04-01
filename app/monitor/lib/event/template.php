@@ -56,11 +56,30 @@ class monitor_event_template
             'rpc_warning'              => 'RPC调用失败报警',
             'store_freeze_abnormal'    => '库存或冻结消费异常报警',
             'inventory_calc_error'     => '库存计算异常报警',
+            'order_ship_refund_apply'  => '订单已发货仅退款发起申请',
+            'order_unship_refund_apply'  => '订单未发货退款发起申请',
+            'order_refund_apply_reback_fail' => '订单退款发起申请发货单撤销失败',
+            'order_part_ship_refund_apply' => '订单部分发货仅退款发起申请',
+            'order_refund_apply_reback_succ' => '退款申请对应发货单均撤回',
+            'order_refund_apply_force_refund' => '退款单强制退款',
+            'order_delivery_timeliness' => '订单发货时效提醒',
+            'order_delivery_platform_sync_error' => '订单发货回写平台失败',
+            'inventory_calc_error'     => '库存计算异常报警',
             // 新增事件类型
             'delivery_cancel_success'  => '发货单取消成功通知',
             'reship_cancel_success'    => '退货单取消成功通知',
+            'delivery_cancel_wms'      => '发货单撤销WMS通知',
             'sap_sync_error'            => 'SAP同步异常报警',
+            'order_lack_notify'         => '订单缺货通知',
         );
+        foreach(kernel::servicelist('monitor.service.event.template.get.after') as $object) {
+            if(method_exists($object, 'getEventType')){
+                $rs = $object->getEventType();
+                if(is_array($rs) && $rs) {
+                    $eventType = array_merge($eventType, $rs);
+                }
+            }
+        }
         return $eventType;
     }
 
@@ -160,6 +179,29 @@ SAP同步异常报警
     >同步状态：<font color="warning">{sync_status}</font>
     >接口名：<font color="warning">{method}</font>
     >错误信息：<font color="warning">{errmsg}</font>
+TPL
+,
+            'order_delivery_platform_sync_error' => <<<TPL
+订单发货回写平台失败
+    >订单号：<font color="warning">{order_bn}</font>
+    >发货单号：<font color="warning">{delivery_bn}</font>
+    >平台：<font color="warning">{platform}</font>
+    >店铺：<font color="warning">{shop_name}</font>
+    >错误信息：<font color="warning">{errmsg}</font>
+TPL
+,
+            'delivery_cancel_wms' => <<<TPL
+{shop_type}平台{shop_name}店铺发货单号（{delivery_bn}）已撤销，明细如下，请WMS端及时取消出货，谢谢。
+    {detail_list}
+TPL
+,
+            'order_lack_notify' => <<<TPL
+订单缺货通知
+    >订单号：<font color="warning">{order_bn}</font>
+    >仓库：<font color="warning">{branch_name}</font>
+    >缺货商品数量：<font color="warning">{lack_count}</font>
+    >缺货商品详情：
+{lack_products}
 TPL
 ,
         );

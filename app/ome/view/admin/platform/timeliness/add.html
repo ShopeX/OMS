@@ -1,0 +1,83 @@
+<div class="tableform">
+    <div class="division">
+        <form method="post" action="index.php?app=ome&ctl=admin_platform_timeliness&act=save" id="frm">
+            <{input type="hidden" name="id" value=$data.id}>
+            <table border="0" cellspacing="0" cellpadding="0" >
+                <tbody>
+                    <tr>
+                        <th>平台编码：</th>
+                        <td><{input issearch="fuzzy-search" type="select" required="true" options=$optShopType name="shop_type" value=$data.shop_type }></td>
+                    </tr>
+                    <tr>
+                        <th>场景：</th>
+                        <td>
+                            <{assign var="opt" value=array('delivery'=>'发货')}>
+                            <{input type="select" name="scene" value=$data.scene options=$opt required="true"}>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>时效时间(小时)：</th>
+                        <td><{input type="number" vtype="required" name="hour" value=$data.hour min="0" }></td>
+                    </tr>
+                    <tr>
+                        <th>备注：</th>
+                        <td><{input type="textarea" name="memo" value=$data.memo style="height: 100px;"}></td>
+                    </tr>
+                </tbody>
+            </table>
+        </form>
+    </div>
+</div>
+<{area inject=".mainFoot"}>
+<div class="table-action">
+    <table width="100%" cellspacing="0" cellpadding="0">
+        <tbody>
+            <tr>
+                <td>
+                    <{button type="button" id='submit_btn' class="btn-primary" label='保存' }>
+                    <{button type="button" id='close_btn' class="btn-secondary" label='关闭' isCloseDialogBtn="true"}>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<{/area}>
+<script type="text/javascript">
+    (function(){
+        var _form = $('frm');//表单ID 
+        var btn   = $('submit_btn');//按钮ID
+        var finder = finderGroup['<{$env.get.finder_id}>'];
+        tail.select('select[issearch="fuzzy-search"]', {
+            search: true,
+            width: 150,
+            height: 660,
+            searchMinLength: 0
+        });
+        _form.store('target',{
+            onRequest:function(){
+                btn.setAttribute('disabled', 'disabled');
+            },
+            onComplete:function(){
+                btn.removeAttribute('disabled');
+            },
+            onSuccess:function(response){
+                var hash_res_obj = JSON.decode(response);
+                if (hash_res_obj.success != undefined && hash_res_obj.success != ""){
+                    try{
+                        var _dialogIns = btn.getParent('.dialog').retrieve('instance');
+                    }catch(e){}
+
+                    if(_dialogIns){
+                        setTimeout(finder.refresh(),30000);
+                        _dialogIns.close();
+                    }
+                }
+            }
+        });
+
+        btn.addEvent('click',function(){
+          _form.fireEvent('submit',{stop:$empty});
+        });
+
+    })();
+</script>

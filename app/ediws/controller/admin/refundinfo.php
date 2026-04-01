@@ -81,7 +81,11 @@ class ediws_ctl_admin_refundinfo extends desktop_controller{
      * @return mixed 返回值
      */
     public function do_sync() {
-        $shop_id = $_POST['shop_id'];
+        $shop_id = $_POST['shop_id'] ?? '';
+        if (empty($shop_id)) {
+            echo json_encode(array('total' => 0, 'error' => '请选择店铺'));
+            exit;
+        }
         $warehouse = $_POST['warehouse'];
         $start_time   = $_POST['start_time'].' '.$_POST['_DTIME_']['H']['start_time'].':'.$_POST['_DTIME_']['M']['start_time'].':00';
         $end_time     = $_POST['end_time'].' '.$_POST['_DTIME_']['H']['end_time'].':'.$_POST['_DTIME_']['M']['end_time'].':00';

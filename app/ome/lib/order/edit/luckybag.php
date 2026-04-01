@@ -182,6 +182,13 @@ class ome_order_edit_luckybag
                     }
                     
                     $tmp_obj[$k]['sale_price']  = $tmp_obj[$k]['amount'] - $obj_pmt_price[$k];
+                    $tmp_obj[$k]['divide_order_fee'] = sprintf('%.2f', $obj_['divide_order_fee'] * intval($onum[$k]) / $obj_['quantity']);
+                    $tmp_obj[$k]['settlement_amount'] = sprintf('%.2f', $obj_['settlement_amount'] * intval($onum[$k]) / $obj_['quantity']);
+                    $tmp_obj[$k]['actually_amount'] = sprintf('%.2f', $obj_['actually_amount'] * intval($onum[$k]) / $obj_['quantity']);
+                    $tmp_obj[$k]['platform_pay_amount'] = sprintf('%.2f', $tmp_obj[$k]['divide_order_fee'] - $tmp_obj[$k]['actually_amount']);
+                    $tmp_obj[$k]['platform_amount'] = sprintf('%.2f', $tmp_obj[$k]['settlement_amount'] - $tmp_obj[$k]['divide_order_fee']);
+                    $tmp_obj[$k]['part_mjz_discount'] = sprintf('%.2f', $tmp_obj[$k]['sale_price'] - $tmp_obj[$k]['divide_order_fee']);
+                    $tmp_obj[$k]['oid'] = $obj_['oid'];
                     if ($obj_['sale_price'] != $tmp_obj[$k]['sale_price']){
                         $is_order_change = true;
                         $is_goods_modify = true;

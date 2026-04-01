@@ -193,6 +193,39 @@ function response_html(val){
 }
 <{/if}>
 
+// 商品勾选相关功能
+function select_all(el){
+    var do_check = el.checked;
+    $$(document.getElementsByName("obj_id[]")).each(function (e) {
+        e.checked = do_check;
+    });
+    sum_price();
+}
+
+function sum_price() {
+    var input = document.getElementsByName("obj_id[]");
+    var sumPrice = 0;
+    for (var i = 0; i < input.length; i++)
+    {
+        var obj = input[i];
+        //判断是否是checkbox并且已经选中
+        if (obj.type == "checkbox" && obj.checked){
+            var obj_id = obj.value;//获取checkbox的值
+            var price = $(obj_id+'_price').value
+            sumPrice += parseFloat(price);
+        }
+    }
+    var cost_freight_money = 0;
+    $$('.cost_freight').each(function(item){
+        if(item.checked==true){
+            sumPrice+=parseFloat(item.value);
+        }
+    });
+    $('kuaidimoney').value = sumPrice
+}
+// 初始化计算退款金额
+sum_price();
+
 </script>
     <input type='hidden' name='shop_id' id='shop_id' value='<{$shop_id}>'>
     <input type='hidden' name='return_id' value='<{$return_id}>'>
@@ -316,16 +349,21 @@ function response_html(val){
                 <table>
                     <thead>
                         <tr>
+                            <th><input type="checkbox" class="selectall" id="selectall" onclick="select_all(this)"></th>
                             <th><{t}>基础物料编码<{/t}></th>
                             <th><{t}>基础物料名称<{/t}></th>
                             <th><{t}>数量<{/t}></th>
                             <th><{t}>原价<{/t}></th>
                             <th><{t}>销售价<{/t}></th>
+                            <th><{t}>实付(小计)<{/t}></th>
                         </tr>
                     </thead>
                     <tbody>
                         <{foreach from=$aItems item=aGoods name="item"}>
                             <tr <{if $aGoods.delete == 'true'}>style="background-color: rgb(216, 216, 216);"<{/if}>>
+                                <td>
+                                    <input type="checkbox" checked name="obj_id[]" onclick="sum_price()" value='<{$aGoods.obj_id}>'>
+                                </td>
                                 <td><{$aGoods.bn}></td>
                                 <td class="textleft">
                                     <{$aGoods.name}>
@@ -333,6 +371,8 @@ function response_html(val){
                                 <td><{$aGoods.quantity}></td>
                                 <td><{$aGoods.price|cur}></td>
                                 <td><{$aGoods.sale_price/$aGoods.quantity|cur}></td>
+                                <td><{$aGoods.divide_order_fee}></td>
+                                <input type="hidden" id="<{$aGoods.obj_id}>_price" value="<{$aGoods.divide_order_fee}>">
                             </tr>
                         <{/foreach}>
                     </tbody>

@@ -59,7 +59,7 @@ class o2o_task{
         }
 
         //初始化数据
-        kernel::single('base_initial', 'o2o')->init();
+        //kernel::single('base_initial', 'o2o')->init();
     }
 
     function post_uninstall(){

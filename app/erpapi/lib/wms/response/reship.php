@@ -17,8 +17,8 @@
 /**
  * 退货单
  *
- * @category
- * @package
+ * @category 
+ * @package 
  * @author chenping<chenping@shopex.cn>
  * @version $Id: Z
  */
@@ -26,9 +26,8 @@ class erpapi_wms_response_reship extends erpapi_wms_response_abstract
 {    
     /**
      * wms.reship.status_update
-     * 
-     * */
-
+     *
+     **/
     public function status_update($params){
 
         $this->__apilog['title'] = $this->__channelObj->wms['channel_name'] . '退货单' . $params['reship_bn'];
@@ -73,14 +72,32 @@ class erpapi_wms_response_reship extends erpapi_wms_response_abstract
         if($items){
             foreach($items as $key=>$val){
                 if (!$val['product_bn']) continue;
-                
-                $reship_items[$val['product_bn']]['bn']            = $val['product_bn'];
-                $reship_items[$val['product_bn']]['normal_num']    = (int)$reship_items[$val['product_bn']]['normal_num'] + (int)$val['normal_num'];
-                $reship_items[$val['product_bn']]['defective_num'] = (int)$reship_items[$val['product_bn']]['defective_num'] + (int)$val['defective_num'];
+                $key = trim($val['product_bn']);
+                if(app::get('ome')->getConf('wms.goods.type.branch') == 1) {
+                    if(empty($val['inventoryType'])) {
+                        $this->__apilog['result']['msg'] = '缺少商品库位';
+                        return false;
+                    }
+                    $arrTypeBranch = [];
+                    if(!$arrTypeBranch[$val['inventoryType']]) {
+                        $arrTypeBranch[$val['inventoryType']] = kernel::single('ome_branch_type')->getBranchByTypeWms($val['inventoryType'], $this->__channelObj->wms['channel_id'], $params['warehouse']);
+                    }
+                    if(!$arrTypeBranch[$val['inventoryType']]) {
+                        $this->__apilog['result']['msg'] = '商品库位对应的仓库不存在';
+                        return false;
+                    }
+                    $key = $key . '-|-' . $arrTypeBranch[$val['inventoryType']]['branch_id'];
+                    $reship_items[$key]['branch_id'] = $arrTypeBranch[$val['inventoryType']]['branch_id'];
+                    $val['normal_num'] = (int)$val['normal_num'] + (int)$val['defective_num'];
+                    $val['defective_num'] = 0;
+                }
+                $reship_items[$key]['bn']            = $val['product_bn'];
+                $reship_items[$key]['normal_num']    = (int)$reship_items[$key]['normal_num'] + (int)$val['normal_num'];
+                $reship_items[$key]['defective_num'] = (int)$reship_items[$key]['defective_num'] + (int)$val['defective_num'];
               
                 if(is_array($val['sn_list']) && $val['sn_list']['sn']) {
                     $sn_list = is_array($val['sn_list']['sn']) ? $val['sn_list']['sn'] : [$val['sn_list']['sn']];
-                    $reship_items[$val['product_bn']]['sn_list'] = $reship_items[$val['product_bn']]['sn_list'] ? array_merge($reship_items[$val['product_bn']]['sn_list'], $sn_list) : $sn_list;
+                    $reship_items[$key]['sn_list'] = $reship_items[$key]['sn_list'] ? array_merge($reship_items[$key]['sn_list'], $sn_list) : $sn_list;
                 }
                 if($val['batch']) {
                     $v = $val['batch'];
@@ -89,7 +106,7 @@ class erpapi_wms_response_reship extends erpapi_wms_response_abstract
                         foreach ($v as $vv) {
                             if ($vv['actualQty'] == 0) continue;
 
-                            $reship_items[$val['product_bn']]['batch'][] = array(
+                            $reship_items[$key]['batch'][] = array(
                                 'purchase_code' => $vv['batchCode'],
                                 'produce_code'  => $vv['produceCode'],
                                 'product_time'  => strtotime($vv['productDate']),
@@ -101,7 +118,7 @@ class erpapi_wms_response_reship extends erpapi_wms_response_abstract
                     } else {
                         if ($v['actualQty'] == 0) continue;
 
-                        $reship_items[$val['product_bn']]['batch'][] = array(
+                        $reship_items[$key]['batch'][] = array(
                             'purchase_code' => $v['batchCode'],
                             'produce_code'  => $v['produceCode'],
                             'product_time'  => strtotime($v['productDate']),
@@ -113,9 +130,67 @@ class erpapi_wms_response_reship extends erpapi_wms_response_abstract
                 }
             }
         }
-        
+        $virtualItems = $this->_getVirtualItems($data['reship_bn']);
+        if(!empty($virtualItems)) {
+            $reship_items = array_merge($reship_items, $virtualItems);
+        }
         $data['items'] = $reship_items;
         return $data;
+    }
+
+    protected function _getVirtualItems($reship_bn) {
+        // 获取退货单信息
+        $reshipMdl = app::get('ome')->model('reship');
+        $reshipInfo = $reshipMdl->db_dump(array('reship_bn' => $reship_bn), 'reship_id');
+        
+        if (empty($reshipInfo)) {
+            return array();
+        }
+        
+        // 获取退货明细
+        $reshipItemMdl = app::get('ome')->model('reship_items');
+        $reshipItems = $reshipItemMdl->getList('bn, num', array(
+            'reship_id' => $reshipInfo['reship_id'],
+            'is_del' => 'false'
+        ));
+        
+        if (empty($reshipItems)) {
+            return array();
+        }
+        
+        // 提取所有bn
+        $bns = array_column($reshipItems, 'bn');
+        if (empty($bns)) {
+            return array();
+        }
+        
+        // 查询虚拟类型的基础物料
+        $basicMaterialMdl = app::get('material')->model('basic_material');
+        $virtualMaterials = $basicMaterialMdl->getList('material_bn', array(
+            'material_bn' => $bns,
+            'type' => 5,  // 虚拟类型
+            'disabled' => 'false'
+        ));
+        
+        if (empty($virtualMaterials)) {
+            return array();
+        }
+        
+        // 获取虚拟物料的bn列表
+        $virtualBns = array_column($virtualMaterials, 'material_bn');
+        
+        // 组装结果数据
+        $result = array();
+        foreach ($reshipItems as $item) {
+            if (in_array($item['bn'], $virtualBns)) {
+                $result[] = array(
+                    'bn' => $item['bn'],
+                    'normal_num' => (int)$item['num']
+                );
+            }
+        }
+        
+        return $result;
     }
 
     protected function _dealWMSParams($params) {
@@ -150,7 +225,7 @@ class erpapi_wms_response_reship extends erpapi_wms_response_abstract
         $inData['logistics'] = $params['logistics'];
         $inData['logi_no'] = $params['logi_no'];
         $inData['remark'] = $params['remark'];
-        $inData['extend_props'] = $params['extend_props'];
+        $inData['extend_props'] = $params['extendProps'];
         $inData['order_type'] = $params['order_type'];
         $inData['warehouse'] = $params['warehouse'];
         $id = $wrMdl->insert($inData);
@@ -164,12 +239,13 @@ class erpapi_wms_response_reship extends erpapi_wms_response_abstract
                 $inItems[] = [
                     'wr_id' => $id,
                     'product_bn' => $val['product_bn'],
+                    'inventory_type' => $val['inventoryType'],
                     'normal_num' => $val['normal_num'],
                     'defective_num' => $val['defective_num'],
                     'sn_list' => $val['sn_list'] ? json_encode($val['sn_list'], JSON_UNESCAPED_UNICODE) : '',
                     'batch' => $val['batch'] ? json_encode($val['batch'], JSON_UNESCAPED_UNICODE) : '',
                     'wms_item_id' => $val['item_id'],
-                    'extend_props' => $val['extend_props'],
+                    'extend_props' => $val['extendProps'],
                 ];
             }
             $wriMdl = app::get('console')->model('wms_reship_items');
@@ -181,11 +257,6 @@ class erpapi_wms_response_reship extends erpapi_wms_response_abstract
     }
     
     #wms.reship.add_complete
-        /**
-     * 添加_complete
-     * @param mixed $params 参数
-     * @return mixed 返回值
-     */
     public function add_complete($params) {
         $this->__apilog['title'] = $this->__channelObj->channel['channel_name'] . '新建与完成退货单';
         $this->__apilog['original_bn'] = $params['returnOrderId'];

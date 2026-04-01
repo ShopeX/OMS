@@ -90,8 +90,10 @@ class erpapi_shop_response_process_qianniu extends erpapi_shop_response_abstract
             }
         }
         
+        // [大家电]收货人信息变更后,重新进行预约
+        kernel::single('ome_order_reservation')->againReservation($order_id, 'address_change');
+        
         return array('rsp'=>'succ','msg'=>'千牛/平台改地址成功');
-
     }
 
     /**

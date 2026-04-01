@@ -95,4 +95,50 @@ class ome_mdl_reship_items extends dbeav_model{
         $result['return'] = $return[0]['c'];
         $result['change'] = $change[0]['c'];
      }
+
+    /**
+     * 根据基础物料编码获取退货单ID（支持大数据量分批查询）
+     * @param array $filter 筛选条件，包含 product_bn
+     * @return array 返回 reship_id 列表
+     */
+    public function getReshipIdByFilterbnEq($filter)
+    {
+        $reshipObj = app::get('ome')->model('reship');
+        $product_bn = $filter['product_bn'];
+
+        $where = 1;
+        if (is_array($product_bn)) {
+            $where = 'in (\'' . implode('\',\'', $product_bn) . '\')';
+        } else {
+            $where = '= \'' . $product_bn . '\'';
+        }
+        unset($filter['product_bn']);
+        $reship_filter = $reshipObj->_filter($filter);
+        $reship_filter = str_replace('`sdb_ome_reship`', 'r', $reship_filter);
+        // 使用正则替换，排除已经带 r. 前缀的字段
+        $reship_filter = preg_replace('/(?<!r\.)reship_id/', 'r.reship_id', $reship_filter);
+        $reship_filter = preg_replace('/(?<!r\.)delivery_mode/', 'r.delivery_mode', $reship_filter);
+        $reship_filter = preg_replace('/(?<!r\.)return_type/', 'r.return_type', $reship_filter);
+        $sql = 'SELECT count(1) as _c FROM sdb_ome_reship_items as i LEFT JOIN sdb_ome_reship as r ON i.reship_id=r.reship_id WHERE i.bn ' . $where . ' AND ' . $reship_filter;
+        $count = $this->db->selectrow($sql);
+        if ($count['_c'] >= 10000) {
+            $offset = 0;
+            $limit  = 9000;
+            $list   = array();
+            $sql    = 'SELECT i.reship_id FROM sdb_ome_reship_items as i LEFT JOIN sdb_ome_reship as r ON i.reship_id=r.reship_id WHERE i.bn ' . $where . ' AND ' . $reship_filter;
+            $total  = floor($count['_c'] / $limit);
+            for ($i = $total; $i >= 0; $i--) {
+                $rows = $this->db->selectlimit($sql, $limit, $i * $limit);
+                if ($rows) {
+                    $list = array_merge_recursive($list, $rows);
+                }
+            }
+            return $list;
+        }
+
+        $sql  = 'SELECT i.reship_id FROM sdb_ome_reship_items as i LEFT JOIN sdb_ome_reship as r ON i.reship_id=r.reship_id WHERE i.bn ' . $where . ' AND ' . $reship_filter;
+        $rows = $this->db->select($sql);
+
+        return $rows;
+    }
 }

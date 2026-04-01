@@ -17,8 +17,8 @@
 /**
  * 供应商推送
  *
- * @category
- * @package
+ * @category 
+ * @package 
  * @author chenping<chenping@shopex.cn>
  * @version $Id: Z
  */
@@ -31,12 +31,6 @@ abstract class erpapi_wms_selfwms_request_abstract
 
     public $__apilog;
 
-    /**
-     * 初始化
-     * @param erpapi_channel_abstract $channel channel
-     * @return mixed 返回值
-     */
-
     public function init(erpapi_channel_abstract $channel)
     {
         $this->__channelObj = $channel;
@@ -45,37 +39,33 @@ abstract class erpapi_wms_selfwms_request_abstract
     }
 
     /**
-     * succ
-     * @param mixed $msg msg
-     * @param mixed $msgcode msgcode
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
+     * 成功输出
+     *
+     * @return void
+     * @author 
+     **/
     final public function succ($msg='', $msgcode='', $data=null)
     {
         return array('rsp'=>'succ', 'msg'=>$msg, 'msg_code'=>$msgcode, 'data'=>$data);
     }
 
     /**
-     * error
-     * @param mixed $msg msg
-     * @param mixed $msgcode msgcode
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
+     * 失败输出
+     *
+     * @return void
+     * @author 
+     **/
     final public function error($msg, $msgcode, $data=null)
     {
         return array('rsp'=>'fail','msg'=>$msg,'msg_code'=>$msgcode,'data'=>$data);
     }
 
     /**
-     * 保存_api_fail
-     * @param mixed $obj_bn obj_bn
-     * @param mixed $obj_type obj_type
-     * @param mixed $method method
-     * @param mixed $err_msg err_msg
-     * @return mixed 返回操作结果
-     */
+     * 失败日志
+     *
+     * @return void
+     * @author 
+     **/
     final public function save_api_fail($obj_bn,$obj_type,$method,$err_msg)
     {
         $failApiModel = app::get('erpapi')->model('api_fail');
@@ -96,10 +86,10 @@ abstract class erpapi_wms_selfwms_request_abstract
 
     /**
      * undocumented function
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     private function request($wms_class,$wms_method,$wms_params)
     {   
         try {
@@ -148,10 +138,10 @@ abstract class erpapi_wms_selfwms_request_abstract
 
     /**
      * 发货单创建
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function delivery_create($sdf){
 
         $this->title = $this->__channelObj->wms['channel_name'] . '发货单添加';
@@ -179,6 +169,35 @@ abstract class erpapi_wms_selfwms_request_abstract
         }elseif($rs['rsp'] == 'succ'){
             $failApiModel->delete(array('obj_bn'=>$sdf['outer_delivery_bn'],'obj_type'=>'delivery'));
             $consoleDlyLib->update_sync_status($deliverys['delivery_id'], 'send_succ', $msg);
+            
+            // 自发货标记(selfwms自有仓储自动完成发货)
+            if($sdf['is_self_shipment'] === true){
+                $wms_id = $this->__channelObj->wms['channel_id'];
+                $delivery_bn = $sdf['delivery_bn'];
+                
+                // params
+                $data = [];
+                $data['delivery_bn'] = $delivery_bn; // 发货单号
+                $data['status'] = 'delivery';
+                $data['logi_id'] = $sdf['logi_id']; // 物流公司ID：直接使用发货单上的物流公司ID
+                $data['logi_no'] = $delivery_bn; // 物流单号：直接使用发货单号作为虚拟物流单号
+                
+                // delivery_items
+                if($sdf['delivery_items']){
+                    $itemList = [];
+                    foreach($sdf['delivery_items'] as $itemVal)
+                    {
+                        $itemList[] = array(
+                            'product_bn' => $itemVal['bn'],
+                            'num' => $itemVal['number'],
+                        );
+                    }
+                    $data['item'] = json_encode($itemList);
+                }
+                
+                return kernel::single('erpapi_router_response')->set_channel_id($wms_id)->set_api_name('wms.delivery.status_update')->dispatch($data);
+            }
+            
         }
 
         return $rs;
@@ -186,10 +205,10 @@ abstract class erpapi_wms_selfwms_request_abstract
 
     /**
      * 发货单暂停
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function delivery_pause($sdf){
         $this->title = $this->__channelObj->wms['channel_name'] . '发货单暂停';
         $this->original_bn = $sdf['outer_delivery_bn'];
@@ -199,10 +218,10 @@ abstract class erpapi_wms_selfwms_request_abstract
 
     /**
      * 发货单暂停恢复
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function delivery_renew($sdf){
         $this->title = $this->__channelObj->wms['channel_name'] . '发货单恢复';
         $this->original_bn = $sdf['outer_delivery_bn'];
@@ -212,10 +231,10 @@ abstract class erpapi_wms_selfwms_request_abstract
 
     /**
      * 发货单取消
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function delivery_cancel($sdf){
         $this->title = $this->__channelObj->wms['channel_name'] . '发货单撤销';
         $this->original_bn = $sdf['outer_delivery_bn'];
@@ -225,10 +244,10 @@ abstract class erpapi_wms_selfwms_request_abstract
 
     /**
      * 商品添加
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function goods_add($sdf){
         $this->title = $this->__channelObj->wms['channel_name'] . '添加物料';
 
@@ -237,10 +256,10 @@ abstract class erpapi_wms_selfwms_request_abstract
 
     /**
      * 商品编辑
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function goods_update($sdf){
         $this->title = $this->__channelObj->wms['channel_name'] . '更新物料';
 
@@ -249,10 +268,10 @@ abstract class erpapi_wms_selfwms_request_abstract
 
     /**
      * 退货单创建
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function reship_create($sdf){
         $this->title = $this->__channelObj->wms['channel_name'] . '退货单创建';
         $this->original_bn = $sdf['reship_bn'];
@@ -262,10 +281,10 @@ abstract class erpapi_wms_selfwms_request_abstract
 
     /**
      * 退货单创建取消
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function reship_cancel($sdf){
         $this->title = $this->__channelObj->wms['channel_name'] . '退货单取消';
         $this->original_bn = $sdf['reship_bn'];
@@ -275,10 +294,10 @@ abstract class erpapi_wms_selfwms_request_abstract
 
     /**
      * 转储单创建
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function stockdump_create($sdf){
         $this->title = $this->__channelObj->wms['channel_name'] . '转储单创建';
         $this->original_bn = $sdf['stockdump_bn'];
@@ -288,10 +307,10 @@ abstract class erpapi_wms_selfwms_request_abstract
 
     /**
      * 转储单取消
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function stockdump_cancel($sdf){
         $this->title = $this->__channelObj->wms['channel_name'] . '转储单取消';
         $this->original_bn = $sdf['stockdump_bn'];
@@ -301,10 +320,10 @@ abstract class erpapi_wms_selfwms_request_abstract
 
     /**
      * 入库单创建
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function stockin_create($sdf){
         $this->title = $this->__channelObj->wms['channel_name'] . '入库单创建';
         $this->original_bn = $sdf['io_bn'];
@@ -340,10 +359,10 @@ abstract class erpapi_wms_selfwms_request_abstract
 
     /**
      * 入库单取消
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function stockin_cancel($sdf){
         $this->title = $this->__channelObj->wms['channel_name'] . '入库单取消';
         $this->original_bn = $sdf['io_bn'];
@@ -373,10 +392,10 @@ abstract class erpapi_wms_selfwms_request_abstract
 
     /**
      * 出库单创建
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function stockout_create($sdf){
         $this->title = $this->__channelObj->wms['channel_name'] . '出库单创建';
         $this->original_bn = $sdf['io_bn'];
@@ -407,10 +426,10 @@ abstract class erpapi_wms_selfwms_request_abstract
 
     /**
      * 出库单取消
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function stockout_cancel($sdf){
         $this->title = $this->__channelObj->wms['channel_name'] . '出库单取消';
         $this->original_bn = $sdf['io_bn'];
@@ -437,81 +456,41 @@ abstract class erpapi_wms_selfwms_request_abstract
         return $this->request($wms_class,$wms_method,$sdf);
     } 
 
-        /**
-     * supplier_create
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function supplier_create($sdf)
     {
         return $this->error('接口方法不存在','w402');
     }
 
-    /**
-     * branch_getlist
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function branch_getlist($sdf)
     {
         return $this->error('接口方法不存在','w402');
     }
 
-    /**
-     * logistics_getlist
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function logistics_getlist($sdf)
     {
         return $this->error('接口方法不存在','w402');
     }
 
-    /**
-     * delivery_search
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function delivery_search($sdf)
     {
         return $this->error('接口方法不存在','w402');
     }
 
-    /**
-     * reship_search
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function reship_search($sdf)
     {
         return $this->error('接口方法不存在','w402');
     }
 
-    /**
-     * stockin_search
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function stockin_search($sdf)
     {
         return $this->error('接口方法不存在','w402');
     }
 
-    /**
-     * stockout_search
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function stockout_search($sdf)
     {
         return $this->error('接口方法不存在','w402');
     }
 
-    /**
-     * delivery_cut
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function delivery_cut($sdf)
     {
         return $this->error('接口方法不存在','w402');

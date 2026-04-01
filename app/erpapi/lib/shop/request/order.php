@@ -88,8 +88,31 @@ class erpapi_shop_request_order extends erpapi_shop_request_abstract
         return $this->doGetOrderStatusRet($rsp);
     }
     
+    #获取订单发票汇总信息
+    public function getActuallyPay($order_bn)
+    {
+        $params = array('tid' => $order_bn);
+        $title = "店铺(" . $this->__channelObj->channel['name'] . ")获取前端店铺" . $order_bn . "的客户实付信息";
+        $rsp = $this->__caller->call(SHOP_GET_TRADE_INVOICE_SUMMARY, $params, array(), $title, 10, $order_bn);
+        return $this->doGetActuallyPayRet($rsp);
+    }
+    
     protected function doGetOrderStatusRet($rsp) {
         $rsp['data'] = json_decode($rsp['data'], 1);
+        return $rsp;
+    }
+    
+    protected function doGetActuallyPayRet($rsp) {
+        if(empty($rsp['data'])) {
+            $rsp['data'] = array();
+        } else {
+            $rsp['data'] = json_decode($rsp['data'], 1);
+            
+            // consumer_invoice_amount
+            if(isset($rsp['data']['consumer_invoice_amount'])){
+                $rsp['data']['actually_pay'] = $rsp['data']['consumer_invoice_amount'] / 100;
+            }
+        }
         return $rsp;
     }
     
@@ -400,4 +423,22 @@ class erpapi_shop_request_order extends erpapi_shop_request_abstract
      * 子类可以重写此方法实现具体的订单确认逻辑
      */
     public function confirm($order){}
+    
+    /**
+     * 隐私号G组更新：报备外呼主叫号码组
+     *
+     * @param array $params 单个订单信息
+     * @return array
+     */
+    public function bindSecretMobiles($params)
+    {}
+    
+    /**
+     * 隐私号G组查询：查询报备外呼主叫号码组
+     *
+     * @param array $params 单个订单信息
+     * @return array
+     */
+    public function querySecretMobiles($params)
+    {}
 }

@@ -248,10 +248,11 @@ class erpapi_shop_matrix_luban_request_aftersale extends erpapi_shop_request_aft
                 }else{
                     $file_url = is_array($params['reason']) ?  $params['reason']['refuse_proof'] : '';
                 }
+                
                 $refuse_reason = $this->getRefuseReason();
-                $arr_params = is_array($params['reason']) ? $params['reason'] : array();
-
                 $refuse_reason = ome_func::cast_index_to_key($refuse_reason,'reason_id');
+                
+                $arr_params = is_array($params['reason']) ? $params['reason'] : array();
                 
                 //兼容
                 if(isset($arr_params['reject_reason_code']) && $arr_params['reject_reason_code']){
@@ -264,7 +265,7 @@ class erpapi_shop_matrix_luban_request_aftersale extends erpapi_shop_request_aft
                 if(isset($refuse_reason[$arr_params['reject_reason_code']])){
                     $params['reason'] = $refuse_reason[$arr_params['reject_reason_code']]['reason_text'];
                 }else{
-                    $params['reason'] = '';
+                    $params['reason'] = (is_string($params['reason']) ? $params['reason'] : '');
                 }
                 
                 $params['reject_reason_code'] = $arr_params['reject_reason_code'];
@@ -372,20 +373,32 @@ class erpapi_shop_matrix_luban_request_aftersale extends erpapi_shop_request_aft
                 }else{
                     $file_url = is_array($params['reason']) ? $params['reason']['refuse_proof'] : '';
                 }
+                
                 $refuse_reason = $this->getRefuseReason();
-                $arr_params = $params['reason'];
-
                 $refuse_reason = ome_func::cast_index_to_key($refuse_reason,'reason_id');
                 
-                //兼容
-                $arr_params['reject_reason_code'] = is_array($arr_params) && $arr_params['reject_reason_code'] ? $arr_params['reject_reason_code'] : '1';
+                // reason
+                $arr_params = is_array($params['reason']) ? $params['reason'] : array();
                 
-                $params['reason'] = $refuse_reason[$arr_params['reject_reason_code']]['reason_text'];
+                //兼容
+                if(isset($arr_params['reject_reason_code']) && $arr_params['reject_reason_code']){
+                    $arr_params['reject_reason_code'] = trim($arr_params['reject_reason_code']);
+                }else{
+                    $arr_params['reject_reason_code'] = '1';
+                }
+                
+                if(isset($refuse_reason[$arr_params['reject_reason_code']]['reason_text'])){
+                    $params['reason'] = $refuse_reason[$arr_params['reject_reason_code']]['reason_text'];
+                }else{
+                    $params['reason'] = (is_string($params['reason']) ? $params['reason'] : '');
+                }
+                
                 $params['reject_reason_code'] = $arr_params['reject_reason_code'];
                 $params['remark'] = $arr_params['remark'];
                 $params['url'] = $file_url;
                 $params['parse'] = empty($arr_params['parse']) ? 'first' : $arr_params['parse'];
                 $params['version'] = '2.0';
+                
                 //[兼容]先同意退货再进行拒绝
                 if(in_array($aftersale['status'], array('2','3','4'))){
                     $parseVal = $this->_getParseConfirm($aftersale);

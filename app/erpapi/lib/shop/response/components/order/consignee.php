@@ -37,6 +37,10 @@ class erpapi_shop_response_components_order_consignee extends erpapi_shop_respon
             $area_city = $this->_platform->_ordersdf['consignee']['area_city']; //市
             $area_district = $this->_platform->_ordersdf['consignee']['area_district']; //区
             $area_street = $this->_platform->_ordersdf['consignee']['area_street']; //镇、街道
+            if(empty($area_district) && $area_street){
+                $area_district = $area_street;
+                $area_street = '';
+            }
             
             $this->_platform->_newOrder['consignee']['name']      = $this->_platform->_ordersdf['consignee']['name'];
             $this->_platform->_newOrder['consignee']['area']      = $area_state .'/'. $area_city .'/'. $area_district; //地区
@@ -76,6 +80,10 @@ class erpapi_shop_response_components_order_consignee extends erpapi_shop_respon
             $area_city = $this->_platform->_ordersdf['consignee']['area_city']; //市
             $area_district = $this->_platform->_ordersdf['consignee']['area_district']; //区
             $area_street = $this->_platform->_ordersdf['consignee']['area_street']; //镇、街道
+            if(empty($area_district) && $area_street){
+                $area_district = $area_street;
+                $area_street = '';
+            }
             
             //地区
             $area = $area_state .'/'. $area_city .'/'. $area_district;

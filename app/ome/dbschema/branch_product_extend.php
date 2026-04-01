@@ -38,7 +38,7 @@ $db['branch_product_extend'] = array (
             'required' => true,
             'default' => 0,
             'editable' => false,
-            'label' => '商品ID',
+            'label' => '基础物料ID',
             'in_list' => false,
             'default_in_list' => false,
         ),

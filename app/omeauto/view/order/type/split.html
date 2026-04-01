@@ -28,10 +28,15 @@
                         <td><{input type="textarea" cols="100" rows="4" name="describe" id='t_describe' value=$info.describe}><br/>(对此订单类型的简单描述)</td>
                     </tr>
                     <tr>
-                        <th width="60"><{help}>按京东开普勒商品渠道ID拆：现仅用于【抖音平台】订单使用【京东云交易】仓储进行发货。<{/help}>&nbsp;拆单类型： </th>
+                        <th width="60">拆单类型： </th>
                         <td>
                             <{input type="select" id='t_split_type' name="split_type" value=$info.split_type options=$split_type required="required"}>
-                            <div id="split_type_special" style="padding-top: 10px"></div>&nbsp;&nbsp;<span style="color:red;">*提示：如果设置了 "按虚拟商品拆单" 规则，系统会优先执行虚拟商品自动拆单并自动发货。</span>
+                            <div id="split_type_special" style="padding-top: 10px"></div>
+                            &nbsp;&nbsp;
+                            <br>
+                            <span style="color:red;">*提示：“按库存就全拆”拆单类型，不适用【订单审核时不需要管控库存】，如果有不需要库存管控的订单明细，请单独创建一个审单规则，并且【分组规则】权重值必须设置高一些。</span>
+                            <br>
+                            <br>
                         </td>
                     </tr>
                     <tr>

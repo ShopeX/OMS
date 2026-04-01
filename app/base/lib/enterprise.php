@@ -147,9 +147,9 @@ class base_enterprise {
         $query_string = http_build_query($params);
         
         // 如果企业已经认证过了（ent_id存在），返回组织列表URL，否则返回认证URL
-        if (!empty($entId)) {
-            return $base . '/organization/list?' . $query_string;
-        }
+        // if (!empty($entId)) {
+        //     return $base . '/organization/list?' . $query_string;
+        // }
         
         return $base . '/system/apply?' . $query_string;
     }

@@ -54,6 +54,7 @@ class openapi_conf
                 'methods' => array(
                     'add'     => '新建采购单',
                     'getList' => '采购单信息',
+                    'cancel'  => '取消采购单',
                 ),
             ),
             'transfer'          => array(
@@ -275,6 +276,14 @@ class openapi_conf
                     'check' => '连接测试',
                 ),
                 'group'   => 'pda',
+            ),
+            'middleware_export' => array(
+                'label'   => '导出任务',
+                'methods' => array(
+                    'add'     => '任务添加/更新',
+                    'getList' => '获取导出列表',
+                ),
+                'group'   => 'middleware',
             ),
             'inventory'             => array(
                 'label'   => '盘点单',

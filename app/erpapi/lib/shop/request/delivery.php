@@ -170,6 +170,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                 'logi_no'         => $sdf['logi_no'],
                 'obj_bn' => $sdf['orderinfo']['order_bn'],
                 'company_code'=>$sdf['logi_type'],
+                'delivery_bn'   => $sdf['delivery_bn'],
             ),
         );
 
@@ -215,7 +216,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                 }
 
                 //判断是否使用同步请求
-                $result = $this->__caller->call($api_method, $package_param, [], $title,10,$sdf['orderinfo']['order_bn']);
+                $result = $this->__caller->call($api_method, $package_param, [], $title,10,$package_param['tid']);
 
                 $result = $this->confirm_callback($result,$callback['params']);
             }
@@ -306,7 +307,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
         
         //订单信息
         $orderModel = app::get('ome')->model('orders');
-        $orders = $orderModel->getList('order_id,sync,shop_type',array('order_id'=>$order_id),0,1);
+        $orders = $orderModel->getList('order_id,order_bn,sync,shop_type,shop_id',array('order_id'=>$order_id),0,1);
 
         // 支持合单的回写
         $orderBnArr = [];
@@ -314,7 +315,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
             $orderBnArr = json_decode($callback_params['merged_order_sns'], 1);
             if ($orderBnArr && is_array($orderBnArr)) {
                 // 去除掉已作废的订单
-                $orders = $orderModel->getList('order_id,sync,shop_type',array('order_bn|in'=>$orderBnArr, 'status|noequal'=>'dead'));
+                $orders = $orderModel->getList('order_id,order_bn,sync,shop_type,shop_id',array('order_bn|in'=>$orderBnArr, 'status|noequal'=>'dead'));
             }
         }
 
@@ -452,7 +453,51 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
             $logFileter = array('log_id'=>$shipment_log_id, 'status' => array('send','succ'));
             // 合单的回写,merge_order一起更新状态，更新成succ以后不再更新
             $shipmentModel->update($updateShipmentData,$logFileter);
-
+            if($status != 'succ'){
+                // 获取预警需要的变量
+                $delivery_bn = isset($callback_params['delivery_bn']) ? $callback_params['delivery_bn'] : '';
+                $shop_name = '';
+                $platform = '';
+                
+                // 获取店铺信息和平台类型
+                if (!empty($orders)) {
+                    $firstOrder = $orders[0];
+                    
+                    // 获取店铺信息和平台类型
+                    if (!empty($firstOrder['shop_id'])) {
+                        $shopModel = app::get('ome')->model('shop');
+                        $shopInfo = $shopModel->dump(array('shop_id' => $firstOrder['shop_id']), 'name,node_type');
+                        if ($shopInfo) {
+                            $shop_name = $shopInfo['name'] ? $shopInfo['name'] : '';
+                            // 优先使用店铺的 node_type，如果没有则使用订单的 shop_type
+                            $shop_type_code = $shopInfo['node_type'] ? $shopInfo['node_type'] : ($firstOrder['shop_type'] ? $firstOrder['shop_type'] : '');
+                        } else {
+                            // 如果店铺信息获取失败，使用订单的 shop_type
+                            $shop_type_code = $firstOrder['shop_type'] ? $firstOrder['shop_type'] : '';
+                        }
+                    } else {
+                        // 如果没有 shop_id，使用订单的 shop_type
+                        $shop_type_code = $firstOrder['shop_type'] ? $firstOrder['shop_type'] : '';
+                    }
+                    
+                    // 将 shop_type 转换为中文
+                    if ($shop_type_code) {
+                        $platform = ome_shop_type::shop_name($shop_type_code);
+                        if (empty($platform)) {
+                            $platform = $shop_type_code; // 如果转换失败，使用原始值
+                        }
+                    }
+                }
+                
+                kernel::single('monitor_event_notify')->addNotify('order_delivery_platform_sync_error', [
+                    'logi_no' => $logi_no,
+                    'order_bn' => implode(',', array_column($orders, 'order_bn')),
+                    'delivery_bn' => $delivery_bn,
+                    'platform' => $platform,
+                    'shop_name' => $shop_name,
+                    'errmsg' => $message,
+                ]);
+            }
             // 合单的回写,merged_order_sns一起更新状态，更新成succ以后不再更新
             if ($orderBnArr && is_array($orderBnArr) && $status == 'succ' && $callback_params['tid']) {
 
@@ -1112,20 +1157,19 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
             $is_part_consign = false;
             if($val['sendnum'] < $val['nums']){
                 $is_part_consign = true;
+            } else {
+                if(app::get('ome')->model('order_items')->db_dump(['obj_id'=>$val['order_obj_id'], 'delete'=>'false', 'filter_sql'=>'nums <> sendnum'], 'item_id')){
+                    $is_part_consign = true;
+                }
             }
             
             $consignStatus[$oid] = array(
                 'sub_tid' => $oid, //子订单id
                 'is_part_consign' => $is_part_consign, //子订单是否部分发货,true:部分发货,false:全部发货;
             );
-            
-            //@todo：天猫、淘宝子订单oid只会回写一次(组织发货单数据时,sdb_ome_shipment_log表有oid回写则会被过滤掉)
             if(in_array($shop_type, array('tmall', 'taobao'))){
                 //去除数量字段
                 unset($oidList[$oid]['num']);
-                
-                //子订单默认就是全部发货
-                $consignStatus[$oid]['is_part_consign'] = false;
             }
         }
         
@@ -1252,9 +1296,10 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                 //已经打包的数量
                 $sdf['delivery_items'][$itemKey]['pack_nums'] += $package_num;
                 
-                //data
+                //data（含 order_obj_id 供 is_part_consign 场景2 使用）
                 $packageList[$logi_no][$oid] = array(
                     'oid' => $oid,
+                    'order_obj_id' => isset($itemVal['order_obj_id']) ? $itemVal['order_obj_id'] : null,
                     'item_type' => $itemVal['item_type'],
                     'goods_bn' => $itemVal['bn'],
                     'product_bn' => $product_bn,
@@ -1304,10 +1349,17 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                     'num' => $package_num, //发货数量
                 );
                 
-                //子订单发货情况
+                //子订单发货情况（is_part_consign=true 仅在这两种部分发货场景出现，见下方注释）
                 $is_part_consign = false;
                 if($oidList[$oid]['sendnum'] < $oidList[$oid]['nums']){
+                    // 场景1：该子订单当前已发数量 < 订购数量（本次或历史为部分发货）
                     $is_part_consign = true;
+                } else {
+                    // 场景2：同一子订单(obj_id)下存在其他 order_item 未发完(nums<>sendnum)
+                    $obj_id = isset($oidVal['order_obj_id']) ? $oidVal['order_obj_id'] : null;
+                    if ($obj_id && app::get('ome')->model('order_items')->db_dump(['obj_id'=>$obj_id, 'filter_sql'=>'nums <> sendnum'], 'item_id')){
+                        $is_part_consign = true;
+                    }
                 }
                 
                 $consignStatus[$oid] = array(
@@ -1315,13 +1367,9 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                     'is_part_consign' => $is_part_consign, //子订单是否部分发货,true:部分发货,false:全部发货;
                 );
                 
-                //@todo：天猫、淘宝子订单oid只会回写一次(组织发货单数据时,sdb_ome_shipment_log表有oid回写则会被过滤掉)
                 if(in_array($shop_type, array('tmall', 'taobao'))){
                     //去除数量字段
                     unset($packages[$logi_no]['goods'][$oid]['num']);
-                    
-                    //子订单默认就是全部发货
-                    $consignStatus[$oid]['is_part_consign'] = false;
                 }
             }
         }

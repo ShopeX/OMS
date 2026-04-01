@@ -44,7 +44,7 @@ $db['inventory_snapshot_items'] = [
         ],
         'item_code'      => [
             'type'            => 'varchar(32)',
-            'label'           => '商品编码',
+            'label'           => '基础物料编码',
             'in_list'         => true,
             'default_in_list' => true,
             'order'           => 10,
@@ -76,14 +76,14 @@ $db['inventory_snapshot_items'] = [
 
         'item_id'        => [
             'type'            => 'varchar(32)',
-            'label'           => '商品ID',
+            'label'           => '基础物料ID',
             'in_list'         => true,
             'default_in_list' => true,
             'order'           => 50,
         ],
         'inventory_type' => [
             'type'            => 'varchar(32)',
-            'label'           => '商品类型',
+            'label'           => '基础物料类型',
             'in_list'         => true,
             'default_in_list' => true,
             'order'           => 60,
@@ -128,7 +128,7 @@ $db['inventory_snapshot_items'] = [
         ],
         'product_date'   => [
             'type'            => 'varchar(32)',
-            'label'           => '商品生产日期',
+            'label'           => '基础物料生产日期',
             'in_list'         => true,
             'default_in_list' => true,
             'order'           => 110,
@@ -137,7 +137,7 @@ $db['inventory_snapshot_items'] = [
         ],
         'expire_date'    => [
             'type'            => 'varchar(32)',
-            'label'           => '商品过期日期',
+            'label'           => '基础物料过期日期',
             'in_list'         => true,
             'default_in_list' => true,
             'order'           => 120,

@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class wms_ctl_admin_check extends desktop_controller{
     var $name = "货物校验";
     var $workground = "wms_delivery";
@@ -156,7 +155,17 @@ class wms_ctl_admin_check extends desktop_controller{
         $deliveryBill = $dlyBillMdl->db_dump(['logi_no' => $logi_no]);
         $delivery_id = $deliveryBill ? $deliveryBill['delivery_id'] : 0;
         $bill_id = $deliveryBill ? $deliveryBill['b_id'] : 0;
-        
+
+        // [提货物流] delivery_model='pickup' 运单号后取，扫描的是发货单号
+        if (empty($deliveryBill)) {
+            $pickupDly = $deliveryObj->dump(array('delivery_bn' => $logi_no, 'delivery_model' => 'pickup'), 'delivery_id');
+            if ($pickupDly) {
+                $delivery_id = $pickupDly['delivery_id'];
+                $deliveryBill = $dlyBillMdl->db_dump(array('delivery_id' => $delivery_id, 'type' => 1));
+                $bill_id = $deliveryBill ? $deliveryBill['b_id'] : 0;
+            }
+        }
+
         //[同城配]商家配送支持配送员手机号搜索
         if(empty($deliveryBill) && strlen($logi_no) == 11){
             $deliveryInfo = $deliveryObj->dump(array('deliveryman_mobile'=>$logi_no, 'process_status'=>array(0,1)), '*');
@@ -213,7 +222,7 @@ class wms_ctl_admin_check extends desktop_controller{
 
         $this->pagedata['markandtext']  = $markandtext;
 
-        # 货品名显示方式(stock:后台,front:前台)
+        # 基础物料名称显示方式(stock:后台,front:前台)
         $product_name_show_type = app::get('wms')->getConf('wms.delivery.check_show_type');
         $product_name_show_type = empty($product_name_show_type) ? 'stock' : $product_name_show_type;
 
@@ -494,8 +503,8 @@ class wms_ctl_admin_check extends desktop_controller{
             'delivery_id' => $dly_id,
         );
         
-        //[同城配]商家配送
-        if($dly['delivery_model'] == 'seller'){
+        //[同城配]商家配送 / [提货物流]
+        if($dly['delivery_model'] == 'seller' || $dly['delivery_model'] == 'pickup'){
             $filter = array(
                 'delivery_id' => $dly_id,
             );
@@ -626,10 +635,15 @@ class wms_ctl_admin_check extends desktop_controller{
             $filter = array(
                 'delivery_id'=>$delivery,
             );
-            $deliverys = $deliveryObj->getList('delivery_id,delivery_bn',$filter);
+            $deliverys = $deliveryObj->getList('delivery_id,delivery_bn,delivery_model',$filter);
             $succ = 0;
             $fail = 0;
             foreach($deliverys as $value){
+                if (isset($value['delivery_model']) && $value['delivery_model'] === 'pickup'){
+                    $fail++;
+                    $failInfo[] = $value['delivery_bn'] . '(提货单不支持分组校验)';
+                    continue;
+                }
                 $logi_no = $dlyBillObj->getPrimaryLogiNoById($value['delivery_id']);
                 $checkInfo = $dlyCheckLib->checkAllow($logi_no, $msg, 'group', true);
                 if ($checkInfo){

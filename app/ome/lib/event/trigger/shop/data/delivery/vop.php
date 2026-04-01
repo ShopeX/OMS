@@ -141,6 +141,10 @@ class ome_event_trigger_shop_data_delivery_vop extends ome_event_trigger_shop_da
                 }else{
                     $pkg_nums[$value['order_obj_id']]=$number;
                 }
+                // 解决捆绑商品回传，销售物料重复且数量为0，报“商品数量 必须大于等于1”的问题
+                if (!$number) {
+                    continue;
+                }
                 $delivery_items[] = array(
                     'name'          => trim($order_objects[$value['order_obj_id']]['name']),
                     'bn'            => trim($order_objects[$value['order_obj_id']]['bn']),

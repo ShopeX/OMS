@@ -126,6 +126,11 @@ $db['delivery_items_detail'] = array(
             'default'  => '0',
             'label' => '用户实付',
         ),
+        'actually_amount' => array(
+            'type'    => 'money',
+            'default' => '0',
+            'label'   => '客户实付',
+        ),
         'retail_price' => array (
             'type' => 'money',
             'editable' => false,

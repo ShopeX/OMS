@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 $db['foreign_sku']=array (
   'columns' => 
   array (
@@ -139,8 +138,8 @@ $db['foreign_sku']=array (
       array (
         0 => '未同步',
         1 => '同步失败',
-        2 => '同步成功',
-        3 => '无需同步',
+        2 => '无需同步',
+        3 => '同步成功',
       ),
       'default' => '0',
       'required' => true,

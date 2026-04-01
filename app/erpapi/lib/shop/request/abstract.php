@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
  *

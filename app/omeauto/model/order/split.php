@@ -25,9 +25,10 @@ class omeauto_mdl_order_split extends dbeav_model{
         'skuvolume' => '按商品体积拆',
         'branchgroup' => '按仓库分组拆',
         'virtualsku' => '按虚拟商品拆,虚拟商品自动发货',
-        'skuchannel' => '按京东开普勒商品渠道ID拆',
+        //'skuchannel' => '按京东开普勒商品渠道ID拆',
         'oid' => '按京东子订单拆',
         'orderhost' => '按达人信息拆',
+        'customerclassify' => '按客户分类拆',
     );
 
     protected $batchConfirmSplitType = array('storemax', 'sku', 'skuweight','skucategory', 'skuvolume', 'oid');

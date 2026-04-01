@@ -26,7 +26,7 @@
             <{if $adapter ne 'openapi'}>
             <div class="step-item step-item-1 <{if $step eq 1}>active<{elseif $step_completed[1]}>completed<{/if}>" data-step="1" onclick="goToStep(1); event.stopPropagation();">
                 <div class="step-number">2</div>
-                <div class="step-text">企业认证</div>
+                <div class="step-text">系统节点注册</div>
             </div>
             <div class="step-divider <{if $step_completed[1]}>completed<{/if}>"></div>
             <{/if}>
@@ -43,7 +43,7 @@
                     <div class="step-text">店铺绑定</div>
                 </div>
                 <{else}>
-                <!-- 淘宝店铺：商家自研隐藏企业认证与奇门，直接店铺绑定 -->
+                <!-- 淘宝店铺：商家自研隐藏系统节点注册与奇门，直接店铺绑定 -->
                 <div class="step-item step-item-3 <{if $step eq 3}>active<{elseif $step_completed[3]}>completed<{/if}>" data-step="3" onclick="goToStep(3); event.stopPropagation();">
                     <div class="step-number">2</div>
                     <div class="step-text">店铺绑定</div>
@@ -103,17 +103,17 @@
                     <{/if}>
                 </div>
             <{elseif $step eq 1}>
-                <!-- 第一步：企业认证 -->
+                <!-- 第一步：系统节点注册 -->
                 <div class="step-section step-section-iframe">
                     <div class="section-header">
-                        <p class="qimen-auth-tip">请完成企业认证，以便使用系统的完整功能。认证后您将获得系统节点号，可使用商派矩阵能力。<{if $adapter eq 'openapi'}>当前为商家自研对接，企业认证为可选，可直接跳过进入店铺绑定。<{/if}></p>
+                        <p class="qimen-auth-tip">请完成系统节点注册，以便使用系统的完整功能。注册成功后您将获得系统节点号，可使用商派矩阵能力。<{if $adapter eq 'openapi'}>当前为商家自研对接，系统节点注册为可选，可直接跳过进入店铺绑定。<{/if}></p>
                         <{if !$is_certified}>
-                        <p>认证密钥请到后台“基本信息 &gt; 站点设置”获取。仅超管可见明文，其他账号显示打码，需明文请联系超管。</p>
+                        <p>注册所用密钥请到后台“基本信息 &gt; 站点设置”获取。仅超管可见明文，其他账号显示打码，需明文请联系超管。</p>
                         <{/if}>
                     </div>
                     <div class="section-content">
                         <{if $is_certified}>
-                            <!-- 已认证：显示企业信息（调试阶段，同时显示iframe） -->
+                            <!-- 已注册：显示企业侧信息（调试阶段，同时显示 iframe） -->
                             <div class="enterprise-authorized-info" style="margin-bottom: 6px;">
                                 <div class="info-row-inline">
                                     <div class="info-item info-item-inline">
@@ -137,11 +137,11 @@
                                 <{/if}>
                             </div>
                         <{/if}>
-                        <!-- 显示授权iframe（调试阶段，已认证也显示） -->
+                        <!-- 显示系统节点注册页 iframe（调试阶段，已注册也显示） -->
                         <div class="iframe-container" id="auth_iframe_container_1">
                             <div class="iframe-loading">
                                 <div class="loading-spinner"></div>
-                                <div class="loading-text">正在加载授权页面...</div>
+                                <div class="loading-text">正在加载系统节点注册页面...</div>
                             </div>
                             <iframe id="auth_iframe_1" class="auth-iframe" frameborder="0" src="<{if $bind_url}><{$bind_url}><{/if}>"></iframe>
                         </div>
@@ -745,7 +745,7 @@
     align-items: stretch;
 }
 
-/* iframe步骤统一布局（企业认证、店铺绑定、奇门授权） */
+/* iframe步骤统一布局（系统节点注册、店铺绑定、奇门授权） */
 .step-section-iframe {
     overflow: visible;
     display: flex;
@@ -1397,7 +1397,7 @@
     margin-left: 4px;
 }
 
-/* 企业认证信息显示 */
+/* 系统节点注册页 / 企业侧信息显示 */
 .enterprise-authorized-info {
     padding: 4px 8px;
     background: #f5f5f5;
@@ -1709,7 +1709,7 @@
     // 获取店铺是否有节点（从PHP传递）
     var HAS_NODE = <{if $has_node}>1<{else}>0<{/if}> == 1;
     
-    // 获取企业认证状态（从PHP传递）
+    // 系统节点注册是否完成（从 PHP step_completed[1] / is_certified）
     var IS_CERTIFIED = <{if $step_completed[1]}>1<{else}>0<{/if}> == 1;
     // 是否淘宝店铺（全局使用）
     var IS_TAOBAO = <{if $is_taobao}>true<{else}>false<{/if}>;
@@ -1862,7 +1862,7 @@
             return;
         }
         
-        // 第1步：企业认证
+        // 第1步：系统节点注册
         if (currentStep == 1) {
             // 强制检查：步骤0必须完成
             if (!stepCompleted[0]) {
@@ -1871,10 +1871,10 @@
             }
             // 强制检查：步骤1必须完成才能进入下一步
             if (needEnterpriseAuth && !stepCompleted[1]) {
-                MessageBox.error('请先完成企业认证（步骤2）');
+                MessageBox.error('请先完成系统节点注册（步骤2）');
                 return;
             }
-            // 如果是商家自研对接（openapi），不需要企业认证，直接跳到步骤2
+            // 商家自研（openapi）不强制系统节点注册，直接跳到店铺绑定步骤
             if (!needEnterpriseAuth && adapter == 'openapi') {
                 loadStep(isTaobao ? 3 : 2);
             } else {
@@ -1892,7 +1892,7 @@
                 return;
             }
             if (needEnterpriseAuth && !stepCompleted[1]) {
-                MessageBox.error('请先完成企业认证（步骤2）');
+                MessageBox.error('请先完成系统节点注册（步骤2）');
                 return;
             }
             
@@ -1931,7 +1931,7 @@
                 return;
             }
             if (needEnterpriseAuth && !stepCompleted[1]) {
-                MessageBox.error('请先完成企业认证（步骤2）');
+                MessageBox.error('请先完成系统节点注册（步骤2）');
                 return;
             }
             if (adapter != 'openapi' && !stepCompleted[2]) {
@@ -2081,7 +2081,7 @@
         
         var isTaobao = <{if $is_taobao}>true<{else}>false<{/if}>;
         
-        // 步骤1：企业认证，如果有bind_url，初始化iframe
+        // 步骤1：系统节点注册，如果有 bind_url，初始化 iframe
         if (currentStep == 1 && bindUrl) {
             initAuthIframe(currentStep);
             return;
@@ -2368,10 +2368,10 @@
             return;
         }
         
-        // 步骤2：需要步骤1完成（如果不需要企业认证，则跳过检查）
+        // 步骤2：需要步骤1完成（openapi 不强制系统节点注册则跳过检查）
         if (step == 2) {
             if (needEnterpriseAuth && !stepCompleted[1]) {
-                MessageBox.error('请先完成企业认证（步骤2）');
+                MessageBox.error('请先完成系统节点注册（步骤2）');
                 return;
             }
         }
@@ -2391,7 +2391,7 @@
                 return;
             }
             if (needEnterpriseAuth && !stepCompleted[1]) {
-                MessageBox.error('请先完成企业认证（步骤2）');
+                MessageBox.error('请先完成系统节点注册（步骤2）');
                 return;
             }
             if (isTaobao) {

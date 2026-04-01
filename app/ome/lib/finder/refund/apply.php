@@ -141,7 +141,7 @@ class ome_finder_refund_apply{
         return $render->fetch('admin/refund/refundapp_detail.html');
     }
     
-    var $addon_cols = 'archive,source,order_id,abnormal_status,bool_type,reship_id,return_id,source_status,shop_type,negotiate_sync_status,status';
+    var $addon_cols = 'archive,source,order_id,abnormal_status,bool_type,reship_id,return_id,source_status,status,refund_refer,shop_type,negotiate_sync_status';
     
     /**
      * 备注
@@ -329,11 +329,21 @@ class ome_finder_refund_apply{
         return self::$_platformStatus[$platform_status];
     }
     
-    var $column_edit = "操作";
-    var $column_edit_width = "200";
-    var $column_edit_order = "1";
-    function column_edit($row){
-        $buttons = '';
+    public $column_edit = "操作";
+    public $column_edit_width = 120;
+    public $column_edit_order = 1;
+    public function column_edit($row){
+        $btn = [];
+        
+        // 获取状态和售后退款标识
+        $apply_id = $row['apply_id'];
+        $status = $row[$this->col_prefix.'status'];
+        $refund_refer = isset($row[$this->col_prefix.'refund_refer']) ? $row[$this->col_prefix.'refund_refer'] : '0';
+        
+        // 条件：售后退款(refund_refer=1)且退款完成(status=4)
+        if ($status == '4' && $refund_refer == '1' && empty($row[$this->col_prefix.'reship_id'])) {
+            $btn[] = '<a class="lnk" href="javascript:if(confirm(\'确定生成退货单?\')) {W.page(\'index.php?app=ome&ctl=admin_refund_apply&act=transfer_reship&p[0]='.$apply_id.'&finder_id='.$_GET['_finder']['finder_id'].'\');};">生成退货单</a>';
+        }
 
         // 添加协商按钮 - 限制条件：source != 'local' && status = 0|1|2 && 支持taobao和tmall
         $source = $row[$this->col_prefix . 'source'];
@@ -341,10 +351,10 @@ class ome_finder_refund_apply{
         $negotiate_sync_status = $row[$this->col_prefix.'negotiate_sync_status'];
         $status = $row[$this->col_prefix.'status'];
         if ($source != 'local' && in_array($status, array('0', '1', '2')) && in_array($shop_type, array('taobao', 'tmall')) && in_array($negotiate_sync_status,['pending'])) {
-            $buttons .= '<a href="index.php?app=ome&ctl=admin_refund_apply&act=merchant_negotiation&p[0]='.$row['apply_id'].'&finder_id='.$_GET['_finder']['finder_id'].'" target="dialog::{width:1200,height:680,title:\'商家协商\'}">协商</a>';
+            $btn[]= '<a href="index.php?app=ome&ctl=admin_refund_apply&act=merchant_negotiation&p[0]='.$row['apply_id'].'&finder_id='.$_GET['_finder']['finder_id'].'" target="dialog::{width:1200,height:680,title:\'商家协商\'}">协商</a>';
         }
         
-        return $buttons;
+        return implode('|', $btn);
     }
 }
 ?>

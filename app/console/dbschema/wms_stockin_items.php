@@ -69,6 +69,11 @@ $db['wms_stockin_items'] = array(
             'default'         => '',
             'label'           => '第三方货品编码',
         ),
+        'inventoryType'      => array(
+            'type'            => 'varchar(25)', // ZP/CC
+            'default'         => '',
+            'label'           => '库存类型',
+        ),
         'at_time'       => array(
             'type'            => 'TIMESTAMP',
             'label'           => '创建时间',

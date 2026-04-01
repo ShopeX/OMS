@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * 更新库存逻辑
  *
@@ -692,9 +691,10 @@ class inventorydepth_logic_stock extends inventorydepth_logic_abstract
 
         // 获取销售物料对应的shop_sku_id
         $smBnArr = array_column($products, 'sales_material_bn');
-        $_shopSkuList = $skusObj->getList('shop_product_bn,shop_sku_id', array('shop_id'=>$shop['shop_id'], 'shop_product_bn'=>$smBnArr, 'request'=>'true'));
+        $_shopSkuList = $skusObj->getList('shop_product_bn,shop_sku_id,shop_iid', array('shop_id'=>$shop['shop_id'], 'shop_product_bn'=>$smBnArr, 'request'=>'true'));
         $shopSkuList = [];
         foreach ($_shopSkuList as $_v) {
+            $_v['shop_sku_id'] = $_v['shop_sku_id'] ? $_v['shop_sku_id'] : $_v['shop_iid'];
             $shopSkuList[$_v['shop_product_bn']][] = $_v['shop_sku_id'];
         }
         
@@ -955,9 +955,9 @@ class inventorydepth_logic_stock extends inventorydepth_logic_abstract
                 }
 
                 // 如果配置了skuid，判断是否在skuid list里，不在则不回写
-                if (isset($shop_sku_id_list[$val['shop_product_bn']]) && array_filter($shop_sku_id_list[$val['shop_product_bn']]) && !in_array($val['shop_sku_id'], $shop_sku_id_list[$val['shop_product_bn']])) {
-                    continue;
-                }
+                // if (isset($shop_sku_id_list[$val['shop_product_bn']]) && array_filter($shop_sku_id_list[$val['shop_product_bn']]) && !in_array($val['shop_sku_id'], $shop_sku_id_list[$val['shop_product_bn']])) {
+                //     continue;
+                // }
                 $shop_product_bn = $val['shop_product_bn'];
                 
                 //一个货号对应多个sku_id的场景
@@ -973,8 +973,13 @@ class inventorydepth_logic_stock extends inventorydepth_logic_abstract
                     if($skusList[$shop_product_bn]){
                         foreach ($skusList[$shop_product_bn] as $skuKey => $skuVal)
                         {
+                            if ($val['sku_id'] && $skuVal['shop_sku_id'] != $val['sku_id'] && $skuVal['shop_iid'] != $val['sku_id']) {
+                                continue;
+                            }
+
                             $tmp = $val;
-                            $tmp['sku_id'] = $skuVal['shop_sku_id'];
+                            $tmp['sku_id'] = $val['sku_id'] == $skuVal['shop_iid'] ? '' : $skuVal['shop_sku_id'];
+
                             if (in_array($shop['node_type'], array('vop'))) {
                                 $tmp['barcode'] = $skuVal['shop_sku_id'];
                             }

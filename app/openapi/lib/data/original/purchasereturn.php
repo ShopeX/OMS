@@ -18,13 +18,6 @@
 class openapi_data_original_purchasereturn{
 
         
-    /**
-     * 获取List
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $limit limit
-     * @return mixed 返回结果
-     */
     public function getList($filter,$offset=0,$limit=100){
         
     	$po_mdl = app::get('purchase')->model('returned_purchase');
@@ -123,11 +116,6 @@ class openapi_data_original_purchasereturn{
         
         return $bproduct;
     }
-    /**
-     * 添加
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function add($data){
         
         $basicMaterialLib    = kernel::single('material_basic_material');
@@ -166,6 +154,7 @@ class openapi_data_original_purchasereturn{
             $result['msg'] = 'items参数必须为数组!';
             return $result; 
         }
+        $products = array();
         foreach ($items as $item) {
             if(!$item['bn'] || !$item['nums']){
                 $result['rsp'] = 'fail';
@@ -177,6 +166,7 @@ class openapi_data_original_purchasereturn{
                 $result['msg'] = '货号'.$item['bn'].'在'.$branch['name'].'仓库不存在!';
                 return $result;
             }
+            $products[$item['bn']] = $product;
             if (!is_numeric($item['nums']) || $item['nums'] < 1){
                 $result['rsp'] = 'fail';
                 $result['msg'] = '货号'.$item['bn'].'的退货数量必须为数字且大于0!';
@@ -227,6 +217,7 @@ class openapi_data_original_purchasereturn{
             
             foreach ($items as $item){
                 //插入采购退货单详情
+                $product = $products[$item['bn']];
                 $p    = $basicMaterialLib->getBasicMaterialExt($product['product_id']);
                 
                 $row = array();

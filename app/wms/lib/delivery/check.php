@@ -36,7 +36,17 @@ class wms_delivery_check{
         $delivery_id = $deliveryBill ? $deliveryBill['delivery_id'] : 0;
 
         $delivery = $dlyModel->getList('branch_id,delivery_id,status,deli_cfg,process_status,delivery_bn,print_status,logi_number',array('delivery_id'=>$delivery_id),0,1);
-        
+
+        // [提货物流] delivery_model='pickup' 运单号后取，扫描的是发货单号
+        if (empty($delivery)) {
+            $pickupDly = $dlyModel->getList('branch_id,delivery_id,status,deli_cfg,process_status,delivery_bn,print_status,logi_number', array('delivery_bn' => $logi_no, 'delivery_model' => 'pickup'), 0, 1);
+            if ($pickupDly) {
+                $delivery = $pickupDly;
+                $delivery_id = $pickupDly[0]['delivery_id'];
+                $deliveryBill = $dlyBillMdl->db_dump(array('delivery_id' => $delivery_id, 'type' => 1));
+            }
+        }
+
         //[同城配]商家配送支持配送员手机号搜索
         if(empty($delivery) && strlen($logi_no) == 11){
             $delivery = $dlyModel->getList('*', array('deliveryman_mobile'=>$logi_no, 'process_status'=>array(0,1)), 0, 1);
@@ -310,7 +320,17 @@ class wms_delivery_check{
                 }
             }
         }
-        
+
+        // [提货物流] delivery_model='pickup' 运单号后取，扫描的是发货单号
+        if (empty($dly)) {
+            $pickupDly = $dlyObj->dump(array('delivery_bn' => $logi_no, 'delivery_model' => 'pickup'), 'delivery_id');
+            if ($pickupDly) {
+                $primary = true;
+                $delivery_id = $pickupDly['delivery_id'];
+                $dly = $dlyObj->dump(array('delivery_id' => $delivery_id), '*', array('delivery_items' => array('*')));
+            }
+        }
+
         //[同城配]商家配送支持配送员手机号搜索
         if(empty($dly) && strlen($logi_no) == 11){
             $dly = $dlyObj->dump(array('deliveryman_mobile'=>$logi_no, 'process_status'=>array(2,3)), '*', array('delivery_items'=>array('*')));

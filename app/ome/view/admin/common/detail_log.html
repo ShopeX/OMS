@@ -1,0 +1,37 @@
+<{capture name="header"}>
+<link href="../apps/ome/statics/ome.css" rel="stylesheet" type="text/css">
+<{/capture}>
+
+<div class="division" style="width: 98%;">
+    <h4>操作记录</h4>
+    <table cellspacing="0" class="gridlist" cellpadding="0" border="0" width="100%">
+        <thead>
+        <tr>
+            <th>操作时间</th>
+            <!--<th>IP</th>-->
+            <th>操作人</th>
+            <th>操作类型</th>
+            <th>操作内容</th>
+        </tr>
+        </thead>
+        <tbody>
+        <{if $logList}>
+        <{foreach from=$logList item=log}>
+        <tr>
+            <td ><{$log.operate_time|cdate:'FDATE_STIME'}></td>
+            <!--<td><{$log.ip}></td>-->
+            <td><{$log.op_name}></td>
+            <td><{$log.operation}></td>
+            <td>
+                <span><{$log.memo}></span>
+            </td>
+        </tr>
+        <{/foreach}>
+        <{else}>
+        <tr>
+            <td colspan="5" align="center"><div style="text-align:center; width:100%;">没有相关记录...</div></td>
+        </tr>
+        <{/if}>
+        </tbody>
+    </table>
+</div>

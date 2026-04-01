@@ -563,11 +563,6 @@ class erpapi_shop_response_process_exchange {
                     'return_logi_no'=>$logisticsNo,
                     'outer_lastmodify'=>$sdf['modified'],
                 );
-                //退换货自动审批(系统-->退换货自动审核设置-->是否启用退换货自动审批)
-                $is_auto_approve = app::get('ome')->getConf('return.auto_approve');
-                if($is_auto_approve == 'on'){
-                    kernel::single('ome_reship')->batch_reship_queue($sdf['reship']['reship_id']);
-                }
                 
                 //flag
                 $is_update_logi = true;
@@ -587,6 +582,10 @@ class erpapi_shop_response_process_exchange {
                 $rs = app::get('ome')->model('reship')->update($upData,array('reship_id'=>$reship['reship_id']));
                 $operateLog = app::get('ome')->model('operation_log');
                 $operateLog->write_log('reship@ome',$reship['reship_id'],$memo);
+                // 物流单号重复检测打标（flag_type 位）
+                if ($reship['reship_id']) {
+                    kernel::single('ome_reship')->markDuplicateReturnLogiNo($reship['reship_id'], $logisticsNo);
+                }
                 if ($returnData){
                     app::get('ome')->model('return_product')->update($returnData,array('return_id'=>$sdf['return_product']['return_id']));
                     $operateLog->write_log('return@ome', $sdf['return_product']['return_id'],'版本变化更新成接受申请状态');
@@ -594,6 +593,16 @@ class erpapi_shop_response_process_exchange {
                 
                 //请求WMS更新最新物流单号
                 if($is_update_logi){
+                    //退换货自动审批(系统-->退换货自动审核设置-->是否启用退换货自动审批)
+                    $is_auto_approve = app::get('ome')->getConf('return.auto_approve');
+                    if($is_auto_approve == 'on'){
+                        kernel::single('ome_reship')->batch_reship_queue($sdf['reship']['reship_id']);
+                    }
+                    foreach(kernel::servicelist('erpapi.service.aftersale.update.reship.logistics.after') as $object) {
+                        if(method_exists($object, 'after_update_logistics')){
+                            $object->after_update_logistics($reship['reship_id']);
+                        }
+                    }
                     $error_msg = '';
                     kernel::single('ome_reship')->request_wms_returnorder($reship['reship_id'], $error_msg);
                 }

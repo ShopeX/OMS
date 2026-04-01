@@ -1,0 +1,278 @@
+<div class="tableform">
+    <{if $history}>
+    <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; margin-bottom: 15px; border-radius: 3px;">
+        <h4 style="margin: 0 0 10px 0; color: #856404;">历史快照 - 只读模式</h4>
+        <p style="margin: 0; color: #856404;">此页面显示的是历史快照数据，仅供查看，不可编辑。</p>
+    </div>
+    <{/if}>
+    
+    <div class="division">
+        <{if !$history}>
+        <form method="post" action="index.php?app=financebase&ctl=admin_shop_settlement_account_chart&act=saveAccount" id="form-rule">
+            <input type="hidden" name="id" value="<{$account_info.id}>">
+        <{/if}>
+      <table width="100%" cellspacing="0" cellpadding="0" border="0" id="rule-section">
+        <tbody>
+          <tr>
+            <th>会计科目：</th>
+            <td>
+              <{if $history}>
+                <{if $diff_data.account}>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #999; text-decoration: line-through; font-family: inherit;">
+                    <{$diff_data.account.old_value}>
+                  </span>
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #fff5f5; border: 1px solid #f56565; border-radius: 3px; color: #e53e3e; font-weight: bold; font-family: inherit;">
+                    <{$diff_data.account.new_value}>
+                  </span>
+                </div>
+                <{else}>
+                <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #495057; font-family: inherit;"><{$account_info.account}></span>
+                <{/if}>
+              <{else}>
+                <input type="text" name="account" value="<{$account_info.account}>"/>
+              <{/if}>
+            </td>
+          </tr>
+          <tr>
+            <th>客户：</th>
+            <td>
+              <{if $history}>
+                <{if $diff_data.customer}>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #999; text-decoration: line-through; font-family: inherit;">
+                    <{$diff_data.customer.old_value}>
+                  </span>
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #fff5f5; border: 1px solid #f56565; border-radius: 3px; color: #e53e3e; font-weight: bold; font-family: inherit;">
+                    <{$diff_data.customer.new_value}>
+                  </span>
+                </div>
+                <{else}>
+                <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #495057; font-family: inherit;"><{$account_info.customer}></span>
+                <{/if}>
+              <{else}>
+                <input type="text" name="customer" value="<{$account_info.customer}>">
+                <span class="notice-inline">会计科目 和 客户 至少填写一项</span>
+              <{/if}>
+            </td>
+          </tr>
+          <tr>
+            <th>科目描述：</th>
+            <td>
+              <{if $history}>
+                <{if $diff_data.description}>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #999; text-decoration: line-through; font-family: inherit;">
+                    <{$diff_data.description.old_value}>
+                  </span>
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #fff5f5; border: 1px solid #f56565; border-radius: 3px; color: #e53e3e; font-weight: bold; font-family: inherit;">
+                    <{$diff_data.description.new_value}>
+                  </span>
+                </div>
+                <{else}>
+                <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #495057; font-family: inherit;"><{$account_info.description}></span>
+                <{/if}>
+              <{else}>
+                <input type="text" name="description" value="<{$account_info.description}>">
+              <{/if}>
+            </td>
+          </tr>
+          <tr>
+            <th><em class="c-red">*</em>记账码：</th>
+            <td>
+              <{if $history}>
+                <{if $diff_data.postingkey}>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #999; text-decoration: line-through; font-family: inherit;">
+                    <{$diff_data.postingkey.old_value}>
+                  </span>
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #fff5f5; border: 1px solid #f56565; border-radius: 3px; color: #e53e3e; font-weight: bold; font-family: inherit;">
+                    <{$diff_data.postingkey.new_value}>
+                  </span>
+                </div>
+                <{else}>
+                <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #495057; font-family: inherit;"><{$account_info.postingkey}></span>
+                <{/if}>
+              <{else}>
+                <input type="text" name="postingkey" vtype="required" value="<{$account_info.postingkey}>">
+              <{/if}>
+            </td>
+          </tr>
+          <tr>
+            <th>成本中心：</th>
+            <td>
+              <{if $history}>
+                <{if $diff_data.costcenter}>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #999; text-decoration: line-through; font-family: inherit;">
+                    <{$diff_data.costcenter.old_value}>
+                  </span>
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #fff5f5; border: 1px solid #f56565; border-radius: 3px; color: #e53e3e; font-weight: bold; font-family: inherit;">
+                    <{$diff_data.costcenter.new_value}>
+                  </span>
+                </div>
+                <{else}>
+                <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #495057; font-family: inherit;"><{$account_info.costcenter}></span>
+                <{/if}>
+              <{else}>
+                <input type="text" name="costcenter" value="<{$account_info.costcenter}>">
+              <{/if}>
+            </td>
+          </tr>
+          <tr>
+            <th>原因代码：</th>
+            <td>
+              <{if $history}>
+                <{if $diff_data.reason_code}>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #999; text-decoration: line-through; font-family: inherit;">
+                    <{$diff_data.reason_code.old_value}>
+                  </span>
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #fff5f5; border: 1px solid #f56565; border-radius: 3px; color: #e53e3e; font-weight: bold; font-family: inherit;">
+                    <{$diff_data.reason_code.new_value}>
+                  </span>
+                </div>
+                <{else}>
+                <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #495057; font-family: inherit;"><{$account_info.reason_code}></span>
+                <{/if}>
+              <{else}>
+                <input type="text" name="reason_code" value="<{$account_info.reason_code}>">
+              <{/if}>
+            </td>
+          </tr>
+
+
+          <tr>
+            <th>税率：</th>
+            <td>
+              <{if $history}>
+                <{if $diff_data.tax_rate}>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #999; text-decoration: line-through; font-family: inherit;">
+                    <{$diff_data.tax_rate.old_value}>
+                  </span>
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #fff5f5; border: 1px solid #f56565; border-radius: 3px; color: #e53e3e; font-weight: bold; font-family: inherit;">
+                    <{$diff_data.tax_rate.new_value}>
+                  </span>
+                </div>
+                <{else}>
+                <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #495057; font-family: inherit;"><{$account_info.tax_rate}></span>
+                <{/if}>
+              <{else}>
+                <input type="text" name="tax_rate" value="<{$account_info.tax_rate}>" vtype="unsigned">
+              <{/if}>
+            </td>
+          </tr>
+          <tr>
+            <th>税率会计科目：</th>
+            <td>
+              <{if $history}>
+                <{if $diff_data.tax_account}>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #999; text-decoration: line-through; font-family: inherit;">
+                    <{$diff_data.tax_account.old_value}>
+                  </span>
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #fff5f5; border: 1px solid #f56565; border-radius: 3px; color: #e53e3e; font-weight: bold; font-family: inherit;">
+                    <{$diff_data.tax_account.new_value}>
+                  </span>
+                </div>
+                <{else}>
+                <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #495057; font-family: inherit;"><{$account_info.tax_account}></span>
+                <{/if}>
+              <{else}>
+                <input type="text" name="tax_account" value="<{$account_info.tax_account}>">
+                <span class="notice-inline">如果有税率，此字段为必填</span>
+              <{/if}>
+            </td>
+          </tr>
+          <{if !in_array('platform_amount', $existing_categories) || !in_array('actually_amount', $existing_categories) || !in_array('refundplatform_amount', $existing_categories) || !in_array('refundactually_amount', $existing_categories)}>
+          <tr>
+            <th>应用场景：</th>
+            <td>
+              <{if $history}>
+                <{if $diff_data.account_category}>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #999; text-decoration: line-through; font-family: inherit;">
+                    <{$diff_data.account_category.old_value}>
+                  </span>
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #fff5f5; border: 1px solid #f56565; border-radius: 3px; color: #e53e3e; font-weight: bold; font-family: inherit;">
+                    <{$diff_data.account_category.new_value}>
+                  </span>
+                </div>
+                <{else}>
+                <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #495057; font-family: inherit;">
+                  <{if $account_info.account_category == 'platform_amount'}>平台承担
+                  <{elseif $account_info.account_category == 'actually_amount'}>客户实付
+                  <{elseif $account_info.account_category == 'refundplatform_amount'}>平台补贴退
+                  <{elseif $account_info.account_category == 'refundactually_amount'}>客户应退
+                  <{else}>未设置
+                  <{/if}>
+                </span>
+                <{/if}>
+              <{else}>
+                <select name="account_category">
+                  <option value="">请选择</option>
+                  <{if !in_array('platform_amount', $existing_categories)}>
+                  <option value="platform_amount" <{if $account_info.account_category == 'platform_amount'}>selected<{/if}>>平台承担</option>
+                  <{/if}>
+                  <{if !in_array('actually_amount', $existing_categories)}>
+                  <option value="actually_amount" <{if $account_info.account_category == 'actually_amount'}>selected<{/if}>>客户实付</option>
+                  <{/if}>
+                  <{if !in_array('refundplatform_amount', $existing_categories)}>
+                  <option value="refundplatform_amount" <{if $account_info.account_category == 'refundplatform_amount'}>selected<{/if}>>平台补贴退</option>
+                  <{/if}>
+                  <{if !in_array('refundactually_amount', $existing_categories)}>
+                  <option value="refundactually_amount" <{if $account_info.account_category == 'refundactually_amount'}>selected<{/if}>>客户应退</option>
+                  <{/if}>
+                </select>
+                <span class="notice-inline">每个应用场景只能设置一条会计科目</span>
+              <{/if}>
+            </td>
+          </tr>
+          <{/if}>
+        </tbody>
+      </table>
+        <{if !$history}>
+        <div class="table-action">
+            <{button class="btn-primary" type="button" id='submit_btn' label='确定' }>
+            <{button class="btn-secondary" type="button" label='关闭' isCloseDialogBtn="true" }>
+        </div>
+        </form>
+        <{/if}>
+    </div>
+</div>
+<{if !$history}>
+<script type="text/javascript">
+(function(){
+    var _form = $('form-rule');//表单ID 
+    var btn   = $('submit_btn');//按钮ID
+    var finder = finderGroup['<{$env.get.finder_id}>'];
+    
+    _form.store('target',{
+        onRequest:function(){
+            btn.setAttribute('disabled', 'disabled');
+        },
+        onComplete:function(){
+            btn.removeAttribute('disabled');
+        },
+        onSuccess:function(response){
+            var hash_res_obj = JSON.decode(response);
+            if (hash_res_obj.success != undefined && hash_res_obj.success != ""){
+                try{
+                    var _dialogIns = btn.getParent('.dialog').retrieve('instance');
+                }catch(e){}
+
+                if(_dialogIns){
+                    setTimeout(finder.refresh(),30000);
+                    _dialogIns.close();
+                }
+            }
+        }
+    });
+
+    btn.addEvent('click',function(){
+        _form.fireEvent('submit',{stop:$empty});
+    });
+})();
+</script>
+<{/if}>

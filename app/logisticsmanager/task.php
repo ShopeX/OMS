@@ -14,11 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class logisticsmanager_task{
 
     function post_install($options){
-        kernel::single('base_initial', 'logisticsmanager')->init();
+        //kernel::single('base_initial', 'logisticsmanager')->init();
 
         // 顺风城市编码
         //kernel::single('logisticsmanager_citycode_sf')->install();

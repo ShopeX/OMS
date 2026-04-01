@@ -48,8 +48,8 @@ class ome_autotask_timer_hour
         kernel::single('ome_compensate_record')->timeSync();
         
         //[京东云交易]每小时定时拉取退货寄件地址
-        $keplerLib = kernel::single('ome_reship_kepler');
-        $keplerLib->getReshipAddress();
+        //$keplerLib = kernel::single('ome_reship_kepler');
+        //$keplerLib->getReshipAddress();
         
         //[兼容]重试推送回传平台发货状态是"发货中"的订单
         //todo：最近发现回传抖音平台发货状态,矩阵没有响应结果
@@ -58,6 +58,9 @@ class ome_autotask_timer_hour
         
         //每小时触发回写 在misctask中
         //kernel::single('erpapi_misc_task')->hour();
+        
+        // 每小时触发：库存增加自动审核订单
+        kernel::single('ome_autotask_timer_autoconfirmorderstockinc')->process($params, $error_msg);
         
         return true;
     }

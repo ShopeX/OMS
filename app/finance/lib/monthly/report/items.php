@@ -81,10 +81,15 @@ class finance_monthly_report_items {
         }
         list($rs, $rsData) = $this->doGapRule($itemId, $shop_id);
         $oMRI = app::get('finance')->model('monthly_report_items');
-        if(app::get('finance')->model('bill')->db_dump(['status|noequal'=>'2', 'monthly_item_id'=>$itemId], 'bill_id')
+        $billInfo = [];
+        if($billInfo = app::get('finance')->model('bill')->db_dump(['status|noequal'=>'2', 'monthly_item_id'=>$itemId])
             || app::get('finance')->model('ar')->db_dump(['status|noequal'=>'2', 'monthly_item_id'=>$itemId], 'ar_id')
         ) {
-            $oMRI->update(['gap_type'=>'', 'memo'=>$rsData['msg'], 'verification_status'=>'1'], ['id'=>$itemId]);
+            $upData = ['gap_type'=>'', 'memo'=>$rsData['msg'], 'verification_status'=>'1'];
+            if($billInfo && $billInfo['fee_item'] == '国补金额' && $billInfo['money']>0){
+                $upData['gov_shishou_total_upset_sql'] = '`gov_shishou_total`+'.$billInfo['money'];
+            }
+            $oMRI->update($upData, ['id'=>$itemId]);
         } else {
             $upData = ['verification_status'=>'2', 'memo'=>'', 'gap_type'=>''];
             if($rsData['msg']) {
@@ -94,6 +99,9 @@ class finance_monthly_report_items {
                 $upData['gap_type'] = $rsData['gap_type'];
             }
             $oMRI->update($upData, ['id'=>$itemId]);
+            
+            // 更新核对状态
+            kernel::single('finance_verification')->updateArVerifyStatus($itemId);
         }
 
         $servicelist = kernel::servicelist('financebase.reportitem.doAutoVerificate.after');
@@ -217,15 +225,21 @@ class finance_monthly_report_items {
      * @return mixed 返回结果
      */
     public function getDiffMoney($itemId) {
-        $arlist = app::get('finance')->model('ar')->getList('money,type,trade_time', ['monthly_item_id' => $itemId]);
-        $upData = ['yingshou_money'=>0, 'yingtui_money'=>0, 'refund_only_money'=>0,'shishou_money'=>0,'shitui_money'=>0];
+        $arlist = app::get('finance')->model('ar')->getList('money,type,trade_time,actually_money,platform_amount', ['monthly_item_id' => $itemId]);
+        $upData = ['yingshou_money'=>0, 'yingtui_money'=>0, 'refund_only_money'=>0,'shishou_money'=>0,'shitui_money'=>0,'actually_amount'=>0,'platform_amount'=>0,'refund_actually_amount'=>0,'refund_platform_amount'=>0];
         foreach ($arlist as $arRow) {
             if($arRow['money'] > 0) {
                 $upData['ship_time'] = $arRow['trade_time'];
                 $upData['yingshou_money'] += $arRow['money'];
+                // 累计客户实付和平台承担金额（只计算收入）
+                $upData['actually_amount'] += $arRow['actually_money'];
+                $upData['platform_amount'] += $arRow['platform_amount'];
             } else {
                 $upData['reship_time'] = $arRow['trade_time'];
                 $upData['yingtui_money'] += $arRow['money'];
+                // 累计退款客户实付和退款平台承担金额（只计算退款）
+                $upData['refund_actually_amount'] += $arRow['actually_money'];
+                $upData['refund_platform_amount'] += $arRow['platform_amount'];
                 if($arRow['type'] == kernel::single('finance_ar')->get_type_by_name('售后仅退款')) {
                     $upData['refund_only_money'] += $arRow['money'];
                 }
@@ -244,6 +258,8 @@ class finance_monthly_report_items {
         }
         $upData['shouzhi_total'] = $upData['shishou_money'] + $upData['shitui_money'];
         $upData['gap'] = $upData['xiaotui_total'] - $upData['shouzhi_total'];
+        $upData['sales_gap'] = $upData['yingshou_money'] - $upData['shishou_money'];
+        $upData['refund_gap'] = $upData['yingtui_money'] - $upData['shitui_money'];
         app::get('finance')->model('monthly_report_items')->update($upData, ['id'=>$itemId]);
         return $upData;
     }

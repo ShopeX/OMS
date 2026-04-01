@@ -103,7 +103,9 @@ class console_ctl_admin_difference_inventory extends desktop_controller
             $data['items'][$key]['diff_status_value'] = $diff_status[$value['diff_status']];
             $value['diff_reason'] == 'other' && $data['items'][$key]['diff_reason'] .= '_' . $value['handle_type'];
             $data['items'][$key]['to_branch_bn'] = $value['to_branch_id'] ? $branch_list[$value['to_branch_id']]['name'] : '-';
-            $data['items'][$key]['handle_type']  = $diff_items_obj->handle_type[$value['handle_type']];
+            $data['items'][$key]['handle_type']  = isset($diff_items_obj->handle_type[$value['handle_type']]) 
+                ? $diff_items_obj->handle_type[$value['handle_type']] 
+                : '';
             
             if ($value['responsible'] == '2') {
                 $data['items'][$key]['description'] = sprintf($diff_items_obj->newDescribe[$value['diff_reason']], $diff_items_obj->newResponsible[$value['responsible']], $branch_list[$data['extrabranch_id']]['name']);

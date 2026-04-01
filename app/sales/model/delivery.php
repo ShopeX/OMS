@@ -14,34 +14,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
+/**
+	* ShopEx licence
+	*
+	* @copyright  Copyright (c) 2005-2012 ShopEx Technologies Inc. (http://www.shopex.cn)
+	* @license  http://ecos.shopex.cn/ ShopEx License
+	* @date 2012-08-22
+	* 基础物料销售发货明细类
+*/
 class sales_mdl_delivery extends dbeav_model{
-	var $export_name = '商品销售发货明细';
+	var $export_name = '基础物料销售发货明细';
 	
     function __construct($app){
         parent::__construct(app::get('ome'));
     }
 
-    /**
-     * 搜索Options
-     * @return mixed 返回值
-     */
     public function searchOptions(){
 
         $Options = array(
            'order_bn'=>'订单号',
            'delivery_bn'=>'发货单号',
-           'bn'=>'货号',
+           'bn'=>'基础物料编码',
         );
         return $Options;
     }
 
-    /**
-     * io_title
-     * @param mixed $ioType ioType
-     * @return mixed 返回值
-     */
     public function io_title( $ioType='csv' ){
 		switch( $ioType ){
             case 'csv':
@@ -56,10 +53,10 @@ class sales_mdl_delivery extends dbeav_model{
 					'*:成交金额'=>'sales_amount',
 					'*:下单时间'=>'order_createtime',
 					'*:付款时间'=>'order_paytime',
-					'*:商品类型'=>'type_id',
-					'*:商品品牌'=>'brand_id',
-					'*:货号'=>'bn',
-					'*:商品名称'=>'name',
+					'*:基础物料类型'=>'type_id',
+					'*:基础物料品牌'=>'brand_id',
+                    '*:基础物料编码'=>'bn',
+                    '*:基础物料名称'=>'name',
 					'*:数量'=>'num',
 					'*:原始单价'=>'price',
 					'*:原始金额'=>'amount',
@@ -78,14 +75,6 @@ class sales_mdl_delivery extends dbeav_model{
 	        return $this->ioTitle[$ioType]['delivery'];
     }
 
-    /**
-     * fgetlist_csv
-     * @param mixed $data 数据
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $exportType exportType
-     * @return mixed 返回值
-     */
     public function fgetlist_csv( &$data,$filter,$offset,$exportType = 1 ){
 
          if( !$data['title'] ){
@@ -180,11 +169,6 @@ class sales_mdl_delivery extends dbeav_model{
         return true;
     }
     
-    /**
-     * count
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function count($filter = null){
 
 	    $sql = 'select count(di.bn) as _count from sdb_ome_delivery d left join sdb_ome_delivery_items di on d.delivery_id = di.delivery_id where '.$this->_filter($filter).' and status="succ"';
@@ -232,11 +216,6 @@ sales_price      成交价格
 	       return $data;
     }
     
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function _filter($filter){
 
        $where = ' 1 ';
@@ -365,7 +344,7 @@ sales_price      成交价格
 				),
 				'type_id' => array (
 				    'type' => 'table:goods_type@ome',
-				    'label' => '商品类型',
+				    'label' => '基础物料类型',
 				    'width' => 120,
 				    'searchtype' => 'has',
 				    'editable' => false,
@@ -374,7 +353,7 @@ sales_price      成交价格
 				),
 				'brand_id' => array (
 				    'type' => 'table:brand@ome',
-				    'label' => '商品品牌',
+				    'label' => '基础物料品牌',
 				    'width' => 120,
 				    'searchtype' => 'has',
 				    'editable' => false,
@@ -383,7 +362,7 @@ sales_price      成交价格
 				),
 				'bn' => array (
 				    'type' => 'varchar(30)',
-				    'label' => '货号',
+                    'label' => '基础物料编码',
 				    'width' => 85,
 				    'searchtype' => 'has',
 				    'editable' => false,
@@ -392,7 +371,7 @@ sales_price      成交价格
 				),
 				'name' => array (
 				    'type' => 'varchar(200)',
-				    'label' => '商品名称',
+                    'label' => '基础物料名称',
 				    'width' => 190,
 				    'searchtype' => 'has',
 				    'editable' => false,

@@ -14,12 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class console_reship{
     function reship_data($reship_id){
         $oReship = app::get('ome')->model('reship');
         $oOrders = app::get('ome')->model('orders');
-        $reship_data = $oReship->dump(array('reship_id'=>$reship_id),'reship_bn,logi_no,logi_id,order_id,t_begin,return_type,shop_id');
+        $reship_data = $oReship->dump(array('reship_id'=>$reship_id),'reship_bn,logi_no,logi_id,order_id,t_begin,return_type,shop_id,flag_type');
         $Oreship_items = app::get('ome')->model('reship_items');
         $oProcess_items = app::get('ome')->model('return_process_items');
         $Odly_corp = app::get('ome')->model('dly_corp');
@@ -49,6 +48,7 @@ class console_reship{
                 $data[$branch_id]['create_time'] = $reship_data['t_begin'];//storage_code
                 $data[$branch_id]['memo'] = '';//storage_code
                 $data[$branch_id]['return_type'] = $reship_data['return_type'];
+                $data[$branch_id]['flag_type'] = $reship_data['flag_type'];
                 //memo original_delivery_bn
                 $data[$branch_id]['original_delivery_bn'] = '';
                 $data[$branch_id]['logi_no'] = $reship_data['logi_no'];
@@ -72,8 +72,8 @@ class console_reship{
     }
 
     /**
-     * 取消退货单
-     */
+    * 取消退货单
+    */
     function notify_reship($type,$reship_id){
         $reship_data = kernel::single('console_reship')->reship_data($reship_id);
         if ($type == 'create'){//创建
@@ -125,51 +125,103 @@ class console_reship{
         return $reship_item;
     }
 
-    /**
-     * siso_iostockReship
-     * @param mixed $reship_id ID
-     * @param mixed $msg msg
-     * @return mixed 返回值
-     */
     public function siso_iostockReship($reship_id, &$msg=''){
         $oReship = app::get('ome')->model('reship');
         $reship = $oReship->dump(array('reship_id'=>$reship_id),'branch_id,return_type');
         $oReship_item = app::get('ome')->model('reship_items');
-        $normal_reship_item = $oReship_item->getList('*',array('reship_id'=>$reship_id,'normal_num|than'=>0));
-        $defective_reship_item = $oReship_item->getList('*',array('reship_id'=>$reship_id,'defective_num|than'=>0));
+        
+        if(app::get('ome')->getConf('wms.goods.type.branch') != 1) {
+
+            $normal_reship_item = $oReship_item->getList('*',array('reship_id'=>$reship_id,'normal_num|than'=>0));
+            $defective_reship_item = $oReship_item->getList('*',array('reship_id'=>$reship_id,'defective_num|than'=>0));
+            $reshipLib = kernel::single('siso_receipt_iostock_reship');
+            $flag = true;
+            $data = array(); // 定义$data变量
+            
+            if (count($normal_reship_item)>0){
+                $return_type = $reship['return_type'];
+                if ($return_type == 'refuse'){
+                    $reshipLib->_typeId=32;
+                }else{
+                    $reshipLib->_typeId=30;
+                }
+               $normal_result = $reshipLib->create(array('reship_id'=>$reship_id,'items'=>$normal_reship_item,'branch_id'=>$reship['branch_id']), $data, $msg);
+                if (!$normal_result){
+                    $flag = false;
+                }
+            }
+
+            if (count($defective_reship_item)>0) {
+                $damaged = kernel::single('console_iostockdata')->getDamagedbranch($reship['branch_id']);
+                $reshipLib->_typeId=50;
+                $defective_result = $reshipLib->create(array('reship_id'=>$reship_id,'items'=>$defective_reship_item,'branch_id'=>$damaged['branch_id'],'orig_type_id'=>'30'), $data, $msg);
+                if (!$defective_result){
+                    $flag = false;
+                }
+            }
+            return $flag;
+        }
+        
+        // 根据return_process_items进行入库，按branch_id和bn分组累加数量
+        $return_process_items = app::get('ome')->model('return_process_items');
+        $process_items = $return_process_items->getList('*', array('reship_id'=>$reship_id, 'is_check'=>'true'), 0, -1);
+
+        // 按branch_id和bn分组处理入库，累加数量
+        $branch_items = array();
+        foreach ($process_items as $item) {
+            $branch_id = $item['branch_id'] ? $item['branch_id'] : $reship['branch_id'];
+            $bn = $item['bn'];
+            $key = $branch_id . '_' . $bn;
+            
+            if (!isset($branch_items[$key])) {
+                $branch_items[$key] = $item;
+            } else {
+                $branch_items[$key]['num'] += $item['num'];
+            }
+        }
+        
+        // 按仓库分组整理数据
+        $branch_grouped_items = array();
+        foreach ($branch_items as $item) {
+            $branch_id = $item['branch_id'];
+            if (!isset($branch_grouped_items[$branch_id])) {
+                $branch_grouped_items[$branch_id] = array();
+            }
+            
+            // 直接使用process_items的数据构建入库项
+            $stock_item = array(
+                'item_id' => $item['item_id'],
+                'bn' => $item['bn'],
+                'normal_num' => $item['num'],
+            );
+            
+            $branch_grouped_items[$branch_id][] = $stock_item;
+        }
+        
         $reshipLib = kernel::single('siso_receipt_iostock_reship');
         $flag = true;
-        if (count($normal_reship_item)>0){
-            $return_type = $reship['return_type'];
-            if ($return_type == 'refuse'){
-                $reshipLib->_typeId=32;
-            }else{
-                $reshipLib->_typeId=30;
-            }
-           $normal_result = $reshipLib->create(array('reship_id'=>$reship_id,'items'=>$normal_reship_item,'branch_id'=>$reship['branch_id']), $data, $msg);
-            if (!$normal_result){
-                $flag = false;
-            }
-        }
-
-        if (count($defective_reship_item)>0) {
-            $damaged = kernel::single('console_iostockdata')->getDamagedbranch($reship['branch_id']);
-            $reshipLib->_typeId=50;
-            $defective_result = $reshipLib->create(array('reship_id'=>$reship_id,'items'=>$defective_reship_item,'branch_id'=>$damaged['branch_id'],'orig_type_id'=>'30'), $data, $msg);
-            if (!$defective_result){
-                $flag = false;
+        
+        // 按仓库分别生成入库单
+        foreach ($branch_grouped_items as $branch_id => $items) {
+            $data = array(); // 为每个仓库定义$data变量
+            
+            if (!empty($items)) {
+                $return_type = $reship['return_type'];
+                if ($return_type == 'refuse'){
+                    $reshipLib->_typeId=32;
+                }else{
+                    $reshipLib->_typeId=30;
+                }
+                $result = $reshipLib->create(array('reship_id'=>$reship_id,'items'=>$items,'branch_id'=>$branch_id), $data, $msg);
+                if (!$result){
+                    $flag = false;
+                }
             }
         }
+        
         return $flag;
     }
 
-    /**
-     * 更新_sync_status
-     * @param mixed $reship_id ID
-     * @param mixed $status status
-     * @param mixed $msg msg
-     * @return mixed 返回值
-     */
     public function update_sync_status($reship_id, $status, $msg=''){
         if(!$reship_id || !$status){
             return false;
@@ -196,7 +248,6 @@ class console_reship{
      * @param
      * @return
      */
-
     static public function cancel($reship,$log_memo=''){
         $reshipObj = app::get('ome')->model('reship');
         $logObj = app::get('ome')->model('operation_log');//写日志
@@ -219,18 +270,22 @@ class console_reship{
 
             $reshipObj->update($updata,array('reship_id'=>$reship['reship_id']));
         }
-        
+        if($updata['is_check']) {
+            // 退货单取消后的service扩展点
+            foreach(kernel::servicelist('console.service.reship.cancel.after') as $object) {
+                if(method_exists($object, 'cancel_reship_after')) {
+                    $object->cancel_reship_after($reship['reship_id']);
+                }
+            }
+        }
+
         // 退货单取消成功通知
         kernel::single('ome_reship')->sendReshipCancelSuccessNotify($reship, $log_memo);
+  
         
         $logObj->write_log('reship@ome',$reship['reship_id'],$memo);
     }
 
-    /**
-     * notice
-     * @param mixed $reship reship
-     * @return mixed 返回值
-     */
     static public function notice($reship){
         $res = array('rsp'=>'succ');
         if ($reship['is_check'] == '1'){
@@ -349,11 +404,12 @@ class console_reship{
         return $result;
     }
 
-    /**
-     * orderRefundToLJRK
-     * @param mixed $dlyId ID
-     * @return mixed 返回值
-     */
+    public function batchOrderRefundToLJRK($dlyIds) {
+        foreach($dlyIds as $dlyId) {
+            $this->orderRefundToLJRK($dlyId);
+        }
+    }
+
     public function orderRefundToLJRK($dlyId) {
         $dlyInfo = app::get('ome')->model('delivery')->db_dump(['delivery_id'=>$dlyId], 'delivery_id,branch_id,logi_no,logi_name,process,logi_status');
         if(empty($dlyInfo)) {
@@ -367,7 +423,7 @@ class console_reship{
         }
         $didItems = app::get('ome')->model('delivery_items_detail')->getList('*', ['delivery_id'=>$dlyId]);
         $tgOrder = app::get('ome')->model('orders')->getList('pay_status,order_type,shop_type', ['order_id'=>array_column($didItems, 'order_id')]);
-        $refundApply = app::get('ome')->model('refund_apply')->getList('apply_id,bool_type,product_data', array('order_id' => array_column($didItems, 'order_id'), 'status' => '4'));
+        $refundApply = app::get('ome')->model('refund_apply')->getList('apply_id,bool_type,product_data,tag_type,order_id', array('order_id' => array_column($didItems, 'order_id'), 'status' => '4'));
         $needLJ =  false;
         foreach($tgOrder as $v) {
             //[天猫定制订单]申请售后仅退款,不用转换拦截退货单
@@ -381,6 +437,7 @@ class console_reship{
             }
         }
         $refundItemId = [];
+        $orderQZ = [];
         foreach($refundApply as $val) {
             if($val['bool_type'] & ome_refund_bool_type::__PROTECTED_CODE) {
                 continue;
@@ -388,6 +445,9 @@ class console_reship{
             $arrProduct = unserialize($val['product_data']);
             if(!is_array($arrProduct)) {
                 continue;
+            }
+            if($val['tag_type'] == 8) {
+                $orderQZ[] = $val['order_id'];
             }
             $order_item_id = array_column($arrProduct, 'order_item_id');
             $refundItemId = array_merge($refundItemId, $order_item_id);
@@ -405,23 +465,69 @@ class console_reship{
         foreach($didItems as $v) {
             $orderDidItems[$v['order_id']][] = $v;
         }
-        foreach($orderDidItems as $v) {
+        foreach($orderDidItems as $order_id => $v) {
+            $dlyInfo['qz_refund'] = in_array($order_id, $orderQZ);
             $this->oneOrderRefundToLJRK($v, $dlyInfo, $refundItemId);
         }
     }
 
-    /**
-     * oneOrderRefundToLJRK
-     * @param mixed $didItems ID
-     * @param mixed $dlyInfo dlyInfo
-     * @param mixed $refundItemId ID
-     * @return mixed 返回值
-     */
+    public function qzRefundToLJRK($refundApply){
+        // 1. 解析product_data字段
+        $arrProduct = unserialize($refundApply['product_data']);
+        if (!is_array($arrProduct)) {
+            return [false, ['msg' => '退款单缺少商品明细']];
+        }
+        
+        // 获取退款商品ID数组
+        $refundItemId = array_column($arrProduct, 'order_item_id');
+        
+        // 使用product_data组织didItems参数
+        $didItems = [];
+        foreach ($arrProduct as $product) {
+            $didItems[] = [
+                'order_id' => $refundApply['order_id'],
+                'order_item_id' => $product['order_item_id'],
+                'product_id' => $product['product_id'],
+                'bn' => $product['bn'],
+                'number' => $product['num'], // product_data中使用的是num字段
+                'oid' => $product['oid']
+            ];
+        }
+        
+        // 获取发货单信息
+        $deliveryOrderItemModel = app::get('sales')->model('delivery_order_item');
+        $filter = [
+            'order_id' => $refundApply['order_id'],
+            'order_item_id' => $refundItemId,
+        ];
+        $deliveryOrderItem = $deliveryOrderItemModel->db_dump($filter, 'delivery_id');
+        if (!$deliveryOrderItem) {
+            return [false, ['msg' => '发货单不存在']];
+        }
+        $deliveryId = $deliveryOrderItem['delivery_id'];
+        $deliveryModel = app::get('ome')->model('delivery');
+        $deliveryInfo = $deliveryModel->db_dump(['delivery_id' => $deliveryId], 
+            'delivery_id,branch_id,logi_no,logi_name,process,logi_status');
+        
+        $dlyInfo = [
+            'delivery_id' => $deliveryInfo['delivery_id'],
+            'branch_id' => $deliveryInfo['branch_id'],
+            'logi_no' => $deliveryInfo['logi_no'],
+            'logi_name' => $deliveryInfo['logi_name'],
+            'process' => $deliveryInfo['process'],
+            'logi_status' => $deliveryInfo['logi_status'],
+            'qz_refund' => ($refundApply['tag_type'] == 8), // 强制退款标识
+            'reship_bn' => 'LJ'.$refundApply['refund_apply_bn'],
+        ];
+        
+        return $this->oneOrderRefundToLJRK($didItems, $dlyInfo, $refundItemId);
+    }
+
     public function oneOrderRefundToLJRK($didItems, $dlyInfo, $refundItemId){
         $tgOrder = app::get('ome')->model('orders')->db_dump(['order_id'=>array_column($didItems, 'order_id')], '*');
         $opInfo     = kernel::single('ome_func')->get_system();
         $insertData = array(
-            'reship_bn'        => 'LJ'.$tgOrder['order_id'].$dlyInfo['delivery_id'],
+            'reship_bn'        => $dlyInfo['reship_bn'] ? : 'LJ'.$tgOrder['order_id'].$dlyInfo['delivery_id'],
             'shop_id'          => $tgOrder['shop_id'],
             'shop_type'        => $tgOrder['shop_type'],
             'order_id'         => $tgOrder['order_id'],
@@ -447,6 +553,9 @@ class console_reship{
             'flag_type'        => ome_reship_const::__LANJIE_RUKU,
             'org_id'           => $tgOrder['org_id'],
         );
+        if($dlyInfo['qz_refund']) {
+            $insertData['flag_type'] = $insertData['flag_type'] | ome_reship_const::__QZ_REFUND_CODE;
+        }
         $shop_info = app::get('ome')->model('shop')->getShopInfo($insertData['shop_id']);
         // 经销店铺的单据，delivery_mode冗余到售后申请表
         if ($shop_info['delivery_mode'] == 'jingxiao') {
@@ -514,6 +623,11 @@ class console_reship{
         $oOperation_log = app::get('ome')->model('operation_log');
         $memo           = '退款订单发货新建退货拦截单';
         $oOperation_log->write_log('reship@ome', $insertData['reship_id'], $memo);
+        foreach(kernel::servicelist('ome.service.reship.create.after') as $object) {
+            if(method_exists($object, 'after_create')){
+                $object->after_create($insertData['reship_id']);
+            }
+        }
         $insertData = array_merge($insertData, $upData);
         $this->reshipToReturn($insertData);
         //退换货自动审批(系统-->退换货自动审核设置-->是否启用退换货自动审批)
@@ -536,11 +650,6 @@ class console_reship{
         return [true, ['msg'=>'操作完成']];
     }
 
-    /**
-     * reshipToReturn
-     * @param mixed $reship reship
-     * @return mixed 返回值
-     */
     public function reshipToReturn($reship) {
         if($reship['return_id']) {
             return [false, ['msg'=>'售后申请单已存在']];
@@ -622,11 +731,6 @@ class console_reship{
         return [true];
     }
 
-    /**
-     * 添加ReshipDiff
-     * @param mixed $isoId ID
-     * @return mixed 返回值
-     */
     public function addReshipDiff($isoId) {
         $iso = app::get('taoguaniostockorder')->model('iso')->db_dump(['iso_id'=>$isoId], 'iso_id,iso_bn,type_id,iso_status,bill_type,business_bn,branch_id');
         if($iso['type_id'] != '70') {
@@ -700,12 +804,6 @@ class console_reship{
     }
 
 
-    /**
-     * releaseShopChangeFreeze
-     * @param mixed $reship_bn reship_bn
-     * @param mixed $shop_id ID
-     * @return mixed 返回值
-     */
     public function releaseShopChangeFreeze($reship_bn, $shop_id) {
         $reship = app::get('ome')->model('reship')->db_dump(['reship_bn'=>$reship_bn, 'shop_id'=>$shop_id], 'reship_id');
         if($reship) {

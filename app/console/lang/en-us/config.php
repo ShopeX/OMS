@@ -87,7 +87,7 @@ return array (
     '盘差单' => 'Inventory Difference Order',
     '日盘单' => 'Daily Inventory Order',
     '库存对账查询' => 'Inventory Reconciliation Query',
-    '货品库存查询' => 'Product Inventory Query',
+    '货品库存查询' => 'Basic Material Inventory Query',
     '仓库库存列表' => 'Warehouse Inventory List',
     '总库存列表' => 'Total Inventory List',
     '库存异动查询' => 'Inventory Change Query',

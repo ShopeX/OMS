@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class ome_finder_extend_filter_branch_product{
     function get_extend_colums(){
         $brObj = app::get('ome')->model('branch');
@@ -49,7 +48,7 @@ class ome_finder_extend_filter_branch_product{
                     array (
                     'type' => 'varchar(40)',
                     'editable' => false,
-                    'label' => '货号',
+                    'label' => '基础物料编码',
                     'width' => 110,
                   
                     'filtertype' => 'normal',
@@ -61,7 +60,7 @@ class ome_finder_extend_filter_branch_product{
                    array (
                    'type' => 'varchar(200)',
                    'required' => true,
-                   'label' => '货品名称',
+                   'label' => '基础物料名称',
                    'width' => 260,
                    'searchtype' => 'has',
                    'editable' => false,

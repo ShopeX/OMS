@@ -238,6 +238,7 @@ class erpapi_logistics_matrix_wxshipin_request_electron extends erpapi_logistics
 
         $deliveryInfo = app::get('wms')->model('delivery')->db_dump(['delivery_bn' => $sdf['delivery_bn']]);
         $dlyCorpInfo  = app::get('ome')->model('dly_corp')->db_dump(['corp_id' => $deliveryInfo['logi_id']]);
+        app::get('ome')->model('dly_corp_channel')->getChannel($dlyCorpInfo, array($deliveryInfo));
         $prt_tmpl_id  = $dlyCorpInfo['prt_tmpl_id'];
         $templateMdl  = app::get('logisticsmanager')->model('express_template');
         $templateInfo = $templateMdl->db_dump(['template_id' => $prt_tmpl_id]);

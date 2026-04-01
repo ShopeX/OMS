@@ -659,7 +659,6 @@ $db['reship'] = array(
                 0 => 'return_type',
             ),
         ),
-        
         'ind_t_begin'        => array(
             'columns' => array(
                 0 => 't_begin',
@@ -710,6 +709,11 @@ $db['reship'] = array(
         'ind_cos_id' => array(
             'columns' => array(
                 0 => 'cos_id',
+            ),
+        ),
+        'ind_platform_order_bn' => array(
+            'columns' => array(
+                0 => 'platform_order_bn',
             ),
         ),
     ),

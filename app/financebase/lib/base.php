@@ -26,6 +26,7 @@ class financebase_base extends eccommon_analysis_abstract implements eccommon_an
     public $type_options = array(
         'display' => 'false',
     );
+    public $export_href;
 
     function __construct(&$app)
     {
@@ -45,8 +46,8 @@ class financebase_base extends eccommon_analysis_abstract implements eccommon_an
         $this->_render->pagedata['shop_id']= $_POST['shop_id'] ? $_POST['shop_id'] : '0';
         $this->_render->pagedata['bill_status']= $_POST['bill_status'] ? $_POST['bill_status'] : 'all';
         $this->_render->pagedata['search_key'] = isset($_POST['search_key']) ? $_POST['search_key'] : '';
-        $this->_render->pagedata['search_value'] = $_POST['search_value'];
-        $this->_render->pagedata['trade_type'] = $_POST['trade_type'];
+        $this->_render->pagedata['search_value'] = isset($_POST['search_value']) ? $_POST['search_value'] : '';
+        $this->_render->pagedata['trade_type'] = isset($_POST['trade_type']) ? $_POST['trade_type'] : '';
         $this->_render->pagedata['billCategory']= app::get('financebase')->model('expenses_rule')->getBillCategory();
         $this->_extra_view = array('financebase' => 'admin/base.html');
     }

@@ -18,7 +18,7 @@
 class siso_task{
 
     function post_install(){
-    	kernel::single('base_initial', 'siso')->init();
+    	//kernel::single('base_initial', 'siso')->init();
     }
    
 

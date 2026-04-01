@@ -52,7 +52,7 @@ $db['rpcnotify']=array (
       'default_in_list' => true,
     ),
     'msg'=>array(
-      'type' => 'varchar(255)',
+      'type' => 'text',
       'required' => true,
       'width'=>200,
       'label' => app::get('base')->_('信息'),
@@ -81,6 +81,14 @@ $db['rpcnotify']=array (
       'in_list' =>true,
       'default_in_list' => true,
     ),
+    'read_user' =>
+    array(
+      'type' => 'varchar(255)',
+      'label' => app::get('base')->_('已读人'),
+      'width' => 100,
+      'in_list' =>true,
+      'default_in_list' => true,
+    ),
     ),
   'index' => 
   array (
@@ -89,6 +97,13 @@ $db['rpcnotify']=array (
       'columns' => 
       array (
         0 => 'status',
+      ),
+    ),
+    'ind_notifytime' => 
+    array (
+      'columns' => 
+      array (
+        0 => 'notifytime',
       ),
     ),
   ),

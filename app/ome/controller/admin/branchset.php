@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class ome_ctl_admin_branchset extends desktop_controller{
     var $name = "仓库设置";
     var $workground = "setting_tools";
@@ -28,6 +27,8 @@ class ome_ctl_admin_branchset extends desktop_controller{
        $setData                                = array();
        $setData['return_auto_branch']          = app::get('ome')->getConf('return.auto_branch');
        $setData['return_auto_shop_branch']     = app::get('ome')->getConf('return.auto_shop_branch');
+       // 获取WMS商品类型仓库配置
+       $setData['wms_goods_type_branch'] = app::get('ome')->getConf('wms.goods.type.branch');
        $this->pagedata['setData'] = $setData;
        $shopMdl = app::get('ome')->model('shop');
        $shopList = $shopMdl->getlist('shop_id,name',array('s_type'=>'1','s_status'=>'2'));
@@ -40,14 +41,6 @@ class ome_ctl_admin_branchset extends desktop_controller{
        $this->page('admin/branch/branchset.html');
     }
 
-    
-    /**
-     * 保存设置
-     * @param 
-     * @return  
-     * @access  public
-     * @author sunjing@shopex.cn
-     */
     function save()
     {
         $this->begin();
@@ -58,6 +51,10 @@ class ome_ctl_admin_branchset extends desktop_controller{
             foreach ($_POST['auto_shop_branch']['shop_id'] as $key => $shop_id) {
                 $_POST['set']['return.auto_shop_branch'][$shop_id] = $_POST['auto_shop_branch']['branch_id'][$key];
             }
+        }
+        // 保存WMS商品类型仓库配置
+        if ($_POST['set']['wms_goods_type_branch']) {
+            app::get('ome')->setConf('wms.goods.type.branch', $_POST['set']['wms_goods_type_branch']);
         }
         app::get('wms')->setConf('wms.branchset.type',$settype);
         app::get('ome')->setConf('ome.aftersale.goods.branch.type',$goodsBranchType);

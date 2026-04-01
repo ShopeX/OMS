@@ -22,12 +22,6 @@ class wms_ctl_admin_receipts_outer extends wms_ctl_admin_receipts_print {
     var $dlyCorp_tab = 'show';
 
 
-    /**
-     * _views
-     * @param mixed $base_filter base_filter
-     * @param mixed $source source
-     * @return mixed 返回值
-     */
     public function _views($base_filter = [], $source = '') {
         if($this->dlyCorp_tab == 'hidden'){
            return array();
@@ -59,7 +53,11 @@ class wms_ctl_admin_receipts_outer extends wms_ctl_admin_receipts_print {
         foreach ($sub_menu as $k => $v) {
             //$v['filter']['branch_id'] = $outerBranch;
             //非管理员取管辖仓与自建仓的交集
-            $v['filter']['ext_branch_id'] = $v['filter']['ext_branch_id'] ? array_intersect($v['filter']['ext_branch_id'], $outerBranch) : $outerBranch;
+            $v['filter']['ext_branch_id'] = $v['filter']['ext_branch_id'] ? $v['filter']['ext_branch_id'] : $outerBranch;
+            if (!is_array($v['filter']['ext_branch_id'])) {
+                $v['filter']['ext_branch_id'] = array($v['filter']['ext_branch_id']);
+            }
+            $v['filter']['ext_branch_id'] = array_intersect($v['filter']['ext_branch_id'], $outerBranch);
             $sub_menu[$k]['filter'] = $v['filter'] ? $v['filter'] : null;
             $sub_menu[$k]['addon'] = $mdl_order->count($v['filter']);
             $query['view'] = $i++;
@@ -71,9 +69,9 @@ class wms_ctl_admin_receipts_outer extends wms_ctl_admin_receipts_print {
 
     /**
      * 第三方发货单列表
-     * 
+     *
      * @author chenping<chenping@shopex.cn>
-     * */
+     **/
     public function index()
     {
         if (isset($_POST['delivery_bn']) && $_POST['delivery_bn']) {
@@ -109,7 +107,9 @@ class wms_ctl_admin_receipts_outer extends wms_ctl_admin_receipts_print {
             $branch_ids = $oBranch->getBranchByUser(true);
             if ($branch_ids) {
                 $filter['ext_branch_id'] = $_POST['branch_id'] ? $_POST['branch_id'] : $branch_ids;
-
+                if (!is_array($filter['ext_branch_id'])) {
+                    $filter['ext_branch_id'] = array($filter['ext_branch_id']);
+                }
                 $filter['ext_branch_id'] = array_intersect($filter['ext_branch_id'], $outerBranch);
             } else {
                 $filter['ext_branch_id'] = 'false';
@@ -192,10 +192,6 @@ class wms_ctl_admin_receipts_outer extends wms_ctl_admin_receipts_print {
     }
    
     #自定义发货模板导出
-        /**
-     * exportTemplate
-     * @return mixed 返回值
-     */
     public function exportTemplate(){
         if(!empty($_POST['delivery_id'])){
            $filter['delivery_id'] = $_POST['delivery_id'];

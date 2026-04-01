@@ -448,6 +448,15 @@ class ome_reship{
             $error_msg = '没有可操作的退换货单!';
             return false;
         }
+        foreach(kernel::servicelist('ome.service.reship.check.before') as $object) {
+            if(method_exists($object, 'check_valid')){
+                list($rs, $rsData) = $object->check_valid($reship_id);
+                if(!$rs) {
+                    $error_msg = $rsData['msg'];
+                    return false;
+                }
+            }
+        }
         if($reship['flag_type'] & ome_reship_const::__RESHIP_DIFF) {
             list($rs, $rsData) = kernel::single('console_reship_diff')->doCheck($reship);
             if(!$rs) {
@@ -458,7 +467,8 @@ class ome_reship{
         #拦截入库审核打拦截接口
         if($reship['is_check'] == '0'
             && $status == '1'
-            && $reship['flag_type'] & ome_reship_const::__LANJIE_RUKU) {
+            && $reship['flag_type'] & ome_reship_const::__LANJIE_RUKU
+            && !($reship['flag_type'] & ome_reship_const::__QZ_REFUND_CODE)) {
             $rs = ome_delivery_notice::cut(['logi_no'=>$reship['logi_no']]);
             if($rs['rsp'] != 'succ') {
                 //$error_msg = '拦截失败：'.$rs['msg'];
@@ -751,7 +761,11 @@ class ome_reship{
         $schema = $Oreship->schema['columns'];
         $memo = $operation. '状态:'.$schema['is_check']['type'][$status];
         $oOperation_log->write_log('reship@ome', $reship_id, $memo);
-        
+        foreach(kernel::servicelist('ome.service.reship.check.after') as $object) {
+            if(method_exists($object, 'after_check')){
+                $object->after_check($reship_id);
+            }
+        }
         //[电商仓]质检成功后执行相应的操作
         
         $result = $this->part_finish_aftersale($reship_id,$reship['is_check'], $after_error_msg);
@@ -2472,5 +2486,51 @@ class ome_reship{
         } catch (Exception $e) {
             // 静默处理异常，不影响主流程
         }
+    }
+
+    /**
+     * 退回物流单号重复检测与标记（flag_type位操作）
+     * @param int $reshipId
+     * @param string $logiNo
+     * @return bool
+     */
+    public function markDuplicateReturnLogiNo($reshipId, $logiNo)
+    {
+        if (!$reshipId) {
+            return false;
+        }
+
+        $reshipObj = app::get('ome')->model('reship');
+        $reship = $reshipObj->dump(['reship_id' => $reshipId], 'reship_id,flag_type,order_id');
+        if (!$reship) {
+            return false;
+        }
+
+        $flagType = intval($reship['flag_type']);
+        $bit = ome_reship_const::__RETURN_LOGI_DUP;
+
+        // 单号为空，直接清标
+        if (empty($logiNo)) {
+            $newFlag = $flagType & (~$bit);
+            if ($newFlag !== $flagType) {
+                $reshipObj->update(['flag_type' => $newFlag], ['reship_id' => $reshipId]);
+            }
+            return true;
+        }
+
+        // 检查条件：排除当前退货单、排除已取消的退货单、排除同一订单的其他退货单
+        $exists = $reshipObj->count([
+            'return_logi_no'    => $logiNo,
+            'reship_id|noequal' => $reshipId,
+            'is_check|noequal'  => '5',
+            'order_id|noequal'  => $reship['order_id'], // 排除同一订单的其他退货单（同一订单重复不需要打标）
+        ]);
+
+        $newFlag = $exists > 0 ? ($flagType | $bit) : ($flagType & (~$bit));
+        if ($newFlag !== $flagType) {
+            $reshipObj->update(['flag_type' => $newFlag], ['reship_id' => $reshipId]);
+        }
+
+        return true;
     }
 }

@@ -115,7 +115,7 @@ $db['product_serial_history']=array (
     ),
     'serial_number' => 
     array (
-      'type' => 'varchar(30)',
+      'type' => 'varchar(64)',
       'required' => true,
       'editable' => false,
       'label' => '唯一码',

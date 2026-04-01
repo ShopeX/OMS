@@ -38,7 +38,7 @@
         <permission id="purchase_eo">入库单</permission>
         <permission id="purchase_returned">采购退货单</permission>-->
         <permission id="purchase_supplier">供应商</permission>
-        <permission id="purchase_supplier_goods">供应商货品</permission>
+        <permission id="purchase_supplier_goods">供应商基础物料</permission>
 
         <permission id="purchase_do_need">补货提醒</permission>
         
@@ -85,7 +85,7 @@
  <workground name="基础档案" id="goods_manager"  order="600" icon="icon-jichudangan-01">
  <menugroup name="供应商管理" en="supplier-management">
             <menu controller='admin_supplier' action='index' permission='purchase_supplier' display='true' order='5000100'>供应商</menu>
-            <menu controller='admin_supplier_goods' action='index' permission='purchase_supplier_goods' display='true' order='5000101'>供应商货品</menu>
+            <menu controller='admin_supplier_goods' action='index' permission='purchase_supplier_goods' display='true' order='5000101'>供应商基础物料</menu>
         </menugroup>
  </workground>
     <workground name="单据报表" id="invoice_center"  order="1200" icon="icon-danjubaobiao-01">

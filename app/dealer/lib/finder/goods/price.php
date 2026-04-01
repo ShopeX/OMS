@@ -19,7 +19,7 @@
  * @Author:   Assistant
  * @Version:  1.0
  * @DateTime: 2024年
- * @describe: 经销商品价格管理
+ * @describe: 经销商物料价格管理
  * ============================
  */
 class dealer_finder_goods_price 

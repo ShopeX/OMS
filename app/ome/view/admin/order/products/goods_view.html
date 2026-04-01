@@ -19,6 +19,10 @@
       <table width="100%" class="gridlist" border="0" cellspacing="0" cellpadding="0">
         <thead>
         <tr>
+          <{if $is_sap_reserved_times}>
+          <th><{t}>SAP预约时间<{/t}></th>
+          <{/if}>
+
           <th><{t}>基础物料编码<{/t}></th>
           <th><{t}>基础物料名称<{/t}></th>
           
@@ -35,6 +39,10 @@
           <th><{t}>优惠额<{/t}></th>
             <th><{t}>实付金额<{/t}></th>
             <th><{t}>优惠分摊<{/t}></th>
+            <{if $order.settlement_amount > 0}>
+            <th><{t}>客户实付<{/t}></th>
+            <th><{t}>商家结算<{/t}></th>
+            <{/if}>
           <th><{t}>购买量<{/t}></th>
             <th><{t}>已发货量<{/t}></th>
           <th><{t}>已退货量<{/t}></th>
@@ -59,6 +67,10 @@
         <{foreach from=$objs item=obj}>
         <{if $obj.order_items|@count > 1}>
       <tr class="ColColorGray" id="tr_<{$obj.obj_id}>" oid="<{$obj.obj_id}>" <{if $item.delete == 'true'}>style="background-color: #DBDBDB;" g-del="b"<{else}>g-del="a"<{/if}>>
+        <{if $is_sap_reserved_times}>
+        <td>&nbsp;</td>
+        <{/if}>
+
         <td><{$obj.bn}></td>
         <td><{t}><{$obj.name}><{/t}></td>
         
@@ -74,6 +86,10 @@
         <td>-</td>
         <td>-</td>
         <td>-</td>
+        <{if $order.settlement_amount > 0}>
+        <td>-</td>
+        <td>-</td>
+        <{/if}>
         <td></td>
         <td></td>
         <td></td>
@@ -96,6 +112,10 @@
       <{/if}>
       <{foreach from=$obj.order_items item=item}>
       <tr <{if $item.delete == 'true'}>style="background-color: rgb(216, 216, 216);"<{elseif $obj.pay_status == '5'}>style="background-color: #ffe3e7;"<{/if}> >
+        <{if $is_sap_reserved_times}>
+        <td><{$item.sap_reserved_times}></td>
+        <{/if}>
+
         <td class="item_bn <{$item.item_type}>class">
           <span class="number"><{$item.bn}></span>
         </td>
@@ -108,7 +128,12 @@
           </div> -->
         </td>
         
-        <td><{t}><{$obj.bn}><{/t}></td>
+        <td>
+          <{t}><{$obj.bn}><{/t}>
+          <{if isset($obj['platform_outer_iid'])}>
+          <span style="color: LightGray" title="平台商品编码">【<{$obj['platform_outer_iid']}>】</span>
+          <{/if}>
+        </td>
         <td>
             <{if $obj.is_price_protect == 'true'}><span style="color: red">【价保】</span><{/if}>
             <{if $obj.s_type=='dx'}><span style="color:#66ccff">【代销】</span><{/if}>
@@ -127,6 +152,10 @@
         <td><{if $show_sale_price}><{$item.pmt_price/$item.quantity|cur}><{else}>-<{/if}></td>
         <td><{if $show_sale_price}><{$item.divide_order_fee|cur}><{else}>-<{/if}></td>
         <td><{if $show_sale_price}><{$item.part_mjz_discount|cur}><{else}>-<{/if}></td>
+        <{if $order.settlement_amount > 0}>
+        <td><{if $show_sale_price}><{$item.actually_amount|cur}><{else}>-<{/if}></td>
+        <td><{if $show_sale_price}><{$item.settlement_amount|cur}><{else}>-<{/if}></td>
+        <{/if}>
         <td><{$item.quantity}></td>        <td><{$item.sendnum}></td>
         <td><{$item.return_num}></td>
         <td><{$item.split_num}></td>

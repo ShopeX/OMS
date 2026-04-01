@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class wms_finder_extend_filter_branch_product{
     function get_extend_colums(){
         $db['branch_product']=array (
@@ -22,7 +21,7 @@ class wms_finder_extend_filter_branch_product{
               'bn'=>  array (
                     'type' => 'varchar(40)',
                     'editable' => false,
-                    'label' => '货号',
+                    'label' => '基础物料编码',
                     'width' => 110,
                     'filtertype' => 'normal',
                     'filterdefault' => true,

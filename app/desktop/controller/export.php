@@ -14,15 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
+ 
 class desktop_ctl_export extends desktop_controller{
 
-    /**
-     * __construct
-     * @param mixed $app app
-     * @return mixed 返回值
-     */
     public function __construct($app)
     {
         parent::__construct($app);
@@ -33,6 +27,7 @@ class desktop_ctl_export extends desktop_controller{
         $exptempObj = app::get('desktop')->model('export_template');
         $temps =$exptempObj->getList('et_id,et_name',array('et_type'=>$type),0,-1);
         $this->pagedata['temps'] = $temps;
+        $this->pagedata['type'] = $type;
         return $this->display("export/template.html");
     }
 
@@ -73,5 +68,28 @@ class desktop_ctl_export extends desktop_controller{
         $this->pagedata['export_fields_msg'] = $fields_str;
         $this->pagedata['need_detail'] = $curr_filter['need_detail'];
         return $this->display("export/templatedetail.html");
+    }
+    
+    /**
+     * 删除指定的导出模板
+     *
+     * @return void
+     */
+    function deleteTemp(){
+        $this->begin('javascript:location.reload();');
+        
+        $et_id = $_POST['et_id'];
+        if(empty($et_id)){
+            $this->end(false, '模板ID不能为空');
+        }
+        
+        $exptempObj = app::get('desktop')->model('export_template');
+        $result = $exptempObj->delete(array('et_id'=>$et_id));
+        
+        if($result){
+            $this->end(true, '删除成功');
+        }else{
+            $this->end(false, '删除失败');
+        }
     }
 }

@@ -67,6 +67,15 @@ class console_finder_basic_material_stock_artificial_freeze{
         return $rs_ma['material_bn'];
     }
     
+    var $column_basic_material_spu = '基础物料款号';
+    var $column_basic_material_spu_width = 150;
+    var $column_basic_material_spu_order = 16;
+    function column_basic_material_spu($row){
+        $bm_id = $row[$this->col_prefix.'bm_id'];
+        $rs_ma = $this->_mdl_ma_ba_ma->dump(array("bm_id"=>$bm_id),"material_spu");
+        return $rs_ma['material_spu'];
+    }
+    
     var $column_status = '状态';
     var $column_status_width = 150;
     var $column_status_order = 20;

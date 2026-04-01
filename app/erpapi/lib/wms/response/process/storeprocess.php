@@ -43,6 +43,7 @@ class erpapi_wms_response_process_storeprocess {
     }
 
     private function _dealStatus($sdf){
+
         $tmp = $this->tmp_dealStatus($sdf);
         return $tmp;
     }

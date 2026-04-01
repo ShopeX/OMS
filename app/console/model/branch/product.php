@@ -14,16 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class console_mdl_branch_product extends dbeav_model{
      var $export_name = '仓库库存';
 
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
-    public function table_name($real = false){
+     public function table_name($real = false){
         if($real){
            $table_name = 'sdb_ome_branch_product';
         }else{
@@ -32,10 +26,6 @@ class console_mdl_branch_product extends dbeav_model{
         return $table_name;
     }
 
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema(){
         $schema = app::get('ome')->model('branch_product')->get_schema();
         unset($schema['columns']['branch_id']);
@@ -65,6 +55,7 @@ class console_mdl_branch_product extends dbeav_model{
             $pRow = array();
             $detail['store'] = $aFilter['store'];
             $detail['store_freeze'] = $aFilter['store_freeze'];
+            $detail['available_store'] = max(0, $aFilter['store'] - $aFilter['store_freeze']);
             $detail['barcode'] = "\t".$this->charset->utf2local($barcode);
             $detail['name'] = $this->charset->utf2local($aFilter['name']);
             $detail['bn'] = "\t".$this->charset->utf2local($aFilter['bn']);
@@ -83,11 +74,6 @@ class console_mdl_branch_product extends dbeav_model{
         return true;
     }
 
-    /**
-     * fcount_csv
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function fcount_csv($filter = NULL)
     {
         return 600;
@@ -106,6 +92,7 @@ class console_mdl_branch_product extends dbeav_model{
                 '*:款号' => 'material_spu',
                 '*:库存' => 'store',
                 '*:冻结库存' => 'store_freeze',
+                '*:可售库存' => 'available_store',
                 '*:在途库存'=>'arrive_store'
                 );
                 break;
@@ -123,11 +110,6 @@ class console_mdl_branch_product extends dbeav_model{
 
         echo implode("\n",$output);
     }
-    /**
-     * exportName
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function exportName(&$data){
         $branch_id = $_POST['branch_id'];
 

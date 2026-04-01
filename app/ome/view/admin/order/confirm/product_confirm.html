@@ -37,6 +37,7 @@
           <{/if}>
           <th style="width:6%;">购买数量</th>
           <{if $split_model}>
+          <th style="width:6%;">已拆分数量</th>
           <th style="width:6%;">待发货数量</th>
           <{/if}>
           <{foreach from=$branch_list item=branch}>
@@ -46,6 +47,7 @@
           <th style="width:10%;" id="storeBranchHeader" data-storeid="<{$default_store_branch_id}>" <{if $default_store_branch_id == $selected_branch_id}>class="selected"<{/if}>>
             <div id="store_branch_selector" style="cursor: pointer; padding: 4px 8px; color: #3367AC; text-align: center; font-size: 12px; width: 110px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-sizing: border-box; height: 24px; line-height: 16px; transition: text-decoration 0.2s ease;">
               <span id="selected_store_name">可选择O2O门店</span>
+              <span id="more_stores_hint" style="display: none; color: #666; font-size: 11px;"> | 更多》》</span>
               <i class="fa fa-chevron-down" style="margin-left: 5px; font-size: 10px;"></i>
             </div>
           </th>

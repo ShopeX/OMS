@@ -481,7 +481,14 @@ class ome_order_importV2  implements omecsv_data_split_interface
                     $oFunc->writelog(sprintf('订单创建失败：【%s】', $order['order_bn']), 'settlement', $m);
                 }
             }
-
+            
+            //[SAP创建]调用service进行SAP创建
+            foreach(kernel::servicelist('ome.service.order.create.after') as $object)
+            {
+                if(method_exists($object, 'after_create')){
+                    $object->after_create($order);
+                }
+            }
         }
         
         return [true, $errMsg];

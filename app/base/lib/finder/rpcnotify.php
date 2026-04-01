@@ -30,18 +30,20 @@ class base_finder_rpcnotify
             $msg = json_decode($info['msg'], true);
             if (is_array($msg)) {
                 $shop = $shopMdl->dump(array('node_id' => $msg['node_id']), 'name');
+                $data['msg']       = $msg['info'];
+                $data['shop_name'] = $shop['name'];
+            } else {
+                $data['msg']       = $info['msg'];
             }
         }
-        
-        $data['msg']       = $msg['info'];
-        $data['shop_name'] = $shop['name'];
+
         //修改已有缓存
         $cacheInfo = cachecore::fetch('system_notice_data');
         if ($cacheInfo) {
             $infoKey = array_search($id, array_column($cacheInfo, 'id'));
             $cacheInfo[$infoKey]['status'] = 'true';
             cachecore::store('system_notice_data', $cacheInfo, 1800);
-            $noticeMdl->update(['status' => 'true'], array('id' => $id));
+            $noticeMdl->update(['status' => 'true','read_user'=>kernel::single('desktop_user')->get_login_name()], array('id' => $id));
         }
         $render->pagedata['info'] = $data;
         

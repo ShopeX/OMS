@@ -183,8 +183,9 @@ class erpapi_misc_task
             }
         }
         
-        
-
+        // [每小时执行一次]重试推送请求WMS失败的发货单
+        $deliveryLib = kernel::single('console_delivery');
+        $deliveryLib->auto_retry_wms_delivery();
     }
 
     /**

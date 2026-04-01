@@ -71,7 +71,10 @@ class financebase_data_task
             $ioType->setFilePrefix(md5(KV_PREFIX . uniqid() . time()));
             $ioType->setPageSize($page_size);
             $ioType->setCellDateCnt($columnData['column'], $columnData['time_diff']);
-            $ioType->getData($file_name, 0, -1, 0, true);
+            
+            // 支持指定工作表名称（针对多工作表Excel文件，如天猫优品）
+            $sheet = isset($oProcess->sheet_name) ? $oProcess->sheet_name : 0;
+            $ioType->getData($file_name, $sheet, -1, 0, true);
 
             if ($ioType->file_data) {
                 $storageLib = kernel::single('taskmgr_interface_storage');
@@ -277,8 +280,23 @@ class financebase_data_task
             $fund_title = $workbook['fund'][0]; // 资金表标题（第一行）
 
             // 3. 分别处理结算表和资金表，使用各自对应的标题
-            $settlement_result = $this->splitSettlementData($workbook['settlement'], $shop_id, $task_info, $page_size, $settlement_title);
-            $fund_result = $this->splitFundData($workbook['fund'], $shop_id, $task_info, $page_size, $fund_title);
+            $settlement_result = $this->splitSettlementData($workbook['settlement'], $shop_id, $task_info, $page_size, $settlement_title, $settlement_has_data);
+            $fund_result = $this->splitFundData($workbook['fund'], $shop_id, $task_info, $page_size, $fund_title, $fund_has_data);
+
+            // 检查两个工作表是否都为空
+            if (!$settlement_has_data && !$fund_has_data) {
+                // 更新导入记录状态为失败
+                if (isset($task_info['queue_data']['import_id'])) {
+                    $db = kernel::database();
+                    $import_id = intval($task_info['queue_data']['import_id']);
+                    $sql = "UPDATE sdb_financebase_bill_import_jdwallet 
+                            SET status = 'failed', 
+                                error_msg = '结算表和资金表都为空，无法导入' 
+                            WHERE id = {$import_id}";
+                    $db->exec($sql);
+                }
+                return array(false, '结算表和资金表都为空，无法导入');
+            }
 
             if (!$settlement_result || !$fund_result) {
                 // 更新导入记录状态为失败
@@ -408,7 +426,19 @@ class financebase_data_task
             $data[] = $title; // 第一行是标题
             
             while (($row = $excel->nextRow()) !== null) {
-                $data[] = $row;
+                // 过滤空行：检查所有字段是否都为空
+                $is_empty = true;
+                foreach ($row as $value) {
+                    if (!empty(trim($value))) {
+                        $is_empty = false;
+                        break;
+                    }
+                }
+                
+                // 只有非空行才添加到数据中
+                if (!$is_empty) {
+                    $data[] = $row;
+                }
             }
             
             return $data;
@@ -425,18 +455,37 @@ class financebase_data_task
      * @param array $task_info 任务信息
      * @param int $page_size 分片大小
      * @param array $title 标题信息
+     * @param bool &$has_data 返回是否有有效数据
      * @return bool
      */
-    private function splitSettlementData($sheet_data, $shop_id, $task_info, $page_size, $title)
+    private function splitSettlementData($sheet_data, $shop_id, $task_info, $page_size, $title, &$has_data)
     {
+        $has_data = false;
+        
         // 处理结算表数据
         if (empty($sheet_data) || count($sheet_data) < 2) {
-            return false;
+            return true; // 允许结算表为空，但标记为无数据
         }
         
         // 第一行是标题，从第二行开始是数据
         $data_rows = array_slice($sheet_data, 1);
         $headers = $sheet_data[0];
+
+        // 检查是否有有效的数据行（非空行）
+        foreach ($data_rows as $row) {
+            // 检查行中是否有非空值
+            foreach ($row as $value) {
+                if (!empty(trim($value))) {
+                    $has_data = true;
+                    break 2; // 跳出两层循环
+                }
+            }
+        }
+        
+        // 如果没有有效数据，直接返回true（结算表可能为空）
+        if (!$has_data) {
+            return true;
+        }
 
         $chunk_count = 0;
         $file_prefix = md5(KV_PREFIX . 'settlement_' . time());
@@ -476,18 +525,38 @@ class financebase_data_task
      * @param array $task_info 任务信息
      * @param int $page_size 分片大小
      * @param array $title 标题信息
+     * @param bool &$has_data 返回是否有有效数据
      * @return bool
      */
-    private function splitFundData($sheet_data, $shop_id, $task_info, $page_size, $title)
+    private function splitFundData($sheet_data, $shop_id, $task_info, $page_size, $title, &$has_data)
     {        
+        $has_data = false;
+        
         // 处理资金表数据
         if (empty($sheet_data) || count($sheet_data) < 2) {
-            return false;
+            // 如果只有标题行或完全为空，也返回true（资金表可能不导入数据）
+            return true;
         }
         
         // 第一行是标题，从第二行开始是数据
         $data_rows = array_slice($sheet_data, 1);
         $headers = $sheet_data[0];
+
+        // 检查是否有有效的数据行（非空行）
+        foreach ($data_rows as $row) {
+            // 检查行中是否有非空值
+            foreach ($row as $value) {
+                if (!empty(trim($value))) {
+                    $has_data = true;
+                    break 2; // 跳出两层循环
+                }
+            }
+        }
+        
+        // 如果没有有效数据，直接返回true（资金表可能不导入数据）
+        if (!$has_data) {
+            return true;
+        }
 
         $chunk_count = 0;
         $file_prefix = md5(KV_PREFIX . 'fund_' . time());

@@ -21,10 +21,13 @@ class ome_refund_bool_type
     const __PROTECTED_CODE = 0x0001;
     //零秒退快递拦截
     const __ZERO_INTERCEPT = 0x0002;
+    //手工确认为仅退款
+    const __ONLY_REFUND = 0x0004;
     
     private $boolStatus = array(
         self::__PROTECTED_CODE => array('identifier'=>'保', 'text'=>'价保退款单', 'color'=>'RED', 'search'=>'true'),
         self::__ZERO_INTERCEPT => array('identifier'=>'拦', 'text'=>'零秒退快递拦截', 'color'=>'#F183A0', 'search'=>'true'),
+        self::__ONLY_REFUND => array('identifier'=>'仅', 'text'=>'手工确认为仅退款', 'color'=>'blue', 'search'=>'true'),
     );
     
     /**

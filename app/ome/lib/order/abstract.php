@@ -25,6 +25,9 @@ abstract class ome_order_abstract
 {
     public $page_size = 100;
     
+    // 预约订单标记
+    public $reservation_order_label = 'RESERVATION_ORDER';
+    
     public function __construct()
     {
         //--

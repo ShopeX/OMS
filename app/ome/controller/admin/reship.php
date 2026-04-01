@@ -166,7 +166,8 @@ class ome_ctl_admin_reship extends desktop_controller{
                 $data = array(
                     'reship_bn' =>  $reship_detail['reship_bn'],
                     'branch_bn' => $branch['branch_bn'],
-                    'reship_id' => $reship_detail['reship_id'],
+                    'owner_code' => $branch['owner_code'],
+                  'reship_id' => $reship_detail['reship_id'],
                 );
                 $result = kernel::single('console_event_trigger_reship')->cancel($wms_id, $data, true);
 
@@ -182,7 +183,12 @@ class ome_ctl_admin_reship extends desktop_controller{
 
             //判断是否是已确认拒绝如果是需要释放冻结库存
             kernel::single('console_reship')->releaseChangeFreeze($reship_id);
-
+            // 退货单取消后的service扩展点
+            foreach(kernel::servicelist('console.service.reship.cancel.after') as $object) {
+                if(method_exists($object, 'cancel_reship_after')) {
+                    $object->cancel_reship_after($reship_id);
+                }
+            }
             $memo = '拒绝确认收货';
             if($return_id){
                 $oOperation_log->write_log('return@ome',$return_id,$memo);

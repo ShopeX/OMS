@@ -118,7 +118,7 @@ $db['goods_price'] = array(
             ),
         ),
     ),
-    'comment' => '经销商品价格管理',
+    'comment' => '经销基础物料价格管理',
     'engine'  => 'innodb',
     'version' => '$Rev: $',
 ); 

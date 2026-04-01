@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class ome_sync_api_log{
 
     /**
@@ -128,32 +127,79 @@ class ome_sync_api_log{
         $apiObj->update($updateSdf,$updateFilter);
 
         // 将支付或者退款请求的同步任务设置为失败
-        if (!empty($log_ids)){
-            $log_ids = implode(',', $log_ids);
-            $where = " `log_id` in ($log_ids) ";
-            kernel::database()->exec($sql.$where);
-        }
+        //@todo：下面的$sql语句未定义，因为上面已经注释掉$sql变量；
+//        if (!empty($log_ids)){
+//            $log_ids = implode(',', $log_ids);
+//            $where = " `log_id` in ($log_ids) ";
+//            kernel::database()->exec($sql.$where);
+//        }
+        
         return true;
     }
 
     /**
      * 自动清除同步日志
      * 每天检测将超过(默认15,可配置)天的日志数据清除(暂移到一张备份表当中)
+     * 采用分批删除方式，避免大数据量时出现锁等待超时问题
      */
     public function clean(){
-
+        $db = kernel::database();
+        
         $time = time();
         $clean_time = app::get('ome')->getConf('ome.api_log.clean_time');
         
         if (empty($clean_time)) $clean_time = 15;
+        
+        $time_threshold = $time - $clean_time * 24 * 60 * 60;
+        $batch_size = 2000; // 每批删除的记录数
+        $total_deleted = 0; // 总删除记录数
+        $batch_count = 0; // 批次计数
+        
+        // 分批删除，避免锁等待超时
+        while (true) {
+            try {
+                // 查询一批需要删除的记录 ID（使用主键索引，性能更好）
+                $select_sql = "SELECT log_id FROM sdb_ome_api_log WHERE createtime<'{$time_threshold}' LIMIT 0, {$batch_size}";
+                $logIds = $db->select($select_sql);
+                if (empty($logIds)) {
+                    // 如果没有更多数据，退出循环
+                    break;
+                }
+                
+                // format
+                $logIds = array_column($logIds, 'log_id');
+                
+                // 使用主键删除，减少锁范围
+                $log_ids_str = "'". implode("','", $logIds) . "'";
+                $del_sql = "DELETE FROM sdb_ome_api_log WHERE log_id IN ({$log_ids_str})";
+                $db->exec($del_sql);
+                
+//                $deleted_count = count($logIds);
+//                $total_deleted += $deleted_count;
+//                $batch_count++;
 
-        $where = " WHERE `createtime`<'".($time-$clean_time*24*60*60)."' ";
-
-        $del_sql = " DELETE FROM `sdb_ome_api_log` $where ";
-
-        kernel::database()->exec($del_sql);
+//                // 记录执行日志（仅在删除数量较多时记录，避免日志过多）
+//                if ($batch_count % 10 == 0 || $deleted_count < $batch_size) {
+//                    error_log("API日志清理：第 {$batch_count} 批，删除 {$deleted_count} 条记录，累计删除 {$total_deleted} 条");
+//                }
+                
+                // 短暂延迟，避免对数据库造成过大压力
+                usleep(100000); // 0.1秒
+            } catch (Exception $e) {
+//                // 记录错误日志，但继续执行下一批
+//                error_log("API日志清理第 " . ($batch_count + 1) . " 批失败：" . $e->getMessage());
+                
+                // 短暂延迟后继续
+                usleep(100000); // 0.1秒
+                continue;
+            }
+        }
+        
+//        // 记录最终结果
+//        if ($total_deleted > 0) {
+//            error_log("API日志清理完成：共执行 {$batch_count} 批，删除 {$total_deleted} 条过期记录");
+//        }
 
         return true;
     }
-
 }

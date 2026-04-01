@@ -17,11 +17,36 @@
 
 class taskmgr_whitelist
 {
+    static private $whiteObj = [];
+
+    public static function initWhitelist($taskName)
+    {
+        if(empty(self::$whiteObj)) {
+            $path = __DIR__.'/whitelist'; 
+            foreach (glob($path.'/*.php') as $file_name) {
+                require_once $file_name;
+                $class_name = 'taskmgr_whitelist_'.basename($file_name,'.php');
+                try{
+                    self::$whiteObj[] = new $class_name();
+                } catch (Exception $e) {
+                    echo $e->getMessage();
+                }
+            }
+        }
+        $task = [];
+        foreach (self::$whiteObj as $obj) {
+            if(method_exists($obj,$taskName)) {
+                $task = array_merge($task,$obj->{$taskName}());
+            }
+        }
+        return $task;
+    }
 
     //进队列业务逻辑处理任务
     public static function task_list()
     {
-        return $_tasks = array(
+        $task = self::initWhitelist('task_list');
+        $_tasks = array(
             'autochk'       => array(
                 'method' => 'wms_autotask_task_check', 
                 'threadNum' => 5,
@@ -100,12 +125,14 @@ class taskmgr_whitelist
                 'timeout' => 180,
             ),
         );
+        return array_merge($_tasks, $task);
     }
 
     //定时任务，线程数不允许修改
     public static function timer_list()
     {
-        return $_tasks = array(
+        $task = self::initWhitelist('timer_list');
+        $_tasks = array(
             'misctask'          => array('method' => 'ome_autotask_timer_misctask', 'threadNum' => 1),  // 系统定时任务分、时、天、周、月任务
             'inventorydepth'    => array('method' => 'ome_autotask_timer_inventorydepth', 'threadNum' => 1),    // 库存回写
             // 'batchfill'         => array('method' => 'ome_autotask_timer_batchfill', 'threadNum' => 1),  // 订单补单任务
@@ -148,7 +175,7 @@ class taskmgr_whitelist
 
             'sync_branch_freeze_decr' => array('method'=>'ome_autotask_timer_branchfreezedecr', 'threadNum' => 1), // 后置仓更新冻结
             'sync_sku_freeze_decr' => array('method'=>'ome_autotask_timer_skufreezedecr', 'threadNum' => 1), // 后置商品更新冻结
-            'check_freeze_store' => array('method'=>'monitor_autotask_timer_checkfreezestore', 'threadNum' => 1), // 对比ome_branch_product和basic_material_stock_freeze
+            'check_freeze_store' => array('method'=>'monitor_autotask_timer_checkfreezestore', 'threadNum' => 1, 'retry' => false, 'timeout' => 600), // 对比ome_branch_product和basic_material_stock_freeze
             // 'clean_freeze_queue' => array('method'=>'monitor_autotask_timer_cleanfreezequeue', 'threadNum' => 1),   // 清理冻结队列
 
             'ediws_accountorders'=>array('method'=>'ediws_autotask_timer_accountorders', 'threadNum' => 1),// EDI实销实结明细
@@ -162,16 +189,19 @@ class taskmgr_whitelist
             'sync_shop_skus'=>array('method'=>'inventorydepth_autotask_timer_shopskus', 'threadNum' => 1, 'timeout' => 180),// 下载缓存商品
             'check_order_is_delivery' => array('method'=>'monitor_autotask_timer_checkorderisdelivery', 'threadNum' => 1), 
             'o2oundelivery'    => array('method'=>'monitor_autotask_timer_o2oundelivery', 'threadNum'=>1),
-            // 'retry_delivery_cancel_to_wms'=>array('method'=>'ome_autotask_timer_retrydeliverycancel', 'threadNum' => 1),// 重试推送wms发货单取消
+            'retry_delivery_cancel_to_wms'=>array('method'=>'ome_autotask_timer_retrydeliverycancel', 'threadNum' => 1),// 重试推送wms发货单取消
             'ediws_fixaccountorders'=>array('method'=>'ediws_autotask_timer_fixaccountorders', 'threadNum' => 1),// EDI实销实结明细补拉任务
             'invoice_queryinvoicelist'       => array('method' => 'invoice_autotask_timer_queryinvoicelist', 'threadNum' => 1),
+            'platform_timeliness' => array('method' => 'ome_autotask_timer_platform_timeliness', 'threadNum' => 1),// 平台时效检查
         );
+        return array_merge($_tasks, $task);
     }
 
     //初始化域名进任务队列,这里的命名规范就是实际连的队列任务+domainqueue生成这个初始化任务的数组值，线程数不允许修改
     public static function init_list()
     {
-        return $_tasks = array(
+        $task = self::initWhitelist('init_list');
+        $_tasks = array(
             'misctaskdomainqueue'    => array(
                 'threadNum' => 1,
                 'rule'      => '*/30 * * * * *',
@@ -377,10 +407,10 @@ class taskmgr_whitelist
                 'threadNum' => 1,
                 'rule' => '0 0 * * * *',
             ),
-            // 'retry_delivery_cancel_to_wms'=>array(
-            //     'threadNum' => 1,
-            //     'rule' => '0 */5 * * * *',
-            // ),
+            'retry_delivery_cancel_to_wms'=>array(
+                'threadNum' => 1,
+                'rule' => '0 */5 * * * *',
+            ),
             'ediws_fixaccountorders'=>array(
                 'threadNum' => 1,
                 'rule' => '0 0 3 * * *',
@@ -393,13 +423,19 @@ class taskmgr_whitelist
                 'threadNum' => 1,
                 'rule' => '0 */15 * * * *',
             ),
+            'platform_timelinessdomainqueue' => array(
+                'threadNum' => 1,
+                'rule' => '0 */20 * * * *',
+            ),
         );
+        return array_merge($_tasks, $task);
     }
 
     //导出任务
     public static function export_list()
     {
-        return $_tasks = array(
+        $task = self::initWhitelist('export_list');
+        $_tasks = array(
             'exportsplit'           => array(
                 'method' => 'ome_autotask_export_exportsplit', 
                 'threadNum' => 5,
@@ -436,12 +472,14 @@ class taskmgr_whitelist
                 'name' => '导出文件生成队列',
             ),
         );
+        return array_merge($_tasks, $task);
     }
 
     //rpc任务
     public static function rpc_list()
     {
-        return $_tasks = array(
+        $task = self::initWhitelist('rpc_list');
+        $_tasks = array(
             'omecallback' => array('method' => 'ome_autotask_rpc_omecallback', 'threadNum' => 5),
             'wmscallback' => array('method' => 'ome_autotask_rpc_wmscallback', 'threadNum' => 5),
             'wmsrpc'      => array(
@@ -455,10 +493,12 @@ class taskmgr_whitelist
                 'name' => '收单队列',
             ),
         );
-    }
+        return array_merge($_tasks, $task);
+ }
 
     public static function finance_list(){
-        return $_tasks = array(
+        $task = self::initWhitelist('finance_list');
+        $_tasks = array(
             'billapidownload'       => array('method'=>'financebase_autotask_task_process', 'threadNum'=>1), //财务下载任务
             'billassign'            => array('method'=>'financebase_autotask_task_process', 'threadNum'=>1), //账单导入分派任务
             'billjdwalletassign'    => array('method'=>'financebase_autotask_task_process', 'threadNum'=>1), //京东钱包导入分派任务
@@ -486,6 +526,7 @@ class taskmgr_whitelist
             'jitaftersale'          => array('method'=>'billcenter_autotask_timer_aftersales', 'threadNum' => 1), // JIT售后单
 
         );
+        return array_merge($_tasks, $task);
     }
 
     //全部任务

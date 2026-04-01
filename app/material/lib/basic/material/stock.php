@@ -794,6 +794,9 @@ class material_basic_material_stock extends ome_redis{
             $dateline = 'UNIX_TIMESTAMP()';
             if ($opt == '+') {
                 $store = "store=IFNULL(store, 0)+" . $item['quantity'] . ',';
+                
+                // 库存增加时，记录“库存最后添加时间”
+                $store .= " inc_store_lastmodify=" . $dateline . ",";
             } else {
                 // opt='-'的时候，$item['quantity']为负，所以用+
                 if ($item['negative_stock'] == 'true'){

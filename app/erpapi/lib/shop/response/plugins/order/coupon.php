@@ -57,7 +57,7 @@ class erpapi_shop_response_plugins_order_coupon extends erpapi_shop_response_plu
                     'material_name' => $value['name'],
                     'material_bn'   => $value['bn'],
                     'oid'           => $oid,
-                    'create_time'   => kernel::single('ome_func')->date2time($platform->_ordersdf['createtime']),
+                    'create_time'   => sprintf('%.0f', time()),
                     'shop_id'       => $platform->__channelObj->channel['shop_id'],
                     'shop_type'     => $platform->__channelObj->channel['shop_type'],
                     'org_id'        => $platform->__channelObj->channel['org_id'],
@@ -92,7 +92,7 @@ class erpapi_shop_response_plugins_order_coupon extends erpapi_shop_response_plu
                         'amount'        => sprintf('%.3f', $v['pmt_amount'] / $value['num']),
                         'total_amount'  => $v['pmt_amount'],
                         'create_time'   => sprintf('%.0f', time()),
-                        'pay_time'      => $platform->_ordersdf['pay_time'] ? kernel::single('ome_func')->date2time($platform->_ordersdf['pay_time']) : null,
+                        'pay_time'      => !empty($platform->_newOrder['paytime']) ? kernel::single('ome_func')->date2time($platform->_newOrder['paytime']) : null,
                         'shop_type'     => $platform->__channelObj->channel['shop_type'],
                         'source'        => 'push'
                     );
@@ -126,8 +126,8 @@ class erpapi_shop_response_plugins_order_coupon extends erpapi_shop_response_plu
                             'coupon_type'   => 0,
                             'amount'        => sprintf('%.3f', floatval($calcActuallyPay) / (intval($orderObj['quantity']) ?: 1)),
                             'total_amount'  => floatval($calcActuallyPay),
-                            'create_time'   => kernel::single('ome_func')->date2time($platform->_ordersdf['createtime']),
-                            'pay_time'      => $platform->_ordersdf['pay_time'] ? kernel::single('ome_func')->date2time($platform->_ordersdf['pay_time']) : null,
+                            'create_time'   => sprintf('%.0f', time()),
+                            'pay_time'      => !empty($platform->_newOrder['paytime']) ? kernel::single('ome_func')->date2time($platform->_newOrder['paytime']) : null,
                             'shop_type'     => $platform->__channelObj->channel['shop_type'],
                             'source'        => 'push'
                         ];
@@ -202,6 +202,7 @@ class erpapi_shop_response_plugins_order_coupon extends erpapi_shop_response_plu
                 $coupon['objects_coupon_data'][] = array_merge($coupon['objects_coupon_data'], $_coupon['objects_coupon_data']);
             }
         }
+
         return $coupon;
     }
     

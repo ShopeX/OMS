@@ -25,6 +25,7 @@
          <!-- <permission id="finance_bill_setting_index">费用项管理</permission> -->
          <permission id="finance_bill_setting_init">账期设置</permission>
 		 <permission id="finance_monthend_index">月末结账</permission>
+         <!-- <permission id="finance_gaptype_index">差异类型设置</permission> -->
          <!-- <permission id="finance_bill_confirm">无归属账单</permission> -->
          <!-- <permission id="finance_bills_analysis">费用统计</permission> -->
          
@@ -49,6 +50,8 @@
             <menu controller='setting_init' action='index' permission='finance_bill_setting_init' display='false' order='1900100'>账期设置</menu>
             <menu controller='monthend' action='index' permission='finance_monthend_index' display='true' order='1900100'>账期列表</menu>
 
+            <!-- 详情页面菜单，display='false'表示不在菜单中显示，但用于权限检查 -->
+            <menu controller='monthend_verification' action='index' permission='finance_monthend_index' display='false' order='1900200'>核销列表</menu>
             <!-- <menu controller='monthend_verification' action='index' permission='finance_monthend_index' display='false' order='1000300'>账期核销</menu> -->
             <!-- <menu controller='monthend_detail' action='index' permission='finance_monthend_index' display='false' order='1000400'>账期详情</menu> -->
             <!-- <menu controller='monthend_uncharge' action='index' permission='finance_monthend_index' display='false' order='1000500'>往期单据</menu> -->
@@ -56,6 +59,9 @@
 <!--         <menugroup name="对账报表">
             <menu controller='bill_order' action='index' permission='finance_bill_order_index' display='false' order='3000701'>订单收支明细</menu>
             <menu controller='ar_item' action='index' permission='finance_ar_index' display='false' order='3000702'>销售到账明细</menu>
+        </menugroup> -->
+        <!-- <menugroup name="账单设置" en="bill-basic-set">
+            <menu controller='gaptype' action='index' permission='finance_gaptype_index' display='true' order='2000400'>差异类型设置</menu>
         </menugroup> -->
     </workground>
 <!--     <workground name="单据报表" id="invoice_center"  order="1100">

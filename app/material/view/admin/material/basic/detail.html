@@ -154,6 +154,18 @@
                     </div>
                     <span style="color:red;">*支持门店配送/自提，需要开启此配置项。</span>
                 </div>
+
+                <div class="form-field">
+                    <span class="form-field-label">是否管控库存：</span>
+                    <div class="form-radios">
+                        <input id="is_ctrl_store01" name="is_ctrl_store" type="radio" <{if $material_info.is_ctrl_store != 2}>checked="checked"<{/if}> value="1">
+                        <label for="is_ctrl_store01">是</label>
+                        <input id="is_ctrl_store02" name="is_ctrl_store" type="radio" <{if $material_info.is_ctrl_store == 2}>checked="checked"<{/if}> value="2">
+                        <label for="is_ctrl_store02" >否</label>
+                    </div>
+                    <span style="color:red;">*审核订单时，是否需要管控库存。</span>
+                </div>
+
                 <div class="form-field">
                     <span class="form-field-label">所属公司业务组织：</span>
                     <select class="form-input" placeholder="请选择" name="bbu_info">

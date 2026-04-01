@@ -32,17 +32,20 @@
     </thead>
     <tbody>
       <{foreach from=$conf.objs item=obj}>
-      <tr id="tr_<{$obj.obj_id}>" oid="<{$obj.obj_id}>" <{if $obj.delete == 'true'}>style="background-color: #DBDBDB;" g-del="b"  class='disabled'<{else}>g-del="a"<{/if}> g-type="<{$obj.obj_type}>" g-pid="<{$obj.goods_id}>" g-shop-pid="<{$obj.shop_goods_id}>" aid="<{$obj.obj_id}>" g-bn="<{$obj.bn}>" g-pname="<{$obj.name}>" >
+      <tr id="tr_<{$obj.obj_id}>" oid="<{$obj.obj_id}>" <{if $obj.delete == 'true'}>style="background-color: #DBDBDB;" g-del="b"  class='disabled'<{else}>g-del="a"<{/if}> g-type="<{$obj.obj_type}>" g-pid="<{$obj.goods_id}>" g-shop-pid="<{$obj.shop_goods_id}>" aid="<{$obj.obj_id}>" g-bn="<{$obj.bn}>" g-pname="<{$obj.name}>" <{if !empty($obj.oid) && $obj.oid != '-1'}>data-oid="<{$obj.oid}>"<{/if}>>
         <td class="obj_bn <{$obj.obj_type}>class">
           <span class="number"><{$obj.bn}></span>
-          <input type="hidden" value="<{$obj.bn}>" name="bn_list[]" /></td>
+          <input type="hidden" value="<{$obj.bn}>" name="bn_list[]" />
+          <{if !empty($obj.oid) && $obj.oid != '-1'}><input type="hidden" name="pko[oid][<{$obj.obj_id}>]" value="<{$obj.oid}>" /><{/if}></td>
         <td class="obj_name"><{$obj.name}><input name="pko_ids[]" id="pko_ids_<{$obj.obj_id}>" type="text" value="<{$obj.goods_id}>" style="display:none;" /></td>
         <td class="obj_num"><input type="hidden" value="<{$obj.obj_id}>" name="pko[obj][<{$obj.obj_id}>][]" />
-          <input atype="num" aid="<{$obj.obj_id}>" name="pko[num][<{$obj.obj_id}>]" type="text" size="5" value="<{$obj.quantity}>" vtype="required&&unsignedint" id="num_<{$obj.obj_id}>" <{if $obj.delete == 'true'}>disabled="true"<{/if}> onchange="changetotalpko(this);total();" onclick='edit_checked("<{$obj.obj_id}>","<{$obj.bn}>");' /></td>
-        <td class="obj_price"><input name="pko[price][<{$obj.obj_id}>]" type="text" size="8" oninput="value=value.toString().match(/^\d+(?:\.\d{0,2})?/)" value="<{$obj.price}>" vtype="required&&unsigned" atype="price" id="pr_<{$obj.obj_id}>" aid="<{$obj.obj_id}>" <{if $obj.delete == 'true'}>disabled="true"<{/if}> onchange="changetotalpko(this);total();" onclick='edit_checked("<{$obj.obj_id}>","<{$obj.bn}>");' /></td>
-        <td class="obj_pmt"><input type="text" id="pmt_<{$obj.obj_id}>" aid="<{$obj.obj_id}>" vtype="unsigned" atype="pmt_price" oninput="value=value.toString().match(/^\d+(?:\.\d{0,2})?/)" value="<{$obj.pmt_price|default:0}>" class="pko_pmt_price"  name="pko[obj_pmt_price][<{$obj.obj_id}>]" size="6" <{if $obj.delete == 'true'}>disabled="true"<{/if}>  onchange="changetotalpko(this);total();" onclick='edit_checked("<{$obj.obj_id}>","<{$obj.bn}>");' /></td>
+          <input atype="num" aid="<{$obj.obj_id}>" name="pko[num][<{$obj.obj_id}>]" type="text" size="5" value="<{$obj.quantity}>" vtype="required&&unsignedint" id="num_<{$obj.obj_id}>" <{if $obj.delete == 'true'}>disabled="true"<{elseif !empty($obj.oid) && $obj.oid != '-1'}>data-original-quantity="<{$obj.quantity}>"<{/if}> onchange="changetotalpko(this);total();" onclick='edit_checked("<{$obj.obj_id}>","<{$obj.bn}>");' /></td>
+        <td class="obj_price"><input name="pko[price][<{$obj.obj_id}>]" type="text" size="8" oninput="value=value.toString().match(/^\d+(?:\.\d{0,2})?/)" value="<{$obj.price}>" vtype="required&&unsigned" atype="price" id="pr_<{$obj.obj_id}>" aid="<{$obj.obj_id}>" <{if $obj.delete == 'true'}>disabled="true"<{elseif !empty($obj.oid) && $obj.oid != '-1'}>readonly="readonly" style="color:#666;"<{/if}> onchange="changetotalpko(this);total();" onclick='edit_checked("<{$obj.obj_id}>","<{$obj.bn}>");' /></td>
+        <td class="obj_pmt"><input type="text" id="pmt_<{$obj.obj_id}>" aid="<{$obj.obj_id}>" vtype="unsigned" atype="pmt_price" oninput="value=value.toString().match(/^\d+(?:\.\d{0,2})?/)" value="<{$obj.pmt_price|default:0}>" class="pko_pmt_price"  name="pko[obj_pmt_price][<{$obj.obj_id}>]" size="6" <{if $obj.delete == 'true'}>disabled="true"<{elseif !empty($obj.oid) && $obj.oid != '-1'}>readonly="readonly" style="color:#666;"<{/if}>  onchange="changetotalpko(this);total();" onclick='edit_checked("<{$obj.obj_id}>","<{$obj.bn}>");' /></td>
         <td class="obj_total"><input type="text" class="pkototal" style="display:none" id="pkototal_<{$obj.obj_id}>" size="2" value="0" <{if $obj.delete == 'true'}>disabled="true"<{/if}> /><input type="text" size="5" id="pkosalepr_<{$obj.obj_id}>" readonly="readonly" <{if $obj.delete == 'true'}>disabled="true"<{/if}> class="none_input<{if $obj.obj_type != 'gift' && $obj.order_items|@count == '1'}> pkosaleprice<{/if}>" value="<{$obj.sale_price}>">
           <input type="hidden" size="5" id="pkopmtpr_<{$obj.obj_id}>" readonly="readonly" <{if $obj.delete == 'true'}>disabled="true"<{/if}> class="none_input<{if $obj.obj_type != 'gift' && $obj.order_items|@count == '1'}> pkopmtprice<{/if}>" value="<{$obj.pmt_order_price}>">
+          <input type="hidden" id="pkopartmjz_<{$obj.obj_id}>" value="<{$obj.part_mjz_discount|default:0}>" />
+          <input type="hidden" id="pkodivideorderfee_<{$obj.obj_id}>" value="<{$obj.divide_order_fee|default:0}>" />
         </td>
         <td class="item_op" objid="<{$obj.obj_id}>">
         <{if $obj.delete == 'false'}>
@@ -72,12 +75,13 @@
     </thead>
     <tbody>
       <{foreach from=$conf.objs item=obj}>
-      <tr id="tr_<{$obj.obj_id}>" oid="<{$obj.obj_id}>" <{if $obj.delete == 'true'}>style="background-color: #DBDBDB;" g-del="b"  class='disabled'<{else}>g-del="a"<{/if}> g-type="<{$obj.obj_type}>" g-pid="<{$obj.goods_id}>" g-shop-pid="<{$obj.shop_goods_id}>" aid="<{$obj.obj_id}>" g-bn="<{$obj.bn}>" g-pname="<{$obj.name}>" >
+      <tr id="tr_<{$obj.obj_id}>" oid="<{$obj.obj_id}>" <{if $obj.delete == 'true'}>style="background-color: #DBDBDB;" g-del="b"  class='disabled'<{else}>g-del="a"<{/if}> g-type="<{$obj.obj_type}>" g-pid="<{$obj.goods_id}>" g-shop-pid="<{$obj.shop_goods_id}>" aid="<{$obj.obj_id}>" g-bn="<{$obj.bn}>" g-pname="<{$obj.name}>" <{if !empty($obj.oid) && $obj.oid != '-1'}>data-oid="<{$obj.oid}>"<{/if}>>
         <td class="obj_bn <{$obj.obj_type}>class">
           <span class="number"><{$obj.bn}></span>
-          <input type="hidden" value="<{$obj.bn}>" name="bn_list[]" /></td>
+          <input type="hidden" value="<{$obj.bn}>" name="bn_list[]" />
+          <{if !empty($obj.oid) && $obj.oid != '-1'}><input type="hidden" name="pko[oid][<{$obj.obj_id}>]" value="<{$obj.oid}>" /><{/if}></td>
         <td class="obj_name"><{$obj.name}><input name="pko_ids[]" id="pko_ids_<{$obj.obj_id}>" type="text" value="<{$obj.goods_id}>" style="display:none;" /></td>
-        <td class="obj_num"><input type="hidden" value="<{$obj.obj_id}>" name="pko[obj][<{$obj.obj_id}>][]" /><input atype="num" aid="<{$obj.obj_id}>" name="pko[num][<{$obj.obj_id}>]" type="text" size="5" value="<{$obj.quantity}>" id="num_<{$obj.obj_id}>" <{if $obj.delete == 'true'}>disabled="true"<{else}>readonly="readonly" style="color:#666;"<{/if}> /><input type="hidden" value="<{$obj.quantity}>" id="old_pko_nums_<{$obj.obj_id}>" /></td>
+        <td class="obj_num"><input type="hidden" value="<{$obj.obj_id}>" name="pko[obj][<{$obj.obj_id}>][]" /><input atype="num" aid="<{$obj.obj_id}>" name="pko[num][<{$obj.obj_id}>]" type="text" size="5" value="<{$obj.quantity}>" id="num_<{$obj.obj_id}>" <{if $obj.delete == 'true'}>disabled="true"<{else}>readonly="readonly" style="color:#666;"<{/if}> <{if !empty($obj.oid) && $obj.oid != '-1'}>data-original-quantity="<{$obj.quantity}>"<{/if}> /><input type="hidden" value="<{$obj.quantity}>" id="old_pko_nums_<{$obj.obj_id}>" /></td>
         <td class="obj_buy_nums">
         <{if $obj.left_nums <= 0}>
             <input aid="<{$obj.obj_id}>" name="pko[item_buy_nums][<{$obj.obj_id}>]" type="text" size="5" value="<{$obj.left_nums}>" id="item_buy_nums_<{$obj.obj_id}>" disabled="true" />
@@ -86,10 +90,12 @@
         <{/if}>
         <{if $obj.make_nums}><br />(<font color="#f00;">已发货：<{$obj.make_nums}></font>)<input type="hidden" value="<{$obj.make_nums}>" id="split_send_<{$obj.obj_id}>" /><{/if}>
         </td>
-        <td class="obj_price"><input name="pko[price][<{$obj.obj_id}>]" type="text" size="8" oninput="value=value.toString().match(/^\d+(?:\.\d{0,2})?/)" value="<{$obj.price}>" vtype="required&&unsigned" atype="price" id="pr_<{$obj.obj_id}>" aid="<{$obj.obj_id}>" <{if $obj.delete == 'true'}>disabled="true"<{elseif $obj.make_nums > 0}>readonly="readonly" style="color:#666;"<{else}>onchange="changetotalpko(this);total();"<{/if}> /></td>
-        <td class="obj_pmt"><input type="text" id="pmt_<{$obj.obj_id}>" aid="<{$obj.obj_id}>" vtype="unsigned" atype="pmt_price" oninput="value=value.toString().match(/^\d+(?:\.\d{0,2})?/)" value="<{$obj.pmt_price|default:0}>" class="pko_pmt_price"  name="pko[obj_pmt_price][<{$obj.obj_id}>]" size="6" <{if $obj.delete == 'true'}>disabled="true"<{elseif $obj.make_nums > 0}>readonly="readonly" style="color:#666;"<{else}>onchange="changetotalpko(this);total();"<{/if}> /></td>
+        <td class="obj_price"><input name="pko[price][<{$obj.obj_id}>]" type="text" size="8" oninput="value=value.toString().match(/^\d+(?:\.\d{0,2})?/)" value="<{$obj.price}>" vtype="required&&unsigned" atype="price" id="pr_<{$obj.obj_id}>" aid="<{$obj.obj_id}>" <{if $obj.delete == 'true'}>disabled="true"<{elseif $obj.make_nums > 0 || (!empty($obj.oid) && $obj.oid != '-1')}>readonly="readonly" style="color:#666;"<{else}>onchange="changetotalpko(this);total();"<{/if}> /></td>
+        <td class="obj_pmt"><input type="text" id="pmt_<{$obj.obj_id}>" aid="<{$obj.obj_id}>" vtype="unsigned" atype="pmt_price" oninput="value=value.toString().match(/^\d+(?:\.\d{0,2})?/)" value="<{$obj.pmt_price|default:0}>" class="pko_pmt_price"  name="pko[obj_pmt_price][<{$obj.obj_id}>]" size="6" <{if $obj.delete == 'true'}>disabled="true"<{elseif $obj.make_nums > 0 || (!empty($obj.oid) && $obj.oid != '-1')}>readonly="readonly" style="color:#666;"<{else}>onchange="changetotalpko(this);total();"<{/if}> /></td>
         <td class="obj_total"><input type="text" class="pkototal" style="display:none" id="pkototal_<{$obj.obj_id}>" size="2" value="0" <{if $obj.delete == 'true'}>disabled="true"<{/if}> /><input type="text" size="5" id="pkosalepr_<{$obj.obj_id}>" readonly="readonly" <{if $obj.delete == 'true'}>disabled="true"<{/if}> class="none_input<{if $obj.obj_type != 'gift' && $obj.order_items|@count == '1'}> pkosaleprice<{/if}>" value="<{$obj.sale_price}>">
         <input type="hidden" size="5" id="pkopmtpr_<{$obj.obj_id}>" readonly="readonly" <{if $obj.delete == 'true'}>disabled="true"<{/if}> class="none_input<{if $obj.obj_type != 'gift' && $obj.order_items|@count == '1'}> pkopmtprice<{/if}>" value="<{$obj.pmt_order_price}>">
+        <input type="hidden" id="pkopartmjz_<{$obj.obj_id}>" value="<{$obj.part_mjz_discount|default:0}>" />
+        <input type="hidden" id="pkodivideorderfee_<{$obj.obj_id}>" value="<{$obj.divide_order_fee|default:0}>" />
         </td>
         <td class="item_op" objid="<{$obj.obj_id}>">
         <{if empty($obj.make_nums)}>
@@ -172,6 +178,42 @@ function edit_checked(obj_id,$obj_bn){
 function changetotalpko(e){
     var id = e.get('aid'),l=0,_ca = e.getNext('.error');
     if(e.disable) return;
+    
+    // 检查是否有oid限制
+    var tr = e.getParent('tr');
+    var hasOidLimit = tr && tr.get('data-oid') && tr.get('data-oid') != '-1';
+    var originalQuantity = null;
+    var originalSalePrice = null;
+    var originalDivideOrderFee = null;
+    var originalPmtPrice = null;
+    
+    if(hasOidLimit) {
+        var numInput = $('num_'+id);
+        if(numInput && numInput.get('data-original-quantity')) {
+            originalQuantity = parseFloat(numInput.get('data-original-quantity'));
+        }
+        if($('pkosalepr_'+id)) {
+            originalSalePrice = parseFloat($('pkosalepr_'+id).get('data-original-sale-price') || $('pkosalepr_'+id).value);
+            if(!$('pkosalepr_'+id).get('data-original-sale-price')) {
+                $('pkosalepr_'+id).set('data-original-sale-price', originalSalePrice);
+            }
+        }
+        if($('pkopmtpr_'+id)) {
+            var pmtOrderPrice = parseFloat($('pkopmtpr_'+id).value || 0);
+            // 直接读取obj层的divide_order_fee
+            if($('pkodivideorderfee_'+id)) {
+                originalDivideOrderFee = parseFloat($('pkodivideorderfee_'+id).value || 0);
+            }
+        }
+        // 获取原始的商品优惠价格
+        if($('pmt_'+id)) {
+            originalPmtPrice = parseFloat($('pmt_'+id).get('data-original-pmt-price') || $('pmt_'+id).value || 0);
+            if(!$('pmt_'+id).get('data-original-pmt-price')) {
+                $('pmt_'+id).set('data-original-pmt-price', originalPmtPrice);
+            }
+        }
+    }
+    
     if (/^\d+(\.\d+)?$/.test(e.value)){
         if(e.get('atype') == 'num'){
             if (parseInt(e.value) <= 0){
@@ -180,7 +222,44 @@ function changetotalpko(e){
                     e.set('value', '0');
                 }
                 return;
-            }else{
+            }
+            
+            // oid限制：验证数量只能改小
+            if(hasOidLimit && originalQuantity !== null) {
+                var newQuantity = parseFloat(e.value);
+                if(newQuantity > originalQuantity) {
+                    if (!_ca){
+                        new Element('span',{'class':'error caution notice-inline',html:'数量不能大于原数量 '+originalQuantity}).injectAfter(e);
+                    }
+                    e.set('value', originalQuantity);
+                    return;
+                } else {
+                    if (_ca) _ca.remove();
+                }
+                
+                // 按比例计算销售价和实付
+                if(originalSalePrice !== null && originalQuantity > 0) {
+                    var ratio = newQuantity / originalQuantity;
+                    var newSalePrice = (originalSalePrice * ratio).toFixed(2);
+                    $('pkosalepr_'+id).set('value', newSalePrice);
+                    
+                    if(originalDivideOrderFee !== null) {
+                        var newDivideOrderFee = (originalDivideOrderFee * ratio).toFixed(2);
+                        // newPmtPrice 按比例计算，和 newSalePrice 一样的计算方式
+                        var newPmtPrice = (originalPmtPrice * ratio).toFixed(2);
+                        $('pmt_'+id).set('value', newPmtPrice);
+                        
+                        // 计算并更新part_mjz_discount = sale_price - divide_order_fee
+                        var newPartMjzDiscount = (parseFloat(newSalePrice) - parseFloat(newDivideOrderFee)).toFixed(2);
+                        if ($('pkopartmjz_'+id)) {
+                            $('pkopartmjz_'+id).set('value', newPartMjzDiscount);
+                        }
+                    }
+                    
+                    $('pkototal_'+id).value = (parseFloat($('num_'+id).value) * parseFloat($('pr_'+id).value)).toFixed(3);
+                    return;
+                }
+            } else {
                 if (_ca) _ca.remove();
             }
 
@@ -219,6 +298,15 @@ function changetotalpko(e){
             }
 
         }else if (e.get('atype') == 'price'){
+            // oid限制：单价不可修改
+            if(hasOidLimit) {
+                var originalPrice = parseFloat($('pr_'+id).get('data-original-price') || $('pr_'+id).value);
+                if(!$('pr_'+id).get('data-original-price')) {
+                    $('pr_'+id).set('data-original-price', originalPrice);
+                }
+                e.set('value', originalPrice);
+                return;
+            }
 
             if (parseInt(e.value) < 0){
                 if (!_ca){
@@ -267,6 +355,15 @@ function changetotalpko(e){
                 $('pkototal_'+oid).value = parseFloat(pkototalsub).toFixed(3);
             }
         }else if (e.get('atype') == 'pmt_price'){
+            // oid限制：优惠价格不可修改
+            if(hasOidLimit) {
+                var originalPmtPrice = parseFloat($('pmt_'+id).get('data-original-pmt-price') || $('pmt_'+id).value);
+                if(!$('pmt_'+id).get('data-original-pmt-price')) {
+                    $('pmt_'+id).set('data-original-pmt-price', originalPmtPrice);
+                }
+                e.set('value', originalPmtPrice);
+                return;
+            }
 
             if (parseInt(e.value) < 0){
                 if (!_ca){
@@ -339,6 +436,40 @@ function changetotalpko(e){
 
 $('pko_list').getElements("input[atype]").each(function(e){
     changetotalpko(e);
+});
+
+// 初始化oid限制的原始值
+$('pko_list').getElements('tr[data-oid]').each(function(tr){
+    var oid = tr.get('data-oid');
+    if(oid && oid != '-1') {
+        var aid = tr.get('aid');
+        var numInput = $('num_'+aid);
+        var priceInput = $('pr_'+aid);
+        var pmtInput = $('pmt_'+aid);
+        var salePriceInput = $('pkosalepr_'+aid);
+        
+        if(numInput && !numInput.get('data-original-quantity')) {
+            numInput.set('data-original-quantity', numInput.value);
+        }
+        if(priceInput && !priceInput.get('data-original-price')) {
+            priceInput.set('data-original-price', priceInput.value);
+        }
+        if(pmtInput && !pmtInput.get('data-original-pmt-price')) {
+            pmtInput.set('data-original-pmt-price', pmtInput.value || 0);
+        }
+        if(salePriceInput && !salePriceInput.get('data-original-sale-price')) {
+            salePriceInput.set('data-original-sale-price', salePriceInput.value);
+        }
+        if($('pkopmtpr_'+aid) && !$('pkopmtpr_'+aid).get('data-original-divide-order-fee')) {
+            var pmtOrderPrice = parseFloat($('pkopmtpr_'+aid).value || 0);
+            var originalSalePrice = parseFloat(salePriceInput.value || 0);
+            // 直接读取obj层的divide_order_fee
+            var originalDivideOrderFee = 0;
+            if($('pkodivideorderfee_'+aid)) {
+                originalDivideOrderFee = parseFloat($('pkodivideorderfee_'+aid).value || 0);
+            }
+        }
+    }
 });
 
 function total_pko(){

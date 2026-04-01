@@ -74,7 +74,7 @@ class omecsv_io_io{
 
     public function finish_import(){
         if( method_exists( $this->model,'finish_import_csv' ) ){
-            $this->model->finish_import_csv();
+            return $this->model->finish_import_csv();
         }
     }
 

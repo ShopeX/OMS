@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 abstract class siso_receipt_iostock_abstract
 {
     const PURCH_STORAGE      = 1; //采购入库Purchasing storage
@@ -47,9 +46,9 @@ abstract class siso_receipt_iostock_abstract
     
     /**
      * 检查是否统计进销存成本
-     * 
+     *
      * @var string
-     * */
+     **/
     protected $_io_cost = true;
 
     public $_iostock_types = array(
@@ -83,11 +82,6 @@ abstract class siso_receipt_iostock_abstract
         '1000'=> array('code'=>'DC','info'=>'转仓入库','is_new'=>true,'io'=>1),
     );
 
-        /**
-     * 设置_io_cost
-     * @param mixed $io_cost io_cost
-     * @return mixed 返回操作结果
-     */
     public function set_io_cost($io_cost)
     {
         $this->_io_cost = $io_cost;
@@ -97,7 +91,7 @@ abstract class siso_receipt_iostock_abstract
 
     /**
      * 出入库明细创建生成方法
-     * 
+     *
      * @param array $params
      * @param string $msg
      */
@@ -126,7 +120,7 @@ abstract class siso_receipt_iostock_abstract
         
         //校验数据内容
         if (!$this->checkData($this->_io_data, $msg)) {
-            $msg = '校验数据内容失败';
+            $msg = '校验数据内容失败'.$msg;
             return false;
         }
         
@@ -178,7 +172,7 @@ abstract class siso_receipt_iostock_abstract
     
     /**
      * 处理有效期
-     * 
+     *
      * @param $iostock_data
      * @param $sourcetb
      * @param $opType
@@ -215,7 +209,7 @@ abstract class siso_receipt_iostock_abstract
     }
 
     /**
-     * 
+     *
      * 检查参数
      * @param array $params
      * @param string $msg
@@ -240,7 +234,7 @@ abstract class siso_receipt_iostock_abstract
     
     /**
      * 格式化数据
-     * 
+     *
      * @param $data
      * @param $err_msg
      * @return boolean
@@ -487,7 +481,7 @@ abstract class siso_receipt_iostock_abstract
     }
 
     /**
-     * 
+     *
      * 检查数据内容
      * @param array $data
      * @param string $msg
@@ -507,7 +501,7 @@ abstract class siso_receipt_iostock_abstract
     }
 
     /**
-     * 
+     *
      * 检验必填字段是否全部填写
      * @param array $data
      * @param string $msg
@@ -533,7 +527,7 @@ abstract class siso_receipt_iostock_abstract
     }
 
     /**
-     * 
+     *
      * 检验字段类型是否符合要求
      * @param array $data
      * @param string $msg
@@ -721,7 +715,7 @@ abstract class siso_receipt_iostock_abstract
     }
 
     /**
-     * 
+     *
      * 出入库明细保存
      */
     public function save($data)
@@ -794,13 +788,6 @@ abstract class siso_receipt_iostock_abstract
 
     //更新基础物料库存
     // 废弃，用change_store_batch处理
-    /**
-     * 更新Product
-     * @param mixed $num num
-     * @param mixed $product_id ID
-     * @param mixed $operator operator
-     * @return mixed 返回值
-     */
     public function updateProduct($num, $product_id, $operator = '-')
     {
         return false;
@@ -816,19 +803,13 @@ abstract class siso_receipt_iostock_abstract
         if ($operator == '-') {
             $sql = "UPDATE sdb_material_basic_material_stock SET store=IF(store<" . $num . ",0,store-$num),last_modified=" . time() . ",real_store_lastmodify=" . time() . ",max_store_lastmodify=" . time() . " WHERE bm_id='" . $product_id . "'";
         } else {
-            $sql = "UPDATE sdb_material_basic_material_stock SET store=store+" . $num . ",last_modified=" . time() . ",real_store_lastmodify=" . time() . ",max_store_lastmodify=" . time() . " WHERE bm_id='" . $product_id . "'";
+            $sql = "UPDATE sdb_material_basic_material_stock SET store=store+" . $num . ",last_modified=" . time() . ",real_store_lastmodify=" . time() . ",max_store_lastmodify=" . time() . ",inc_store_lastmodify=" . time() . " WHERE bm_id='" . $product_id . "'";
         }
 
         return kernel::database()->exec($sql);
     }
     
     //获取基础物料对应仓库库存
-    /**
-     * 获取_branch_store
-     * @param mixed $branch_id ID
-     * @param mixed $product_id ID
-     * @return mixed 返回结果
-     */
     public function get_branch_store($branch_id, $product_id)
     {
         $libBranchProduct = kernel::single('ome_branch_product');
@@ -840,7 +821,7 @@ abstract class siso_receipt_iostock_abstract
     /**
      * 生成出入库单号
      * $type 类型 如：iostock-1
-     * */
+     **/
     public function get_iostock_bn($type, $num = 0)
     {
         $kt           = $this->iostock_rules($type);

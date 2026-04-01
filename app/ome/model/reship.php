@@ -113,6 +113,28 @@ class ome_mdl_reship extends dbeav_model{
             $where .=' AND reship_id IN('.implode(',',$reship_ids).')';
             unset($filter['bn']);
         }
+        if (isset($filter['product_bn'])){
+            $reshipId = array();
+            $reshipId[] = 0;
+
+            //多基础物料查询
+            if($filter['product_bn'] && is_string($filter['product_bn']) && strpos($filter['product_bn'], "\n") !== false){
+                $filter['product_bn'] = array_unique(array_map('trim', array_filter(explode("\n", $filter['product_bn']))));
+            }
+
+            //按基础物料查询相关退货单
+            $reshipItemObj = $this->app->model('reship_items');
+            $rows = $reshipItemObj->getReshipIdByFilterbnEq($filter);
+            if($rows){
+                foreach($rows as $row){
+                    $temp_reship_id = $row['reship_id'];
+                    $reshipId[$temp_reship_id] = $temp_reship_id;
+                }
+            }
+
+            $where .= ' AND reship_id IN ("'.implode('","', $reshipId).'")';
+            unset($filter['product_bn']);
+        }
         if($filter['flag_type_text']) {
             if($filter['flag_type_text'] == 'ydt') {
                 $where .= ' and (flag_type & '.ome_reship_const::__LANJIE_RUKU.')';
@@ -438,7 +460,11 @@ class ome_mdl_reship extends dbeav_model{
             //操作日志
             $memo = $add_operation.'退换货单,单号为:'.$sdf_data['reship_bn'];
             $oOperation_log->write_log('reship@ome',$sdf_data['reship_id'],$memo);
-
+            foreach(kernel::servicelist('ome.service.reship.create.after') as $object) {
+                if(method_exists($object, 'after_create')){
+                    $object->after_create($sdf_data['reship_id']);
+                }
+            }
             //存在相关的售后单 更新相关字段 为了售后问题类型的统计添加的字段(problem_id)，并且给该字段赋值
             if($sdf_data['return_id']){
                 $oProduct = $this->app->model('return_product');
@@ -485,6 +511,11 @@ class ome_mdl_reship extends dbeav_model{
 
                     return false;
                 }
+            }
+
+            // 物流单号重复检测打标（flag_type 位）
+            if (!empty($sdf_data['reship_id']) && !empty($sdf_data['return_logi_no'])) {
+                kernel::single('ome_reship')->markDuplicateReturnLogiNo($sdf_data['reship_id'], $sdf_data['return_logi_no']);
             }
 
             $msg = $add_operation.'退换货单成功，请等待审核!';
@@ -539,7 +570,13 @@ class ome_mdl_reship extends dbeav_model{
           'order_item_id'=>$bn,
         );
         if ($type == 'return') {
-            $item['branch_id'] = $param['branch_id'];
+            // branch_id
+            if(is_array($param['branch_id'])){
+                $item['branch_id'] = isset($param['branch_id'][$bn]) ? intval($param['branch_id'][$bn]) : 0;
+            }else{
+                $item['branch_id'] = intval($param['branch_id']);
+            }
+            
             if($param['shop_goods_bn'][$bn]){
                 $item['shop_goods_bn'] = $param['shop_goods_bn'][$bn];
             }
@@ -551,7 +588,12 @@ class ome_mdl_reship extends dbeav_model{
             }
             
         }else{
-           $item['branch_id'] = $param['branch_id'][$bn];
+            // branch_id
+            if(is_array($param['branch_id'])){
+                $item['branch_id'] = isset($param['branch_id'][$bn]) ? intval($param['branch_id'][$bn]) : 0;
+            }else{
+                $item['branch_id'] = intval($param['branch_id']);
+            }
         }
         $result = $object->save($item);
         if (!$result) {
@@ -1125,7 +1167,7 @@ class ome_mdl_reship extends dbeav_model{
         }
         $order_sdf['mark_text'] = $mark_text;
         $tostr=array();
-        
+        list($actually_amount, $settlement_amount) = $this->getActuallyAmount($reshipinfo['reship_id']);
         //[销售物料层]格式化订单明细
         $item_cost = 0;
         foreach ( $reship_items as $objKey => &$items )
@@ -1143,6 +1185,8 @@ class ome_mdl_reship extends dbeav_model{
             $items['name']        = $items['product_name'];
             $items['quantity']    = $items['num'];
             $items['amount']      = $items['sale_price'] = $items['num'] * $items['price'];
+            $items['actually_amount'] = $actually_amount;
+            $items['settlement_amount'] = $settlement_amount;
             if($order_sdf['order_type'] == 'platform') {
                 $items['is_sh_ship'] = 'true';
             }
@@ -1204,7 +1248,23 @@ class ome_mdl_reship extends dbeav_model{
           $reshipObj->update(array('change_order_id'=>$order_sdf['order_id'],'change_status'=>'1'),array('reship_id'=>$reshipinfo['reship_id']));
           kernel::single('ome_service_aftersale')->returngoods_agree($reshipinfo['return_id']);
           $extend_data = array('orig_reship_id'=>$reshipinfo['reship_id'],'order_id'=>$order_sdf['order_id']);
-          app::get('ome')->model('order_extend')->save($extend_data);
+          
+          //小红书平台：根据return_id查询换货收货地址表中的encrypt_source_data，提取openAddressId到extend_field，openAddressId用于获取电子面单取号
+          if($reshipinfo['shop_type'] == 'xhs' && $reshipinfo['return_id']){
+              $returnExchangeReceiverObj = app::get('ome')->model('return_exchange_receiver');
+              $exchangeReceiverInfo = $returnExchangeReceiverObj->dump(array('return_id'=>$reshipinfo['return_id']), 'encrypt_source_data');
+              
+              if($exchangeReceiverInfo && !empty($exchangeReceiverInfo['encrypt_source_data'])){
+                  $encryptSourceData = unserialize($exchangeReceiverInfo['encrypt_source_data']);
+                  
+                  if($encryptSourceData && is_array($encryptSourceData) && isset($encryptSourceData['openAddressId']) && !empty($encryptSourceData['openAddressId'])){
+                      //追加openAddressId到extend_field
+                      $extend_data['extend_field'] = json_encode(array('openAddressId' => $encryptSourceData['openAddressId']), JSON_UNESCAPED_UNICODE);
+                  }
+              }
+          }
+
+          $extendObj->save($extend_data);
           //原订单上新增换出订单备注
           if($Order_detail['mark_text']) $oldmemo= unserialize($Order_detail['mark_text']);
           $memo = array();
@@ -1225,8 +1285,42 @@ class ome_mdl_reship extends dbeav_model{
        if($order_sdf['order_type'] == 'platform' && $order_sdf['order_id']) {
             kernel::single('ome_order_platform')->deliveryConsign($order_sdf['order_id']);
        }
+       
+       // [SAP创建]调用service进行SAP创建
+       foreach(kernel::servicelist('ome.service.order.create.after') as $object)
+       {
+           if(method_exists($object, 'after_create')){
+               $object->after_create($order_sdf);
+           }
+       }
+       
        return  $result ? $order_sdf : false;
    }
+
+    public function getActuallyAmount($reship_id) {
+        $reshipItems = app::get('ome')->model('reship_items')->getList('num,normal_num,defective_num,order_item_id', ['return_type'=>'return', 'reship_id'=>$reship_id]);
+        if (!$reshipItems) {
+            return [0, 0];
+        }
+        $orderItemNum = [];
+        foreach($reshipItems as $v) {
+            if(empty($v['order_item_id'])) {
+                return [0, 0];
+            }
+            $orderItemNum[$v['order_item_id']] += $v['normal_num'] + $v['defective_num'];
+        }
+        $saleItems = app::get('ome')->model('sales_items')->getList('nums,order_item_id,actually_amount,settlement_amount', ['order_item_id'=>array_column($reshipItems, 'order_item_id')]);
+        $actuallyAmount = 0;
+        $settlementAmount = 0;
+        foreach($saleItems as $v) {
+            if($orderItemNum[$v['order_item_id']]) {
+                $radio = $orderItemNum[$v['order_item_id']] / $v['nums'];
+                $actuallyAmount += $radio * $v['actually_amount'];
+                $settlementAmount += $radio * $v['settlement_amount'];
+            }
+        }
+        return [$actuallyAmount, $settlementAmount];
+    }
 
     /*
      * 数据验证
@@ -1262,32 +1356,35 @@ class ome_mdl_reship extends dbeav_model{
         if($type_return['goods_bn']){
            foreach ($type_return['goods_bn'] as $key => $value)
            {
+              // 获取基础物料号，如果不存在则使用order_item_id作为后备
+              $material_bn = isset($type_return['bn'][$value]) ? $type_return['bn'][$value] : $value;
+              
               if ($data['is_check'] == '11') {
                   $normal_num = intval($type_return['normal_num'][$value]);
                   $defective_num = intval($type_return['defective_num'][$value]);
                   $total_return_num = $normal_num + $defective_num;
                   if ($total_return_num > $type_return['effective'][$value]) {
-                      $v_msg = '货号【'.$value.'】的入库数量超出可退入数量，申请被人拒绝!';
+                      $v_msg = '货号【'.$material_bn.'】的入库数量超出可退入数量，申请被人拒绝!';
                       return false;
                   }
                   
                   //if ($total_return_num < 1) {
-                  //    $v_msg = '货号【'.$value.'】的入库数量为0，需要删除!';
+                  //    $v_msg = '货号【'.$material_bn.'】的入库数量为0，需要删除!';
                   //    return false;
                   //}
               }else{
                   if($type_return['effective'][$value] < 1){
-                      $v_msg = '退入商品中货号为:'.$value.'商品申请数量小于0，申请被拒绝!';
+                      $v_msg = '退入商品中货号为:'.$material_bn.'商品申请数量小于0，申请被拒绝!';
                       return false;
                   }
                   
                   if ($type_return['num'][$value] > $type_return['effective'][$value]) {
-                      $v_msg = '货号【'.$value.'】的申请数量超出可退入数量，申请被人拒绝!';
+                      $v_msg = '货号【'.$material_bn.'】的申请数量超出可退入数量，申请被人拒绝!';
                       return false;
                   }
                   
                   if ($type_return['num'][$value]<=0) {
-                      $v_msg = '货号【'.$value.'】的申请数量必须大于0!';
+                      $v_msg = '货号【'.$material_bn.'】的申请数量必须大于0!';
                       return false;
                   }
               }
@@ -1431,7 +1528,7 @@ class ome_mdl_reship extends dbeav_model{
         //申请退款金额大于0时新建退款申请(货到付款订单不需要创建退款申请单)
         if($money >= 0 && !($is_cod_order&&$money==0)){
             //[兼容]抖音平台退货完成,创建退款申请单号直接使用售后申请单号
-            if(in_array($reshipinfo['shop_type'],['luban','ecos.ecshopx','website','website_v2']) && $reshipinfo['source']=='matrix'){
+            if($reshipinfo['source']=='matrix'){
                 $returnInfo = $Oreturn_products->dump(array('return_id'=>$reshipinfo['return_id']), 'return_bn');
 
                 $refund_apply_bn = ($returnInfo['return_bn'] ? $returnInfo['return_bn'] : $reshipinfo['reship_bn']);
@@ -1624,7 +1721,11 @@ class ome_mdl_reship extends dbeav_model{
                 //c2c店铺平台
                 $c2cShopType = ome_shop_type::shop_list();
                 if(in_array($reshipinfo['shop_type'], $c2cShopType) || in_array($reshipinfo['shop_type'], ome_shop_type::shop_refund_list())){
-                    $agAutoReturn = true;
+                    //差收不发起AG
+                    $compare_nums = $oReship_items->db->select("SELECT item_id FROM sdb_ome_reship_items WHERE reship_id=".$reship_id." AND return_type='return' AND num!=defective_num+normal_num");
+                    if(!$compare_nums){
+                        $agAutoReturn = true;
+                    }
                 }
                 
                 //[开普勒]校验京东云交易MQ消息通知的退款金额
@@ -1681,6 +1782,11 @@ class ome_mdl_reship extends dbeav_model{
         if (isset($reshipinfo['flag_type']) && ($reshipinfo['flag_type'] & ome_reship_const::__RESHIP_DIFF)) {
             $err = '';
             kernel::single('ome_bill_label')->markBillLabel($reshipinfo['order_id'], '', 'SAMS_RETURN_GAP', 'order', $err);
+        }
+        foreach(kernel::servicelist('ome.service.reship.finish.after') as $object=>$instance){
+            if(method_exists($instance,'afterReshipFinish')){
+                $instance->afterReshipFinish($reshipinfo['reship_id']);
+            }
         }
         return true;
     }

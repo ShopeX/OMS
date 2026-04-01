@@ -852,7 +852,11 @@ EOF;
                 if ($res['request_logistics_code']!=$v['delivery_id']) {
                     continue;
                 }
-                $accountList[$v['acct_id']] = [
+                $key = $v['acct_id'];
+                if (isset($v['_unique_acct_id']) && $v['_unique_acct_id']) {
+                    $key = $v['_unique_acct_id'];
+                }
+                $accountList[$key] = [
                     'available'      => $v['available'],
                     'status'         => $v['status'],
                     'delivery_id'    => $v['delivery_id'],
@@ -897,12 +901,12 @@ EOF;
     public function save_shop_address()
     {
         $this->begin();
-        if (!$_POST['acct_id']) {
+        if (!$_POST['_unique_acct_id']) {
             $this->end(false, '请选择一个签约信息');
         }
 
         $accountList = json_decode($_POST['account_list_json'], 1);
-        $accountInfo = $accountList[$_POST['acct_id']];
+        $accountInfo = $accountList[$_POST['_unique_acct_id']];
         if (!$accountInfo) {
             $this->end(false, '电子面单账号id无效');
         }

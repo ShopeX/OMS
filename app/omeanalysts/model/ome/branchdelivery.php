@@ -14,18 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class omeanalysts_mdl_ome_branchdelivery extends dbeav_model{
 
     var $has_export_cnf = true;
 
     var $export_name = '仓库发货情况汇总';
 
-    /**
-     * 获取_count
-     * @param mixed $filter filter
-     * @return mixed 返回结果
-     */
     public function get_count($filter=null){
         
         $sales_sql ='
@@ -45,11 +39,6 @@ class omeanalysts_mdl_ome_branchdelivery extends dbeav_model{
         );
     }
 
-    /**
-     * count
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function count($filter=null){
        
         return count($this->getList('*',$filter));
@@ -127,7 +116,7 @@ class omeanalysts_mdl_ome_branchdelivery extends dbeav_model{
         
         //获取售后单退货数量
         $filter['productIds'] = $productIds;
-        $aftersale_sql = 'select AI.bn,AI.product_id,AI.product_name,sum(AI.num) as num,AI.branch_id,A.shop_id from sdb_sales_aftersale_items AI left join sdb_sales_aftersale A on AI.aftersale_id =  A.aftersale_id
+        $aftersale_sql = 'select AI.bn,AI.product_id,sum(AI.num) as num,AI.branch_id,A.shop_id from sdb_sales_aftersale_items AI left join sdb_sales_aftersale A on AI.aftersale_id =  A.aftersale_id
                           where '.$this->_rfilter($filter).' group by AI.bn,AI.branch_id ,A.shop_id ';
         
         // if($orderType) $aftersale_sql .= ' order by '.(is_array($orderType)?implode($orderType,' '):$orderType);
@@ -153,7 +142,7 @@ class omeanalysts_mdl_ome_branchdelivery extends dbeav_model{
             
             $rowdatas[$md_key]['branch_name']   = $v['branch_id'];
             $rowdatas[$md_key]['product_bn']    = $v['bn'];
-            $rowdatas[$md_key]['product_name']  = $v['product_name'];
+            // product_name 保持来自 sale_datas（sdb_material_basic_material），不覆盖
             $rowdatas[$md_key]['aftersale_num'] = $v['num'];
             $rowdatas[$md_key]['shop_id']       = $v['shop_id'];
             $rowdatas[$md_key]['shop_type']    = kernel::single('omeanalysts_shop')->getShopDetail($v['shop_id']);       
@@ -182,11 +171,6 @@ class omeanalysts_mdl_ome_branchdelivery extends dbeav_model{
         
         return $rows;
     }
-    /**
-     * _newFilter
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function _newFilter($filter){ 
         #$where = array();
         #已发货的基础过滤条件
@@ -259,11 +243,6 @@ class omeanalysts_mdl_ome_branchdelivery extends dbeav_model{
         return  implode(' AND ', $where);
     }
 
-    /**
-     * _sfilter
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function _sfilter($filter){
         
         $where = array();
@@ -349,11 +328,6 @@ class omeanalysts_mdl_ome_branchdelivery extends dbeav_model{
     }
 
     
-    /**
-     * _rfilter
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function _rfilter($filter){
         
         $where = array();
@@ -455,11 +429,6 @@ class omeanalysts_mdl_ome_branchdelivery extends dbeav_model{
         }
     }
 
-    /**
-     * io_title
-     * @param mixed $ioType ioType
-     * @return mixed 返回值
-     */
     public function io_title( $ioType='csv' ){
     
         switch( $ioType ){
@@ -482,25 +451,12 @@ class omeanalysts_mdl_ome_branchdelivery extends dbeav_model{
         return $this->ioTitle[$ioType];
     }
     
-    /**
-     * export_csv
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function export_csv($data){
         $output = array();
         $output[] = $data['title']['branchdelivery']."\n".implode("\n",(array)$data['content']['branchdelivery']);
         echo implode("\n",$output);
     }
 
-    /**
-     * fgetlist_csv
-     * @param mixed $data 数据
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $exportType exportType
-     * @return mixed 返回值
-     */
     public function fgetlist_csv( &$data,$filter,$offset,$exportType = 1 ){
 
         @ini_set('memory_limit','64M');
@@ -561,20 +517,11 @@ class omeanalysts_mdl_ome_branchdelivery extends dbeav_model{
         return true;
     }
 
-    /**
-     * exportName
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function exportName(&$data){
         $data['name'] = $_POST['time_from'].'到'.$_POST['time_to'].$this->export_name;
     }
 
 
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema(){
 
         $schema = array (

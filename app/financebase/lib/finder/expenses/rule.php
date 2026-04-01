@@ -23,6 +23,7 @@
  * ============================
  */
 class financebase_finder_expenses_rule {
+    public $addon_cols = 'rule_content';
 
     public $column_edit = "操作";
     public $column_edit_width = "80";
@@ -38,5 +39,28 @@ class financebase_finder_expenses_rule {
         $ret = '<a href="index.php?app=financebase&ctl=admin_expenses_rule&act=setRule&p[0]='.$row['rule_id'].'&finder_id=' . $finder_id . '" target="dialog::{width:550,height:400,resizeable:false,title:\'设置\'}">设置</a>';
 
         return $ret;
+    }
+
+    var $column_platform = '平台设置';
+    var $column_platform_width = "500";
+    var $column_platform_order = 20;
+    function column_platform($row) {
+
+        $oFunc = kernel::single('financebase_func');
+
+        $platform = $oFunc->getShopPlatform();
+
+        $ret = [];
+
+        $row['rule_content'] = $row[$this->col_prefix.'rule_content'];
+
+        $rule_content = $row['rule_content'] ? json_decode($row['rule_content'],1) : array();
+        foreach ($platform as $key => $value) {
+            if(isset($rule_content[$key]) && $rule_content[$key]) {
+                $ret[] = $value;
+            }
+        }
+
+        return implode(',', $ret);  
     }
 }

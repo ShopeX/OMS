@@ -129,10 +129,6 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
         return $sub_menu;
     }
 
-    /**
-     * notice
-     * @return mixed 返回值
-     */
     public function notice()
     {
         $this->page('admin/receipts/notice.html');
@@ -681,7 +677,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 打印发货单
-     * 
+     *
      */
     function toPrintMerge() {
         $_err = 'false';
@@ -726,7 +722,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 新版打印发货单
-     * 
+     *
      */
     function toPrintMergeNew() {
         $_err = 'false';
@@ -1476,10 +1472,10 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 打印新版本数据结构重组
-     * 
+     *
      * @return void
      * @author chenping<chenping@shopex.cn>
-     * */
+     **/
     private function format_print_delivery($delivery)
     {
         $format_delivery_items = array();
@@ -1560,7 +1556,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 打印快递单
-     * 
+     *
      * 修改 加了一个补打快递单的开关 wujian@shopex.cn 2012年3月14日
      */
     function toPrintShip($afterPrint=true) {
@@ -1907,8 +1903,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
      * wujian@shopex.cn
      * 2012年3月13日
      */
-
-    public function addPrintShip(){
+     public function addPrintShip(){
         if(count($_REQUEST['log_id']) > 0){
             $this->addPrintShipNoData();
             exit;
@@ -1954,8 +1949,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
      * wujian@shopex.cn
      * 2012年3月13日
      */
-
-    public function addPrintShipNoData(){
+     public function addPrintShipNoData(){
          if(is_array($_REQUEST['log_id'])){
             if(count($_REQUEST['log_id']) == 1){
                 $tmp_str = $_REQUEST['log_id'][0];
@@ -2047,7 +2041,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 批量更改物流
-     * 
+     *
      * @param void
      * @return void
      */
@@ -2082,7 +2076,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 更换物流公司
-     * 
+     *
      */
     function doChangeDly() {
         $this->begin();
@@ -2155,10 +2149,10 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 更新发货单的打印状态
-     * 
+     *
      * @param string $type
      * @param int $dly_id
-     * 
+     *
      */
     function setPrintStatus() {
         set_time_limit(0);
@@ -2290,7 +2284,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
     
     /**
      * 打印备货单
-     * 
+     *
      */
     function toPrintStock() {
         $_err = 'false';
@@ -2387,7 +2381,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 录入快递单号
-     * 
+     *
      */
     function insertExpress() {
         if (empty($_POST['id'])) {
@@ -2453,7 +2447,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 合并发货单列表
-     * 
+     *
      * @param bigint $dly_id
      */
     function merge($dly_id) {
@@ -2486,7 +2480,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 拆分发货单列表
-     * 
+     *
      * @param bigint $dly_id
      */
     function split($dly_id) {
@@ -2507,7 +2501,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 合并发货单操作
-     * 
+     *
      */
     function doMerge() {
         $this->begin('index.php?app=ome&ctl=admin_receipts_print&act=merge');
@@ -2562,7 +2556,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 拆分发货单操作
-     * 
+     *
      */
     function doSplit() {
         $this->begin('index.php?app=ome&ctl=admin_receipts_print&act=split');
@@ -2588,7 +2582,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 保存发货单详情信息
-     * 
+     *
      */
     function doDetail() {
         $status = $_POST['status'] ? $_POST['status'] : 0;
@@ -2741,7 +2735,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 保存货品货位详情信息
-     * 
+     *
      */
     function doItemDetail() {
         $this->begin();
@@ -2796,7 +2790,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 打印页面初始化 获取打印批次号
-     * 
+     *
      * @return Array
      */
     function _getPrintQueue($ids) {
@@ -2812,7 +2806,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 检查是否能同批次打印
-     * 
+     *
      * @return bool
      */
     function _checkPrintQueue($ids, &$msg) {
@@ -2918,7 +2912,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 检查发货单是否可操作
-     * 
+     *
      * @param Integer $dly_id
      * @param String $errMsg  引用，用于返回错误信息
      * @return Boolean
@@ -3002,7 +2996,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 判断发货单号状态是否处于取消或异常或超时或失败或disabled
-     * 
+     *
      * @param bigint $dly_id
      * @return null
      */
@@ -3079,7 +3073,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * rebackPrintStyle
-     * 
+     *
      * @access public
      * @return void
      */
@@ -3113,7 +3107,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
     /**
      * 根据发货单ID修改它对映的发货配置
      * 一旦打印了任何一种单据就不
-     * 
+     *
      * @author chenping<chenping@shopex.cn>
      */
     private function updateDeliCfg($deliIds,$sku='') {
@@ -3189,17 +3183,13 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
         echo '"'.implode('","',$title).'"';
     }
 
-    /**
-     * shipStatus
-     * @return mixed 返回值
-     */
     public function shipStatus(){
         return array('succ'=> '已发货','unsucc'=> '未发货');#已发货状态以外的，都是未发货
     }
 
     /**
      * 打印新版快递单
-     * 
+     *
      * 修改 加了一个补打快递单的开关 wujian@shopex.cn 2012年3月14日
      */
     function toPrintExpre($afterPrint=true) {
@@ -3592,7 +3582,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
     }
 
     /**
-     * 运单号异步页面
+     *运单号异步页面
      */
     public function async_logino_page() {
         $channel_id = $_GET['channel_id'];
@@ -3619,10 +3609,6 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
         }
     }
 
-    /**
-     * 获取WaybillLogiNo
-     * @return mixed 返回结果
-     */
     public function getWaybillLogiNo() {
         $waybillObj = kernel::single('logisticsmanager_service_waybill');
         $channel_id = $_POST['channel_id'];
@@ -3651,10 +3637,6 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
         echo json_encode($result);
     }
 
-    /**
-     * 获取ExtLogiNo
-     * @return mixed 返回结果
-     */
     public function getExtLogiNo() {
         $waybillObj = kernel::single('logisticsmanager_service_waybill');
         $channel_id = $_POST['channel_id'];
@@ -3688,7 +3670,6 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
     /*
      * 获取当前准备打印的发货单号
      */
-
     public function getPreparePrintIds(){
         $delivery_ids = $_REQUEST['delivery_id'];
         $isSelectAll = $_REQUEST['isSelectedAll'];
@@ -3798,11 +3779,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
          echo '获取结束';
     }
     
-    //[拆单]显示发货单货品详情
-    /**
-     * show_delivery_items
-     * @return mixed 返回值
-     */
+    //[拆单]显示发货单基础物料详情
     public function show_delivery_items()
     {
         $dly_id    = intval($_REQUEST['id']);

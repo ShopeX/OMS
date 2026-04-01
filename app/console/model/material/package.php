@@ -14,14 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/**
- * ============================
- * @Author:   yaokangming
- * @Version:  1.0
- * @DateTime: 2022/11/23 15:40:10
- * @describe: model层
- * ============================
- */
 class console_mdl_material_package extends dbeav_model {
 
     private $templateColumn = array(
@@ -33,34 +25,15 @@ class console_mdl_material_package extends dbeav_model {
         '数量' => 'number',
     );
 
-    /**
-     * 获取TemplateColumn
-     * @return mixed 返回结果
-     */
-
     public function getTemplateColumn() {
         return array_keys($this->templateColumn);
     }
-    /**
-     * prepared_import_csv
-     * @return mixed 返回值
-     */
     public function prepared_import_csv(){
         $this->import_data =[];
         $this->import_data_bm_bn =[];
         $this->ioObj->cacheTime = time();
     }
 
-    /**
-     * prepared_import_csv_row
-     * @param mixed $row row
-     * @param mixed $title title
-     * @param mixed $tmpl tmpl
-     * @param mixed $mark mark
-     * @param mixed $newObjFlag newObjFlag
-     * @param mixed $msg msg
-     * @return mixed 返回值
-     */
     public function prepared_import_csv_row($row,&$title,&$tmpl,&$mark,&$newObjFlag,&$msg)
     {
         if(empty($row) || empty(array_filter($row))) return false;
@@ -137,10 +110,6 @@ class console_mdl_material_package extends dbeav_model {
         return null;
     }
 
-    /**
-     * finish_import_csv
-     * @return mixed 返回值
-     */
     public function finish_import_csv(){
         if(empty($this->import_data)) {
             return null;
@@ -150,13 +119,6 @@ class console_mdl_material_package extends dbeav_model {
         $this->insertDataItems($data, $items, '导入');
     }
 
-    /**
-     * insertDataItems
-     * @param mixed $data 数据
-     * @param mixed $items items
-     * @param mixed $source source
-     * @return mixed 返回值
-     */
     public function insertDataItems($data, $items, $source) {
         if(empty($data) || empty($items)) {
             return [false, '数据不全'];
@@ -183,6 +145,14 @@ class console_mdl_material_package extends dbeav_model {
         foreach ($bmsRows as $v) {
             $bms[$v['pbm_id']][] = $v;
         }
+        
+        // 校验物料同步状态
+        list($validateRs, $validateMsg) = $this->_validateMaterialSyncStatus($data['branch_id'], $items, $bmsRows);
+        if (!$validateRs) {
+            $this->db->rollBack();
+            return [false, ['msg' => $validateMsg]];
+        }
+        
         $storeManage = kernel::single('ome_store_manage');
         $storeManage->loadBranch(array('branch_id'=>$data['branch_id']));
         $mpid = [];
@@ -241,10 +211,6 @@ class console_mdl_material_package extends dbeav_model {
         return [true, ['msg'=>'操作成功']];
     }
 
-    /**
-     * gen_id
-     * @return mixed 返回值
-     */
     public function gen_id() {
         $prefix = 'MP'.date("ymd");
         $sign   = kernel::single('eccommon_guid')->incId('material_package', $prefix, 6);
@@ -252,12 +218,102 @@ class console_mdl_material_package extends dbeav_model {
     }
 
     /**
-     * 更新DataItems
-     * @param mixed $data 数据
-     * @param mixed $items items
-     * @param mixed $source source
-     * @return mixed 返回值
+     * 校验物料同步状态
+     * @param int $branch_id 仓库ID
+     * @param array $mainItems 主商品数组，包含 bm_id 和 bm_bn
+     * @param array $detailItems 子商品数组，包含 bm_id 和 bm_bn（或 material_bn）
+     * @return array [是否成功, 错误信息]
      */
+    public function _validateMaterialSyncStatus($branch_id, $mainItems, $detailItems = array()) {
+        // 获取 wms_id，如果为空则跳过校验（门店仓）
+        $wms_id = kernel::single('ome_branch')->getWmsIdById($branch_id);
+        if (!$wms_id) {
+            return [true, ''];
+        }
+
+        // 收集所有商品的 bm_id 和 bm_bn
+        $bm_ids = array();
+        $bm_bn_map = array();
+        
+        // 收集主商品
+        foreach ($mainItems as $item) {
+            if (!empty($item['bm_id'])) {
+                $bm_ids[] = $item['bm_id'];
+                $bm_bn_map[$item['bm_id']] = isset($item['bm_bn']) ? $item['bm_bn'] : '';
+            }
+        }
+        
+        // 收集子商品
+        foreach ($detailItems as $item) {
+            if (!empty($item['bm_id'])) {
+                $bm_ids[] = $item['bm_id'];
+                // 子商品可能使用 material_bn 或 bm_bn
+                $bm_bn_map[$item['bm_id']] = isset($item['material_bn']) ? $item['material_bn'] : (isset($item['bm_bn']) ? $item['bm_bn'] : '');
+            }
+        }
+        
+        $bm_ids = array_unique($bm_ids);
+        
+        if (empty($bm_ids)) {
+            return [true, ''];
+        }
+
+        // 查询 foreign_sku 表，获取所有商品的同步状态
+        $foreignSkuModel = app::get('console')->model('foreign_sku');
+        $foreignSkuList = $foreignSkuModel->getList('inner_product_id, sync_status, inner_sku', array(
+            'inner_product_id|in' => $bm_ids,
+            'wms_id' => $wms_id
+        ));
+
+        // 构建已查询到的商品映射（bm_id => sync_status）
+        $syncStatusMap = array();
+        $skuMap = array();
+        foreach ($foreignSkuList as $foreignSku) {
+            $syncStatusMap[$foreignSku['inner_product_id']] = $foreignSku['sync_status'];
+            $skuMap[$foreignSku['inner_product_id']] = $foreignSku['inner_sku'];
+        }
+
+        // 校验同步状态，收集未同步的商品信息
+        $unsyncItems = array();
+        $syncStatusText = array(
+            0 => '未同步',
+            1 => '同步失败',
+            2 => '同步中',
+            3 => '同步成功',
+            4 => '同步后编辑',
+        );
+        foreach ($bm_ids as $bm_id) {
+            if (!isset($syncStatusMap[$bm_id])) {
+                // 商品在 foreign_sku 表中不存在，视为未分配
+                $material_bn = isset($bm_bn_map[$bm_id]) && !empty($bm_bn_map[$bm_id]) ? $bm_bn_map[$bm_id] : $bm_id;
+                $unsyncItems[] = array(
+                    'material_bn' => $material_bn,
+                    'status_text' => '未分配'
+                );
+            } elseif ($syncStatusMap[$bm_id] != '3') {
+                // sync_status 不等于 3，视为未同步成功
+                // inner_sku 就是 material_bn
+                $material_bn = isset($skuMap[$bm_id]) ? $skuMap[$bm_id] : (isset($bm_bn_map[$bm_id]) && !empty($bm_bn_map[$bm_id]) ? $bm_bn_map[$bm_id] : $bm_id);
+                $unsyncItems[] = array(
+                    'material_bn' => $material_bn,
+                    'status_text' => isset($syncStatusText[$syncStatusMap[$bm_id]]) ? $syncStatusText[$syncStatusMap[$bm_id]] : '未知状态'
+                );
+            }
+        }
+        // 如果有未同步的商品，生成错误提示信息
+        if (!empty($unsyncItems)) {
+            $errorMsg = '以下商品未同步到仓库，请先到"基础物料分配"页面同步物料：';
+            $itemMsgs = array();
+            foreach ($unsyncItems as $item) {
+                $itemMsgs[] = '商品编码：' . $item['material_bn'] . '，同步状态：' . $item['status_text'];
+            }
+            $errorMsg .= implode('；', $itemMsgs);
+            return [false, $errorMsg];
+        }
+
+        return [true, ''];
+    }
+
     public function updateDataItems($data, $items, $source) {
         if(empty($data) || empty($items)) {
             return [false, '数据不全'];
@@ -282,10 +338,45 @@ class console_mdl_material_package extends dbeav_model {
         foreach ($bmsRows as $v) {
             $bms[$v['pbm_id']][$v['bm_id']] = $v;
         }
+        
+        // 收集需要校验的主商品（只包括保留和新增的，不包括删除的）
+        // $items 中包含了所有要保留和新增的主商品
+        $allMainItems = $items;
+        
+        // 获取要保留和新增的主商品的 bm_id 列表
+        $keepBmIds = array_column($items, 'bm_id');
+        
+        // 收集需要校验的子商品
+        // 从 bmsRows 过滤，只保留那些 pbm_id 在 $items 中的子商品（排除要删除的主商品的子商品）
+        $allDetailItems = array();
+        foreach ($bmsRows as $bmsRow) {
+            if (in_array($bmsRow['pbm_id'], $keepBmIds)) {
+                $allDetailItems[] = $bmsRow;
+            }
+        }
+        
+        // 2. 收集保留的旧主商品对应的子商品（从 itemDetail 获取）
+        // 只收集那些在 $items 中存在的旧主商品对应的子商品
+        $itemDetailObj = app::get('console')->model('material_package_items_detail');
+        foreach ($oldItems as $oldItem) {
+            // 如果这个旧主商品在 $items 中存在，说明是保留的，需要校验其子商品
+            if (isset($items[$oldItem['bm_id']])) {
+                $oldDetailItems = $itemDetailObj->getList('bm_id, bm_bn', ['mpi_id' => $oldItem['id']]);
+                $allDetailItems = array_merge($allDetailItems, $oldDetailItems);
+            }
+            // 如果不在 $items 中，说明是要删除的，不需要校验
+        }
+        
+        // 校验物料同步状态
+        list($validateRs, $validateMsg) = $this->_validateMaterialSyncStatus($data['branch_id'], $allMainItems, $allDetailItems);
+        if (!$validateRs) {
+            $this->db->rollBack();
+            return [false, ['msg' => $validateMsg]];
+        }
+        
         $storeManage = kernel::single('ome_store_manage');
         $storeManage->loadBranch(array('branch_id'=>$data['branch_id']));
         $storeLessMsg = '';
-        $itemDetailObj = app::get('console')->model('material_package_items_detail');
         foreach ($oldItems as $value) {
             if($items[$value['bm_id']]) {
                 $newItem = $items[$value['bm_id']];

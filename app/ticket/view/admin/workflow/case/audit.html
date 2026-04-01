@@ -1,0 +1,95 @@
+<form id="saveForm" action="index.php?app=ticket&ctl=admin_workflow_case&act=do_audit" method="post">
+    <input type="hidden" name="id" value="<{$data.id}>">
+    <div class="tableform">
+        <div class="division">
+            <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                    <th valign="middle" style="height:35px; line-height:35px;"><{t}>审批节点：<{/t}></th>
+                    <td valign="middle" style="height:35px; line-height:35px; font-weight: bold; color: red;"><{$currentNode.node_name}></td>
+                </tr>
+                <tr>
+                    <th valign="middle" style="height:35px; line-height:35px;"><{t}>来源单号：<{/t}></th>
+                    <td valign="middle">
+                        <input autocomplete="off" class="x-input " type="text" name="original_bn" value="<{$data.original_bn}>" id="class_bn" readonly="readonly" style="border:0px;">
+                    </td>
+                </tr>
+                <tr>
+                    <th height="35"><{t}>审批状态：<{/t}></th>
+                    <td style="vertical-align:middle;">
+                        <input type="radio" name="status" value="approved" <{if $data.status == 'approve'}>checked="checked"<{/if}> />
+                        <label for="type1">同意</label>
+                        <input type="radio" name="status" value="rejected" <{if $data.status == 'rejected'}>checked="checked"<{/if}> />
+                        <label for="type2">拒绝</label>
+                    </td>
+                </tr>
+                <tr>
+                    <th height="35"><{t}>审批意见：<{/t}></th>
+                    <td>
+                        <textarea name="remark" id="remark" rows="12" vtype="required" style="width:400px !important; height:65px;"><{$data.remark}></textarea>
+                    </td>
+                </tr>
+                <tr>
+                    <th><{t}>赠品明细：<{/t}></th>
+                    <td>
+                        <div class="clear division">
+                        <table width="100%" border="0" cellspacing="0" cellpadding="0" class="gridlist">
+                            <thead>
+                                <tr>
+                                <th style="width:230px; height:26px;">赠品编码</th>
+                                <th style="width:330px;">赠品名称</th>
+                                <th style="width:120px;">申请数量</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                            <{foreach from=$addGiftList item=item}>
+                            <tr>
+                                <td style="width:230px; height:30px;"><{$item.bn}></td>
+                                <td><input autocomplete="off" class="x-input " type="text" name="gift_bns[]" value="<{$item.name}>" readonly="readonly" style="border:0px; width:300px;"></td>
+                                <td><{$item.quantity}></td>
+                            </tr>
+                            <{/foreach}>
+                            </tbody>
+                        </table>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                  <th>&nbsp;</th>
+                  <td>&nbsp;</td>
+                </tr>
+                <tr>
+                  <th>&nbsp;</th>
+                  <td>&nbsp;</td>
+                </tr>
+                <tr>
+                  <th>&nbsp;</th>
+                  <td>&nbsp;</td>
+                </tr>
+            </table>
+      </div>
+
+        <div class="table-action">
+            <{button type="submit" id="btn-save" label="审 批"}>
+            <{button type='button' label='关 闭' isCloseDialogBtn="true"}>
+        </div>
+    </div>
+</form>
+<script>
+$('saveForm').store('target',{
+    onRequest:function(){
+        $('btn-save').set('disabled', 'true');
+    },
+    onComplete:function(jsontext){
+        var json = Json.evaluate(jsontext);
+        if (typeof(json.error) != 'undefined'){
+            $('btn-save').set('disabled', '');
+        }else{
+            $('btn-save').set('disabled', 'true');
+            
+            if($('saveForm').getParent('.dialog')){
+                $('saveForm').getParent('.dialog').retrieve('instance').close();
+            }
+        }
+    }
+});
+</script>

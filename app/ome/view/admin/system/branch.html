@@ -33,12 +33,18 @@
 
              <div class="form-field">
                     <span class="form-field-label"><em class="c-red">*</em>仓库编号：</span>
-                    <input class="form-input" name="branch_bn" id="branch_bn" value="<{$branch.branch_bn}>" vtype="code&&required" placeholder="仓库在系统中的编号" />
+                    <input class="form-input" name="branch_bn" id="branch_bn" value="<{$branch.branch_bn}>" placeholder="仓库在系统中的编号" />
             </div>
 
             <div class="form-field">
                 <span class="form-field-label"><em class="c-red">*</em>库内存放点编号：</span>
                 <input class="form-input" name="storage_code" id="storage_code" value="<{$branch.storage_code}>" vtype="code&&required" placeholder="库内存放点编号" />
+            </div>
+            
+            <div class="form-field" >
+                <span class="form-field-label">WAREHOUSE CODE：</span>
+                <input class="form-input" name="warehouse_code" value="<{$branch.warehouse_code}>" vtype="code" placeholder="WAREHOUSE CODE" />
+                <p class="form-remark">仓库在WMS系统中的唯一标识编码</p>
             </div>
 
              <div class="form-field">
@@ -208,6 +214,11 @@
             <div class="form-field">
                 <span class="form-field-label">手机：</span>
                 <input class="form-input" name="mobile" value="<{$branch.mobile}>" vtype="number" placeholder="仓库负责人的移动联系方式" />
+            </div>
+
+            <div class="form-field">
+                <span class="form-field-label">邮箱：</span>
+                <{input name="email" type="textarea" value=$branch.email  }><{help}>多个有限使用,间隔<{/help}>
             </div>
         </div>
     </div>  

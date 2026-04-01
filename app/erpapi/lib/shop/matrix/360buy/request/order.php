@@ -166,5 +166,45 @@ class erpapi_shop_matrix_360buy_request_order extends erpapi_shop_request_order
         }
         return $return_data;
     }
-
+    
+    /**
+     * [京东700虚拟号]隐私号G组更新：报备外呼主叫号码组
+     *
+     * @param array $params
+     * @return array
+     */
+    public function bindSecretMobiles($params)
+    {
+        $title = '隐私号G组更新';
+        
+        $original_bn = $params['order_bn'];
+        
+        // check
+        if(empty($original_bn) || empty($params['mobile_list'])){
+            return $this->error('没有order_bn 或 mobile_list');
+        }
+        
+        // mobile_list
+        if(is_array($params['mobile_list'])){
+            $json_mobile = json_encode($params['mobile_list'], JSON_UNESCAPED_UNICODE);
+        }else{
+            $json_mobile = $params['mobile_list'];
+        }
+        
+        // params
+        $params = array(
+            'operate_type' => 'ADD_GXB_GROUP', // ADD_GXB_GROUP: 添加，DELETE_GXB_GROUP: 删除
+            'tid' => $params['order_bn'], //订单号
+            'mobile_list' => $json_mobile, // JSON格式
+            //'virtual_id' => '', //此字段不需要传入
+        );
+        
+        // callback
+        $callback = array();
+        
+        // 使用矩阵透传接口请求淘宝
+        $result = $this->__caller->call(STORE_VIRTUAL_NUMBER_GROUP_UPDATE, $params, $callback, $title, 10, $original_bn);
+        
+        return $result;
+    }
 }

@@ -136,7 +136,7 @@ class material_ctl_admin_material_basic extends desktop_controller
                         'href'   => 'index.php?app=material&ctl=admin_material_basic&act=getExportTemplate',
                         'target' => 'dialog::{width:450,height:210,title:\'' . app::get('desktop')->_('导出模板') . '\'}',
                     );
-                    $actions[] = array('label' => app::get('desktop')->_('更新导入'), 'icon' => 'upload.gif', 'href' => 'index.php?app=omecsv&ctl=admin_import&act=main&ctler=material_mdl_basic_material_ext&add=material', 'target' => 'dialog::{width:450,height:210,title:\'' . app::get('desktop')->_('更新导入') . '\'}');
+                    $actions[] = array('label' => app::get('desktop')->_('更新导入'), 'icon' => 'upload.gif', 'href' => 'index.php?app=omecsv&ctl=admin_import&act=main&ctler=material_mdl_basic_material_ext&add=material', 'target' => 'dialog::{width:550,height:310,title:\'' . app::get('desktop')->_('更新导入') . '\'}');
 
 
                    
@@ -202,7 +202,7 @@ class material_ctl_admin_material_basic extends desktop_controller
             'use_buildin_export'  => $use_buildin_export,
             'use_buildin_import'  => $use_buildin_import,
             'use_buildin_importxls'  => $use_buildin_import,
-            'finder_cols'         => 'column_edit,material_name,material_bn,column_barcode,column_cost,column_weight,column_unit,column_retail_price,visibled,column_specifications,column_brand',
+            'finder_cols'         => 'column_edit,material_name,material_bn,column_barcode,column_cost,column_weight,column_unit,column_retail_price,visibled,column_specifications,column_brand,column_cat_level_1,column_cat_level_2,column_cat_level_3,column_cat_level_4,column_cat_level_5',
         );
 
 
@@ -359,7 +359,10 @@ class material_ctl_admin_material_basic extends desktop_controller
 
         //是否全渠道
         $omnichannel = ($_POST['omnichannel'] == 1 ? 1 : 2);
-
+        
+        // 是否管控库存
+        $is_ctrl_store = isset($_POST['is_ctrl_store']) ? intval($_POST['is_ctrl_store']) : 1;
+        
         //保存物料主表信息
         $addData = array(
             'material_name'     => $_POST['material_name'],
@@ -377,8 +380,9 @@ class material_ctl_admin_material_basic extends desktop_controller
             'tax_name'          => $_POST['tax_name'],
             'tax_code'          => $_POST['tax_code'],
             'color'             => $_POST['color'], 
-            'size'             => $_POST['size'],
-            'is_o2o_sales'      =>$_POST['is_o2o_sales'], 
+            'size'              => $_POST['size'],
+            'is_o2o_sales'      => $_POST['is_o2o_sales'],
+            'is_ctrl_store'     => ($is_ctrl_store === 2 ? 2 : 1),
         );
         
         if (isset($_POST['bbu_info']) && $_POST['bbu_info']) {
@@ -789,7 +793,11 @@ EOF;
         $updateData['size']      = $_POST['size'];
         $updateData['is_o2o_sales']      = $_POST['is_o2o_sales'];
         $filter['bm_id']             = $_POST['bm_id'];
-
+        
+        // 是否管控库存
+        $is_ctrl_store = isset($_POST['is_ctrl_store']) ? intval($_POST['is_ctrl_store']) : 1;
+        $updateData['is_ctrl_store'] = ($is_ctrl_store === 2 ? 2 : 1);
+        
         //快照
         $basicMaterialLib  = kernel::single('material_basic_material');
         $basicMaterialInfo = $basicMaterialLib->getBasicMaterialExt($filter['bm_id']);

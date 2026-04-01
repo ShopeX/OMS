@@ -88,6 +88,13 @@ class wms_operation_log{
             'fukubukuro_combine_add' => array('name'=>'福袋组合添加', 'type'=>'fukubukuro_combine@material'),
             'fukubukuro_combine_edit' => array('name'=>'福袋组合编辑', 'type'=>'fukubukuro_combine@material'),
             'fukubukuro_combine_modify' => array('name'=>'编辑关联销售物料', 'type'=>'fukubukuro_combine@material'),
+            
+            // 赠品审批实例
+            'order_workflow_case' => array('name'=>'赠品审批', 'type'=>'workflow_case@ticket'),
+            
+            // SET商品
+            'set_materialprice_create' => array('name'=>'创建加价购', 'type'=>'basic_material_price@miele'),
+            'set_materialprice_edit' => array('name'=>'编辑加价购', 'type'=>'basic_material_price@miele'),
         );
         
         return array('wms'=>$operations);

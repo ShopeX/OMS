@@ -337,11 +337,23 @@ class finance_verification
             return $res;
         }
         $oMRI = app::get('finance')->model('monthly_report_items');
+
+        $servicelist = kernel::servicelist('financebase.reportitem.doAutoVerificate.after');
         foreach($monthly_item_id as $itemId) {
             if(!app::get('finance')->model('bill')->db_dump(['status|noequal'=>'2', 'monthly_item_id'=>$itemId], 'bill_id')
                 && !app::get('finance')->model('ar')->db_dump(['status|noequal'=>'2', 'monthly_item_id'=>$itemId], 'ar_id')
             ) {
                 $oMRI->update(['memo'=>$memo, 'verification_status'=>'2'], ['id'=>$itemId]);
+
+                // 更新核对状态
+                $this->updateArVerifyStatus($itemId);
+
+                foreach ($servicelist as $instance) {
+                    if (method_exists($instance, 'after_verificate')){
+                        $instance->after_verificate($itemId);
+                    }
+                }
+
             }
         }
         return $res;
@@ -611,5 +623,45 @@ class finance_verification
         }
 
         return $res;
+    }
+
+    /**
+     * 更新核对状态
+     * 根据monthly_item_id查找sdb_finance_bill表数据，匹配sdb_financebase_bill表的unique_id
+     * 如果匹配到且ar_verify_status='2'，则更新为'1'
+     * 
+     * @param int $itemId 月度报告项目ID
+     * @return bool 更新是否成功
+     */
+    public function updateArVerifyStatus($itemId)
+    {
+        if (empty($itemId)) {
+            return false;
+        }
+
+        // 第一步：查询符合条件的 unique_id 列表
+        $sql1 = "SELECT unique_id 
+                 FROM sdb_finance_bill 
+                 WHERE monthly_item_id = '{$itemId}'";
+        $uniqueIds = kernel::database()->select($sql1);
+        
+        if (empty($uniqueIds)) {
+            return true; // 没有需要更新的记录
+        }
+        
+        // 提取 unique_id 数组
+        $ids = array();
+        foreach ($uniqueIds as $row) {
+            $ids[] = $row['unique_id'];
+        }
+        $idsStr = "'" . implode("','", $ids) . "'";
+        
+        // 第二步：更新 sdb_financebase_bill 表
+        $sql2 = "UPDATE sdb_financebase_bill 
+                 SET ar_verify_status = '1' 
+                 WHERE unique_id IN ({$idsStr}) 
+                 AND ar_verify_status = '2'";
+    
+        return kernel::database()->exec($sql2);
     }
 }

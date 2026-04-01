@@ -15,10 +15,10 @@
 -->
 <desktop>
     <widgets id="ome_desktop_widgets_waittask" order='30'>待办事务表</widgets>
+    <widgets id="ome_desktop_widgets_greenchannel" order='32'>绿色通道</widgets>
     <widgets id="ome_desktop_widgets_productinfo" order='40'>产品信息</widgets>
     <widgets id="ome_desktop_widgets_consultandpatch" order='50'>资讯及补丁</widgets>
     <widgets id="base_desktop_widgets_msgnotify" order='60'>系统消息</widgets>
-
 
     <permissions>
         <permission id="order_view_active">当前订单</permission>
@@ -29,42 +29,24 @@
         <permission id="order_back_buffer">退回暂存区</permission>
         <permission id="order_confirm" show='ome_roles:show_group' save='ome_roles:save_role'>订单确认</permission>
         <permission id="order_retrial">我的复审异常订单</permission>
+        <!-- <permission id="order_reservation">预约订单</permission> -->
         <permission id="order_abnormal">异常订单</permission>
         <permission id="order_lack">缺货列表</permission>
         <permission id="order_lack_supplier">缺货查看供应商</permission>
         <permission id="order_lack_purchase">缺货生成采购单</permission>
-        <!-- <permission id="order_conflict">状态冲突</permission> -->
         <permission id="order_add">订单新建</permission>
         <permission id="order_groupon_index">团购订单导入列表</permission>
         <permission id="order_groupon_import">团购订单批量导入</permission>
-
         <permission id="order_export">订单导出</permission>
         <permission id="order_goback">订单退回</permission>
         <permission id="process_fast_consign" show='ome_roles:show_branch' save='ome_roles:save_role'>状态回写</permission>
         <permission id="batch_update_order">批量编辑订单</permission>
-        <!--
-        <permission id="process_receipts_print_export">发货单导出</permission>
-        <permission id="process_receipts_print" show='ome_roles:show_branch' save='ome_roles:save_role'>单据打印</permission>
-        <permission id="process_product_refunded" show='ome_roles:show_branch' save='ome_roles:save_role'>原样寄回</permission>
-        
-        <permission id="process_product_check" show='ome_roles:show_branch' save='ome_roles:save_role'>逐个校验</permission>
-        <permission id="process_product_batch_check" show='ome_roles:show_branch' save='ome_roles:save_role'>整单校验</permission>
-        <permission id="process_product_group_check" show='ome_roles:show_branch' save='ome_roles:save_role'>分组校验</permission>
-        <permission id="process_product_fast_check" show='ome_roles:show_branch' save='ome_roles:save_role'>批量校验</permission>
-        
-        <permission id="process_consign" show='ome_roles:show_branch' save='ome_roles:save_role'>逐单发货</permission>
-        <permission id="process_batch_consign" show='ome_roles:show_branch' save='ome_roles:save_role'>批量发货</permission>
-        <permission id="process_group_consign" show='ome_roles:show_branch' save='ome_roles:save_role'>分组发货</permission>
-        <permission id="process_fast_consign" show='ome_roles:show_branch' save='ome_roles:save_role'>状态回写</permission>
-        <permission id="process_fill_delivery" show='ome_roles:show_branch' save='ome_roles:save_role'>补打物流单</permission>
-        -->
-
-        <!--<permission id="process_delivery_sync" show='ome_roles:show_branch' save='ome_roles:save_role'>发货单状态回写</permission>-->
+        <permission id="ome_platform_set">平台相关设置</permission>
+        <permission id="ome.action.order.cancel">取消订单</permission>
 
         <!--售后 begin-->
         <permission id="aftersale_return_apply">售后服务列表</permission>
         <permission id="aftersale_jingxiao_return_apply">平台自发售后服务列表</permission>
-<!--        <permission id="aftersale_return_create">新建售后</permission>-->
         <permission id="aftersale_return_add">新建售后服务</permission>
         <permission id="aftersale_return_edit">编辑售后服务</permission>
         <permission id="aftersale_return_check">审核中</permission>
@@ -72,8 +54,11 @@
         <permission id="aftersale_return_refuse">拒绝</permission>
         <permission id="aftersale_return_apply_fail">失败售后申请</permission>
         <permission id="aftersale_return_batch">售后批量设置</permission>
+        <!--补寄 begin-->
+        <permission id="ome.action.return_reshipping.view">补寄申请单</permission>
+        <!--补寄 end-->
         <permission id="aftersale_return_address">卖家地址库列表</permission>
-		<permission id="aftersale_return_setting">售后自动审批设置</permission>
+        <permission id="aftersale_return_setting">售后自动审批设置</permission>
         <permission id="aftersale_return_rchange">退换货单列表</permission>
         <permission id="aftersale_jingxiao_return_rchange">平台自发退换货单列表</permission>
         <permission id="aftersale_rchange_add">新建退换货单</permission>
@@ -81,12 +66,9 @@
         <permission id="aftersale_rchange_check">审核退换货单</permission>
         <permission id="aftersale_rchange_recheck">反审核退换货单</permission>
         <permission id="aftersale_rchange_export">导出</permission>
-
         <permission id="aftersale_rchange_process">逐单质检</permission>
-
         <permission id="aftersale_rchange_sv">收货/质检</permission>
         <permission id="aftersale_compensate_record">直赔单</permission>
-
         <permission id="aftersale_sv_charge">唯一码查询</permission>
         <permission id="aftersale_servial_list">唯一码列表</permission>
         <permission id="aftersale_storagelife_list">保质期批次列表</permission>
@@ -102,11 +84,9 @@
         <permission id="reback_delivery">撤销发货单</permission>
         <permission id="invoice_delivery">发货单管理</permission>
         <permission id="invoice_return">售后入库单</permission>
-
         <permission id="finance_payment_confirm">付款确认</permission>
         <permission id="finance_refund_confirm">退款确认</permission>
         <permission id="finance_jingxiao_refund_confirm">平台自发退款确认</permission>
-
         <permission id="setting_basic">系统设置</permission>
         <permission id="setting_print">打印模板管理</permission>
         <permission id="setting_payment_cfg">支付方式配置</permission>
@@ -123,35 +103,15 @@
         <permission id="ome_branch_flow_index">仓业务设置</permission>
         <permission id="setting_branch_type">仓库类型列表</permission>
         <permission id='setting_extrabranch'>外部仓库设置</permission>
-        <!-- <permission id="setting_branch_pos">货位管理</permission>-->
         <permission id="setting_dly_corp">物流公司管理</permission>
         <permission id="ome_setting_iso_type">出入库类型设置</permission>
-        <!--
-        <permission id="setting_dly_print">快递单模板管理</permission>
-        <permission id="setting_print_termini">大头笔设置</permission>
-        -->
         <permission id="setting_preprocess_gift">淘宝赠品设置</permission>
         <permission id="setting_order_confirm_group">订单确认组管理</permission>
         <permission id="setting_api_log">同步日志管理</permission>
 
-        <!--<permission id="storage_stock_search" show='ome_roles:show_branch' save='ome_roles:save_role'>库存查询</permission>
-        <permission id="storage_stock" show='ome_roles:show_branch' save='ome_roles:save_role'>仓库库存列表</permission>
-
-        <permission id="storage_branch_product_pos" show='ome_roles:show_branch' save='ome_roles:save_role'>货位资源查看</permission>-->
-        <!--
-        <permission id="goods_add">添加商品</permission>
-        <permission id="goods_view">查看所有商品</permission>
-
-        <permission id="goods_spec">商品规格</permission>
-        <permission id="goods_import">批量上传</permission>
-        -->
-
         <!-- 基础物料配置 -->
         <permission id="goods_brand">基础物料品牌</permission>
         <permission id="goods_type">基础物料类型</permission>
-        <!--<permission id="material_add">基础物料添加</permission>-->
-        <!--<permission id="goods_view">查看所有物料</permission>-->
-
         <permission id="data_clear">清除数据</permission>
         <permission id="api_stock_log">库存同步管理</permission>
         <permission id="api_order_log">前端订单列表同步管理</permission>
@@ -165,6 +125,7 @@
         <permission id="bill_export">单据导出</permission>
         <permission id="finance_export">财务导出</permission>
         <permission id="process_receipts_print_export">发货单导出</permission>
+
         <!-- 操作日志start -->
         <permission id="operation_log">操作日志</permission>
         <permission id="login_log">登录日志</permission>
@@ -175,15 +136,11 @@
         <permission id="retrial_audit">价格异常订单</permission>
         <permission id="retrial_success">已复审订单</permission>
         <!-- 复审权限end -->
-        <permission id="aftersale_branchset">退货仓库设置</permission>
 
+        <permission id="aftersale_branchset">退货仓库设置</permission>
         <permission id="aftersale_delivery_refuse">追回单据</permission>
-        <!-- <permission id="aftersale_delivery_refuse_process">发货追回</permission>
-		<permission id="aftersale_delivery_refuse_import">发货追回导入</permission>
-		 -->
 
         <!-- 赠品管理 -->
-        <!-- <permission id="gift_rules">规则设置</permission> -->
         <permission id="gift_logs">赠品发送记录</permission>
         <permission id="gift_setgift">赠品设置</permission>
         <!-- 赠品管理 end -->
@@ -195,19 +152,9 @@
         <permission id="ome_freeze_queue">冻结队列表</permission>
         <permission id="ome_freeze_detail">冻结明细查询</permission>
         <permission id="add_reship_memo">添加退货单备注</permission>
-       
     </permissions>
 
-    <!-- <adminpanel group="desktop_apilog" permission="setting_api_log" controller='admin_api_log' action='index' display='true'>所有</adminpanel> -->
-    <!-- <adminpanel group="desktop_apilog" permission="setting_api_log" controller='admin_api_log' action='success' display='true'>成功</adminpanel> -->
-    <!-- <adminpanel group="desktop_apilog" permission="setting_api_log" controller='admin_api_log' action='running' display='true'>运行中</adminpanel> -->
-    <!-- <adminpanel group="desktop_apilog" permission="setting_api_log" controller='admin_api_log' action='requestfail' display='true'>请求失败</adminpanel> -->
-    <!-- <adminpanel group="desktop_apilog" permission="setting_api_log" controller='admin_api_log' action='responsefail' display='true'>响应失败</adminpanel> -->
-    <!-- <adminpanel group="desktop_apilog" permission="setting_api_log" controller='admin_api_log' action='sending' display='true'>发起中</adminpanel> -->
-    <!-- <adminpanel group="desktop_apilog" permission="api_stock_log" controller='admin_api_stock' action='index' display='true'>库存同步管理</adminpanel> -->
-    <!-- <adminpanel group="desktop_apilog" permission="api_order_log" controller='admin_api_orders' action='index' display='true'>前端订单列表同步管理</adminpanel> -->
     <adminpanel group="desktop_user" permission="setting_operationorg" controller="admin_operationorg" display='true'>运营组织</adminpanel>
-
     <adminpanel group="desktop_setting" permission="setting" controller='admin_shop' action='shopnode' display='true'>网店节点</adminpanel>
 
     <workground name="日志管理" id="monitor_center"  order="1820" icon="icon-caozuorizhi-01">
@@ -235,15 +182,14 @@
             <menu controller='admin_order_platform' action='index' permission='order_platform' display='true' order='1000500'>平台自发订单</menu>
             <menu controller='' action='' permission='order_to_brush' display='false' order='1000350'>设置为特殊订单</menu>
         </menugroup>
-
         <menugroup name="订单调度" en="order-dispatch">
             <menu controller='admin_order' action='dispatch' params='flt:assigned' permission='order_dispatch' display='true' order='2000200'>已分派的订单</menu>
             <menu controller='admin_order' action='order_goback' params='action:goback' permission='order_goback' display='false' order='2000500'>订单退回</menu>
             <menu controller='admin_order' action='dispatch' params='flt:notassigned' permission='order_dispatch' display='true' order='2000300'>未分派的订单</menu>
             <menu controller='admin_order' action='dispatch' params='flt:buffer' permission='order_dispatch' display='false' order='2000400'>订单暂存区</menu>
-           
         </menugroup>
         <menugroup name="订单处理" en="order-process">
+            <!-- <menu controller='admin_order_reservation' action='index' permission='order_reservation' display='true' order='3000001'>预约订单</menu> -->
             <menu controller='admin_order' action='confirm' params='flt:unmyown' permission='order_confirm' display='true' order='3000100'>我的待处理订单</menu>
             <menu controller='admin_order' action='confirm' params='flt:myown' permission='order_confirm' display='true' order='3000200'>我的已处理订单</menu>
             <menu controller='admin_order' action='retrial' permission='order_retrial' display='true' order='3000210'>我的复审异常订单</menu>
@@ -251,22 +197,17 @@
             <menu controller='admin_order' action='order_buffer' permission='order_back_buffer' display='false' order='3000400'>退回暂存区</menu>
             <menu controller='admin_consign' action='fast_consign' permission='process_fast_consign' display='true' order='3000500'>状态回写</menu>
             <menu controller='admin_order' action='BatchUpdateOrder' permission='batch_update_order' display='false' order='3000600' >批量编辑订单</menu>
+            <menu controller='admin_order' action='cancel' permission='ome.action.order.cancel' display='false' order='3000700'>取消订单</menu>
         </menugroup>
-    <!--
-        <menugroup name="撤销发货单">
-            <menu controller='admin_delivery' action='reback' params='status:1' permission='reback_delivery' display='true' order='8000002'>撤销发货单</menu>
-        </menugroup>-->
         <menugroup name="异常订单" en="abnormal-order">
             <menu controller='admin_order' action='abnormal' permission='order_abnormal' display='true' order='4000100'>异常订单</menu>
             <menu controller='admin_order_fail' action='index' permission='order_abnormal' display='true' order='4000200'>失败订单</menu>
         </menugroup>
-
         <menugroup name="复审订单" en="recheck-order">
             <menu controller='admin_order_retrial' action='index' permission='retrial_normal' display='true' order='4000500'>商品变化订单</menu>
             <menu controller='admin_order_retrial' action='audit' permission='retrial_audit' display='true' order='4000600'>价格异常订单</menu>
             <menu controller='admin_order_retrial' action='success' permission='retrial_success' display='true' order='4000700'>已复审订单</menu>
         </menugroup>
-
         <menugroup name="订单新建" en="order-add">
             <menu controller='admin_order' action='addNormalOrder' permission='order_add' display='false' order='5000100'>新建订单</menu>
             <menu controller='admin_order' action='export' permission='order_export' display='false' order='5000300'>订单导出</menu>
@@ -341,14 +282,13 @@
             <menu controller='admin_return' action='index' permission='aftersale_return_apply' display='true'>售后申请</menu>
             <menu controller='admin_return' action='jingxiao' permission='aftersale_jingxiao_return_apply' display='true' order='1000200'>平台自发</menu>
             <menu controller='admin_return_fail' action='index' permission='aftersale_return_apply_fail' display='true' order='1000100'>失败列表</menu>
-<!--            <menu controller='admin_return' action='create_return' permission='aftersale_return_create' display='true' order='1000101' target='dialog::{}'>新建售后</menu>-->
             <menu controller='admin_return' action='add_return' permission='aftersale_return_add' display='false' order='1000102'>新建售后申请</menu>
             <menu controller='admin_return' action='edit' permission='aftersale_return_edit' display='false' order='1000103'>编辑售后申请</menu>
             <menu controller='admin_return' params='p[0]:2' action='save' permission='aftersale_return_check' display='false' order='1000104'>审核中</menu>
             <menu controller='admin_return' params='p[0]:3' action='save' permission='aftersale_return_accept' display='false' order='1000105'>接受申请</menu>
             <menu controller='admin_return' params='p[0]:5' action='save' permission='aftersale_return_refuse' display='false' order='1000106'>拒绝</menu>
+            <menu controller='admin_return_reshipping' action='index' permission='ome.action.return_reshipping.view' display='true' order='1000122'>补寄申请单</menu>
         </menugroup>
-
         <menugroup name="退换货服务" en="return-exchange-service">
             <menu controller='admin_return_rchange' action='index' permission='aftersale_return_rchange' display='true' order='1000106'>退换货单</menu>
             <menu controller='admin_return_sv' action='index' permission='aftersale_rchange_process' display='true' order='4000103'>逐单质检</menu>
@@ -361,7 +301,6 @@
             <menu controller='admin_return_rchange' action='jingxiao' permission='aftersale_jingxiao_return_rchange' display='true' order='4000200'>平台自发</menu>
             <menu controller='admin_reship' action='addmemo' permission='add_reship_memo' display='false' order='4000300'>添加退货单备注</menu>
         </menugroup>
-
         <menugroup name="唯一码" en="unique-code">
             <menu controller='admin_product_serial_history' action='search' permission='aftersale_sv_charge' display='true' order='1000116'>唯一码查询</menu>
             <menu controller='admin_product_serial_history' action='index' permission='aftersale_servial_list' display='true' order='1000117'>唯一码历史</menu>
@@ -379,15 +318,10 @@
         <menugroup name="直赔单据" en="aftersale-compensate-record">
             <menu controller='admin_compensate_record' action='index' permission='aftersale_compensate_record' display='true' order='1001000'>直赔单</menu>
         </menugroup>
-        
         <menugroup name="追回" en="aftersale-return-back">
             <menu controller='admin_return_rchange' action='do_cancel' permission='aftersale_rchange_refuse' display='false' order='1000113'>取消</menu>
-            <!--<menu controller='admin_delivery_back' action='check' permission='aftersale_rchange_back' display='true' order="10000120">发货追回</menu>-->
             <menu controller='admin_delivery_back' action='index' permission='aftersale_rchange_back_process' display='true' order='1000121'>追回单据</menu>
-            <!--
-			<menu controller='admin_delivery_back' action='import' permission='aftersale_delivery_refuse_import' display='true' order='10000123'>发货追回导入</menu>-->
         </menugroup>
-        
     </workground>
 
     <workground name="财务管理" id="finance_center"  order="400" icon="icon-caiwuguanli-01">
@@ -399,34 +333,11 @@
         </menugroup>
     </workground>
 
-    <!--<workground name="基础档案" id="goods_manager" order="490">-->
-    <!--<menugroup name="基础物料配置">-->
-    <!--<menu controller="admin_brand" action="index" permission="setting_brand" display="true" order="800080">基础物料品牌</menu>-->
-    <!--</menugroup>-->
-    <!--</workground>-->
-
     <workground name="基础档案" id="goods_manager"  order="600" icon="icon-jichudangan-01">
-        <!--
-        <menugroup name="商品管理">
-            <menu controller='admin_goods' action='index' permission='goods_view' display='true'>查看所有商品</menu>
-            <menu controller='admin_goods_editor' action='add' permission='goods_add' display='true' target='_blank' order='1000200'>添加商品</menu>
-            <menu controller='admin_goods' action='index' params='action:export' permission='goods_export' display='false' order='1000300'>导出商品</menu>
-            <menu controller='admin_goods' action='index' params='action:export|acti:cost' permission='goods_export_cost' display='false' >导出成本价/重量模板</menu>
-            <menu controller='admin_goods' action='index' params='action:cost_import' permission='goods_import_cost' display='false'>批量导入成本价/重量</menu>
-        </menugroup>
-        -->
         <menugroup name="基础物料配置" en="basic-material-config">
             <menu controller='admin_goods_type' action='index' permission='goods_type' display='true' order='2000100'>基础物料类型</menu>
-            <!--<menu controller='admin_specification' action='index' permission='goods_spec' display='true' order='2000200'>商品规格</menu>-->
-            <!--<menu controller='admin_goods' action='index' permission='goods_view' display='true'  order='1000100'>查看所有物料</menu>-->
             <menu controller='admin_brand' action='index' permission='goods_brand' display='true' order='2000300'>基础物料品牌</menu>
-            <!--<menu controller='admin_goods_editor' action='add' permission='material_add' display='true' target='_blank' order='3000200'>基础物料添加</menu>-->
         </menugroup>
-        <!--
-        <menugroup name="商品批量处理">
-            <menu controller='admin_goods' action='import' permission='goods_import' display='true' order='3000100'>批量上传</menu>
-        </menugroup>
-        -->
         <menugroup name="仓库物流管理" en="branch-logistics-management">
             <menu controller='admin_branch' action='index' permission='setting_branch' display='true' order='4000100'>仓库列表</menu>
             <menu controller='admin_branchtype' action='index' permission='setting_branch_type' display='true' order='4000101'>仓库类型列表</menu>
@@ -440,7 +351,6 @@
         <menugroup name='客户管理' en="customer-management">
             <menu controller='admin_customer' action='index' permission='customer_list' display='true' order='5000000'>客户列表</menu>
         </menugroup>
-        
     </workground>
 
     <workground name="单据报表" id="invoice_center"  order="1200" icon="icon-danjubaobiao-01">
@@ -449,14 +359,13 @@
             <menu controller='admin_refund' action='index' permission='invoice_order_refund' display='true' order='1000101'>退款单</menu>
             <menu permission='bill_export' display='false'>单据导出</menu>
         </menugroup>
-
         <menugroup name="仓库作业单据" en="wms-operation-documents">
             <menu controller='admin_delivery' action='index' permission='invoice_delivery' display='true' order='1000200'>发货单</menu>
             <menu controller='admin_delivery' action='export' permission='process_receipts_print_export' display='false' order='1000210'>单据-发货单导出</menu>
             <menu controller='admin_return' action='return_io' permission='invoice_return' display='true' order='1000201'>售后入库单</menu>
         </menugroup>
-
     </workground>
+
     <workground name="系统集成" id="channel_center" order="1400" icon="icon-xitongjicheng-01">
         <menugroup name="前端店铺" en="shop-management">
             <menu controller='admin_shop' action='index' permission='setting_shop' display='true' order='1001'>前端店铺管理</menu>
@@ -464,61 +373,30 @@
     </workground>
 
     <workground name="系统设置" id="setting_tools"  order="1100" icon="icon-xitongshezhi-01">
-
         <menugroup name="基本设置" en="basic-set">
             <menu controller='admin_setting' action='index' permission='setting_basic' display='true' order='1000101'>系统设置</menu>
             <menu controller='admin_print_otmpl' action='index' permission='setting_print' display='true' order='1000102'>打印模板管理</menu>
             <menu controller='admin_payment_cfg' action='index' permission='setting_payment_cfg' display='true' order='1000200'>支付方式配置</menu>
-
             <menu controller="admin_setting" action="set_collection_account" permission="setting_payment_account" display="true" order="1000400">收款账号管理</menu>
-
             <menu controller='admin_setting' action='abnormal' permission='setting_order_abnormal' display='true' order='1000400'>订单异常类型设置</menu>
-
+            <menu controller='admin_platform_set' action='index' permission='ome_platform_set' display='true' order='1000500'>平台相关设置</menu>
         </menugroup>
         <menugroup name="售后设置" en="aftersale-set">
-
             <menu controller='admin_setting' action='product_problem' permission='setting_product_problem' display='true' order='1000500'>售后问题类型设置</menu>
             <menu controller='admin_refund_reason' action='index' permission='setting_refund_reason' display='true' order='1000550'>退款原因设置</menu>
             <menu controller='admin_return_address' action='index' permission='aftersale_return_address' display='true' order='1000600'>地址库列表</menu>
             <menu controller='admin_return_batch' action='index' permission='aftersale_return_batch' display='true' order='1000700'>批量操作设置</menu>
             <menu controller='admin_branchset' action='index' permission='aftersale_branchset' display='true' order='1000800'>退货仓库设置</menu>
-			<menu controller='admin_return_setting' action='index' permission='aftersale_return_setting' display='true' order='1000900'>退换货自动审核设置</menu>
+            <menu controller='admin_return_setting' action='index' permission='aftersale_return_setting' display='true' order='1000900'>退换货自动审核设置</menu>
         </menugroup>
-        <!--<menugroup name="预处理设置">-->
-
-            <!--<menu controller='admin_preprocess_tbgift' action='index' permission='setting_preprocess_gift' display='true' order='7000100'>淘宝赠品管理</menu>-->
-        <!--</menugroup>-->
-
-
         <menugroup name="管理员管理" en="admin-administration">
             <menu controller='admin_group' action='index' permission='setting_order_confirm_group' display='true' order='4000100'>订单确认小组管理</menu>
         </menugroup>
-        <!--
-                <menugroup name="同步日志管理">
-                    <menu controller='admin_api_log' action='index' params='p[0]:all' permission='setting_api_log' display='true' order='5000100'>所有</menu>
-                    <menu controller='admin_api_log' action='index' params='p[0]:success' permission='setting_api_log' display='true' order='5000200'>成功</menu>
-                    <menu controller='admin_api_log' action='index' params='p[0]:running' permission='setting_api_log' display='true' order='5000300'>运行中</menu>
-                    <menu controller='admin_api_log' action='index' params='p[0]:fail|p[1]:request' permission='setting_api_log' display='true' order='5000400'>请求失败</menu>
-                    <menu controller='admin_api_log' action='index' params='p[0]:fail|p[1]:response' permission='setting_api_log' display='true' order='5000500'>响应失败</menu>
-                    <menu controller='admin_api_log' action='index' params='p[0]:sending' permission='setting_api_log' display='true' order='5000600'>发起中</menu>
-                    <menu controller='admin_api_stock' action='index' permission='api_stock_log' display='true' order='5000700'>库存同步管理</menu>
-                    <menu controller='admin_api_orders' action='index' permission='api_order_log' display='true' order='5000800'>前端订单列表同步管理</menu>
-                </menugroup>-->
-
-
-        <!--
-        <menugroup name="数据清除">
-            <menu controller='admin_data_clear' action='index' permission='data_clear' display='true' order='6000100'>清除数据</menu>
-        </menugroup>
-        -->
-
         <menugroup name="赠品管理" en="gift-management">
-            <!-- <menu controller="admin_crm_gift" action="rule" permission="gift_rules" display="true" order="7000200">赠品规则</menu> -->
             <menu controller="admin_crm_gift" action="logs" permission="gift_logs" display="true" order="7000300">赠品发送记录</menu>
             <menu controller="admin_crm_gift" action="setgift" permission="gift_setgift" display="true" order="7000400">赠品设置</menu>
             <menu controller='admin_preprocess_tbgift' action='index' permission='setting_preprocess_gift' display='true' order='7000500'>淘宝赠品管理</menu>
         </menugroup>
-
     </workground>
 
     <workground name="控制面板" id="adminpanel" order="1800" icon="icon-kongzhimianban-01">
@@ -527,17 +405,4 @@
             <menu controller='admin_freeze_detail' action='index' params='' permission="ome_freeze_detail" order="10100" display='true'>冻结明细查询</menu>
         </menugroup>
     </workground>
-
-    <!-- <workground name="采购" id="purchase_manager" order="600">
-         <menugroup name="采购管理">
-             <menu controller='admin_need_supply' action='index' permission='purchase_do_need' display='false' order='1000800'>补货列表</menu>
-         </menugroup>
-     </workground>
- -->
-
-    <!-- <workground name="控制台" id="console_center" order="600">
-         <menugroup name="撤销发货单">
-             <menu controller='admin_delivery' action='reback' params='status:1' permission='reback_delivery' display='true' order='8000002'>撤销发货单</menu>
-         </menugroup>
-     </workground>-->
 </desktop>

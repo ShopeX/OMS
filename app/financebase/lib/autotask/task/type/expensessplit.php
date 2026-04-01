@@ -179,9 +179,17 @@ class financebase_autotask_task_type_expensessplit extends financebase_autotask_
         $oldIds = [];
         foreach ($olds as $v) {
             $oldIds[] = $v['id'];
+            $v['split_bn'] = $expensesSplitModel->gen_id();
             $v['split_status'] = '2';
             $v['split_time'] = $this->splitTime;
             $v['money'] = -$v['money'];
+            // 贷方和借方税金都需要红冲（取反）
+            if (isset($v['tax_amount_plus'])) {
+                $v['tax_amount_plus'] = -$v['tax_amount_plus'];
+            }
+            if (isset($v['tax_amount_minus'])) {
+                $v['tax_amount_minus'] = -$v['tax_amount_minus'];
+            }
             unset($v['id']);
             $expensesSplit[] = $v;
         }

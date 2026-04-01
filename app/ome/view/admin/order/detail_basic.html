@@ -88,6 +88,16 @@
                           <th >已支付金额：</th>
                           <td><{if $show_sale_price}><{$order.payed|cur}><{else}>-<{/if}></td>
                         </tr>
+                        <{if $order.settlement_amount > 0}>
+                        <tr>
+                          <th >商家结算：</th>
+                          <td><{$order.settlement_amount|cur}></td>
+                        </tr>
+                        <tr>
+                          <th >客户实付：</th>
+                          <td><{$order.actually_amount|cur}></td>
+                        </tr>
+                        <{/if}>
                       </tbody>
                     </table>
                     </div>
@@ -223,10 +233,16 @@
           <td style="vertical-align:top;">
             <h4>
               <span><{if $order.is_encrypt}><a class="order-sensitive-btn data-hide" href="javascript:void(0);"></a><{/if}><{t}>收货人信息<{/t}></span>
+              <span style="position:relative;" id="order_receiver_copy_span">
+                <{if $is_hied_receiver_copy !== true}>
+                <button type="button" class="btn" id="order_receiver_copy" stu="Y">
+                  <span><span><{t}>复制收货人信息<{/t}></span></span>
+                </button>
+                <{/if}>
+              </span>
             </h4>
               <div class="division">
                 <table cellspacing="0" cellpadding="0" border="0" id="consigneeinfo">
-
                   <tbody><tr>
                     <th >要求到货时间：</th>
                     <td><{$order.consignee.r_time}></td>
@@ -379,6 +395,7 @@
 
 <script>
 (function(){
+    var order_id = "<{$order.order_id}>";
 
     // 敏感数据处理
     if ($defined($E('.order-sensitive-btn')))
@@ -416,8 +433,70 @@
           });
       });
 
+    $('order_receiver_copy').addEvent('click',function(event){
+        var ship_info = '';
+        new Request(
+        {
+            url: "index.php?app=ome&ctl=admin_order&act=ajaxShowSensitiveData&p[0]=<{$order.order_id}>",
+            async:false,
+            method:'post',
+            data:{order_id:order_id},
+            onComplete: function(json)
+            {
+              result = JSON.decode(json);
+              if(result.rsp == 'succ'){
+                if(result.error_msg){
+                  alert("复制收货人错误：" + result.error_msg);
+                  return false;
+                }else{
+                  ship_info = result.ship_info;
+                }
+              } else{
+                alert("复制收货人失败：" + result.error_msg);
+                return false;
+              }
+            }
+        }).send();
+        
+        // 复制收货人信息到粘贴板
+        if(ship_info){
+          copyTextToClipboard(ship_info);
+          alert('复制成功');
+        }else{
+          alert('没有收货人信息');
+        }
+    });
 
+})();
 
-
-  })();
+function copyTextToClipboard(text)
+{
+    // 检查剪贴板API是否可用
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(function() {
+        console.log('文本已复制到剪贴板');
+      }, function(err) {
+        console.error('复制失败', err);
+      });
+    } else {
+      // 兼容老版本浏览器，使用旧的document.execCommand方法（已废弃）
+      var textArea = document.createElement("textarea");
+      textArea.value = text;
+    
+      // 避免滚动到页面顶部
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+    
+      try {
+        var successful = document.execCommand('copy');
+        var msg = successful ? '成功' : '失败';
+        console.log('文本复制' + msg);
+      } catch (err) {
+        console.error('复制失败', err);
+      }
+    
+      document.body.removeChild(textArea);
+    }
+}
 </script>

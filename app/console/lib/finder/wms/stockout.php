@@ -34,7 +34,7 @@ class console_finder_wms_stockout {
         return implode('|', $btn);
     }*/
 
-    public $detail_item = "货品详情";
+    public $detail_item = "基础物料详情";
     public function detail_item($id){
         $render = app::get('console')->render();
         $items = app::get('console')->model('wms_stockout_items')->getList('*', ['wso_id'=>$id]);

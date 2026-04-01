@@ -25,8 +25,6 @@
 
 class ome_security_factory
 {
-    private $__client;
-
     function __construct()
     {
     
@@ -115,20 +113,30 @@ class ome_security_factory
             return $val;
         }
     }
-
+    
     /**
-     * 查询
+     * 查询单条加密数据
      *
-     * @return void
-     * @author 
-     **/
+     * @param $val
+     * @param $type
+     * @param $node_id
+     * @return mixed|string|null
+     */
     public function search($val,$type, $node_id=null)
     {
-        try {
-            return  $this->__client->search($val,$type);
-        } catch (Exception $e) {
+        // 兼容搜索：同一个字段可能存在“明文/密文”两种存储形态。
+        // 调用方会用 (字段 LIKE/IN 明文) OR (字段 LIKE/IN 密文) 的方式组合查询。
+        if ($val === null || $val === '') {
             return $val;
         }
+
+        // 若输入本身已是本地密文，直接返回用于匹配
+        if ($this->isLocalEncryptData($val, $type)) {
+            return $val;
+        }
+
+        // 输入为明文：生成对应密文用于匹配已加密数据
+        return $this->localEncryptPublic($val, $type);
     }
     
     /**
@@ -167,8 +175,11 @@ class ome_security_factory
         //@todo：使用系统config/目录下certi.php证书文件中的：token
         $encryption_key = base_certificate::get('token');
         
-        // 初始化向量，必须保存下来以便解密时使用
-        $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('aes-256-cbc'));
+        // 初始化向量：为支持“对同一明文进行可重复加密并用于搜索”，这里使用确定性IV。
+        // 注意：这会让相同明文得到相同密文（可搜索），但会泄露“是否相等”的信息。
+        $iv_length = openssl_cipher_iv_length('aes-256-cbc');
+        $seed = $encryption_key . '|' . (string)$type;
+        $iv = substr(hash('sha256', $seed, true), 0, $iv_length);
         
         // 使用AES-256-CBC加密算法加密手机号
         $encrypted_phone_number = openssl_encrypt($val, 'aes-256-cbc', $encryption_key, 0, $iv);
@@ -196,10 +207,13 @@ class ome_security_factory
         }
         
         // 去除本地hashcode
-        $encrypted_data = $this->getLocalOriginText($encrypted_data);
+        $encrypted_data = (string)$this->getLocalOriginText($encrypted_data);
         
         // 将base64编码的数据解码
-        $ciphertext = base64_decode($encrypted_data);
+        $ciphertext = base64_decode($encrypted_data, true);
+        if ($ciphertext === false) {
+            return $encrypted_data;
+        }
         
         // 获取IV（初始化向量），对于AES-256-CBC来说，IV长度为16字节
         $iv_length = openssl_cipher_iv_length('aes-256-cbc');

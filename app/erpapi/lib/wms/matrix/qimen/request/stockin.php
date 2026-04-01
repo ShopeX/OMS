@@ -17,30 +17,18 @@
 /**
  * 入库单推送
  *
- * @category
- * @package
+ * @category 
+ * @package 
  * @author chenping<chenping@shopex.cn>
  * @version $Id: Z
  */
 class erpapi_wms_matrix_qimen_request_stockin extends erpapi_wms_request_stockin
 {
-    /**
-     * stockin_cancel
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
-
-    public function stockin_cancel($sdf){
-        $stockin_bn = $sdf['io_bn'];
-
-        $title = $this->__channelObj->wms['channel_name'] . '入库单取消';
-
-        $params = array(
-            'order_type'     => $this->transfer_stockin_type($sdf['io_type']),
-            'out_order_code' => $stockin_bn,
-            'warehouse_code' => $this->get_warehouse_code($this->__channelObj->wms['channel_id'],$sdf['branch_bn']),
-            'order_id'      => $sdf['out_iso_bn'],
-        );
+    protected function _format_stockin_cancel_params($sdf)
+    {
+        $params = parent::_format_stockin_cancel_params($sdf);
+        $params['warehouse_code'] = $this->get_warehouse_code($this->__channelObj->wms['channel_id'],$sdf['branch_bn']);
+        $params['order_id'] = $sdf['out_iso_bn'];
         if (isset($sdf['owner_code'])) {
             $params['ownerCode'] = $sdf['owner_code'];
         }
@@ -50,7 +38,7 @@ class erpapi_wms_matrix_qimen_request_stockin extends erpapi_wms_request_stockin
             $params['order_type'] = $this->transfer_stockin_type('PURCHASE');
         }
 
-        return $this->__caller->call(WMS_ORDER_CANCEL, $params, null, $title, 10, $stockin_bn); 
+        return $params;
     } 
 
     protected function _format_stockin_create_params($sdf)

@@ -213,9 +213,9 @@ class console_difference {
             'confirm_time'=>time()
         ];
         $rs = $dfObj->update($upData, ['id'=>$id, 'status'=>'2']);
-        if(is_bool($rs)) {
+        if ($rs === false || $rs === true) {
             kernel::database()->rollBack();
-            return [false, ['msg'=>'状态更改不对']];
+            return [false, ['msg'=>'状态不对或已确认']];
         }
         app::get('ome')->model('operation_log')->write_log('difference@console',$id,"确认完成");
         $difRows = app::get('console')->model('difference_items_freeze')->getList('*', ['diff_id'=>$id]);

@@ -48,7 +48,7 @@ class dealer_goods_price_importV2 implements omecsv_data_split_interface
         // 检查导入权限
         $desktop_user = kernel::single('desktop_user');
         if (!$desktop_user->has_permission('dealer_goods_price_import')) {
-            return array(false, '您没有导入经销商品价格的权限');
+            return array(false, '您没有导入经销商物料价格的权限');
         }
         
         // 1. 读取文件数据
@@ -385,7 +385,7 @@ class dealer_goods_price_importV2 implements omecsv_data_split_interface
         }
         unset($data);
         
-        // 创建经销商品价格记录
+        // 创建经销商物料价格记录
         if ($sdf) {
             list($result, $msgList) = $this->saveGoodsPrices($sdf);
             if ($msgList) {
@@ -430,7 +430,7 @@ class dealer_goods_price_importV2 implements omecsv_data_split_interface
     }
 
     /**
-     * 保存经销商品价格数据
+     * 保存经销商物料价格数据
      * @param $sdf 处理后的数据
      * @return array
      */

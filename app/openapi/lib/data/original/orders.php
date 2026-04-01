@@ -205,7 +205,6 @@ class openapi_data_original_orders
     {
         if ($filter['order_bn']) {
             $order_bn = str_replace('，',',',$filter['order_bn']);
-            unset($filter['order_bn']);
             $order_bn = str_replace(' ','',$order_bn);
             $order_bn = explode(',',$order_bn);
             $sqlstr = 'select order_id from sdb_ome_orders where 1';
@@ -219,6 +218,7 @@ class openapi_data_original_orders
             foreach ($orders as $key => $value) {
                 $filter['order_id'][] = $value['order_id'];
             }
+            unset($filter['order_bn']);
         }
         $couObj = app::get('ome')->model('order_coupon');
         $countNum = $couObj->count($filter);

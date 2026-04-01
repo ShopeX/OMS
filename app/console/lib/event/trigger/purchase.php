@@ -84,7 +84,7 @@ class console_event_trigger_purchase extends console_event_trigger_stockinabstra
 
     protected function update_out_bn($io_bn,$result)
     {
-        $out_iso_bn = $result['data']['wms_order_code'];
+        $out_iso_bn = is_array($result['data']) ? $result['data']['wms_order_code'] : '';
         $oPo = app::get('purchase')->model('po');
         $data = array(
             'out_iso_bn'=>(string)$out_iso_bn

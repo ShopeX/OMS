@@ -39,6 +39,11 @@ class material_sales_check
         $is_new_add    = $params['edit'] ? false : true;
         unset($params['edit']);
         
+        // 去除销售物料编码前后空格
+        if (isset($params['sales_material_bn'])) {
+            $params['sales_material_bn'] = trim($params['sales_material_bn']);
+        }
+        
         if(empty($params['sales_material_name'])){
             $err_msg ="销售物料名称不能为空";
             return false;
@@ -53,9 +58,10 @@ class material_sales_check
         if($is_new_add)
         {
             //判断物料编码只能是由数字英文下划线组成
-            $reg_bn_code = "/^[0-9a-zA-Z\_\#\-\/]*$/";
+            // 销售物料编码：支持数字、英文、下划线、横线、井号、斜杠、空格
+            $reg_bn_code = "/^[0-9a-zA-Z\_\#\-\/ ]*$/";
             if(!preg_match($reg_bn_code,$params["sales_material_bn"])){
-                $err_msg = "物料编码只支持(数字、英文、_下划线、-横线、#井号、/斜杠)";
+                $err_msg = "物料编码只支持(数字、英文、_下划线、-横线、#井号、/斜杠、空格)";
                 return false;
             }
             

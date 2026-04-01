@@ -48,27 +48,55 @@ class erpapi_shop_matrix_pinduoduo_response_order extends erpapi_shop_response_o
         if (0 === strpos($this->_ordersdf['mark_text'],'顺丰加价;')) {
             $this->_ordersdf['shipping']['shipping_name'] = '顺丰';
         }
+    
+        // 拼多多集运标识转成oms本地标识
+        if (isset($this->_ordersdf['extend_field']['consolidate_info'])
+            && isset($this->_ordersdf['extend_field']['consolidate_info']['consolidate_type'])) {
+            $pddConsolidateType = (string)$this->_ordersdf['extend_field']['consolidate_info']['consolidate_type'];
         
-        // 拼多多集运标识
-        if ($this->_ordersdf['extend_field']['consolidate_info']) {
-            $this->_ordersdf['consolidate_type'] = $this->_ordersdf['extend_field']['consolidate_info']['consolidate_type'];
-
-            // 集运标识转成oms本地标识
-            $consolList = [
-                '0'  => 'XGJY', // 中国香港集运
-                '1'  => 'XJJY', // 中国新疆中转
-                '2'  => 'HSKSTJY', // 哈萨克斯坦集运
-                '3'  => 'XZJY', // 中国西藏中转
-                '5'  => 'RBJY', // 日本集运
-                '6'  => 'TWJY', // 中国台湾集运
-                '7'  => 'HGJY', // 韩国集运
-                '8'  => 'XJPJY', // 新加坡集运
-                '9'  => 'MLXYJY', // 马来西亚集运
-                '10' => 'TGJY', // 泰国集运
+            // 国内集运映射：0-香港(0x0040), 1-新疆(0x0001), 3-西藏(0x0002), 6-台湾(0x0080), 14-甘肃(0x0004), 15-内蒙古(0x0008), 16-宁夏(0x0010), 17-青海(0x0020), 18-澳门(0x0100)
+            $domesticMap = [
+                '0'  => 0x0040, // 香港
+                '1'  => 0x0001, // 新疆
+                '3'  => 0x0002, // 西藏
+                '6'  => 0x0080, // 台湾
+                '14' => 0x0004, // 甘肃
+                '15' => 0x0008, // 内蒙古
+                '16' => 0x0010, // 宁夏
+                '17' => 0x0020, // 青海
+                '18' => 0x0100, // 澳门
             ];
-            $consolType = $this->_ordersdf['extend_field']['consolidate_info']['consolidate_type'];
-            if ($consolList[$consolType]) {
-                $this->_ordersdf['extend_field']['consolidate_info']['consolidate_type'] = $consolList[$consolType];
+        
+            // 国外集运映射：2,5,7-13,19-25
+            $overseasMap = [
+                '2'  => 0x0001,   // 哈萨克斯坦
+                '5'  => 0x0002,   // 日本
+                '7'  => 0x0004,   // 韩国
+                '8'  => 0x0008,   // 新加坡
+                '9'  => 0x0010,   // 马来西亚
+                '10' => 0x0020,   // 泰国
+                '11' => 0x0040,   // 越南
+                '12' => 0x0080,   // 吉尔吉斯斯坦
+                '13' => 0x0100,   // 乌兹别克斯坦
+                '19' => 0x0200,   // 柬埔寨
+                '20' => 0x0400,   // 老挝
+                '21' => 0x0800,   // 塔吉克斯坦
+                '22' => 0x1000,   // 亚美尼亚
+                '23' => 0x2000,   // 格鲁吉亚
+                '24' => 0x4000,   // 蒙古
+                '25' => 0x8000,   // 加拿大
+            ];
+        
+            if (isset($domesticMap[$pddConsolidateType])) {
+                $this->_ordersdf['extend_field']['consolidate_info'] = [
+                    'consolidate_type'  => 'SOMS_GNJY',
+                    'consolidate_value' => $domesticMap[$pddConsolidateType],
+                ];
+            } elseif (isset($overseasMap[$pddConsolidateType])) {
+                $this->_ordersdf['extend_field']['consolidate_info'] = [
+                    'consolidate_type'  => 'SOMS_GYJY',
+                    'consolidate_value' => $overseasMap[$pddConsolidateType],
+                ];
             }
         }
         $this->_ordersdf['is_delivery']= 'Y';
@@ -181,11 +209,44 @@ class erpapi_shop_matrix_pinduoduo_response_order extends erpapi_shop_response_o
             $rs = app::get('ome')->model('order_extend')->getList('extend_status',array('order_id'=>$this->_tgOrder['order_id']));
             // 如果ERP收货人信息未发生变动时，则更新拼多多收货人信息
             if ($rs[0]['extend_status'] != 'consignee_modified') {
-                // $components[] = 'consignee';
-                $orRe = app::get('ome')->model('order_receiver')->db_dump(['order_id'=>$this->_tgOrder['order_id']], 'encrypt_source_data');
-                $ensd = json_decode($orRe['encrypt_source_data'], 1);
-                if(empty($ensd['open_address_id']) || $ensd['open_address_id'] != $this->_ordersdf['index_field']['open_address_id'] || !$this->_tgOrder['consignee']['name']) {
-                    $components[] = 'consignee';
+    
+                $shouldUpdateConsignee = true;
+    
+                // 集运订单地址更新控制：如果集运仓没有变化，不更新地址
+                if ($this->_tgOrder['consignee']['addr']
+                    && $this->_ordersdf['extend_field']['consolidate_info']
+                    && isset($this->_ordersdf['extend_field']['consolidate_info']['consolidate_type'])
+                    && isset($this->_ordersdf['extend_field']['consolidate_info']['consolidate_value'])) {
+                    $newConsolidateValue = $this->_ordersdf['extend_field']['consolidate_info']['consolidate_value'];
+                    $newConsolidateType = $this->_ordersdf['extend_field']['consolidate_info']['consolidate_type'];
+        
+                    // 获取旧订单的集运标签
+                    $oldLabels = kernel::single('ome_bill_label')->getLabelFromOrder($this->_tgOrder['order_id'], 'order');
+                    $oldConsolidateLabel = null;
+                    foreach ($oldLabels as $label) {
+                        if (in_array($label['label_code'], ['SOMS_GNJY', 'SOMS_GYJY'])) {
+                            $oldConsolidateLabel = $label;
+                            break;
+                        }
+                    }
+        
+                    // 如果旧订单有集运标签，且小标值相同，说明集运仓没变化，不更新地址
+                    if ($oldConsolidateLabel && isset($oldConsolidateLabel['label_value'])) {
+                        if ($oldConsolidateLabel['label_value'] == $newConsolidateValue && $oldConsolidateLabel['label_code'] == $newConsolidateType) {
+                            $shouldUpdateConsignee = false;
+                        }
+                    } else {
+                        // 如果旧订单没有集运标签（可能是旧格式编码或第一次创建），不更新地址
+                        $shouldUpdateConsignee = false;
+                    }
+                }
+                
+                if ($shouldUpdateConsignee) {
+                    $orRe = app::get('ome')->model('order_receiver')->db_dump(['order_id'=>$this->_tgOrder['order_id']], 'encrypt_source_data');
+                    $ensd = json_decode($orRe['encrypt_source_data'], 1);
+                    if(empty($ensd['open_address_id']) || $ensd['open_address_id'] != $this->_ordersdf['index_field']['open_address_id'] || !$this->_tgOrder['consignee']['name']) {
+                        $components[] = 'consignee';
+                    }
                 }
             }
         }

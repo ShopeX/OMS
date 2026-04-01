@@ -16,14 +16,28 @@
 <desktop>
     <permissions>
         <permission id="shop_settlement_rules">收支分类设置</permission>
+        <permission id="shop_settlement_rules_add">收支分类新增</permission>
+        <permission id="shop_settlement_rules_edit">收支分类编辑</permission>
+        <permission id="shop_settlement_rules_delete">收支分类置为无效</permission>
+        <permission id="shop_settlement_rules_restore">收支分类恢复</permission>
         <permission id="shop_settlement_feetype">费用项设置</permission>
+        <permission id="shop_settlement_account_chart">会计科目设置</permission>
+        <permission id="shop_settlement_account_chart_add">会计科目新增</permission>
+        <permission id="shop_settlement_account_chart_edit">会计科目编辑</permission>
+        <permission id="shop_settlement_account_chart_delete">会计科目置为无效</permission>
+        <permission id="shop_settlement_account_chart_restore">会计科目恢复</permission>
+        <permission id="shop_settlement_gap">差异类型设置</permission>
+        <permission id="shop_settlement_gap_add">差异类型新增</permission>
+        <permission id="shop_settlement_gap_edit">差异类型编辑</permission>
+        <permission id="shop_settlement_gap_delete">差异类型置为无效</permission>
+        <permission id="shop_settlement_gap_restore">差异类型恢复</permission>
         <permission id="shop_settlement_verification">核销规则设置</permission>
         <permission id="shop_settlement_base">店铺收支明细</permission>
         <permission id="shop_settlement_expenses_show">费用对账拆分总览</permission>
         <permission id="shop_settlement_import">实收退导入</permission>
         <permission id="shop_settlement_cainiao">菜鸟账单导入</permission>
         <permission id="shop_settlement_jxt">京准通账单导入</permission>
-        <permission id="shop_settlement_jdbill">京东钱包流水</permission>
+        <!-- <permission id="shop_settlement_jdbill">京东钱包流水</permission> -->
         <permission id="shop_settlement_cainiaoitems">支付宝实付明细</permission>
         <permission id="shop_settlement_task">账单设置</permission>
         <permission id="shop_settlement_expenses_rule">费用拆分规则</permission>
@@ -35,7 +49,21 @@
     <workground name="财务管理" id="finance_center"   order="400" icon="icon-caiwuguanli-01">
         <menugroup name="账单设置" en="bill-basic-set">
             <menu controller='admin_shop_settlement_rules' action='index' permission='shop_settlement_rules' display='true' order='2000100'>收支分类设置</menu>
+            <menu controller='admin_shop_settlement_rules' action='setCategory' permission='shop_settlement_rules_add' display='false' order='2000101'>收支分类新增</menu>
+            <menu controller='admin_shop_settlement_rules' action='setCategory' permission='shop_settlement_rules_edit' display='false' order='2000102'>收支分类编辑</menu>
+            <menu controller='admin_shop_settlement_rules' action='disableRules' permission='shop_settlement_rules_delete' display='false' order='2000103'>收支分类置为无效</menu>
+            <menu controller='admin_shop_settlement_rules' action='restoreRules' permission='shop_settlement_rules_restore' display='false' order='2000104'>收支分类恢复</menu>
             <menu controller='admin_shop_settlement_fee_type' action='index' permission='shop_settlement_feetype' display='true' order='2000200'>费用项设置</menu>
+            <menu controller='admin_shop_settlement_account_chart' action='index' permission='shop_settlement_account_chart' display='true' order='2000250'>会计科目设置</menu>
+            <menu controller='admin_shop_settlement_account_chart' action='setAccount' permission='shop_settlement_account_chart_add' display='false' order='2000251'>会计科目新增</menu>
+            <menu controller='admin_shop_settlement_account_chart' action='setAccount' permission='shop_settlement_account_chart_edit' display='false' order='2000252'>会计科目编辑</menu>
+            <menu controller='admin_shop_settlement_account_chart' action='disableAccount' permission='shop_settlement_account_chart_delete' display='false' order='2000253'>会计科目置为无效</menu>
+            <menu controller='admin_shop_settlement_account_chart' action='restoreAccount' permission='shop_settlement_account_chart_restore' display='false' order='2000254'>会计科目恢复</menu>
+            <menu controller='admin_shop_settlement_gap' action='index' permission='shop_settlement_gap' display='true' order='2000260'>差异类型设置</menu>
+            <menu controller='admin_shop_settlement_gap' action='setGap' permission='shop_settlement_gap_add' display='false' order='2000261'>差异类型新增</menu>
+            <menu controller='admin_shop_settlement_gap' action='setGap' permission='shop_settlement_gap_edit' display='false' order='2000262'>差异类型编辑</menu>
+            <menu controller='admin_shop_settlement_gap' action='disableGap' permission='shop_settlement_gap_delete' display='false' order='2000263'>差异类型置为无效</menu>
+            <menu controller='admin_shop_settlement_gap' action='restoreGap' permission='shop_settlement_gap_restore' display='false' order='2000264'>差异类型恢复</menu>
             <menu controller='admin_shop_settlement_verification' action='error' permission='shop_settlement_verification' display='true' order='2000300'>核销规则设置</menu>
         </menugroup>
         <menugroup name="账单导入" en="bill">
@@ -45,7 +73,7 @@
             <menu controller='admin_shop_settlement_cainiao' action='detailed' permission='shop_settlement_cainiao' display='false' order='2000700'>菜鸟账单详情</menu>
             <menu controller='admin_shop_settlement_jingzhuntong' action='index' permission='shop_settlement_jxt' display='true' order='2000800'>京准通账单导入</menu>
             <menu controller='admin_shop_settlement_jingzhuntong' action='detailed' permission='shop_settlement_jxt' display='false' order='2000810'>京准通单详情</menu>
-            <menu controller='admin_shop_settlement_jdbill' action='index' permission='shop_settlement_jdbill' display='true' order='2000900'>京东钱包流水</menu>
+            <!-- <menu controller='admin_shop_settlement_jdbill' action='index' permission='shop_settlement_jdbill' display='true' order='2000900'>京东钱包流水</menu> -->
             <menu controller='admin_shop_settlement_jdbill' action='detailed' permission='shop_settlement_jdbill' display='false' order='2000910'>京东钱包流水明细</menu>
             <menu controller='admin_shop_settlement_bill' action='bill_import' permission='shop_settlement_import' display='true' order='2000400'>实收退导入</menu>
             <menu controller='admin_shop_settlement_queue' action='index' permission='shop_settlement_task' display='true' order='2000401'>实收退任务队列</menu>

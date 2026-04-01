@@ -1,0 +1,34 @@
+<style>
+    .in_ul{clear: both;}
+    .in_ul li {font-size: 12px; float: left;}
+</style>
+<span>
+<ul class="in_ul">
+    <li>
+        <span>筛选范围：</span>
+    </li>
+    <li>
+        <input type="radio" name="find_type" value="include" <{if $init.content.find_type != 'not_include'}>checked<{/if}> />包含
+    </li>
+    <li>
+        <input type="radio" name="find_type" value="not_include" <{if $init.content.find_type == 'not_include'}>checked<{/if}> />不包含
+    </li>
+</ul>
+</span>
+
+<span style="padding-top:10px;">
+    <ul class="in_ul">
+        <li>
+            <span>基础物料分类：</span>
+        </li>
+        <li>
+            <select type="select" name="cat_id" id="cat_id" required="true" class=" x-input-select inputstyle">
+            <{if $cat_list}>
+            <{foreach from=$cat_list key=keyVal item=itemVal}>
+            <option value="<{$itemVal.cat_id}>" <{if $itemVal.cat_id == $init.content.cat_id}>selected<{/if}>><{$itemVal.cat_name}></option>
+            <{/foreach}>
+            <{/if}>
+            </select>
+        </li>
+    </ul>
+</span>

@@ -1,0 +1,65 @@
+<?php
+
+$db['seller'] = array(
+    'columns' => array(
+        'id'   => array(
+            'type'     => 'int unsigned',
+            'extra'    => 'auto_increment',
+            'pkey'     => true,
+            'editable' => false,
+            'label'    => '自增ID',
+        ),
+        'seller_code'  => array(
+            'type'          => 'varchar(255)',
+            'label'         => '销售人员编码',
+            'default'       => '',
+            'in_list'       => true,
+            'default_in_list' => true,
+            'order'         => 10,
+            'searchtype'    => 'nequal',
+            'filtertype'    => 'normal',
+            'filterdefault' => true,
+        ),
+        'seller_name'  => array(
+            'type'          => 'varchar(255)',
+            'label'         => '销售人员名称',
+            'default'       => '',
+            'in_list'       => true,
+            'default_in_list' => true,
+            'is_title'      => true,
+            'order'         => 20,
+        ),
+        'disabled'     => array(
+            'type'          => 'bool',
+            'label'         => '禁用状态',
+            'default'       => 'false',
+            'in_list'       => true,
+            'default_in_list' => true,
+            'order'         => 30,
+        ),
+        'at_time'       => array(
+            'type'            => 'TIMESTAMP',
+            'label'           => '创建时间',
+            'default'         => 'CURRENT_TIMESTAMP',
+            'in_list'         => true,
+            'default_in_list' => true,
+            'order'           => 1000,
+        ),
+        'up_time'       => array(
+            'type'            => 'TIMESTAMP',
+            'label'           => '更新时间',
+            'default'         => 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+            'in_list'         => true,
+            'default_in_list' => true,
+            'order'           => 1010,
+        ),
+    ),
+    'index'   => array(
+        'idx_seller_code'  => array('columns' => array('seller_code'), 'prefix' => 'unique'),
+        'idx_at_time'       => array('columns' => array('at_time')),
+        'idx_up_time'       => array('columns' => array('up_time')),
+    ),
+    'engine'  => 'innodb',
+    'commit'  => '',
+    'version' => 'Rev: 41996 $',
+);

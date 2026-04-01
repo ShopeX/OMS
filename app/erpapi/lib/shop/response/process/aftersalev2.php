@@ -64,6 +64,7 @@ class erpapi_shop_response_process_aftersalev2 {
             switch($sdf['status']) {
                 case '0':
                     $upData = $this->_refundApplySdfToData($sdf);
+                    unset($upData['bool_type']); // 退款金额、原因或版本变化更新为未审核时不更改 bool_type，保留原值
                     $memo = '(退款金额、原因或版本变化)退款申请单更新为未审核';
                     break;
                 default :
@@ -71,6 +72,7 @@ class erpapi_shop_response_process_aftersalev2 {
                         'status' => $sdf['status'],
                         'source_status' => $sdf['source_status'], //平台状态
                         'outer_lastmodify'=> $sdf['modified'],
+                        'cs_status' => $sdf['cs_status'],
                     );
                     if($sdf['refund_version_change']) {
                         $upData['memo']  = $sdf['reason'];
@@ -105,6 +107,10 @@ class erpapi_shop_response_process_aftersalev2 {
             if ($sdf['status'] == '3') {
                 //延迟5分钟自动重新路由审核订单
                 $sdf = array('op_type'=>'timing_confirm', 'timing_time'=>strtotime('5 minutes'), 'memo'=>'退款申请拒绝后重新路由');
+                
+                //@todo：当系统设置里未开启[是否开启系统自动审核]时，未调用延迟自动审核;
+                $sdf['cnAuto'] = 'true';
+                
                 kernel::single('ome_order')->auto_order_combine($sdf['order']['order_id'], $sdf);
             }
         } else {
@@ -123,7 +129,7 @@ class erpapi_shop_response_process_aftersalev2 {
                 return array('rsp'=>'fail', 'msg'=>'退款申请单生成失败');
             }
             kernel::database()->commit($trans);
-            
+            kernel::single('monitor_notice_refund_apply')->erpapi_create($insertData['apply_id']);
             $idBn = array(
                 'apply_id' => $insertData['apply_id'],
                 'refund_apply_bn' => $insertData['refund_apply_bn']
@@ -140,7 +146,8 @@ class erpapi_shop_response_process_aftersalev2 {
             }
             
         }
-        
+        kernel::single('ome_refund_apply')->updateOrderObjectsPayStatusByItemIds($insertData['apply_id']);
+
         //识别是否天猫退款触发AG接口
         $noticeParams = array_merge($sdf, $idBn);
         $this->_noticeAg($noticeParams);
@@ -148,8 +155,7 @@ class erpapi_shop_response_process_aftersalev2 {
         return array('rsp'=>'succ', 'msg'=>$memo);
     }
 
-    private function _refundApplySdfToData($sdf)
-    {
+    private function _getRefundRefer($sdf) {
         //退款来源(normal:普通退款,aftersale:售后仅退款,不退货;)
         if($sdf['refund_refer'] == 'aftersale'){
             $refund_refer = '1';
@@ -161,6 +167,12 @@ class erpapi_shop_response_process_aftersalev2 {
         if($sdf['refund_to_returnProduct']) {
             $refund_refer = '0';
         }
+        return $refund_refer;
+    }
+
+    private function _refundApplySdfToData($sdf)
+    {
+        $refund_refer = $this->_getRefundRefer($sdf);
         
         //oid子单过滤掉重复的oid
         //@todo：之前代码中--PKG组合商品退款时会保存多个oid; 本次只是过滤了重复的oid子单;
@@ -195,6 +207,7 @@ class erpapi_shop_response_process_aftersalev2 {
             'source_status'   => kernel::single('ome_refund_func')->get_source_status($sdf['source_status']),
             'tag_type'        => ($sdf['tag_type'] ? $sdf['tag_type'] : '0'), //退款类型
             'jsrefund_flag'   => ($sdf['jsrefund_flag'] ? $sdf['jsrefund_flag'] : '0'), //极速退款标识
+            'cs_status'       => $sdf['cs_status'],
         );
 
         // 经销店铺的单据，delivery_mode冗余到退款单申请表
@@ -298,11 +311,13 @@ class erpapi_shop_response_process_aftersalev2 {
             return array('rsp'=>'fail', 'msg'=>'退款单创建失败');
         }
         if ($refundApply) {
+            $refund_refer = $this->_getRefundRefer($sdf);
             $filter = array(
                 'apply_id' => $refundApply['apply_id'],
             );
-            $updateData = array('status' => '4','refunded' => $sdf['refund_fee']);
+            $updateData = array('status' => '4','refunded' => $sdf['refund_fee'], 'refund_refer' => $refund_refer, 'cs_status' => $sdf['cs_status']);
             app::get('ome')->model('refund_apply')->update($updateData,$filter);
+            $refundApply = array_merge($refundApply, $updateData);
             app::get('ome')->model('operation_log')->write_log('refund_apply@ome', $refundApply['apply_id'], '退款成功');
             $msg .= "&nbsp;&nbsp;更新退款申请单[{$refundApply['refund_apply_bn']}]为已退款";
             if ($refundApply['addon']) {
@@ -345,7 +360,6 @@ class erpapi_shop_response_process_aftersalev2 {
         if($this->_updateOrderPayed($sdf['order']['order_id'],$sdf['refund_fee'],$must_pause)) {
             $msg .= '&nbsp;&nbsp;更新订单支付状态';
         }
-    
         //扣除原单的运费 要在原单退款单上加日志
         if($sdf['shop_type'] == 'website'){
            $this->_upOriginalOrder($sdf,$refundApply);
@@ -397,7 +411,18 @@ class erpapi_shop_response_process_aftersalev2 {
         }
         //退款未退货
         $this->_refundNoreturn($sdf,$refundApply);
-        
+        kernel::single('monitor_notice_refund_apply')->erpapi_refund($refundApply['apply_id']);
+
+        kernel::single('ome_refund_apply')->updateOrderObjectsPayStatusByItemIds($refundApply['apply_id']);
+        // 增加service扩展点，允许外部service在退款成功后做自定义处理
+        $services = kernel::servicelist('ome.service.refund.apply.accept.refund.after');
+        if ($services) {
+            foreach ($services as $service) {
+                if (method_exists($service, 'after_refund')) {
+                    $service->after_refund($refundApply['apply_id']);
+                }
+            }
+        }
         return array('rsp'=>'succ', 'msg'=>$msg);
     }
     
@@ -461,7 +486,7 @@ class erpapi_shop_response_process_aftersalev2 {
             $filter = array(
                 'apply_id' => $refundApply['apply_id'],
             );
-            $updateData = array('status' => '4','refunded' => $sdf['refund_fee']);
+            $updateData = array('status' => '4','refunded' => $sdf['refund_fee'], 'cs_status' => $sdf['cs_status']);
             app::get('ome')->model('refund_apply')->update($updateData, $filter);
             
             //logs
@@ -497,6 +522,17 @@ class erpapi_shop_response_process_aftersalev2 {
                 kernel::single('ome_bill_label')->markBillLabel($sdf['order']['order_id'], '', $label_code, 'order', $err, 0);
             }
             kernel::single('ome_order_refund')->lanjieDelivery($refundApply['apply_id']);
+        }
+        kernel::single('monitor_notice_refund_apply')->erpapi_refund($refundApply['apply_id']);
+        kernel::single('ome_refund_apply')->updateOrderObjectsPayStatusByItemIds($refundApply['apply_id']);
+        // 增加service扩展点，允许外部service在退款成功后做自定义处理
+        $services = kernel::servicelist('ome.service.refund.apply.accept.refund.after');
+        if ($services) {
+            foreach ($services as $service) {
+                if (method_exists($service, 'after_refund')) {
+                    $service->after_refund($refundApply['apply_id']);
+                }
+            }
         }
         return array('rsp'=>'succ', 'msg'=>$msg);
     }
@@ -774,7 +810,7 @@ class erpapi_shop_response_process_aftersalev2 {
             $data['return_product_items'][] = array(
                 'product_id' => $val['product_id'] ? $val['product_id'] : 0,
                 'bn'         => $val['bn'],
-                'name'       => $val['title'] ? $val['title']: $val['name'],
+                'name'       => $val['name'],
                 'num'        => $val['num'],
                 'price'      => $val['price'],
                 'amount'     => $val['amount'],
@@ -1072,6 +1108,12 @@ class erpapi_shop_response_process_aftersalev2 {
                         );
                         $reshipObj->update($updateSdf, array('reship_id'=>$reship['reship_id']));
                         kernel::single('console_reship')->releaseChangeFreeze($reship['reship_id']);
+                        // 退货单取消后的service扩展点
+                        foreach(kernel::servicelist('console.service.reship.cancel.after') as $object) {
+                            if(method_exists($object, 'cancel_reship_after')) {
+                                $object->cancel_reship_after($reship['reship_id']);
+                            }
+                        }
                     }elseif($is_update_platform_status){
                         //更新平台售后单状态(并标记异常)
                         $updateSdf = array(
@@ -1101,7 +1143,8 @@ class erpapi_shop_response_process_aftersalev2 {
                     //自动审核标记
                     if($sdf['reship']['is_check'] == '0'){
                         $is_auto_confirm = true;
-                    }elseif($updateLogiResult && $sdf['reship']['reship_id']){
+                    }
+                    if($sdf['reship']['return_logi_name'] != $sdf['logistics_company'] || $sdf['reship']['return_logi_no'] != $sdf['logistics_no']) {
                         //请求WMS更新最新物流单号
                         $error_msg = '';
                         kernel::single('ome_reship')->request_wms_returnorder($sdf['reship']['reship_id'], $error_msg);
@@ -1192,6 +1235,10 @@ class erpapi_shop_response_process_aftersalev2 {
                 $upData['platform_status'] = $sdf['platform_status'];
                 $upData['is_modify'] = 'true';
             }
+            if($reship['return_logi_no'] && $reship['return_logi_no'] == $sdf['delivery_logistics_no'] && $logisticsNo != $sdf['delivery_logistics_no']){
+                $upData['flag_type'] = $reship['flag_type'] & (~ome_reship_const::__LANJIE_RUKU);
+                $memo .= '，拦截入库标识已移除。';
+            }
             //换货转退货更新类型
             if (isset($sdf['exchange_to_return']) && $sdf['exchange_to_return'] && $sdf['reship']['return_type'] == 'change') {
                 $upData['return_type'] = 'return';
@@ -1212,6 +1259,16 @@ class erpapi_shop_response_process_aftersalev2 {
             $operateLog = app::get('ome')->model('operation_log');
             $operateLog->write_log('reship@ome',$reship['reship_id'],$memo);
             $this->_updateReturnProductLogistics($reship['return_id'], $logisticsCompany, $logisticsNo,$sdf);
+            // 物流单号重复检测打标（flag_type 位）
+            if ($reship['reship_id']) {
+                kernel::single('ome_reship')->markDuplicateReturnLogiNo($reship['reship_id'], $logisticsNo);
+            }
+            
+            foreach(kernel::servicelist('erpapi.service.aftersale.update.reship.logistics.after') as $object) {
+                if(method_exists($object, 'after_update_logistics')){
+                    $object->after_update_logistics($reship['reship_id']);
+                }
+            }
             
             return $rs;
         }
@@ -1233,7 +1290,7 @@ class erpapi_shop_response_process_aftersalev2 {
             $is_update_platform_status = false;
             
             $msg = '仅处理未审核、拒绝状态和物流信息';
-            if($sdf['reship']['shipcompany'] != $sdf['logistics_company'] || $sdf['reship']['return_logi_no'] != $sdf['logistics_no']) {
+            if($sdf['reship']['return_logi_name'] != $sdf['logistics_company'] || $sdf['reship']['return_logi_no'] != $sdf['logistics_no']) {
                 if($this->_updateReshipLogistics($sdf)) {
                     $msg = '更新物流信息成功';
                     
@@ -1279,6 +1336,12 @@ class erpapi_shop_response_process_aftersalev2 {
                         }
                         
                         kernel::single('console_reship')->releaseChangeFreeze($sdf['reship']['reship_id']);
+                        // 退货单取消后的service扩展点
+                        foreach(kernel::servicelist('console.service.reship.cancel.after') as $object) {
+                            if(method_exists($object, 'cancel_reship_after')) {
+                                $object->cancel_reship_after($sdf['reship']['reship_id']);
+                            }
+                        }
                         if ($sdf['return_product']) {
                             $returnId = $sdf['return_product']['return_id'];
                             $rpData = array('status' => '5', 'last_modified' => time());
@@ -1376,6 +1439,11 @@ class erpapi_shop_response_process_aftersalev2 {
             $this->_insertReshipItems($reshipItems, $insertData['reship_id']);
             
             $operateLog->write_log('reship@ome',$insertData['reship_id'], '新建退货单');
+            foreach(kernel::servicelist('ome.service.reship.create.after') as $object) {
+                if(method_exists($object, 'after_create')){
+                    $object->after_create($insertData['reship_id']);
+                }
+            }
             if ($sdf['return_product']['return_type']=='jdchange') {
                 kernel::single('ome_return_product')->releaseChangeFreeze($insertData['return_id']);
 
@@ -1592,13 +1660,30 @@ class erpapi_shop_response_process_aftersalev2 {
     public function cleanReturnStatus($reship){
         $return_id = (int) $reship['return_id'];
         $reship_id = (int) $reship['reship_id'];
+        $reship_bn = $reship['reship_bn'];
         $oReship = app::get('ome')->model('reship');
         $oOperation_log = app::get('ome')->model('operation_log');//写日志
-        $oReship->db->exec('DELETE FROM sdb_ome_reship WHERE reship_id='.$reship_id);
-        $oReship->db->exec('DELETE FROM sdb_ome_reship_items WHERE reship_id='.$reship_id);
-        $oReship->db->exec('DELETE FROM sdb_ome_return_process WHERE reship_id='.$reship_id);
-        $oReship->db->exec('DELETE FROM sdb_ome_return_process_items WHERE reship_id='.$reship_id);
-        $memo = '退款原因、金额或版本变化,已生成退货单' . $reship['reship_bn'] . '清除';
+        if($reship_id) {
+            // 在作废 reship 数据之前，先释放库存冻结
+            list($rs, $rsData) = kernel::single('console_reship')->releaseChangeFreeze($reship_id);
+            if($rs == false){
+                // 释放失败记录日志，但不影响作废操作
+                $oOperation_log->write_log('reship@ome', $reship_id, '释放库存冻结失败:'.($rsData['msg'] ? $rsData['msg'] : ''));
+            }
+            $updateData = array(
+                'return_id' => 0,
+                'is_check' => 5,
+                'reship_bn' => $reship_bn . '_' . $reship_id
+            );
+            $oReship->update($updateData, array('reship_id'=>$reship_id));
+        }
+        $memo = '退款原因、金额或版本变化,已生成退货单' . $reship['reship_bn'] . '作废处理';
+        // 增加调用所有 cleanReturnStatus 扩展 service
+        foreach(kernel::servicelist('erpapi.service.aftersale.clean.return.status.after') as $object) {
+            if (method_exists($object, 'cleanReturnStatusAfter')) {
+                $object->cleanReturnStatusAfter($reship);
+            }
+        }
         $oOperation_log->write_log('return@ome',$return_id,$memo);
     }
 
@@ -1707,7 +1792,6 @@ class erpapi_shop_response_process_aftersalev2 {
      */
     public function _autoEditorder($sdf, &$error_msg=null, &$is_abnormal=false)
     {
-
         $orderObj = app::get('ome')->model('orders');
         $orderObjMdl = app::get('ome')->model('order_objects');
         $orderItemObj = app::get('ome')->model("order_items");
@@ -1721,7 +1805,7 @@ class erpapi_shop_response_process_aftersalev2 {
         $order_detail = $orderObj->dump($order_filter, '*');
         
         //check支持的平台
-        if(!in_array($order_detail['shop_type'], array('taobao','tmall','luban','website_d1m','website','weimobv','youzan','website_v2','pinduoduo','wxshipin','meituan4sg'))){
+        if(!in_array($order_detail['shop_type'], array('taobao','tmall','luban','website_d1m','website','weimobv','weimobr','youzan','website_v2','pinduoduo','wxshipin','meituan4sg'))){
             $error_msg = $order_detail['shop_type'] . '平台订单不支持编辑';
             return false;
         }
@@ -1797,12 +1881,10 @@ class erpapi_shop_response_process_aftersalev2 {
         {
             foreach($items as $item)
             {
-
                 $refund_items = $refund_item_list[$item['oid']] ? $refund_item_list[$item['oid']] : array();
                 if($item['oid'] != $sdf['oid'] && !$refund_items){
                     continue;
                 }
-                
                 
                 //天猫权益金
                 if ($sdf['refund_fee'] != $item['divide_order_fee'] && $sdf['tmall_mcard_pz_sp']){
@@ -1813,7 +1895,7 @@ class erpapi_shop_response_process_aftersalev2 {
                 if ($sdf['refund_fee'] != $item['divide_order_fee'] && $sdf['isPriceProtect'] !== true && $item['refund_money']){
                     $sdf['refund_fee'] = $sdf['refund_fee'] + $item['refund_money'];
                 }
-    
+                
                 if ($sdf['shop_type'] == 'website' && $refund_items) {
                     $refund_fee = array_sum(array_column($refund_items,'amount'));
                     $sdf['refund_fee'] = number_format($refund_fee, 3, '.', '');
@@ -1828,9 +1910,8 @@ class erpapi_shop_response_process_aftersalev2 {
                     if($oObjRow && $oObjRow['pay_status'] != 5) {
                         $update_sql = "UPDATE sdb_ome_order_objects SET pay_status='5' WHERE order_id=". $order_id ." AND obj_id=". $item['obj_id'];
                         $orderObj->db->exec($update_sql);
-                        $order_sql = "UPDATE sdb_ome_orders SET pmt_goods=pmt_goods-".$item['pmt_price'].", pmt_order=pmt_order-".($item['part_mjz_discount']?:0).", cost_item=cost_item-".$item['amount'];
-                        $order_sql .= ", total_amount=total_amount-".$sdf['refund_fee'].", final_amount=final_amount-".$sdf['refund_fee']." WHERE order_id=". $order_id;
-                        $orderObj->db->exec($order_sql);
+                        //退款单先下来，订单单拉商品优惠在矩阵已经处理过了
+                        kernel::single('ome_order_object_amount')->recalculateOrderAmount($order_id, [$item], false);
                         $edit_flag = true;
                     }
                     continue;
@@ -1956,10 +2037,7 @@ class erpapi_shop_response_process_aftersalev2 {
 
                 
                 //更新订单金额
-                $order_sql = "UPDATE sdb_ome_orders SET pmt_goods=pmt_goods-".$item['pmt_price'].", pmt_order=pmt_order-".($item['part_mjz_discount']?:0).", cost_item=cost_item-".$item['amount'];
-                $order_sql .= ", total_amount=total_amount-".$sdf['refund_fee'].", final_amount=final_amount-".$sdf['refund_fee']." WHERE order_id=". $order_id;
-       
-                $orderObj->db->exec($order_sql);
+                kernel::single('ome_order_object_amount')->recalculateOrderAmount($order_id, [$item]);
                 
                 // custom 根据子订单id查询是否有关联赠品
                 $this->__deletePlatformGift($item['oid'], $order_id, $needChangeFreezeItem);
@@ -2038,8 +2116,15 @@ class erpapi_shop_response_process_aftersalev2 {
             //编辑订单删除退款商品后,重新调用赠品规则
             $this->_dealCrmGift($order_id);
             
+            // [大家电订单]商品被修改，订单需要重新预约时间
+            kernel::single('ome_order_reservation')->againReservation($order_id, 'goods_change');
+            
             //延迟5分钟自动重新路由审核订单
             $sdf = array('op_type'=>'timing_confirm', 'timing_time'=>strtotime('5 minutes'), 'memo'=>'退款完成编辑订单后重新路由');
+            
+            //@todo：当系统设置里未开启[是否开启系统自动审核]时，未调用延迟自动审核;
+            $sdf['cnAuto'] = 'true';
+            
             kernel::single('ome_order')->auto_order_combine($order_id, $sdf);
         }else{
             //订单退款商品无法删除,如有CRM赠品则打标记
@@ -2346,14 +2431,6 @@ class erpapi_shop_response_process_aftersalev2 {
                 $needChangeFreezeItem[] = $giftOrderObjItem;
             }
 
-            // 订单金额处理
-            $giftOrderObject['part_mjz_discount'] = $giftOrderObject['part_mjz_discount'] ? $giftOrderObject['part_mjz_discount'] : 0;
-            $giftOrderObject['divide_order_fee'] = $giftOrderObject['divide_order_fee'] ? $giftOrderObject['divide_order_fee'] : 0;
-            $giftOrderObject['amount'] = $giftOrderObject['amount'] ? $giftOrderObject['amount'] : 0;
-            $giftOrderObject['pmt_price'] =  $giftOrderObject['pmt_price'] ?  $giftOrderObject['pmt_price'] : 0;
-
-            $sql = "update sdb_ome_orders set pmt_goods=pmt_goods-" . $giftOrderObject['pmt_price'] . ",pmt_order=pmt_order-" .($giftOrderObject['part_mjz_discount']?:0). ",cost_item=cost_item-" . $giftOrderObject['amount'] . ",total_amount=total_amount-" . $giftOrderObject['divide_order_fee'] . ",final_amount=final_amount-" . $giftOrderObject['divide_order_fee'] . "  where order_id=" . $order_id;
-            kernel::database()->exec($sql);
         }
     }
     

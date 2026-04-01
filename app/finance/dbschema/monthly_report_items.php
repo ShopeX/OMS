@@ -135,6 +135,24 @@ $db['monthly_report_items'] = array(
             'filtertype' => 'normal',
             'filterdefault' => true,
         ],
+        'gov_yingshou_total' => [
+            'type' => 'money',
+            'label' => '国补应收合计',
+            'in_list' => true,
+            'default_in_list' => true,
+            'order' => 105,
+            'filtertype' => 'normal',
+            'filterdefault' => true,
+        ],
+        'gov_shishou_total' => [
+            'type' => 'money',
+            'label' => '国补实收合计',
+            'in_list' => true,
+            'default_in_list' => true,
+            'order' => 106,
+            'filtertype' => 'normal',
+            'filterdefault' => true,
+        ],
         'gap' => [
             'type' => 'decimal(20,3)',
             'label' => 'GAP',
@@ -150,6 +168,22 @@ $db['monthly_report_items'] = array(
             'in_list' => true,
             'default_in_list' => true,
             'order' => 120,
+        ],
+        'sales_gap' => [
+            'type' => 'decimal(20,3)',
+            'label' => '销售GAP',
+            'default' => '0',
+            'comment' => '销售应收-平台收入',
+            'in_list' => false,
+            'default_in_list' => false,
+        ],
+        'refund_gap' => [
+            'type' => 'decimal(20,3)',
+            'label' => '退款GAP',
+            'default' => '0',
+            'comment' => '销售应退-平台支出',
+            'in_list' => false,
+            'default_in_list' => false,
         ],
         'verification_status'   => array(
             'type'    => [
@@ -169,6 +203,44 @@ $db['monthly_report_items'] = array(
             'default_in_list' => true,
             'order' => 140,
         ],
+        'actually_amount' => array(
+            'type'    => 'money',
+            'default' => '0',
+            'width'           => 65,
+            'editable'        => false,
+            'in_list'         => true,
+            'default_in_list' => true,
+            'label'   => '客户实付',
+        ),
+        'platform_amount' => array(
+            'type'    => 'money',
+            'default' => '0',
+            'width'           => 65,
+            'editable'        => false,
+            'in_list'         => true,
+            'default_in_list' => true,
+            'label'   => '平台承担金额',
+            'comment' => '平台承担金额（不包含支付优惠）',
+        ),
+        'refund_actually_amount' => array(
+            'type'    => 'money',
+            'default' => '0',
+            'width'           => 65,
+            'editable'        => false,
+            'in_list'         => true,
+            'default_in_list' => true,
+            'label'   => '客户应退',
+        ),
+        'refund_platform_amount' => array(
+            'type'    => 'money',
+            'default' => '0',
+            'width'           => 65,
+            'editable'        => false,
+            'in_list'         => true,
+            'default_in_list' => true,
+            'label'   => '平台补贴退',
+            'comment' => '平台补贴退（不包含支付优惠）',
+        ),
         'at_time'       => array(
             'type'            => 'TIMESTAMP',
             'label'           => '创建时间',
@@ -198,6 +270,26 @@ $db['monthly_report_items'] = array(
         'ind_verification_status' => [
             'columns' => [
                 'verification_status'
+            ]
+        ],
+        'ind_gov_yingshou_total' => [
+            'columns' => [
+                'gov_yingshou_total'
+            ]
+        ],
+        'ind_gov_shishou_total' => [
+            'columns' => [
+                'gov_shishou_total'
+            ]
+        ],
+        'ind_gap' => [
+            'columns' => [
+                'gap'
+            ]
+        ],
+        'ind_gap_type' => [
+            'columns' => [
+                'gap_type'
             ]
         ],
         'ind_at_time' => ['columns' => ['at_time']],

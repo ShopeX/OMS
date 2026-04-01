@@ -119,21 +119,15 @@ class omeauto_order_label
         $ruleObj = app::get('omeauto')->model('order_labelrule');
         $ordLabelObj = app::get('ome')->model('bill_label');
         $operLogObj = app::get('ome')->model('operation_log');
+        $labelObj = app::get('omeauto')->model('order_labels');
         
-        //订单标记规则(最多读取50条有效规则)
-        $ruleList = $ruleObj->getList('*', array('disabled' => 'false'), 0, 50);
+        //订单标记规则(最多读取500条有效规则)
+        $ruleList = $ruleObj->getList('*', array('disabled'=>'false'), 0, 500, 'weight DESC,id DESC');
         if (empty($ruleList)) {
             //没有配置标记规则,直接返回true,不用记录log日志
             $error_msg = '没有配置订单标记规则';
             return true;
         }
-        
-        //检查已经打标,则跳过
-        /* $isCheck = $ordLabelObj->dump(array('bill_type' => 'order', 'bill_id' => $order_id), 'bill_id');
-        if ($isCheck) {
-            $error_msg = '订单已经打过标签';
-            return true;
-        } */
         
         //订单信息
         $orderInfo = $orderObj->dump(array('order_id'=>$order_id), '*', array('order_objects'=>array('*', array('order_items'=>array('*')))));
@@ -226,10 +220,15 @@ class omeauto_order_label
                     continue; //标记已存在,则跳过
                 }
                 
+                // 标记信息
+                $labelInfo = $labelObj->dump(array('label_id'=>$label_id), '*');
+                
+                // sdf
                 $saveData = array(
                     'bill_type'   => 'order',
                     'bill_id'     => $order_id,
                     'label_id'    => $label_id,
+                    'label_code'  => $labelInfo['label_code'],
                     'label_name'  => $laVal['label_name'],
                     'create_time' => time(),
                 );

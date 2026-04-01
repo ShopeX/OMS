@@ -81,8 +81,12 @@ class taskmgr_storage_sftp extends taskmgr_storage_abstract implements taskmgr_s
      * @param string $url 生成目标文件路径
      * @return boolean true/false
      */
-    public function save($source_file, $task_id, &$url)
+    public function save($source_file, $task_id, &$url, $extName = '')
     {
+        if ($extName) {
+            $this->setExtName($extName);
+        }
+
         //存储的目的地文件路径
         $destination_file = $this->_get_ident($task_id);
 

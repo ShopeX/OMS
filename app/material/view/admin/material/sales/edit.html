@@ -58,7 +58,7 @@
                 <div class="form-field">
                     <span class="form-field-label">销售物料编码：</span>
                     <{$material_info.sales_material_bn}>
-                    <input class="form-input" placeholder="请输入物料编码" type="hidden" name="sales_material_bn" vtype="required" value="<{$material_info.sales_material_bn}>" onkeyup="value=value.replace(/[^A-Za-z0-9_-\/]/ig,'')" /><span style="color:red;">*</span>
+                    <input class="form-input" placeholder="请输入物料编码" type="hidden" name="sales_material_bn" vtype="required" value="<{$material_info.sales_material_bn}>" onkeyup="value=value.replace(/[^A-Za-z0-9_-\/ ]/ig,'')" /><span style="color:red;">*</span>
                 </div>
                 <div class="form-field">
                     <span class="form-field-label">物料类型：</span>
@@ -157,9 +157,10 @@
                 <table class="gridlist" id="material_table"  style="margin:4px 0;">
                     <thead>
                     <tr>
-                                        <th>编码</th>
+                <th>编码</th>
                 <th style="width:240px;">名称</th>
                 <th><{$price_label}></th>
+                <th>固定价</th>
                 <th>数量</th>
                 <th>组合价格贡献占比(1-100数值)</th>
                 <th style="width:30px;">删除</th>
@@ -167,7 +168,7 @@
                     </thead>
                     <tbody id="dataNode">
                     <tr>
-                        <td colspan="6" style="padding:0;"><div class="note" style="margin:0;"> 暂无物料信息 </div></td>
+                        <td colspan="7" style="padding:0;"><div class="note" style="margin:0;"> 暂无关联的基础物料信息 </div></td>
                     </tr>
                     </tbody>
                 </table>
@@ -618,6 +619,7 @@ var sm_id = "<{$material_info.sm_id}>";
         if($('cantdel')){
             var tpl='<tr key="{bm_id}" id="bm_{bm_id}" title="点击选取/反选此条记录">'
                 +'  <td>{material_bn}</td><td class="material-name">{material_name}</td><td>{' + (priceField || 'retail_price') + '}</td>'
+                +'  <td>{fixed_price}</td>'
                 +'  <td><input type="text" value="{number}" key="number" vtype="number&amp;&amp;required" tname="at[_PRIMARY_]" size="6" readonly></td>'
                 +'  <td><input type="text" vtype="number&amp;&amp;required"  tname="pr[_PRIMARY_]" key="rate" value="{rate}" id="rate_{bm_id}" size="5"></td>'
                 +'  <td style="text-align:center;">-<{img src="bundle/delecate.gif" style="display:none;" app="desktop" key="state" class="pointer btn-delete-item"}></td>'
@@ -632,6 +634,7 @@ var sm_id = "<{$material_info.sm_id}>";
         }else{
             var tpl='<tr key="{bm_id}" id="bm_{bm_id}" title="点击选取/反选此条记录">'
                 +'  <td>{material_bn}</td><td class="material-name">{material_name}</td><td>{' + (priceField || 'retail_price') + '}</td>'
+                +'  <td>{fixed_price}</td>'
                 +'  <td><input type="text" value="{number}" key="number" vtype="number&amp;&amp;required" tname="at[_PRIMARY_]" size="6"></td>'
                 +'  <td><input type="text" vtype="number&amp;&amp;required"  tname="pr[_PRIMARY_]" key="rate" value="{rate}" id="rate_{bm_id}" size="5"></td>'
                 +'  <td><{img src="bundle/delecate.gif" app="desktop" key="state" class="pointer btn-delete-item"}></td>'
@@ -753,7 +756,7 @@ var sm_id = "<{$material_info.sm_id}>";
         var pag,rows,giftPag;
         function emptyData(){
             var noData='<tr>'
-                +'<td colspan="7" style="padding:0;"><div class="note" style="margin:0;"> 暂无物料信息 </div></td>'
+                +'<td colspan="7" style="padding:0;"><div class="note" style="margin:0;"> 暂无关联的基础物料信息... </div></td>'
                 +'</tr>';
             $('dataNode').set('html',noData);
         }

@@ -31,6 +31,10 @@
           <th><{t}>优惠额<{/t}></th>
             <th><{t}>实付金额<{/t}></th>
             <th><{t}>优惠分摊<{/t}></th>
+            <{if $order.settlement_amount > 0}>
+            <th><{t}>客户实付<{/t}></th>
+            <th><{t}>商家结算<{/t}></th>
+            <{/if}>
           <th><{t}>购买量<{/t}></th>
             <th><{t}>已发货量<{/t}></th>
           <th><{t}>已退货量<{/t}></th>
@@ -67,6 +71,10 @@
           <td><strong><{if $show_sale_price}><{$obj.pmt_price/$obj.quantity|cur}><{else}>-<{/if}></strong></td>
           <td><{if $show_sale_price}><{$obj.divide_order_fee|cur}><{else}>-<{/if}></td>
           <td><{if $show_sale_price}><{$obj.part_mjz_discount|cur}><{else}>-<{/if}></td>
+          <{if $order.settlement_amount > 0}>
+          <td><{if $show_sale_price}><{$obj.actually_amount|cur}><{else}>-<{/if}></td>
+          <td><{if $show_sale_price}><{$obj.settlement_amount|cur}><{else}>-<{/if}></td>
+          <{/if}>
           <td><strong><{$obj.quantity}></strong></td>
           <td>&nbsp;</td>
           <td>&nbsp;</td>
@@ -98,6 +106,10 @@
         <td><{if $show_sale_price}><{$item.pmt_price/$item.quantity|cur}><{else}>-<{/if}></td>
         <td><{if $show_sale_price}><{$item.divide_order_fee|cur}><{else}>-<{/if}></td>
         <td><{if $show_sale_price}><{$item.part_mjz_discount|cur}><{else}>-<{/if}></td>
+        <{if $order.settlement_amount > 0}>
+        <td><{if $show_sale_price}><{$item.actually_amount|cur}><{else}>-<{/if}></td>
+        <td><{if $show_sale_price}><{$item.settlement_amount|cur}><{else}>-<{/if}></td>
+        <{/if}>
         <td><{$item.quantity}></td>        <td><{$item.sendnum}></td>
         <td><{$item.return_num}></td>
         <td><{$item.split_num}></td>

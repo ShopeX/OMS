@@ -266,4 +266,29 @@ class ome_branch_type{
 
         return $branchList;
     }
+
+    //通过仓库类型和仓储ID获取仓库ID
+    /**
+     * 通过仓库类型和仓储ID获取仓库
+     *
+     * @param string $type 仓库类型(对应branch_type.type)
+     * @param int $wmsId 仓储ID(对应branch.wms_id)
+     * @param string $warehouseCode 仓库编码(对应branch.warehouse_code)
+     * @return array 仓库信息
+     */
+    public function getBranchByTypeWms($typeName, $wmsId, $warehouseCode = '') {
+        if (empty($typeName) || empty($wmsId)) {
+            return false;
+        }
+
+        $branchModel = app::get('ome')->model('branch');
+        $filter = array(
+            'storage_code' => trim($typeName),
+            'wms_id' => intval($wmsId),
+            'warehouse_code' => $warehouseCode
+        );
+        $branch = $branchModel->getList('branch_id', $filter, 0, 1);
+        
+        return $branch ? $branch[0] : [];
+    }
 }

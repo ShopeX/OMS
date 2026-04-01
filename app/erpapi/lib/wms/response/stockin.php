@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * 入库单
  *
@@ -194,6 +193,7 @@ class erpapi_wms_response_stockin extends erpapi_wms_response_abstract
                     'sn_list' => $val['sn_list'] ? json_encode($val['sn_list'], JSON_UNESCAPED_UNICODE) : '',
                     'batch' => $val['batch'] ? json_encode($val['batch'], JSON_UNESCAPED_UNICODE) : '',
                     'wms_item_id' => $val['item_id'],
+                    'inventoryType' => $val['inventoryType'] ? $val['inventoryType'] : '',
                 ];
             }
             $wriMdl = app::get('console')->model('wms_stockin_items');

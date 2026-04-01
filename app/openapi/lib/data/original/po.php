@@ -17,11 +17,6 @@
 
 class openapi_data_original_po{
 
-    /**
-     * 添加
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function add($data){
         $result = array('rsp'=>'succ');
 
@@ -65,6 +60,59 @@ class openapi_data_original_po{
                 kernel::single('console_po')->do_check($sdf['po_id']);
             }
 
+            // 写入属性表
+            if (!empty($data['props']) && $sdf['po_id']) {
+                // 解析props（JSON字符串转数组）
+                $props = json_decode($data['props'], true);
+                if ($props && is_array($props)) {
+                    $poPropsModel = app::get('purchase')->model('po_props');
+                    foreach ($props as $propsCol => $propsValue) {
+                        if (!empty($propsValue)) {
+                            $inData = array(
+                                'po_id' => $sdf['po_id'],
+                                'props_col' => $propsCol,
+                                'props_value' => $propsValue,
+                            );
+                            $poPropsModel->insert($inData);
+                        }
+                    }
+                }
+            }
+            
+            // 写入明细属性表
+            if (!empty($data['items']) && is_array($data['items']) && $sdf['po_id']) {
+                $poItemsModel = app::get('purchase')->model('po_items');
+                $poItemsPropsModel = app::get('purchase')->model('po_items_props');
+                
+                foreach ($data['items'] as $item) {
+                    // 如果item中有props字段，保存到po_items_props表
+                    if (isset($item['props']) && !empty($item['props'])) {
+                        // 通过po_id和bn查询item_id
+                        $itemInfo = $poItemsModel->db_dump(array(
+                            'po_id' => $sdf['po_id'],
+                            'bn' => $item['bn']
+                        ), 'item_id');
+                        
+                        if ($itemInfo && $itemInfo['item_id']) {
+                            // props可能是JSON字符串或数组
+                            $itemProps = is_string($item['props']) ? json_decode($item['props'], true) : $item['props'];
+                            
+                            if ($itemProps && is_array($itemProps)) {
+                                foreach ($itemProps as $propsCol => $propsValue) {
+                                    if (!empty($propsValue)) {
+                                        $inData = array(
+                                            'item_id' => $itemInfo['item_id'],
+                                            'props_col' => $propsCol,
+                                            'props_value' => $propsValue,
+                                        );
+                                        $poItemsPropsModel->insert($inData);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }else{
             $result['rsp'] = 'fail';
             $result['msg'] = $rs['msg'];
@@ -73,13 +121,6 @@ class openapi_data_original_po{
         return $result;
     }
     
-    /**
-     * 获取List
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $limit limit
-     * @return mixed 返回结果
-     */
     public function getList($filter,$offset=0,$limit=100){
     	$po_mdl = app::get('purchase')->model('po');
     	$poItems_mdl = app::get('purchase')->model('po_items');
@@ -109,6 +150,24 @@ class openapi_data_original_po{
     							$filter,($offset-1)*$limit,$limit);
 
         $result = ['lists' => [], 'count' => $count];
+
+        // 批量查询属性表数据
+        $poIds = array_column($data, 'po_id');
+        $poPropsData = [];
+        if (!empty($poIds)) {
+            $poPropsModel = app::get('purchase')->model('po_props');
+            $poPropsList = $poPropsModel->getList('*', array(
+                'po_id' => $poIds
+            ));
+            
+            // 按po_id分组
+            foreach ($poPropsList as $prop) {
+                if (!isset($poPropsData[$prop['po_id']])) {
+                    $poPropsData[$prop['po_id']] = array();
+                }
+                $poPropsData[$prop['po_id']][$prop['props_col']] = $prop['props_value'];
+            }
+        }
 
         foreach ($data as $k => $v){
             $v['po_time'] = date('Y-m-d H:i:s',$v['po_time']);
@@ -149,18 +208,88 @@ class openapi_data_original_po{
                 }
             }
             $v['eo_list'] = $isoList;
-            $itemInfos = $poItems_mdl->getList('bn as product_bn,name as product_name, price,num, in_num, defective_num as bad_num,status', array('po_id'=>$v['po_id']));
+            $itemInfos = $poItems_mdl->getList('item_id,bn as product_bn,name as product_name, price,num, in_num, defective_num as bad_num,status', array('po_id'=>$v['po_id']));
             $v['po_bn']= $formatFilter->charFilter($v['po_bn']);
             if(!empty($itemInfos)){
-                foreach ($itemInfos as $itemInfo){
+                // 批量查询明细属性表数据
+                $itemIds = array_column($itemInfos, 'item_id');
+                $poItemsPropsData = [];
+                if (!empty($itemIds)) {
+                    $poItemsPropsModel = app::get('purchase')->model('po_items_props');
+                    $poItemsPropsList = $poItemsPropsModel->getList('*', array(
+                        'item_id' => $itemIds
+                    ));
+                    
+                    // 按item_id分组
+                    foreach ($poItemsPropsList as $prop) {
+                        if (!isset($poItemsPropsData[$prop['item_id']])) {
+                            $poItemsPropsData[$prop['item_id']] = array();
+                        }
+                        $poItemsPropsData[$prop['item_id']][$prop['props_col']] = $prop['props_value'];
+                    }
+                }
+                
+                foreach ($itemInfos as $key => $itemInfo){
                     $itemInfo['product_bn']= $formatFilter->charFilter($itemInfo['product_bn']);
                     $itemInfo['product_name']= $formatFilter->charFilter($itemInfo['product_name']);
+                    // 添加明细扩展属性
+                    $itemInfo['props'] = isset($poItemsPropsData[$itemInfo['item_id']]) ? $poItemsPropsData[$itemInfo['item_id']] : array();
+                    // 移除item_id，不输出
+                    unset($itemInfo['item_id']);
+                    $itemInfos[$key] = $itemInfo;
                 }
                 $v['items']= $itemInfos;
+                $v['props'] = isset($poPropsData[$v['po_id']]) ? $poPropsData[$v['po_id']] : array();
                 $result['lists'][] =$v;
             }
     	}
     	return $result;
+    }
+
+    public function cancel($data)
+    {
+        $result = array('rsp' => 'succ');
+        
+        $po_mdl = app::get('purchase')->model('po');
+        $formatFilter = kernel::single('openapi_format_abstract');
+        
+        // 获取采购单编号
+        $po_bn = trim($data['po_bn']);
+        if (empty($po_bn)) {
+            $result['rsp'] = 'fail';
+            $result['msg'] = '采购单编号不能为空';
+            return $result;
+        }
+        
+        // 查询采购单
+        $po_info = $po_mdl->dump(array('po_bn' => $po_bn), 'po_id');
+        if (!$po_info) {
+            $result['rsp'] = 'fail';
+            $result['msg'] = '采购单不存在';
+            return $result;
+        }
+        
+        // 操作员
+        $operator = $data['operator'] ? $formatFilter->charFilter($data['operator']) : 'system';
+        
+        // 备注
+        $memo = $data['memo'] ? $formatFilter->charFilter($data['memo']) : '';
+        
+        // 调用采购取消方法
+        list($rs, $msg) = kernel::single('console_po')->do_cancel($po_info['po_id'], $operator, $memo);
+        
+        if (!$rs) {
+            $result['rsp'] = 'fail';
+            $result['msg'] = $msg;
+        } else {
+            $result['data'] = array(
+                'po_bn' => $po_bn,
+                'po_id' => $po_info['po_id']
+            );
+            $result['msg'] = $msg;
+        }
+        
+        return $result;
     }
     
 }

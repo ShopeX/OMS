@@ -14,6 +14,7 @@
   limitations under the License.
 -->
 
+
 <{capture name="header"}>
   <link href="../app/ome/statics/ome.css" rel="stylesheet" type="text/css">
 <{/capture}>
@@ -23,7 +24,7 @@
 <div class="division">
     <table border="0" cellspacing="0" cellpadding="0">
         <tr>
-            <th>商品总额：</th>
+            <th>基础物料总额：</th>
             <td><{if $show_sale_price}><{$sales.total_amount|cur}><{else}>-<{/if}></td>
             <th>店铺名称：</th>
             <td><{$sales.shopname}></td>
@@ -134,10 +135,10 @@
         <th orderkey="store"><{t}>物料类型<{/t}></th>
 				<th orderkey="bn"><{t}>物料编码<{/t}></th>
                 <th orderkey="store"><{t}>物料名称<{/t}></th>
-                <th orderkey="store"><{t}>商品规格<{/t}></th>
+                <th orderkey="store"><{t}>基础物料规格<{/t}></th>
                 <th orderkey="weight"><{t}>吊牌价<{/t}></th>
                 <th orderkey="unit"><{t}>数量<{/t}></th>
-                <th orderkey="store"><{t}>货品优惠<{/t}></th>
+                <th orderkey="store"><{t}>基础物料优惠<{/t}></th>
                 <th orderkey="weight"><{t}>销售总价<{/t}></th>
                 <th orderkey="store"><{t}>平摊优惠<{/t}></th>
 				<th orderkey="unit"><{t}>销售金额<{/t}></th>

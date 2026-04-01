@@ -1257,6 +1257,14 @@ class erpapi_dealer_response_process_aftersale
         $reship_id = (int) $reship['reship_id'];
         $oReship = app::get('ome')->model('reship');
         $oOperation_log = app::get('ome')->model('operation_log');//写日志
+        
+        // 在删除 reship 数据之前，先释放库存冻结
+        list($rs, $rsData) = kernel::single('console_reship')->releaseChangeFreeze($reship_id);
+        if($rs == false){
+            // 释放失败记录日志，但不影响删除操作
+            $oOperation_log->write_log('reship@ome', $reship_id, '释放库存冻结失败:'.($rsData['msg'] ? $rsData['msg'] : ''));
+        }
+        
         $oReship->db->exec('DELETE FROM sdb_ome_reship WHERE reship_id='.$reship_id);
         $oReship->db->exec('DELETE FROM sdb_ome_reship_items WHERE reship_id='.$reship_id);
         $oReship->db->exec('DELETE FROM sdb_ome_return_process WHERE reship_id='.$reship_id);

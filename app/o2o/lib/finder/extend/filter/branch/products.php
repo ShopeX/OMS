@@ -64,7 +64,7 @@ class o2o_finder_extend_filter_branch_products{
                 'bn' => array (
                     'type' => 'varchar(40)',
                     'editable' => false,
-                    'label' => '货号',
+                    'label' => '基础物料编码',
                     'width' => 110,
                     'filtertype' => 'normal',
                     'filterdefault' => true,

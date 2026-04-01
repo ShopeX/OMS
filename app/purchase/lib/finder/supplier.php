@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class purchase_finder_supplier{
     var $detail_basic = "详细信息";
     var $detail_current_account = "往来帐";
@@ -99,7 +98,7 @@ class purchase_finder_supplier{
         $supplier_bn = $row[$this->col_prefix.'bn'];
         //$button .= "&nbsp;&nbsp;&nbsp;<a class=\"lnk\" href=\"index.php#app=ome&amp;ctl=admin_goods&p[0]=$supplier_id\"  target=\"_blank\">查看商品</a>";
         $url='index.php?app=desktop&act=alertpages&goto='.urlencode('index.php?app=purchase&ctl=admin_purchase&act=findMaterial&p[0]='.$supplier_id);
-        $button .= "&nbsp;&nbsp;&nbsp;<a class=\"lnk\" href=\"".$url."\" target='_blank'>查看关联货品</a>";
+        $button .= "&nbsp;&nbsp;&nbsp;<a class=\"lnk\" href=\"".$url."\" target='_blank'>查看关联基础物料</a>";
         //往来帐
         //$button .= "&nbsp;&nbsp;<span class=\"lnk\" onclick=\"new Dialog('index.php?app=purchase&amp;ctl=admin_statement&act=statement_counter&p[0]=$supplier_id',{height:300,width:750,title:'$supplier_name - 往来账(供应商编号：$supplier_bn)'});\">往来账</span>";
         //预付款

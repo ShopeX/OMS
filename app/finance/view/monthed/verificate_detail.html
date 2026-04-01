@@ -155,6 +155,16 @@
                     </tr>
                     <tr>
                         <td >
+                            差异类型：<select name="gap_type" id="gap-type-select" data-tail-select>
+                                <option value="">请选择差异类型</option>
+                                <{foreach from=$gap_list item=gap}>
+                                <option value="<{$gap.gap_name}>" <{if $saved_gap_type == $gap.gap_name}>selected<{/if}>><{$gap.gap_name}></option>
+                                <{/foreach}>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td >
                             核销备注：<br>
                             <textarea style="width:500px;height:60px;" name="verification_memo"></textarea>
                         </td>
@@ -162,7 +172,7 @@
                 </tbody>
             </table>
         </div>
-        <div align="center">
+        <div align="center" style="margin-top: 20px; padding: 10px;">
             <{button label="确认核销" class="btn btn-primary" id="btn-submit" onclick="do_submit();" }>
             <{button label="关闭" class="btn btn-primary" onclick="javascript:void(window.close());" }>
         </div>
@@ -264,6 +274,20 @@
 <div>
 <script>
 
+// 初始化tail.select
+Ex_Loader("tail.select", function(){
+    tail.select('#gap-type-select', {
+        search: true,
+        width: 'auto',
+        height: 200,
+        searchMinLength: 0,
+        searchPlaceholder: '输入关键词搜索差异类型',
+        searchFocus: true,
+        searchMark: true,
+        searchMarkPlaceholder: '未找到匹配项'
+    });
+});
+
 $$('input[name=ar_id[]]').addEvent('click',function(){
     if ($E('input[name=is_verification]:checked').value == '1') return false;
 });
@@ -279,6 +303,7 @@ function do_submit(){
    
     var is_verification = $$('input[name=is_verification]:checked').get('value');
     var verification_memo = $$('textarea[name=verification_memo]').get('value');
+    var gap_type = $$('select[name=gap_type]').get('value');
     var ar_sel = new Array();
     var bill_sel = new Array();
     $$('input[name=ar_id[]]').each(function(item){
@@ -298,14 +323,17 @@ function do_submit(){
     
     if(is_verification == '1')
     {
-        
         if(verification_memo == '')
         {
             MessageBox.error("填写核销备注!");
             return;
         }
-
         
+        if(gap_type == '')
+        {
+            MessageBox.error("强制核销时必须选择差异类型!");
+            return;
+        }
     }
     else
     {

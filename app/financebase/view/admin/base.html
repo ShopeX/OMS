@@ -40,7 +40,7 @@
                 </select>
                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                 <label>业务类型:</label>
-                <input class="x-input" type="text" name="trade_type" value="<{$env.post.trade_type}>">
+                <input class="x-input" type="text" name="trade_type" value="<{$trade_type}>">
                 <br>
                 <br>
                 <!--<label>具体类别:</label>
@@ -106,7 +106,7 @@
 //if($E('.num')) $E('.num').innerHTML+=' 数据非及时显示，当天数据请于第二天查看';
 var _finder = finderGroup['<{$name}>'],
 dataAction= $('dataAction'),
-data_ipt=$$(dataAction.getElements('input[name^=time_]'),dataAction.getElements('select'),dataAction.getElements('input[name=trade_type]')),
+data_ipt=$$(dataAction.getElements('input[name^=time_]'),dataAction.getElements('select'),dataAction.getElements('input[name=trade_type]'),dataAction.getElements('input[name=search_value]')),
 from=dataAction.getElement('input[name=time_from]'),
 to=dataAction.getElement('input[name=time_to]');
 

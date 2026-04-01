@@ -36,26 +36,55 @@ class omeauto_auto_plugin_split extends omeauto_auto_plugin_abstract implements 
      *
      * @param omeauto_auto_group_item $group 要处理的订单组
      * @param array $confirmRoles autoconfirm中的config
-     * @return void
+     * @return array 性能数据
      */
     public function process(&$group, &$confirmRoles=null)
     {
+        $performanceData = array(
+            'plugin_name' => $this->_getPlugName(),
+            'start_time' => microtime(true),
+            'end_time' => 0,
+            'execution_time' => 0,
+            'success' => true,
+            'message' => '',
+            'order_bns' => array(),
+            'split_type' => '',
+            'split_result' => array()
+        );
+        
+        // 获取第一个订单号
+        $orders = $group->getOrders();
+        $firstOrder = current($orders);
+        $performanceData['order_bns'] = $firstOrder['order_bn'] ?? '';
+        
         $branchId = $group->getBranchId();
 
         // 指定仓发货
         if ($branchId[0] == 'sys_appoint') {
             $group->setProcessSplit();
+            $performanceData['split_type'] = 'branchappoint';
             $startTime = microtime(true);
             list($rs, $msg, $code) = kernel::single('omeauto_split_router', 'branchappoint')->splitOrder($group, '');
+            
+            // 记录拆单结果
+            $performanceData['split_result'] = array(
+                'success' => $rs,
+                'message' => $msg,
+                'code' => $code ?? ''
+            );
+            
             if ($code == 'no branch') {
                 foreach ($group->getOrders() as $order) {
                     $group->setOrderStatus($order['order_id'], $this->getMsgFlag());
                 }
 
-                $this->writeFailLog($group->getOrders(), $msg, $startTime);
+                $performanceData['success'] = false;
+                $performanceData['message'] = $msg;
+                $performanceData['end_time'] = microtime(true);
+                $performanceData['execution_time'] = $performanceData['end_time'] - $performanceData['start_time'];
 
-                $group->setStatus(omeauto_auto_group_item::__OPT_HOLD, $this->_getPlugName());
-                return;
+                $group->setStatus(omeauto_auto_group_item::__OPT_HOLD, $this->_getPlugName(), $msg);
+                return $performanceData;
             }
         }
     
@@ -66,13 +95,19 @@ class omeauto_auto_plugin_split extends omeauto_auto_plugin_abstract implements 
             $isCtrlStore = kernel::single('ome_branch')->getBranchCtrlStore(reset($branchId));
             if ($isCtrlStore === false) {
                 $group->setConfirmBranch(true);
-                return;
+                $performanceData['message'] = '仓库不管控库存，跳过拆单';
+                $performanceData['end_time'] = microtime(true);
+                $performanceData['execution_time'] = $performanceData['end_time'] - $performanceData['start_time'];
+                return $performanceData;
             }
         }
         
         // 门店仓不跑拆单
         if ($group->isStoreBranch()) {
-            return;
+            $performanceData['message'] = '门店仓不跑拆单';
+            $performanceData['end_time'] = microtime(true);
+            $performanceData['execution_time'] = $performanceData['end_time'] - $performanceData['start_time'];
+            return $performanceData;
         }
 
         //是否启动拆单
@@ -80,22 +115,37 @@ class omeauto_auto_plugin_split extends omeauto_auto_plugin_abstract implements 
         $split_seting  = $orderSplitLib->get_delivery_seting();
         $split_model   = $split_seting ? 2 : 0; //自由拆单方式split_model=2
         if (!$split_model) {
-            return;
+            $performanceData['message'] = '未启动拆单功能';
+            $performanceData['end_time'] = microtime(true);
+            $performanceData['execution_time'] = $performanceData['end_time'] - $performanceData['start_time'];
+            return $performanceData;
         }
 
         // 货到付款和门店自提/猫超的不拆单
         foreach ($group->getOrders() as $order) {
             if ($order['is_cod'] == 'true') {
-                return;
+                $performanceData['message'] = '货到付款订单不拆单';
+                $performanceData['end_time'] = microtime(true);
+                $performanceData['execution_time'] = $performanceData['end_time'] - $performanceData['start_time'];
+                return $performanceData;
             }
             if ($order['shipping'] == 'STORE_SELF_FETCH') {
-                return;
+                $performanceData['message'] = '门店自提订单不拆单';
+                $performanceData['end_time'] = microtime(true);
+                $performanceData['execution_time'] = $performanceData['end_time'] - $performanceData['start_time'];
+                return $performanceData;
             }
             if ($order['shop_type'] == "taobao" && $order['order_source'] == 'maochao') {
-                return;
+                $performanceData['message'] = '猫超订单不拆单';
+                $performanceData['end_time'] = microtime(true);
+                $performanceData['execution_time'] = $performanceData['end_time'] - $performanceData['start_time'];
+                return $performanceData;
             }
             if ($order['shop_type'] == "zkh") {
-                return;
+                $performanceData['message'] = 'ZKH订单不拆单';
+                $performanceData['end_time'] = microtime(true);
+                $performanceData['execution_time'] = $performanceData['end_time'] - $performanceData['start_time'];
+                return $performanceData;
             }
         }
 
@@ -103,6 +153,7 @@ class omeauto_auto_plugin_split extends omeauto_auto_plugin_abstract implements 
         if ($split && $split['split_type']) {
             $splitType   = $split['split_type'];
             $splitConfig = $split['split_config'];
+            $performanceData['split_type'] = $splitType;
 
             // 手工审单/自动审单标识
             $splitConfig['confirm_source'] = $confirmRoles['source'];
@@ -111,53 +162,32 @@ class omeauto_auto_plugin_split extends omeauto_auto_plugin_abstract implements 
             
             //开始拆单
             $startTime = microtime(true);
-            list($rs, $msg) = kernel::single('omeauto_split_router', $splitType)->splitOrder($group, $splitConfig);
+            list($rs, $msg, $logResult) = kernel::single('omeauto_split_router', $splitType)->splitOrder($group, $splitConfig);
+            
+            // 记录拆单结果
+            $performanceData['split_result'] = array(
+                'success' => $rs,
+                'message' => $msg,
+                'split_type' => $splitType,
+                'log_result' => $logResult ?? null
+            );
+            
             if (!$rs) {
                 foreach ($group->getOrders() as $order) {
                     $group->setOrderStatus($order['order_id'], $this->getMsgFlag());
                 }
-                $this->writeFailLog($group->getOrders(), $msg, $startTime);
-                $group->setStatus(omeauto_auto_group_item::__OPT_HOLD, $this->_getPlugName());
+                $performanceData['success'] = false;
+                $performanceData['message'] = $msg;
+                $group->setStatus(omeauto_auto_group_item::__OPT_HOLD, $this->_getPlugName(), $msg);
             }
         }
+        
+        $performanceData['message'] = '拆单处理完成';
+        $performanceData['end_time'] = microtime(true);
+        $performanceData['execution_time'] = $performanceData['end_time'] - $performanceData['start_time'];
+        return $performanceData;
     }
 
-    protected function writeFailLog($arrOrder, $msg, $startTime = null)
-    {
-        $orderBn = array();
-        foreach ($arrOrder as $v) {
-            $orderBn[] = $v['order_bn'];
-        }
-        $apilogModel        = app::get('ome')->model('api_log');
-        $log_id             = $apilogModel->gen_id();
-        $result             = array();
-        $result['msg']      = $msg;
-        $result['order_bn'] = $orderBn;
-        
-        $currentTime = microtime(true);
-        $spendTime = $startTime ? ($currentTime - $startTime) : 0;
-        
-        $logsdf = array(
-            'log_id'        => $log_id,
-            'task_name'     => '拆单结果',
-            'status'        => 'fail',
-            'worker'        => 'order.split',
-            'params'        => json_encode(array('order.split', array('arrorder' => $arrOrder))),
-            'transfer'      => '',
-            'response'      => json_encode($result),
-            'msg'           => $msg,
-            'log_type'      => '',
-            'api_type'      => 'response',
-            'memo'          => '',
-            'original_bn'   => $orderBn[0],
-            'createtime'    => $currentTime,
-            'last_modified' => $currentTime,
-            'msg_id'        => '',
-            'spendtime'     => $spendTime,
-            'url'           => '',
-        );
-        $apilogModel->insert($logsdf);
-    }
 
     /**
      * 获取该插件名称

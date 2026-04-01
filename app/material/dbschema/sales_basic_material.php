@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * 销售物料基础物料关联数据结构
  *
@@ -53,6 +52,12 @@ $db['sales_basic_material'] = array(
             'editable' => false,
             'label'    => '促销类基础物料价格贡献占比',
             'default'  => 100,
+            'hidden'   => true,
+        ),
+        'fixed_price' => array(
+            'type' => 'money',
+            'editable' => false,
+            'label'    => '固定价',
             'hidden'   => true,
         ),
     ),

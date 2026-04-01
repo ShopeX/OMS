@@ -41,8 +41,12 @@ class desktop_router implements base_interface_router{
         $arrMethods = get_class_methods($controller);
         if (in_array($_GET['act'], $arrMethods))
             call_user_func_array(array(&$controller,$_GET['act']),(array)$query_args);
-        else
-            call_user_func_array(array(&$controller,'index'),(array)$query_args);
+        else{
+            header("HTTP/1.1 404 Not Found");
+            echo '<h1>404 - Page Not Found</h1>';
+            echo '<p>请求的页面不存在</p>';
+            exit;
+        }
     }
     
     /**

@@ -1,0 +1,80 @@
+<?php
+
+$db['platform_set'] = array(
+    'columns' => array(
+        'id'   => array(
+            'type'     => 'int unsigned',
+            'extra'    => 'auto_increment',
+            'pkey'     => true,
+            'editable' => false,
+            'label'    => '自增ID',
+        ),
+        'shop_type' => array(
+            'type'              => 'varchar(32)',
+            'label'             => '平台编码',
+            'default'           => '',
+            'is_title'          => true,
+            'in_list'           => true,
+            'default_in_list'   => true,
+            'order'             => 10,
+        ),
+        'scene' => array(
+            'type'              => 'varchar(32)',
+            'label'             => '场景',
+            'default'           => 'delivery',
+            'in_list'           => true,
+            'default_in_list'   => true,
+            'order'             => 20,
+            'comment'           => '可选值：delivery（发货时效）、tmyp_commission（天猫优品佣金）、tmsd_commission（天猫喵速达佣金）',
+        ),
+        'kname' => array(
+            'type'              => 'varchar(255)',
+            'label'             => '配置键名',
+            'default'           => '',
+            'in_list'           => true,
+            'default_in_list'   => true,
+            'order'             => 30,
+        ),
+        'kvalue' => array(
+            'type'              => 'varchar(255)',
+            'label'             => '配置值',
+            'default'           => '',
+            'in_list'           => true,
+            'default_in_list'   => true,
+            'order'             => 40,
+        ),
+        'memo' => array(
+            'type'              => 'longtext',
+            'label'             => '备注',
+            'in_list'           => true,
+            'default_in_list'   => true,
+            'order'             => 50,
+        ),
+        'at_time'       => array(
+            'type'            => 'TIMESTAMP',
+            'label'           => '创建时间',
+            'default'         => 'CURRENT_TIMESTAMP',
+            'in_list'         => true,
+            'default_in_list' => true,
+            'order'           => 1000,
+        ),
+        'up_time'       => array(
+            'type'            => 'TIMESTAMP',
+            'label'           => '更新时间',
+            'default'         => 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+            'in_list'         => true,
+            'default_in_list' => true,
+            'order'           => 1010,
+        ),
+    ),
+    'index'   => array(
+        'idx_shop_type_scene' => array('columns' => array('shop_type', 'scene', 'kname'), 'prefix' => 'UNIQUE'),
+        'idx_scene' => array('columns' => array('scene')),
+        'idx_at_time'       => array('columns' => array('at_time')),
+        'idx_up_time'       => array('columns' => array('up_time')),
+    ),
+    'engine'  => 'innodb',
+    'commit'  => '',
+    'version' => 'Rev: 41996 $',
+);
+

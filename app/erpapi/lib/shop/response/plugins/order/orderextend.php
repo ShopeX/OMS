@@ -122,6 +122,11 @@ class erpapi_shop_response_plugins_order_orderextend extends erpapi_shop_respons
         if ($platform->_ordersdf['sf_free_shipping']) {
             $extend['assign_express_code'] = $platform->_ordersdf['shipping']['shipping_name'];
         }
+
+        // 官方提货物流，指定快递编码
+        if ($platform->_ordersdf['official_pickup']) {
+            $extend['assign_express_code'] = 'pickup';
+        }
         
         //asdp_biz_type
         $asdp_biz_type = $platform->_ordersdf['cn_info']['asdp_biz_type'];

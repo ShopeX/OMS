@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class console_finder_branch_product
 {
     public $_braProExtObj = null;
@@ -28,7 +27,7 @@ class console_finder_branch_product
     
 
     
-    var $addon_cols = 'product_id,branch_id';
+    var $addon_cols = 'product_id,branch_id,store';
     var $column_barcode = '条形码';
     var $column_barcode_width = 150;
     var $column_barcode_order = 30;
@@ -40,7 +39,7 @@ class console_finder_branch_product
         return $code['code'];
     }
     
-    var $column_bn = '货号';
+    var $column_bn = '基础物料编码';
     var $column_bn_width = 200;
     var $column_bn_order = 10;
     var $column_bn_order_field = 'p.material_bn';
@@ -49,7 +48,7 @@ class console_finder_branch_product
         return $row['bn'];
     }
     
-    var $column_product_name = '货品名称';
+    var $column_product_name = '基础物料名称';
     var $column_product_name_width = 300;
     var $column_product_name_order = 20;
     function column_product_name($row)
@@ -109,6 +108,19 @@ class console_finder_branch_product
         return $store_freeze;
     }
     
+    //可售库存
+    var $column_available_store = '可售库存';
+    var $column_available_store_width = 100;
+    var $column_available_store_order = 16;
+    function column_available_store($row)
+    {
+        $store = isset($row[$this->col_prefix.'store']) ? $row[$this->col_prefix.'store'] : 0;
+        $store_freeze = $this->_basicMStockFreezeLib->getBranchFreeze($row[$this->col_prefix.'product_id'], $row[$this->col_prefix.'branch_id']);
+        
+        // 可售库存 = 库存 - 冻结库存，最小为0
+        return max(0, $store - $store_freeze);
+    }
+    
     var $column_material_spu = '款号';
     var $column_material_spu_width = 120;
     var $column_material_spu_order = 20;
@@ -137,7 +149,7 @@ class console_finder_branch_product
     
     /**
      * 批量获取基础物料关联的唯品会库存预占
-     * 
+     *
      * @param array $list
      * @return null
      */

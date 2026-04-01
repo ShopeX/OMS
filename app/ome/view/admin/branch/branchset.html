@@ -52,6 +52,14 @@
                 </td>
             </tr>
             <tr>
+                <th><{t}>WMS仓库库位配置：<{/t}></th>
+                <td>
+                    <input type="radio" name="set[wms_goods_type_branch]" value="1" <{if $setData.wms_goods_type_branch=='1'}>checked<{/if}>>按WMS回传仓库库位自动分配仓库
+                    <input type="radio" name="set[wms_goods_type_branch]" value="0" <{if $setData.wms_goods_type_branch=='0' || $setData.wms_goods_type_branch==''}>checked<{/if}>> 不使用
+                    <font color="#666">(选择后系统将根据WMS回传的仓库库位自动分配到对应仓库)</font>
+                </td>
+            </tr>
+            <tr>
                 <th>默认售后仓库设置：</th>
                 <td>
                     <select name="set[return.auto_branch]">

@@ -14,8 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
+/**
+ * 订单业务逻辑处理
+ * @access public
+ * @copyright www.shopex.cn 2010.12.16
+ * @author ome
+ */
 class ome_order_order{
 
     /**
@@ -49,11 +53,11 @@ class ome_order_order{
         $cancel_item_price = $this->get_cancel_item_price($order_detail);
         
         //余单撤消的商品金额
-        if($order_detail['pmt_order']){
+        // if($order_detail['pmt_order']){
             $revock_price = $this->get_cancel_diff_money($order_detail); //有订单优惠,计算商品实付金额
-        }else{
-            $revock_price = kernel::single('ome_order_func')->order_items_diff_money($order_id);
-        }
+        // }else{
+        //     $revock_price = kernel::single('ome_order_func')->order_items_diff_money($order_id);
+        // }
         
         //余单撤消的"商品优惠金额"
         $cancel_pmt_price = $this->get_cancel_pmt_price($order_detail);
@@ -231,6 +235,11 @@ class ome_order_order{
         if (in_array($order_detail['shop_type'], ome_shop_type::many_split_type())) {
             kernel::single('ome_event_trigger_shop_delivery')->delivery_confirm_retry([$order_id]);
         }
+        
+        // [更新]预约订单的发货状态
+        $orderIds = [$order_id];
+        kernel::single('ome_order_reservation')->updateReservationByOrderIds($orderIds);
+        
         return true;
     }
     
@@ -387,15 +396,15 @@ class ome_order_order{
          $amount = 0;
          if ($order['order_objects']){
              foreach ($order['order_objects'] as $obj){
-                 if($obj['obj_type'] == 'pkg'){
+                 /* if($obj['obj_type'] == 'pkg'){
                      $tmp_amount = kernel::single('ome_order_remain_pkg')->get_order_total_price($obj);
                      $amount += $tmp_amount;
                  }elseif($obj['obj_type'] == 'gift'){
                      continue; //赠品为0元,跳过
-                 }else{
+                 }else{ */
                      $tmp_amount = kernel::single('ome_order_remain_goods')->get_order_total_price($obj);
                      $amount += $tmp_amount;
-                 }
+                 //}
              }
          }
          
@@ -409,15 +418,15 @@ class ome_order_order{
          $amount = 0;
          if ($order['order_objects']){
              foreach ($order['order_objects'] as $obj){
-                 if($obj['obj_type'] == 'pkg'){
-                     $tmp_amount = kernel::single('ome_order_remain_pkg')->get_order_diff_money($obj);
-                     $amount += $tmp_amount;
-                 }elseif($obj['obj_type'] == 'gift'){
-                     continue; //赠品为0元,跳过
-                 }else{
+                //  if($obj['obj_type'] == 'pkg'){
+                //      $tmp_amount = kernel::single('ome_order_remain_pkg')->get_order_diff_money($obj);
+                //      $amount += $tmp_amount;
+                //  }elseif($obj['obj_type'] == 'gift'){
+                //      continue; //赠品为0元,跳过
+                //  }else{
                      $tmp_amount = kernel::single('ome_order_remain_goods')->get_order_diff_money($obj);
                      $amount += $tmp_amount;
-                 }
+                //  }
              }
          }
          
@@ -431,15 +440,15 @@ class ome_order_order{
          $amount = 0;
          if ($order['order_objects']){
              foreach ($order['order_objects'] as $obj){
-                 if($obj['obj_type'] == 'pkg'){
-                     $tmp_amount = kernel::single('ome_order_remain_pkg')->get_order_pmt_price($obj);
-                     $amount += $tmp_amount;
-                 }elseif($obj['obj_type'] == 'gift'){
-                     continue; //赠品为0元,跳过
-                 }else{
+                //  if($obj['obj_type'] == 'pkg'){
+                //      $tmp_amount = kernel::single('ome_order_remain_pkg')->get_order_pmt_price($obj);
+                //      $amount += $tmp_amount;
+                //  }elseif($obj['obj_type'] == 'gift'){
+                //      continue; //赠品为0元,跳过
+                //  }else{
                      $tmp_amount = kernel::single('ome_order_remain_goods')->get_order_pmt_price($obj);
                      $amount += $tmp_amount;
-                 }
+                //  }
              }
          }
           
@@ -453,15 +462,15 @@ class ome_order_order{
          $amount = 0;
          if ($order['order_objects']){
              foreach ($order['order_objects'] as $obj){
-                 if($obj['obj_type'] == 'pkg'){
-                     $tmp_amount = kernel::single('ome_order_remain_pkg')->get_order_pmt_order_price($obj);
-                     $amount += $tmp_amount;
-                 }elseif($obj['obj_type'] == 'gift'){
-                     continue; //赠品为0元,跳过
-                 }else{
+                //  if($obj['obj_type'] == 'pkg'){
+                //      $tmp_amount = kernel::single('ome_order_remain_pkg')->get_order_pmt_order_price($obj);
+                //      $amount += $tmp_amount;
+                //  }elseif($obj['obj_type'] == 'gift'){
+                //      continue; //赠品为0元,跳过
+                //  }else{
                      $tmp_amount = kernel::single('ome_order_remain_goods')->get_order_pmt_order_price($obj);
                      $amount += $tmp_amount;
-                 }
+                //  }
              }
          }
          
@@ -510,12 +519,12 @@ class ome_order_order{
          
          //计算未发货商品的金额
          $orderInfo['pmt_order'] = floatval($orderInfo['pmt_order']);
-         if($orderInfo['pmt_order']){
+        //  if($orderInfo['pmt_order']){
              //订单优惠时
              $reback_price = kernel::single('ome_order_order')->get_cancel_diff_money($orderInfo);
-         }else{
-             $reback_price = kernel::single('ome_order_func')->order_items_diff_money($order_id);
-         }
+        //  }else{
+        //      $reback_price = kernel::single('ome_order_func')->order_items_diff_money($order_id);
+        //  }
          
          $revock_price = 0; //撤销商品总额(默认0元后面会重新计算)
          $result = $this->order_revoke($order_id, $reback_price, $revock_price);

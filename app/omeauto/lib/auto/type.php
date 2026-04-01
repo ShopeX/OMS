@@ -25,7 +25,7 @@ class omeauto_auto_type
     /**
      * 所有支持的类型
      */
-    static $TYPE_LIST = array('address', 'shop', 'money', 'platform', 'sku', 'cod', 'skunum', 'itemnum', 'weight', 'memo', 'ordertype', 'materialtype', 'orderhost', 'shopmode', 'customer', 'orderlabel');
+    static $TYPE_LIST = array('address', 'shop', 'money', 'platform', 'sku', 'cod', 'skunum', 'itemnum', 'weight', 'memo', 'ordertype', 'materialtype', 'orderhost', 'shopmode', 'customer', 'orderlabel', 'materialcat');
 
     /**
      * 执行插件的指定方法

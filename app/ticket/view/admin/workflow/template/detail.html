@@ -1,0 +1,37 @@
+<{capture name="header"}>
+<link href="../app/ome/statics/ome.css" rel="stylesheet" type="text/css">
+<{/capture}>
+
+<div class="tableform" id="templateinfo">
+  <h4>基本信息</h4>
+  <div class="division">
+    <table border="0" cellspacing="0" cellpadding="0">
+      <tr>
+        <th>模板编号：</th>
+        <td><{$data.template_bn}></td>
+        <th>模板名称：</th>
+        <td><{$data.template_name}></td>
+        <th>创建时间：</th>
+        <td><{$data.at_time}></td>
+      </tr>
+      <tr>
+        <th>场景类型：</th>
+        <td><{$data.scene_type_name}></td>
+        <th>开启审核流程：</th>
+        <td>
+          <{if $data.is_enabled != 'false'}>启用<{/if}>
+          <{if $data.is_enabled == 'false'}>禁用<{/if}>
+        </td>
+        <th>更新时间：</th>
+        <td><{$data.up_time}></td>
+      </tr>
+    </table>
+  </div>
+  
+  <{if $data.description}>
+  <h4>审批流程描述</h4>
+  <div class="division">
+    <pre><{$data.description}></pre>
+  </div>
+  <{/if}>
+</div> 

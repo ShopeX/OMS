@@ -71,7 +71,7 @@
             <div class="form-layout-fields">
                 <div class="form-field">
                     <span class="form-field-label"><span style="color:red;">*</span>物料编号：</span>
-                    <input class="form-input" placeholder="请输入物料编号" type="text" name="material_bn" vtype="required"  onkeyup="value=value.replace(/[^A-Za-z0-9_-\/]/ig,'')" />
+                    <input class="form-input" placeholder="请输入物料编号" type="text" name="material_bn" vtype="required"  onkeyup="value=value.replace(/[^A-Za-z0-9_-\/ ]/ig,'')" />
                 </div>
                 <div class="form-field">
                     <span class="form-field-label"><span style="color:red;">*</span>物料条码：</span>
@@ -134,6 +134,16 @@
                         <label for="o2osales2" >否</label>
                     </div>
                     <span style="color:red;">*支持门店销售，需要开启此配置项。</span>
+                </div>
+                <div class="form-field">
+                    <span class="form-field-label">是否管控库存：</span>
+                    <div class="form-radios">
+                        <input id="is_ctrl_store01" name="is_ctrl_store" type="radio" checked="checked" value="1">
+                        <label for="is_ctrl_store01">是</label>
+                        <input id="is_ctrl_store02" name="is_ctrl_store" type="radio" value="2">
+                        <label for="is_ctrl_store02" >否</label>
+                    </div>
+                    <span style="color:red;">*审核订单时，是否需要管控库存。</span>
                 </div>
                 <div class="form-layout-fields">
                     <div id="description" style="border: 0px solid black;width: 500px;padding: 10px 50px;letter-spacing: 1px;display: none;background-color: #FDFDDB;">

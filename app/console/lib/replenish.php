@@ -182,7 +182,7 @@ class console_replenish
             
             //count
             $sku_total++; //SKU总数
-            $apply_total += $apply_nums; //申请补货总数
+            $apply_total += intval($val['apply_nums']); //申请补货总数
             $actual_total += $in_nums; //实际补货总数
         }
         
@@ -410,11 +410,13 @@ class console_replenish
             $itemList[0]['bill_type'] = 'replenishment'; 
             $itemList[0]['business_bn'] = $params['business_bn']; //业务单号
             $itemList[0]['to_physics_id'] = $params['physics_id']; //业务单号
-        
-            $memo = sprintf('配货单[%s]门店[%s]创建调拨单', $cpfr_bn, $store_bn);
-            $msg = '';
+            
+            // 备注只显示：业务单号
+            //$memo = sprintf('配货单[%s]门店[%s]创建调拨单', $cpfr_bn, $store_bn);
+            $memo = $params['business_bn'];
             
             //iso
+            $msg = '';
             $iso_id = kernel::single('console_receipt_allocate')->to_savestore($itemList, $appropriation_type, $memo, $operator, $msg);
             if(!$iso_id){
                 //回滚事务
@@ -585,7 +587,7 @@ class console_replenish
             'extrabranch_id'    => $suggest['out_branch_id'],
             'type_id'           => ome_iostock::DIRECT_STORAGE,
             'iso_price'         => 0,
-            'memo'              => (string)$addData['memo'],
+            'memo'              => '', //变量不存在：(string)$addData['memo'],
             'operator'          => $op['op_name'],
             'original_bn'       => $suggest['task_bn'],
             'original_id'       => $suggest['task_id'],

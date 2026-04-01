@@ -69,7 +69,7 @@ class financebase_data_bill_jdwallet extends financebase_abstract_bill
             $fund_sheet = $workbook['fund'];
             $fund_headers = $this->getSheetHeaders($fund_sheet);
             
-            $required_fund_fields = array('商户号', '日期', '商户订单号');
+            $required_fund_fields = array('创建时间', '商户订单号');
             foreach ($required_fund_fields as $field) {
                 if (!in_array($field, $fund_headers)) {
                     return array(false, '资金表缺少必填字段：' . $field, array());
@@ -157,7 +157,7 @@ class financebase_data_bill_jdwallet extends financebase_abstract_bill
             if ($sheet_name === '结算表') {
                 $timeColumn = array('费用结算时间', '费用计费时间', '费用发生时间');
             } else if ($sheet_name === '资金表') {
-                $timeColumn = array('日期', '账单日期');
+                $timeColumn = array('创建时间');
             } else {
                 $timeColumn = array();
             }
@@ -333,16 +333,18 @@ class financebase_data_bill_jdwallet extends financebase_abstract_bill
     public function getFundTitle()
     {
         $title = array(
-            'merchant_no'           => '商户号',
+            'create_time'           => '创建时间',
             'account_code'          => '账户代码',
             'account_name'          => '账户名称',
-            'date'                  => '日期',
-            'merchant_order_no'     => '商户订单号',
-            'account_balance'       => '账户余额(元)',
+            'currency'              => '币种',
             'income_amount'         => '收入金额(元)',
             'expense_amount'        => '支出金额(元)',
-            'transaction_remark'    => '交易备注',
-            'bill_date'             => '账单日期',
+            'account_balance'       => '账户余额(元)',
+            'trade_type'            => '交易类型',
+            'out_trade_no'          => '商户订单号',
+            'trade_order_no'        => '交易订单号',
+            'original_merchant_order_no' => '原商户订单号',
+            'remarks'                => '资金动账备注',
         );
 
         return $title;
@@ -396,11 +398,11 @@ class financebase_data_bill_jdwallet extends financebase_abstract_bill
 
         $res = array('status' => true, 'data' => array(), 'msg' => '');
 
-        if (count($row) >= 10 && $row[0] != '商户号') {
+        if (count($row) >= 12 && $row[0] != '创建时间') {
             $tmp = array_combine($titleKey, $row);
             
             // 转换Excel日期字段（Excel序列号转换为日期字符串）
-            $timeColumn = array('date', 'bill_date');
+            $timeColumn = array('create_time');
             foreach ($timeColumn as $k) {
                 if (isset($tmp[$k]) && is_numeric($tmp[$k]) && $tmp[$k] > 0) {
                     $timestamp = ($tmp[$k] - 25569) * 86400; // Excel基准日期是1900-01-01，Unix基准是1970-01-01
@@ -410,7 +412,7 @@ class financebase_data_bill_jdwallet extends financebase_abstract_bill
             
             // 判断必填字段不能为空
             foreach ($tmp as $k => $v) {
-                if (in_array($k, array('merchant_no', 'date', 'merchant_order_no'))) {
+                if (in_array($k, array('create_time', 'out_trade_no'))) {
                     if (!$v) {
                         $res['status'] = false;
                         $res['msg'] = sprintf("LINE %d : %s 不能为空！", $offset, $this->ioTitle[$k]);
@@ -418,6 +420,12 @@ class financebase_data_bill_jdwallet extends financebase_abstract_bill
                     }
                 }
             }
+
+            // 计算money字段（收入金额 - 支出金额）
+            $tmp['money'] = floatval($tmp['income_amount'] ?? 0) - floatval($tmp['expense_amount'] ?? 0);
+            
+            // 设置financial_no字段
+            $tmp['financial_no'] = $tmp['trade_order_no'] ?? '';
 
             // 直接返回原始数据，父类process会调用_filterData
             $res['data'] = $tmp;
@@ -591,22 +599,23 @@ class financebase_data_bill_jdwallet extends financebase_abstract_bill
     {
         $new_data = array();
 
-        // 从交易备注中提取订单号
-        $order_bn = $this->_extractOrderBnFromRemark($data['transaction_remark'] ?? '');
+        // 从资金动账备注中提取订单号
+        $order_bn = $this->_extractOrderBnFromRemark($data['remarks'] ?? '');
 
         // 资金表数据转换为标准账单格式（与结算表保持一致）
         $new_data['order_bn'] = $order_bn;
         $new_data['trade_no'] = '';
-        $new_data['financial_no'] = $data['merchant_no'] ?? ''; // 使用商户号作为财务流水号
-        $new_data['out_trade_no'] = $data['merchant_order_no'] ?? '';
-        $new_data['trade_time'] = $data['date'] ? strtotime($data['date']) : 0;
-        $new_data['trade_type'] = '资金流水';
-        $new_data['money'] = floatval($data['income_amount'] ?? 0) - floatval($data['expense_amount'] ?? 0);
+        $new_data['financial_no'] = $data['financial_no'] ?? ''; // 使用财务流水号
+        $new_data['out_trade_no'] = $data['out_trade_no'] ?? '';
+        $new_data['trade_time'] = $data['create_time'] ? strtotime($data['create_time']) : 0;
+        $new_data['trade_type'] = !empty($data['trade_type']) ? $data['trade_type'] : '资金流水';
+        $new_data['money'] = $data['money'] ?? 0;
         $new_data['member'] = '';
-        $new_data['unique_id'] = md5($data['merchant_no'] . '_' . $data['merchant_order_no'] . '_' . $data['date']);
+        // $new_data['unique_id'] = md5($data['account_code'] . '_' . $data['out_trade_no'] . '_' . $data['create_time']);
+        $new_data['unique_id'] = $data['financial_no'] ?? '';
 
         $new_data['platform_type'] = 'jdwallet_fund';
-        $new_data['remarks'] = $data['transaction_remark'] ?? '';
+        $new_data['remarks'] = $data['remarks'] ?? '';
 
         return $new_data;
     }
@@ -759,12 +768,12 @@ class financebase_data_bill_jdwallet extends financebase_abstract_bill
             'order_bn'          => $this->_getOrderBn($tmp),
             'channel_id'        => $data['shop_id'],
             'channel_name'      => $data['shop_name'],
-            'trade_time'        => strtotime($tmp['date']), // 资金表使用date字段
+            'trade_time'        => strtotime($tmp['create_time']), // 资金表使用create_time字段
             'fee_obj'           => $tmp['fee_obj'],
             'money'             => round($tmp['money'], 2), // 资金表使用money字段（已计算好的净额）
             'fee_item'          => $tmp['fee_item'],
             'fee_item_id'       => isset($this->fee_item_rules[$tmp['fee_item']]) ? $this->fee_item_rules[$tmp['fee_item']] : 0,
-            'credential_number' => $tmp['financial_no'],// 使用商户号作为单据编号
+            'credential_number' => $tmp['financial_no'],// 使用账户代码作为单据编号
             'member'            => '',
             'memo'              => $tmp['remarks'],
             'unique_id'         => $data['unique_id'],
@@ -788,6 +797,61 @@ class financebase_data_bill_jdwallet extends financebase_abstract_bill
             return true;
         }
         return false;
+    }
+
+    // 更新订单号
+    public function updateOrderBn($data)
+    {
+        $this->_formatData($data);
+        $mdlBill = app::get('finance')->model('bill');
+        if(!$this->shop_list_by_name)
+        {
+            $this->shop_list_by_name = financebase_func::getShopList(financebase_func::getShopType());
+            $this->shop_list_by_name = array_column($this->shop_list_by_name,null,'name');
+        }
+
+        foreach ($data as $v) 
+        {
+            if('订单编号' == $v[0]) continue;
+
+            if(!$v[21] || !$v[22] || !$v[23]) continue;
+
+            $shop_id = isset($this->shop_list_by_name[$v[21]]) ? $this->shop_list_by_name[$v[21]]['shop_id'] : 0;
+            if(!$shop_id) continue;
+
+            $filter = array('bill_bn'=>$v[22],'shop_id'=>$shop_id);
+
+
+            // 找到unique_id
+            $bill_info = $mdlBill->getList('unique_id,bill_id',$filter,0,1);
+            if(!$bill_info) continue;
+            $bill_info = $bill_info[0];
+             
+
+            if($mdlBill->update(array('order_bn'=>$v[23]),array('bill_id'=>$bill_info['bill_id'])))
+            {
+                app::get('financebase')->model('bill')->update(array('order_bn'=>$v[23]),array('unique_id'=>$bill_info['unique_id'],'shop_id'=>$shop_id));
+                $op_name = kernel::single('desktop_user')->get_name();
+                $content = sprintf("订单号改成：%s",$v[23]);
+                finance_func::addOpLog($v[22],$op_name,$content,'更新订单号');
+
+            }
+
+        }
+        
+    }
+
+    public function getImportDateColunm($title=null)
+    {
+        $timeColumn = ['费用结算时间','费用计费时间','费用发生时间'];
+        $timeCol = [];
+        foreach ($timeColumn as $v) {
+             if($k = array_search($v, $title)) {
+                $timeCol[] = $k+1;
+             }
+         } 
+        $timezone = defined('DEFAULT_TIMEZONE') ? DEFAULT_TIMEZONE : 0;
+        return array('column'=>$timeCol,'time_diff'=>$timezone * 3600 );
     }
 
 }

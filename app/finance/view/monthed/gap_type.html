@@ -20,32 +20,76 @@
 		<table width="100%" cellpadding="0" cellspacing="0">
 			<tbody>
 				<tr>
-					<th>差异类型：</th>
+					<th><em class="c-red">*</em>差异类型：</th>
 					<td>
-            <{input type="text" name="gap_type"}>
+						<select name="gap_type" id="gap-type-select" vtype="required" data-tail-select>
+							<option value="">请选择差异类型</option>
+							<{foreach from=$gap_list item=gap}>
+							<option value="<{$gap.gap_name}>" <{if $saved_gap_type == $gap.gap_name}>selected<{/if}>><{$gap.gap_name}></option>
+							<{/foreach}>
+						</select>
 					</td>
 				</tr>
 			</tbody>
 		</table>
 	</div>
 </div>
-<div class="table-action">
-    <{button type="submit" label="确定"  class="btn-primary" }> &nbsp; &nbsp;
-    <{button label="关闭" class="btn-secondary" isCloseDialogBtn="true"}>
-</div>
 </form>
+
+<{area inject=".mainFoot"}>
+<div class="table-action">
+    <table width="100%" cellspacing="0" cellpadding="0">
+        <tbody>
+            <tr>
+                <td>
+                    <{button type="button" id="submit_btn" label="确定"  class="btn-primary" }> &nbsp; &nbsp;
+                    <{button type="button" id="close_btn" label="关闭" class="btn-secondary"}>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<{/area}>
 <script type="text/javascript">
+// 初始化tail.select
+Ex_Loader("tail.select", function(){
+    tail.select('#gap-type-select', {
+        search: true,
+        width: 'auto',
+        height: 200,
+        searchMinLength: 0,
+        searchPlaceholder: '输入关键词搜索差异类型',
+        searchFocus: true,
+        searchMark: true,
+        searchMarkPlaceholder: '未找到匹配项'
+    });
+});
+
+// 绑定按钮事件
+$('submit_btn').addEvent('click', function(){
+    $('bill-gap-type-form').fireEvent('submit', {stop: $empty});
+});
+
+$('close_btn').addEvent('click', function(){
+    try{
+        var _dialogIns = this.getParent('.dialog').retrieve('instance');
+    }catch(e){}
+
+    if(_dialogIns){
+        _dialogIns.close();
+    }
+});
+
 $('bill-gap-type-form').store('target',{
     onRequest:function(){
-       $E('#bill-gap-type-form .btn-primary').set('disabled', 'true');
-       
+       $('submit_btn').setAttribute('disabled', 'disabled');
     },
     onComplete:function(jsontext){
        var json = Json.evaluate(jsontext);
        if (typeof(json.error) != 'undefined'){
-           $E('#bill-gap-type-form .btn-primary').set('disabled', '');
+           $('submit_btn').removeAttribute('disabled');
        }else{
-           $E('#bill-gap-type-form .btn-primary').set('disabled', 'true');
+           $('submit_btn').setAttribute('disabled', 'disabled');
 
            $('bill-gap-type-form').getParent('.dialog').retrieve('instance').close();
 

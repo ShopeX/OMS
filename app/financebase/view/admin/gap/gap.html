@@ -1,0 +1,159 @@
+<div class="tableform">
+    <{if $history}>
+    <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; margin-bottom: 15px; border-radius: 3px;">
+        <h4 style="margin: 0 0 10px 0; color: #856404;">历史快照 - 只读模式</h4>
+        <p style="margin: 0; color: #856404;">此页面显示的是历史快照数据，仅供查看，不可编辑。</p>
+    </div>
+    <{/if}>
+    
+    <div class="division">
+        <{if !$history}>
+        <form method="post" action="index.php?app=financebase&ctl=admin_shop_settlement_gap&act=saveGap" id="form-rule">
+            <input type="hidden" name="id" value="<{$gap_info.id}>">
+        <{/if}>
+      <table width="100%" cellspacing="0" cellpadding="0" border="0" id="rule-section">
+        <tbody>
+          <tr>
+            <th><em class="c-red">*</em>差异类型：</th>
+            <td>
+              <{if $history}>
+                <{if $diff_data.gap_name}>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #999; text-decoration: line-through; font-family: inherit;">
+                    <{$diff_data.gap_name.old_value}>
+                  </span>
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #fff5f5; border: 1px solid #f56565; border-radius: 3px; color: #e53e3e; font-weight: bold; font-family: inherit;">
+                    <{$diff_data.gap_name.new_value}>
+                  </span>
+                </div>
+                <{else}>
+                <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #495057; font-family: inherit;"><{$gap_info.gap_name}></span>
+                <{/if}>
+              <{else}>
+                <{if $gap_info.id}>
+                  <{$gap_info.gap_name}>
+                  <input type="hidden" name="gap_name" value="<{$gap_info.gap_name}>">
+                <{else}>
+                  <input type="text" name="gap_name" value="<{$gap_info.gap_name}>" vtype="required"/>
+                <{/if}>
+              <{/if}>
+            </td>
+          </tr>
+          <tr>
+            <th>贷会计科目：</th>
+            <td>
+              <{if $history}>
+                <{if $diff_data.account_id_plus}>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #999; text-decoration: line-through; font-family: inherit;">
+                    <{$diff_data.account_id_plus.old_value}>
+                  </span>
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #fff5f5; border: 1px solid #f56565; border-radius: 3px; color: #e53e3e; font-weight: bold; font-family: inherit;">
+                    <{$diff_data.account_id_plus.new_value}>
+                  </span>
+                </div>
+                <{else}>
+                <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #495057; font-family: inherit;"><{$gap_info.account_id_plus}></span>
+                <{/if}>
+              <{else}>
+                <select name="account_id_plus" id="account-plus-select" data-tail-select>
+                  <option value="">请选择贷会计科目</option>
+                  <{foreach from=$account_list item=account}>
+                  <option value="<{$account.id}>" <{if $gap_info.account_id_plus == $account.id}>selected<{/if}>>[<{$account.account}>-<{$account.postingkey}>]<{$account.description}></option>
+                  <{/foreach}>
+                </select>
+              <{/if}>
+            </td>
+          </tr>
+          <tr>
+            <th>借会计科目：</th>
+            <td>
+              <{if $history}>
+                <{if $diff_data.account_id_minus}>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #999; text-decoration: line-through; font-family: inherit;">
+                    <{$diff_data.account_id_minus.old_value}>
+                  </span>
+                  <span style="display: inline-block; padding: 4px 8px; background-color: #fff5f5; border: 1px solid #f56565; border-radius: 3px; color: #e53e3e; font-weight: bold; font-family: inherit;">
+                    <{$diff_data.account_id_minus.new_value}>
+                  </span>
+                </div>
+                <{else}>
+                <span style="display: inline-block; padding: 4px 8px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; color: #495057; font-family: inherit;"><{$gap_info.account_id_minus}></span>
+                <{/if}>
+              <{else}>
+                <select name="account_id_minus" id="account-minus-select" data-tail-select>
+                  <option value="">请选择借会计科目</option>
+                  <{foreach from=$account_list item=account}>
+                  <option value="<{$account.id}>" <{if $gap_info.account_id_minus == $account.id}>selected<{/if}>>[<{$account.account}>-<{$account.postingkey}>]<{$account.description}></option>
+                  <{/foreach}>
+                </select>
+              <{/if}>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+        <{if !$history}>
+        <div class="table-action">
+            <{button class="btn-primary" type="button" id='submit_btn' label='确定' }>
+            <{button class="btn-secondary" type="button" label='关闭' isCloseDialogBtn="true" }>
+        </div>
+        </form>
+        <{/if}>
+    </div>
+</div>
+<{if !$history}>
+<script type="text/javascript">
+(function(){
+    var _form = $('form-rule');//表单ID 
+    var btn   = $('submit_btn');//按钮ID
+    var finder = finderGroup['<{$env.get.finder_id}>'];
+    
+    // 初始化tail.select
+    Ex_Loader("tail.select", function(){
+        tail.select('#account-plus-select', {
+            search: true,
+            width: 'auto',
+            height: 200,
+            searchMinLength: 0,
+            searchFocus: true,
+            searchMark: true,
+        });
+        tail.select('#account-minus-select', {
+            search: true,
+            width: 'auto',
+            height: 200,
+            searchMinLength: 0,
+            searchFocus: true,
+            searchMark: true,
+        });
+    });
+    
+    _form.store('target',{
+        onRequest:function(){
+            btn.setAttribute('disabled', 'disabled');
+        },
+        onComplete:function(){
+            btn.removeAttribute('disabled');
+        },
+        onSuccess:function(response){
+            var hash_res_obj = JSON.decode(response);
+            if (hash_res_obj.success != undefined && hash_res_obj.success != ""){
+                try{
+                    var _dialogIns = btn.getParent('.dialog').retrieve('instance');
+                }catch(e){}
+
+                if(_dialogIns){
+                    setTimeout(finder.refresh(),30000);
+                    _dialogIns.close();
+                }
+            }
+        }
+    });
+
+    btn.addEvent('click',function(){
+        _form.fireEvent('submit',{stop:$empty});
+    });
+})();
+</script>
+<{/if}>

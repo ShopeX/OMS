@@ -33,13 +33,13 @@ class finance_ctl_setting_init extends desktop_controller{
         $init_time = app::get('finance')->getConf('finance_setting_init_time');
 
         
-        
+     
 
         $this->pagedata['year'] = $year;
         $this->pagedata['month'] = $month;
         $this->pagedata['day'] = $day;
         $this->pagedata['init_time'] = $init_time;
-        $this->pagedata['isSaveInitTime'] = $init_time ? 'true' : 'false';
+        $this->pagedata['isSaveInitTime'] = 'false';
         $this->pagedata['isInit'] = $init_time['flag'];
 
         $this->pagedata['feeTypeCount'] = app::get('financebase')->model('bill_fee_type')->count();
@@ -79,8 +79,9 @@ class finance_ctl_setting_init extends desktop_controller{
                 $queueData['create_time'] = time();
                 $queueData['queue_name']  = sprintf("账期初始化_%s", $monthly_date);
                 $queueData['queue_data']  = array('begin_time' => $init_date_time, 'end_time' => $next_data_time - 1, 'monthly_date' => $monthly_date);
+              
                 $queue_id = $oQueue->insert($queueData);
-                $queue_id and financebase_func::addTaskQueue(array('queue_id'=>$queue_id),'initmonthlyreport');
+                //$queue_id and financebase_func::addTaskQueue(array('queue_id'=>$queue_id),'initmonthlyreport');
 
                 $init_date_time = $next_data_time;
             }

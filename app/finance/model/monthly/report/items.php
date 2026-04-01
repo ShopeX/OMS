@@ -27,10 +27,17 @@ class finance_mdl_monthly_report_items extends dbeav_model {
      * @return mixed 返回值
      */
     public function modifier_gap($col,$list,$row){
-        if($this->is_export_data) {
-            return $col;
-        }
-        return sprintf('<a href="index.php?app=finance&ctl=monthend_verification&act=base_list&p[0]=%s" target="_blank">%s</a>',$row['id'], $col);
+        // 构建title内容
+        $title = sprintf('sales:%s refund:%s', 
+            isset($row['_0_sales_gap']) ? $row['_0_sales_gap'] : '0',
+            isset($row['_0_refund_gap']) ? $row['_0_refund_gap'] : '0'
+        );
+        
+        return sprintf('<a href="index.php?app=finance&ctl=monthend_verification&act=base_list&p[0]=%s&finder_id=%s" target="_blank" title="%s">%s</a>',
+            $row['id'], $_GET['_finder']['finder_id'], 
+            htmlspecialchars($title), 
+            $col
+        );
     }
 
     /**
@@ -44,6 +51,6 @@ class finance_mdl_monthly_report_items extends dbeav_model {
         if($this->is_export_data) {
             return $col;
         }
-        return sprintf('<a href="index.php?app=finance&ctl=monthend_verification&act=sale_list&p[0]=%s" target="_blank">%s</a>',$row['id'], $col);
+        return sprintf('<a href="index.php?app=finance&ctl=monthend_verification&act=sale_list&p[0]=%s&finder_id=%s" target="_blank">%s</a>',$row['id'],$_GET['_finder']['finder_id'], $col);
     }
 }

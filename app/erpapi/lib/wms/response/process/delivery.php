@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * 发货
  *
@@ -96,6 +95,30 @@ class erpapi_wms_response_process_delivery
                 }
                 $bill['delivery_time'] = strtotime($params['operate_time']);
                 $dliBill->save($bill);
+            }
+        }
+
+        // WMS 回传无物流公司、无运单号时：非大件物流须报错（大件在 OMS 内会用发货单号兜底运单号）
+        if ($params['status'] == 'delivery') {
+            $logiIdEmpty = empty($params['logi_id']);
+            $logiNoEmpty = trim((string)($params['logi_no'] ?? '')) === '';
+            $billHasLogi = !empty($params['bill_logi_no']) && is_array($params['bill_logi_no'])
+                && array_filter(array_map('trim', $params['bill_logi_no']));
+            if ($logiIdEmpty && $logiNoEmpty && !$billHasLogi) {
+                $deliveryRow = app::get('ome')->model('delivery')->dump(
+                    array('delivery_bn' => $params['delivery_bn']),
+                    'logi_id'
+                );
+                if (empty($deliveryRow['logi_id'])) {
+                    return array('rsp' => 'fail', 'msg' => '缺少物流公司');
+                }
+                $corpRow = app::get('ome')->model('dly_corp')->dump(
+                    array('corp_id' => $deliveryRow['logi_id']),
+                    'corp_model'
+                );
+                if (empty($corpRow['corp_model']) || $corpRow['corp_model'] != 'heavy') {
+                    return array('rsp' => 'fail', 'msg' => '缺少物流公司运单号');
+                }
             }
         }
 

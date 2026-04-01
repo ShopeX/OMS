@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * @author chenping<chenping@shopex.cn>
  */
@@ -33,7 +32,7 @@ class inventorydepth_shop {
      * @return void
      * @author
      **/
-    public function downloadList($shop_id,$filter,$page,&$errormsg)
+    public function downloadList($shop_id,$filter,$page,&$errormsg=null)
     {
         $shop = $this->app->model('shop')->db_dump($shop_id);
 
@@ -60,6 +59,7 @@ class inventorydepth_shop {
         if($data === false) return false;
 
         if($data){
+            $stores = [];
             $itemModel = $this->app->model('shop_items');
             $skuModel = $this->app->model('shop_skus');
             $skuModel->batchInsert($data,$shop,$stores);
@@ -370,7 +370,7 @@ class inventorydepth_shop {
      * @param unknown $page
      * @param unknown $errormsg
      */
-    public function ajaxDownloadList($shop_id, $filter, $page)
+    public function ajaxDownloadList($shop_id, $filter, $page=0)
     {
         set_time_limit(0);
         ini_set('memory_limit','1024M');
@@ -431,6 +431,7 @@ class inventorydepth_shop {
         
         //保存数据
         if($data){
+            $stores = [];
             $itemModel = $this->app->model('shop_items');
             $skuModel = $this->app->model('shop_skus');
             $skuModel->batchInsert($data,$shop,$stores);
@@ -534,6 +535,8 @@ class inventorydepth_shop {
                     'num_iid'       => $goods_key,
                 ];
             }
+            
+            $stores = [];
             $skuModel = app::get('inventorydepth')->model('shop_skus');
             $itemModel = app::get('inventorydepth')->model('shop_items');
             $skuModel->batchInsert($data,$shop,$stores);

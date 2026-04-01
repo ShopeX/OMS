@@ -179,6 +179,10 @@ class omeauto_auto_plugin_store extends omeauto_auto_plugin_abstract implements 
         $branchObj = app::get('ome')->model("branch");
         $basicMStockFreezeLib  = kernel::single('material_basic_material_stock_freeze');
         $theSelectBranchId = array();
+        
+        // 获取指定不需要管控库存的基础物料
+        $notCtrlStoreBmList = kernel::single('material_basic_material')->getNotCtrlStoreProducts($groupStore['pids']);
+        
         //根据获取到的仓库来判断库存
         foreach ((array) $bids as $bkey => $bid ) {
             if(isset($tid)) {
@@ -224,7 +228,14 @@ class omeauto_auto_plugin_store extends omeauto_auto_plugin_abstract implements 
 
                 //检查订单组内的货品数量是否足够
                 $allow = true;
-                foreach ($groupStore['store'] as $pid => $nums) {
+                foreach ($groupStore['store'] as $pid => $nums)
+                {
+                    // 检查不需要管控库存的基础物料
+                    if(isset($notCtrlStoreBmList[$pid]) && $notCtrlStoreBmList[$pid]){
+                        continue;
+                    }
+                    
+                    // check store
                     if (($store[$pid]['store'] - $nums) < 0) {
                         $allow = false;
                     } 
@@ -305,5 +316,5 @@ class omeauto_auto_plugin_store extends omeauto_auto_plugin_abstract implements 
     public function getInputUI() {
         
     }
-
+    
 }

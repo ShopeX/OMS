@@ -52,6 +52,10 @@ class ome_reship_const
     const __EDIT_RETURN_CODE = 0x00000200;
     const __EDIT_CHANGE_CODE = 0x00000400;
     const __YUANDANTUI = 0x00000800;
+    const __QZ_REFUND_CODE = 0x80000;
+    
+    // 退回物流单号重复
+    const __RETURN_LOGI_DUP = 0x00001000;
   
     //是否是新退换货单
     /**
@@ -101,6 +105,10 @@ class ome_reship_const
                 $style = array('color'=>'red', 'msg'=>'拦截入库', 'flag'=>'拦截入库');
                 $ret .= $this->getViewPanel($style['color'], $style['msg'], $style['flag']);
             }
+            if($flag_type & ome_reship_const::__QZ_REFUND_CODE){
+                $style = array('color'=>'#3E3E3E', 'msg'=>'强制退款', 'flag'=>'强制退款');
+                $ret .= $this->getViewPanel($style['color'], $style['msg'], $style['flag']);
+            }
             if($flag_type & ome_reship_const::__RESHIP_DIFF){
                 $style = array('color'=>'#BDB76B', 'msg'=>'退货差异入库', 'flag'=>'差异入库');
                 $ret .= $this->getViewPanel($style['color'], $style['msg'], $style['flag']);
@@ -116,6 +124,10 @@ class ome_reship_const
             }
             if($flag_type & ome_reship_const::__YUANDANTUI){
                 $style = array('color'=>'#D2B48C', 'msg'=>'原单退', 'flag'=>'原单退');
+                $ret .= $this->getViewPanel($style['color'], $style['msg'], $style['flag']);
+            }
+            if($flag_type & ome_reship_const::__RETURN_LOGI_DUP){
+                $style = array('color'=>'#9370DB', 'msg'=>'退回物流单号重复', 'flag'=>'物流重复');
                 $ret .= $this->getViewPanel($style['color'], $style['msg'], $style['flag']);
             }
             $ret = '<div style="overflow: auto;word-break: break-word;white-space: normal;width: 100%;flex-wrap: wrap;display: flex;">'.$ret.'</div>';

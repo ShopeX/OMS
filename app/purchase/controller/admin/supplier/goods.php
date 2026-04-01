@@ -14,27 +14,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
- * 供应商货品
+ * 供应商基础物料
  *
  * @access public
  * @author wangbiao<wangbiao@shopex.cn>
  */
 class purchase_ctl_admin_supplier_goods extends desktop_controller{
 
-    var $name = "供应商货品";
+    var $name = "供应商基础物料";
     var $workground = "purchase_manager";
 
     /*
-     * 供应商货品列表
+     * 供应商基础物料列表
      */
     function index()
     {
         $finder_id = $_REQUEST['_finder']['finder_id'];
 
         $base_filter = array();
-        $params = array('title'=>'供应商货品管理',
+        $params = array('title'=>'供应商基础物料管理',
                 'actions'=>array(
                         array(
                                 'label' => '物料关联',
@@ -396,7 +395,7 @@ class purchase_ctl_admin_supplier_goods extends desktop_controller{
     {
         header("Content-Type: text/csv");
 
-        $filename = "供应商货品模板.csv";
+        $filename = "供应商基础物料模板.csv";
         $encoded_filename = urlencode($filename);
         $encoded_filename = str_replace("+", "%20", $encoded_filename);
 

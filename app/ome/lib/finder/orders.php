@@ -14,22 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-class ome_finder_orders{
-
+class ome_finder_orders
+{
     static $_syncErrorMsgs = null;
-
+    
     var $detail_basic = '基本信息';
     var $detail_goods = '订单明细';
     var $detail_pmt = '优惠方案';
-    // var $detail_service = '服务订单';
     var $detail_bill = '收退款记录';
-    // var $detail_refund_apply = '退款申请记录';
     var $detail_delivery = '发货记录';
     var $detail_mark = '商家备注';
     var $detail_abnormal = '订单异常备注';
     var $detail_history = '订单操作记录';
-    //var $detail_aftersale = '售后记录';
     var $detail_custom_mark = '客户备注';
     var $detail_shipment = '发货日志';
     var $detail_prodcut_store = '库存明细';
@@ -37,20 +33,10 @@ class ome_finder_orders{
     var $detail_freeze = '订单冻结流水';
 
     function __construct(){
-        if(($_GET['ctl'] == 'admin_order' 
-                && ($_GET['act'] == 'confirm' || $_GET['act'] == 'index' || $_GET['flt'] == 'buffer' || $_GET['flt'] == 'assigned'))
-            || $_GET['ctl']=='admin_order_lack'){
+        if($_GET['act'] == 'index' || $_GET['act'] == 'confirm' || $_GET['act'] == 'pending' || $_GET['act'] == 'processed'){
             //nothing
         }else{
            unset($this->column_confirm);
-        }
-
-        //剔除复审操作按扭
-        if($_GET['ctl'] == 'admin_order' && $_GET['act'] == 'retrial'){
-            //nothing
-        }else{
-            unset($this->column_abnormal_status);
-            unset($this->column_mark_text);
         }
     }
 
@@ -58,7 +44,32 @@ class ome_finder_orders{
         $render = app::get('ome')->render();
         $oOrders = app::get('ome')->model('orders');
         $oOperation_log = app::get('ome')->model('operation_log');
-
+        
+        // order_id
+        $order_id = intval($order_id);
+        if (!empty($_POST) && isset($_POST['order']['order_id'])) {
+            if($_POST['order']['order_id']){
+                $order_id = $_POST['order']['order_id'];
+            }else{
+                $order_id = 0;
+            }
+        }
+        
+        // filter
+        $base_filter = array('order_id'=>$order_id);
+        
+        //check shop permission
+        $organization_permissions = kernel::single('desktop_user')->get_organization_permission();
+        if($organization_permissions){
+            $base_filter['org_id'] = $organization_permissions;
+        }
+        
+        $order_detail = $oOrders->dump($base_filter,"*",array("order_items"=>array("*")));
+        if(empty($order_detail)){
+            $error_msg = '订单不存在，或者账号无权访问该订单';
+            return '<div style="padding:16px;color:#c00;">' . htmlspecialchars($error_msg, ENT_QUOTES, 'UTF-8') . '</div>';
+        }
+        
         if($_POST){
             if($_POST['is_flag']){
                 //开票提交业务处理
@@ -71,16 +82,6 @@ class ome_finder_orders{
                     switch($_POST['order_action']){
                         case "cancel" :
                             $memo = "订单被取消";
-
-                            /***
-                             * 代码已不使用
-                             *
-                             * TODO: 订单取消作为单独的日志记录
-                            $oOrders->unfreez($order_id);
-                            $oOrders->cancel_delivery($order_id);
-                            $oOperation_log->write_log('order_modify@ome',$order_id,$memo);
-                            *
-                            ***/
                             break;
                         case "order_limit_time" :
                             $plainData = $_POST['order'];
@@ -151,7 +152,7 @@ class ome_finder_orders{
 
             //写操作日志
         }
-        $order_detail = $oOrders->dump($order_id,"*",array("order_items"=>array("*")));
+        
         // 判断是否加密
         $order_detail['is_encrypt'] = kernel::single('ome_security_router',$order_detail['shop_type'])->show_encrypt($order_detail, 'order');
         $invoiceMdl = app::get('ome')->model('order_invoice');
@@ -333,11 +334,16 @@ class ome_finder_orders{
             }
         }
         
+        // 取消订单权限
+        $is_allow_cancel = true;
+        if (!kernel::single('desktop_user')->has_permission('ome.action.order.cancel')) {
+            $is_allow_cancel = false;
+        }
+        $render->pagedata['is_allow_cancel'] = $is_allow_cancel;
         
         return $render->fetch('admin/order/detail_basic.html');
     }
 
-    //开票提交显示
     //开票提交显示
     private function submit_invoice_show(&$order_detail){
         //发票相关 获取是否有订单相关的发票信息 有的话取最新一条发票信息
@@ -418,11 +424,30 @@ class ome_finder_orders{
     function detail_goods($order_id){
         $render = app::get('ome')->render();
         $oOrder = app::get('ome')->model('orders');
-
+        
+        // order_id
+        $order_id = intval($order_id);
+        
+        // filter
+        $base_filter = array('order_id'=>$order_id);
+        
+        //check shop permission
+        $organization_permissions = kernel::single('desktop_user')->get_organization_permission();
+        if($organization_permissions){
+            $base_filter['org_id'] = $organization_permissions;
+        }
+        
+        // orderInfo
+        $orders = $oOrder->dump($base_filter,'order_id,shop_type,order_source,process_status,settlement_amount');
+        if(empty($orders)){
+            $error_msg = '订单不存在，或者账号无权访问该订单明细';
+            return '<div style="padding:16px;color:#c00;">' . htmlspecialchars($error_msg, ENT_QUOTES, 'UTF-8') . '</div>';
+        }
+        
         $item_list = $oOrder->getItemList($order_id,true);
         $item_list = ome_order_func::add_getItemList_colum($item_list);
         ome_order_func::order_sdf_extend($item_list);
-        $orders = $oOrder->getRow(array('order_id'=>$order_id),'order_id,shop_type,order_source,process_status');
+        
         $is_consign = false;
         
         //淘宝代销订单增加代销价
@@ -591,12 +616,24 @@ class ome_finder_orders{
                             
                             //福袋优惠分摊
                             $order_items[$luckybag_id]['part_mjz_discount'] = $itemVal['part_mjz_discount'];
+
+                            //福袋客户实付
+                            $order_items[$luckybag_id]['actually_amount'] = $itemVal['actually_amount'];
+
+                            //福袋商家结算
+                            $order_items[$luckybag_id]['settlement_amount'] = $itemVal['settlement_amount'];
                         }else{
                             //福袋实付金额
                             $order_items[$luckybag_id]['divide_order_fee'] += $itemVal['divide_order_fee'];
                             
                             //福袋优惠分摊
                             $order_items[$luckybag_id]['part_mjz_discount'] += $itemVal['part_mjz_discount'];
+
+                            //福袋客户实付
+                            $order_items[$luckybag_id]['actually_amount'] += $itemVal['actually_amount'];
+
+                            //福袋商家结算
+                            $order_items[$luckybag_id]['settlement_amount'] += $itemVal['settlement_amount'];
                         }
                         
                         //基础物料价格贡献比
@@ -612,6 +649,15 @@ class ome_finder_orders{
                     $item_list[$obj_type][$obj_id]['order_items'] = $order_items;
                 }
             }
+        }
+        
+        // 订单明细格式化：把PKG组合放到数组末尾显示；
+        if(isset($item_list['pkg'])){
+            $pkgItems = $item_list['pkg'];
+            unset($item_list['pkg']);
+            
+            // pkg
+            $item_list['pkg'] = $pkgItems;
         }
         
         $render->pagedata['is_host'] = $is_host;
@@ -635,15 +681,32 @@ class ome_finder_orders{
         $render = app::get('ome')->render();
         $oOrder_pmt = app::get('ome')->model('order_pmt');
         $ordersObj = app::get('ome')->model('orders');
-
+        
+        // order_id
+        $order_id = intval($order_id);
+        
+        // filter
+        $base_filter = array('order_id'=>$order_id);
+        
+        //check shop permission
+        $organization_permissions = kernel::single('desktop_user')->get_organization_permission();
+        if($organization_permissions){
+            $base_filter['org_id'] = $organization_permissions;
+        }
+        
         //订单信息
-        $orderInfo = $ordersObj->dump(array('order_id'=>$order_id), 'order_bn,shop_type,api_version');
+        $orderInfo = $ordersObj->dump($base_filter, 'order_bn,shop_type,api_version');
+        if(empty($orderInfo)){
+            $error_msg = '订单不存在，或者账号无权访问该订单优惠信息';
+            return '<div style="padding:16px;color:#c00;">' . htmlspecialchars($error_msg, ENT_QUOTES, 'UTF-8') . '</div>';
+        }
+        
         $render->pagedata['orderInfo'] = $orderInfo;
 
         //优惠券信息
         $pmts = $oOrder_pmt->getList('*',array('order_id'=>$order_id));
         $render->pagedata['pmts'] = $pmts;
-        if(in_array($orderInfo['shop_type'], ['luban','taobao','360buy','wxshipin'])) {
+        //if(in_array($orderInfo['shop_type'], ['luban','taobao','360buy'])) {
             $couponOrder = app::get('ome')->model('order_coupon')->getList('type,type_name as pmt_describe,total_amount as pmt_amount, oid,material_bn,amount', array('order_id'=>$order_id));
             $title = ['oid'=>'子单号','material_bn'=>'物料编号'];
             $pmts = [];
@@ -656,9 +719,11 @@ class ome_finder_orders{
                 $pmts[$index][$pmtIndex] = ($pmts[$index][$pmtIndex] ? $pmts[$index][$pmtIndex] . ' | ' : '') . $pmt_amount;
                 $title[$pmtIndex] = $pmtIndex;
             }
-            $render->pagedata['coupon']['title'] = $title;
-            $render->pagedata['coupon']['pmts'] = $pmts;
-        }
+            if($pmts) {
+                $render->pagedata['coupon']['title'] = $title;
+                $render->pagedata['coupon']['pmts'] = $pmts;
+            }
+        //}
         if(in_array($orderInfo['shop_type'], ['360buy']) && $orderInfo['api_version'] < 3) {
             $title = ['oid'=>'子单号','material_bn'=>'物料编号'];
             foreach(app::get('ome')->model('order_coupon')->getList('type,type_name as pmt_describe', array('order_id'=>$order_id)) as $v) {
@@ -770,13 +835,33 @@ class ome_finder_orders{
         $oReship = app::get('ome')->model('reship');
         $oWms_delivery = app::get('wms')->model('delivery');
         $obj_order = app::get('ome')->model('orders');
+        
+        // order_id
+        $order_id = intval($order_id);
+        
+        // filter
+        $base_filter = array('order_id'=>$order_id);
+        
+        //check shop permission
+        $organization_permissions = kernel::single('desktop_user')->get_organization_permission();
+        if($organization_permissions){
+            $base_filter['org_id'] = $organization_permissions;
+        }
+        
+        // orderInfo
+        $orderInfo = $obj_order->dump($order_id, '*');
+        if(empty($orderInfo)){
+            $error_msg = '订单不存在，或者账号无权访问该订单发货信息';
+            return '<div style="padding:16px;color:#c00;">' . htmlspecialchars($error_msg, ENT_QUOTES, 'UTF-8') . '</div>';
+        }
+        
         $wms_delivery = $oWms_delivery->getDeliveryByOrder($order_id);
         
         $oBranch = app::get('ome')->model('branch');
         $delivery = $oDelivery->getDeliveryByOrder('branch_id,create_time,delivery_id,delivery_bn,logi_id,logi_no,logi_name,ship_name,delivery,branch_id,stock_status,deliv_status,expre_status,status,weight',$order_id);
         $reship = $oReship->getList('t_begin,reship_id,reship_bn,logi_no,ship_name,delivery',array('order_id'=>$order_id));
         $wms_id = kernel::single('wms_branch')->getBranchByselfwms();
-        $order_info = $obj_order->dump($order_id,'order_bn');
+        
         #检测是否开启华强宝物流
         $is_hqepay_on =  app::get('ome')->getConf('ome.delivery.hqepay');
         if($is_hqepay_on == 'false'){
@@ -806,7 +891,7 @@ class ome_finder_orders{
         
         //获取京东物流包裹明细
         $deliveryPackage = $this->getOrderDeliveryPackage($order_id);
-        $render->pagedata['order_bn'] = $order_info['order_bn'];
+        $render->pagedata['order_bn'] = $orderInfo['order_bn'];
         $render->pagedata['is_hqepay_on'] = $is_hqepay_on;
         $render->pagedata['delivery'] = $delivery;
         $render->pagedata['wms_delivery'] = $wms_delivery;
@@ -914,32 +999,15 @@ class ome_finder_orders{
 
         if($_POST){
             $order_id = $_POST['order']['order_id'];
-            //取出原备注信息
-            $oldmemo = $oOrders->dump(array('order_id'=>$order_id), 'mark_text');
-            $oldmemo= unserialize($oldmemo['mark_text']);
             $op_name = kernel::single('desktop_user')->get_name();
-            if ($oldmemo)
-            foreach($oldmemo as $k=>$v){
-                $memo[] = $v;
+            
+            // 使用ome_order_marktext::add方法添加备注
+            list($success, $message) = kernel::single('ome_order_marktext')->add($order_id, $_POST['order']['mark_text'], $op_name);
+            
+            if (!$success) {
+                // 可以在这里处理错误，比如显示错误消息
+                // 这里暂时不做特殊处理，因为原逻辑也没有错误处理
             }
-            $newmemo =  htmlspecialchars($_POST['order']['mark_text']);
-            $newmemo = array('op_name'=>$op_name, 'op_time'=>date('Y-m-d H:i:s',time()), 'op_content'=>$newmemo);
-            $memo[] = $newmemo;
-            $_POST['order']['mark_text'] = serialize($memo);
-            $plainData = $_POST['order'];
-            $oOrders->save($plainData);
-            //写操作日志
-            $memo = "订单备注修改";
-
-            //订单留言 API
-            foreach(kernel::servicelist('service.order') as $object=>$instance){
-                if(method_exists($instance, 'update_memo')){
-                    $instance->update_memo($order_id, $newmemo);
-                }
-            }
-
-            $oOperation_log = app::get('ome')->model('operation_log');
-            $oOperation_log->write_log('order_modify@ome',$order_id,$memo);
         }
 
         $order_detail = $oOrders->dump($order_id);
@@ -1091,7 +1159,7 @@ class ome_finder_orders{
     function detail_shipment($order_id) {
         $render = app::get('ome')->render();
         $orderObj = app::get('ome')->model('orders');
-        $shipmentObj = & app::get('ome')->model('shipment_log');
+        $shipmentObj = app::get('ome')->model('shipment_log');
         $userObj = app::get('desktop')->model('users');
 
         $order = $orderObj->dump($order_id);
@@ -1135,16 +1203,8 @@ class ome_finder_orders{
 
         return $render->fetch('admin/order/detail_shipment.html');
     }
-
-    /*function detail_aftersale($order_id){
-        $render = app::get('ome')->render();
-        $oReturn = app::get('ome')->model('return_product');
-        $return = $oReturn->Get_aftersale_list($order_id);
-
-        $render->pagedata['return'] = $return;
-        return $render->fetch('admin/order/detail_aftersale.html');
-    }*/
-    var $addon_cols = "print_status,confirm,dt_begin,status,process_status,tax_no,ship_status,op_id,group_id,mark_text,auto_status,custom_mark,mark_type,tax_company,createtime,paytime,sync,pay_status,is_cod,source,order_type,order_bool_type,timing_confirm,shop_type,tostr,itemnum,delivery_time,abnormal_status,shipping,order_source,is_delivery,step_trade_status";
+    
+    var $addon_cols = "print_status,confirm,dt_begin,status,process_status,tax_no,ship_status,op_id,group_id,mark_text,auto_status,custom_mark,mark_type,tax_company,createtime,paytime,sync,pay_status,is_cod,source,order_type,order_bool_type,timing_confirm,shop_type,tostr,itemnum,delivery_time,abnormal_status,shipping,order_source,is_delivery,step_trade_status,is_not_combine";
     var $column_confirm='操作';
     var $column_confirm_width = "120";
 
@@ -1154,6 +1214,8 @@ class ome_finder_orders{
             if($_GET['act'] == 'index') {
                 return $this->_get_index_btn($row);
             }
+            
+            
             return $this->_get_confirm_btn($row);
         } elseif ($_GET['ctl']=='admin_order_lack') {
             return $this->_get_lack_btn($row);
@@ -1200,7 +1262,7 @@ class ome_finder_orders{
         $result = '';
         $order_id = $row['order_id'];
 
-        switch ($row['_0_sync']) {
+        switch ($row[$this->col_prefix.'sync']) {
             case 'none':
                 $result = "<a href='index.php?app=ome&ctl=admin_consign&act=do_sync&p[0]={$order_id}&finder_id=$find_id' target='download'>发货</a>";
                 break;
@@ -1307,18 +1369,19 @@ EOF;
 
             if (($row[$this->col_prefix.'pay_status'] == 1 || $row[$this->col_prefix.'pay_status'] == 4 || ($row[$this->col_prefix.'is_cod'] == 'true' && ($row[$this->col_prefix.'pay_status'] == 0 || $row[$this->col_prefix.'pay_status'] == 3)) || ($row[$this->col_prefix.'pay_status'] == 3 && $row[$this->col_prefix.'step_trade_status'] == 'FRONT_PAID_FINAL_NOPAID' && kernel::single('ome_order_func')->checkPresaleOrder())|| kernel::single('ome_order')->canDeliveryFromBillLabel($labelCode) ) && in_array($row[$this->col_prefix.'process_status'], array('unconfirmed', 'confirmed','splitting')) && $row[$this->col_prefix.'ship_status'] == '0')
             {
-                if ($row[$this->col_prefix.'confirm'] == 'N' && !in_array($row[$this->col_prefix.'process_status'],array('splited','cancel','remain_cancel')) && $row[$this->col_prefix.'status'] == 'active')
-                {
+                if ($row[$this->col_prefix.'confirm'] == 'N' && !in_array($row[$this->col_prefix.'process_status'],array('splited','cancel','remain_cancel')) && $row[$this->col_prefix.'status'] == 'active' && $row[$this->col_prefix.'is_not_combine'] == 0){
                     if($row[$this->col_prefix.'shop_type'] == '360buy' && $row[$this->col_prefix.'source'] == 'matrix') {
                         return $button_batch . ' | ' . $button_platform_split;
                     }
+                    
                     return $button_batch;
                 }
 
-                if (!in_array($row[$this->col_prefix.'process_status'],array('splited','unconfirmed','cancel','remain_cancel')) && $row[$this->col_prefix.'status'] == 'active'){
+                if (!in_array($row[$this->col_prefix.'process_status'],array('splited','unconfirmed','cancel','remain_cancel')) && $row[$this->col_prefix.'status'] == 'active' && $row[$this->col_prefix.'is_not_combine'] == 0){
                     if($row[$this->col_prefix.'shop_type'] == '360buy' && $row[$this->col_prefix.'source'] == 'matrix') {
                         return $button_batch . ' | ' . $button_platform_split;
                     }
+                    
                     return $button_batch;
                 }
             }
@@ -1466,15 +1529,9 @@ EOF;
     //新增
     var $column_fail_status = '注意事项';
     var $column_fail_status_width = "130";
-
     function column_fail_status($row) {
-
-        //$order_id = $row['order_id'];
-        //$oObj = app::get('ome')->model('orders');
-        //$row = $oObj->dump($order_id,'*');
         foreach ($row as $key => $val) {
-
-            $key = str_replace('_0_', '', $key);
+            $key = str_replace($this->col_prefix, '', $key);
             $row[$key] = $val;
         }
 
@@ -1502,11 +1559,11 @@ EOF;
     var $column_deff_time_order_field = "createtime";
 
     function column_deff_time($row) {
-        if ($row['_0_is_cod'] == 'true') {
-            $difftime = kernel::single('ome_func')->toTimeDiff(time(), $row['_0_createtime']);
+        if ($row[$this->col_prefix.'is_cod'] == 'true') {
+            $difftime = kernel::single('ome_func')->toTimeDiff(time(), $row[$this->col_prefix.'createtime']);
         } else {
-            if ($row['_0_paytime'] > 0) {
-                $difftime = kernel::single('ome_func')->toTimeDiff(time(), $row['_0_paytime']);
+            if ($row[$this->col_prefix.'paytime'] > 0) {
+                $difftime = kernel::single('ome_func')->toTimeDiff(time(), $row[$this->col_prefix.'paytime']);
             } else {
                 //return '<span style="color:red;font-weight:700;">未支付</span>';
                 return '';
@@ -1515,13 +1572,6 @@ EOF;
         return $difftime['d'] . '天' . $difftime['h'] . '小时' . $difftime['m'] . '分';
     }
 
-    /**
-     * 获取ViewPanel
-     * @param mixed $color color
-     * @param mixed $msg msg
-     * @param mixed $title title
-     * @return mixed 返回结果
-     */
     public function getViewPanel($color, $msg, $title) {
 
         return sprintf("<div onmouseover='bindFinderColTip(event)' rel='%s' style='width:18px;padding:2px;height:16px;background-color:%s;float:left;color:#ffffff;'>&nbsp;%s&nbsp;</div>", $msg, $color, $title);
@@ -1534,21 +1584,15 @@ EOF;
 
     function column_print_status($row) {
 
-        $stockColor = (($row['_0_print_status'] & 0x02) == 0x02) ? 'green' : '#eeeeee';
-        $delivColor = (($row['_0_print_status'] & 0X04) == 0X04) ? 'red' : '#eeeeee';
-        $expreColor = (($row['_0_print_status'] & 0x01) == 0x01) ? 'gold' : '#eeeeee';
+        $stockColor = (($row[$this->col_prefix.'print_status'] & 0x02) == 0x02) ? 'green' : '#eeeeee';
+        $delivColor = (($row[$this->col_prefix.'print_status'] & 0X04) == 0X04) ? 'red' : '#eeeeee';
+        $expreColor = (($row[$this->col_prefix.'print_status'] & 0x01) == 0x01) ? 'gold' : '#eeeeee';
         $ret = $this->_getViewPanel('备货单', $stockColor);
         $ret .= $this->_getViewPanel('发货单', $delivColor);
         $ret .= $this->_getViewPanel('快递单', $expreColor);
         return $ret;
     }
 
-    /**
-     * _getViewPanel
-     * @param mixed $caption caption
-     * @param mixed $color color
-     * @return mixed 返回值
-     */
     public function _getViewPanel($caption, $color) {
         if ($color == '#eeeeee')
             $caption .= '未打印';
@@ -1590,68 +1634,6 @@ EOF;
         }
         return date('Y-m-d H:i:s', $timeConfirm);
     }
-
-    var $column_abnormal_status    = '复审操作';
-    var $column_abnormal_status_width  = '110';
-    var $column_abnormal_status_order  = '10';
-    function column_abnormal_status($row)
-    {
-        $find_id = $_GET['_finder']['finder_id'];
-        $order_id = $row['order_id'];
-
-        //不是复审订单,直接返回
-        if($row[$this->col_prefix.'process_status'] != 'is_retrial'){
-            return '';
-        }
-
-        $sql    = "SELECT id, retrial_type, status FROM ".DB_PREFIX."ome_order_retrial WHERE order_id='".$order_id."' AND status in('0', '2') ORDER BY dateline DESC";
-        $result = kernel::database()->select($sql);
-
-        $str    = '<a href="index.php?app=ome&ctl=admin_order&act=view_edit&p[0]='.$order_id.'&finder_id='.$find_id.'&oldsource=active" target="_blank">编辑</a>';
-        if($result[0]['status'] == '2' && $result[0]['retrial_type'] == 'normal')
-        {
-            return $str.' | <a href="index.php?app=ome&ctl=admin_order&act=retrial_rollback&p[0]='.$order_id.'&finder_id='.$find_id.'&oldsource=retrial" target="_blank" style="color:red;">恢复原订单</a>';
-        }
-        elseif($result[0]['status'] == '2')
-        {
-            return $str.'<span style="color:#999">(价格复审)</span>';
-        }
-        else
-        {
-            return '<span style="color:#999">未审核</span>';
-        }
-    }
-
-    var $column_mark_text    = '复审备注';
-    var $column_mark_text_width  = '130';
-    var $column_mark_text_order  = '15';
-    function column_mark_text($row)
-    {
-        $order_id = $row['order_id'];
-
-        //不是复审订单,直接返回
-        if($row[$this->col_prefix.'process_status'] != 'is_retrial'){
-            return '';
-        }
-
-        $sql = "SELECT id, remarks, lastdate FROM ".DB_PREFIX."ome_order_retrial WHERE order_id='".$order_id."' AND status in('0', '2') ORDER BY dateline DESC";
-        $result = kernel::database()->select($sql);
-
-        $html   = strip_tags(htmlspecialchars($result[0]['remarks']));
-        return "<div onmouseover='bindFinderColTip(event)' rel='".$html.' by '.date('Y-m-d H:i:s', $result[0]['lastdate'])."'>".$html."<div>";
-    }
-
-    // function detail_service($order_id){
-
-    //     $render = app::get('ome')->render();
-    //     $serviceObj = app::get('ome')->model('order_service');
-
-    //     $service_list = $serviceObj->getList('*',array('order_id'=>$order_id));
-
-    //     $render->pagedata['service_list'] = $service_list;
-    //     return $render->fetch('admin/order/detail_service.html');
-
-    // }
 
     var $column_order_combined_confirm = '已合并审单';
     var $column_order_combined_confirm_width = "60";
@@ -1696,12 +1678,6 @@ EOF;
 
     public $column_push_time = '推单时间';
     public $column_push_time_width = '120';
-    /**
-     * column_push_time
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_push_time($row, $list) {
         $extend = $this->__getOrderExtend($list);
         $time = $extend[$row['order_id']]['push_time'];
@@ -1724,12 +1700,6 @@ EOF;
     
     public $column_collect_time = '揽收时间';
     public $column_collect_time_width = '120';
-    /**
-     * column_collect_time
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_collect_time($row, $list) {
         $extend = $this->__getOrderExtend($list);
         $time = $extend[$row['order_id']]['collect_time'];
@@ -1738,12 +1708,6 @@ EOF;
     }
 
     public $column_added_serivces = '增值服务';
-    /**
-     * column_added_serivces
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_added_serivces($row, $list){
         $extend = $this->__getOrderExtend($list);
         $img = '';
@@ -1781,12 +1745,6 @@ EOF;
 
     public $column_latest_delivery_time = '最晚发货时间';
     public $column_latest_delivery_time_width = '120';
-    /**
-     * column_latest_delivery_time
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_latest_delivery_time($row, $list) {
         $extend = $this->__getOrderExtend($list);
         $time = $extend[$row['order_id']]['latest_delivery_time'];
@@ -1813,12 +1771,6 @@ EOF;
     
     public $column_promised_collect_time = '承诺最晚揽收时间';
     public $column_promised_collect_time_width = '120';
-    /**
-     * column_promised_collect_time
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_promised_collect_time($row, $list) {
         $extend = $this->__getOrderExtend($list);
         $time = $extend[$row['order_id']]['promised_collect_time'];
@@ -1827,12 +1779,6 @@ EOF;
     
     public $column_promised_sign_time = '承诺最晚送达时间';
     public $column_promised_sign_time_width = '120';
-    /**
-     * column_promised_sign_time
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_promised_sign_time($row, $list) {
         $extend = $this->__getOrderExtend($list);
         $time = $extend[$row['order_id']]['promised_sign_time'];
@@ -1844,12 +1790,6 @@ EOF;
     public $column_order_label = '订单标记';
     public $column_order_label_width = 260;
     public $column_order_label_order = 30;
-    /**
-     * column_order_label
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_order_label($row, $list)
     {
         $order_id = $row['order_id'];
@@ -1927,12 +1867,6 @@ EOF;
     public $column_delivery_errormsg = '发货失败信息';
     public $column_delivery_errormsg_width = 300;
     public $column_delivery_errormsg_order = 99;
-    /**
-     * column_delivery_errormsg
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_delivery_errormsg($row, $list)
     {
         //不是已发货状态,直接返回
@@ -2016,11 +1950,6 @@ EOF;
         return kernel::single('ome_preprocess_const')->getBoolTypeIdentifier($row[$this->col_prefix.'abnormal_status'], $row[$this->col_prefix.'shop_type']);
     }
     
-    /**
-     * detail_prodcut_store
-     * @param mixed $order_id ID
-     * @return mixed 返回值
-     */
     public function detail_prodcut_store($order_id)
     {
         $render = app::get('ome')->render();
@@ -2081,11 +2010,6 @@ EOF;
         return $render->fetch('admin/order/detail_product_store.html');
     }
 
-    /**
-     * detail_freeze
-     * @param mixed $order_id ID
-     * @return mixed 返回值
-     */
     public function detail_freeze($order_id)
     {
         $render = app::get('ome')->render();
@@ -2272,7 +2196,7 @@ EOF;
 
     /**
      * [brush特殊订单]订单操作记录
-     * 
+     *
      * @param int $order_id
      * @return string
      */
@@ -2372,12 +2296,6 @@ EOF;
     
     var $column_promise_service = '物流服务标签';
     var $column_promise_service_width = 320;
-    /**
-     * column_promise_service
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_promise_service($row, $list)
     {
         $extend = $this->__getOrderExtend($list);
@@ -2400,18 +2318,30 @@ EOF;
         return $str;
     }
     
+    var $column_is_not_combine = '是否允许审核';
+    var $column_is_not_combine_width = 230;
+    public function column_is_not_combine($row)
+    {
+        if($row[$this->col_prefix.'is_not_combine'] > 0){
+            // 加载不允许审核标签
+            $str = kernel::single('ome_order_combine_const')->getIdentifier($row[$this->col_prefix.'is_not_combine']);
+            
+            $prefix_str = sprintf("<span class='tag-label' title='%s' style='background-color:%s;color:#ffffff;'>%s</span>", '不允许审核', '#FF1493', '否');
+            
+            return $prefix_str . $str;
+        }else{
+            $str = sprintf("<span class='tag-label' title='%s' style='background-color:%s;color:#ffffff;'>%s</span>", '', '#00CD66', '是');
+            
+            return $str;
+        }
+    }
+    
     /**
      * 配送方式映射展示
      */
     var $column_shipping_name = '配送方式';
     var $column_shipping_name_width = 120;
     var $column_shipping_name_order = 35;
-    /**
-     * column_shipping_name
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_shipping_name($row, $list)
     {
         $shipping_code = $row[$this->col_prefix.'shipping'];
@@ -2439,7 +2369,7 @@ EOF;
     
     /**
      * 平台建议信息
-     * 
+     *
      * @param $order_id
      * @return string
      */
@@ -2453,8 +2383,24 @@ EOF;
         
         $logiLib = kernel::single('logisticsmanager_waybill_pdd');
         
-        //订单信息
-        $orderInfo = $orderMdl->dump($order_id);
+        // order_id
+        $order_id = intval($order_id);
+        
+        // filter
+        $base_filter = array('order_id'=>$order_id);
+        
+        //check shop permission
+        $organization_permissions = kernel::single('desktop_user')->get_organization_permission();
+        if($organization_permissions){
+            $base_filter['org_id'] = $organization_permissions;
+        }
+        
+        // orderInfo
+        $orderInfo = $orderMdl->dump($base_filter, '*');
+        if(empty($orderInfo)){
+            $error_msg = '订单不存在，或者账号无权访问该订单平台建议信息';
+            return '<div style="padding:16px;color:#c00;">' . htmlspecialchars($error_msg, ENT_QUOTES, 'UTF-8') . '</div>';
+        }
         
         //订单明细信息
         $orderObjList = $orderObjMdl->getList('*', array('order_id'=>$order_id));
@@ -2559,7 +2505,6 @@ EOF;
                     break;
             }
         }
-        
         
         return $epList[$order_bn];
     }

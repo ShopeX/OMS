@@ -266,6 +266,7 @@ class ome_ctl_admin_order extends desktop_controller{
             'abnormal'=>'false',
             'is_fail' => 'false',
             'status' => 'active',
+            'is_not_combine' => 0, //是否允许审核
         );
 
         //指定显示订单类型
@@ -751,11 +752,11 @@ class ome_ctl_admin_order extends desktop_controller{
             case 'buffer':
                 $this->order_type = 'buffer';
                 $this->base_filter = $this->getBaseFilter('buffer');
+                
                 $this->action = array(
-
                     array('label' => '订单分派', 'submit' => 'index.php?app=ome&ctl=admin_order&act=dispatchDailog&flt=buffer', 'target' => 'dialog::{width:600,height:300,title:\'订单分派\'}'),
                 );
-
+                
                 //brush特殊订单
                 if(kernel::single('desktop_user')->has_permission('order_to_brush')) {
                     array_push($this->action, array('label'=>'设为特殊订单', 'submit'=>'index.php?app=brush&ctl=admin_orders&act=brush', 'confirm'=>'确认要设置为特殊订单么？'));
@@ -772,10 +773,12 @@ class ome_ctl_admin_order extends desktop_controller{
         if($organization_permissions){
             $this->base_filter['org_id'] = $organization_permissions;
         }
-
+        
         $this->base_filter['archive'] ='0';
-        $this->base_filter['process_status|noequal'] = 'is_declare';//跨境申报
-
+        
+        //跨境申报
+        //$this->base_filter['process_status|noequal'] = 'is_declare';
+        
         $this->finder('ome_mdl_orders',array(
             'title' => $this->title,
             'actions' => $this->action,
@@ -820,23 +823,11 @@ class ome_ctl_admin_order extends desktop_controller{
                 switch ($flag) {
                     case 989899:
                         $this->base_filter['pause'] = 'true';
-//                        $this->base_filter['is_cod'] = 'false';
                         break;
                     case 989898:
                         $this->base_filter['pause'] = 'false';
                         $this->base_filter['is_cod'] = 'true';
                         break;
-                    /*case 64:
-                        $this->base_filter['pause'] = 'false';
-                        if (isset($this->base_filter['order_confirm_filter'])) {
-                            $this->base_filter['order_confirm_filter'] .= sprintf(" AND (sdb_ome_orders.auto_status & %s = %s)", $flag, $flag);
-                        } else {
-                            $this->base_filter['order_confirm_filter'] = sprintf("(sdb_ome_orders.auto_status & %s = %s)", $flag, $flag);
-                        }
-                        $this->action = array(
-                            array('label' => '批量审单', 'submit' => 'index.php?ctl=admin_order&app=ome&act=setDlyCorp', 'target' => 'dialog::{width:600,height:400,title:\'批量审核订单\'}'),
-                        );
-                        break;*/
                     default:
                         $this->base_filter['pause'] = 'false';
                         if($flag>=999000) break;
@@ -848,6 +839,7 @@ class ome_ctl_admin_order extends desktop_controller{
                         break;
                 }
             }
+            
             //订单退回
             $isgoback = kernel::single('desktop_user')->has_permission('order_goback');
             if($isgoback){
@@ -944,6 +936,7 @@ class ome_ctl_admin_order extends desktop_controller{
                     );
                 }
             }
+            
             // 超级管理员
             if(kernel::single('desktop_user')->is_super()){
                 if(isset($this->base_filter['op_id']))
@@ -952,12 +945,19 @@ class ome_ctl_admin_order extends desktop_controller{
                 if(isset($this->base_filter['group_id']))
                     unset($this->base_filter['group_id']);
             }
+            
             $export = false;
             $user = kernel::single('desktop_user');
             if($user->has_permission('order_export')){
                 $export = true;
             }
+            
+            //archive
             $this->base_filter['archive'] = 0;
+            
+            //是否允许审核
+            $this->base_filter['is_not_combine'] = 0;
+            
             $this->finder('ome_mdl_orders',array(
                 'title'=>$this->title,
                 'actions'=>$this->action,
@@ -1588,6 +1588,15 @@ class ome_ctl_admin_order extends desktop_controller{
             exit;
         }
         
+        //是否允许审核
+        if($order['is_not_combine'] > 0){
+            header("content-type:text/html; charset=utf-8");
+            echo "<script>alert('订单已被标记：不允许审核，请检查!');
+            opener.finderGroup['{$finder_id}'].refresh.delay(100,opener.finderGroup['{$finder_id}']);window.close();
+            </script>";
+            exit;
+        }
+        
         //定制订单类型,未推送给莫凡,不允许手工审核订单
         if($order['order_type'] == 'custom' && $order['is_delivery'] == 'N'){
             header("content-type:text/html; charset=utf-8");
@@ -1655,16 +1664,25 @@ class ome_ctl_admin_order extends desktop_controller{
         $orderSplitLib   = kernel::single('ome_order_split');
         $split_seting    = $orderSplitLib->get_delivery_seting();
         $split_model     = $split_seting ? 2 : 0;//自由拆单方式split_model=2
-
+        
         $this->pagedata['split_model']  = $split_model;
 
         //获取当前订单的上下条订单
         $this->pagedata['filter'] = urlencode($ini_filter);
-
+        
+        // 是否支持手工合单（On：开启，Off：关闭）
+        $is_manual_merge = app::get('ome')->getConf('ome.combine.manual.merge');
+        if($is_manual_merge){
+            $order['is_manual_merge'] = $is_manual_merge;
+        }else{
+            $order['is_manual_merge'] = '';
+        }
+        
         //获取相关订单，并输入内容
         $combineObj = kernel::single('omeauto_auto_combine');
         $combineOrders = $combineObj->fetchCombineOrder($order);
-
+        
+        // order
         $order = $oOrder->dump($order_id);
         // 处理加密
         $order['is_encrypt']  = kernel::single('ome_security_router',$order['shop_type'])->show_encrypt($order,'order');
@@ -1735,7 +1753,7 @@ class ome_ctl_admin_order extends desktop_controller{
             $recommendLogiStr = implode('，', $tempData);
             $this->pagedata['recommendLogiStr'] = $recommendLogiStr;
         }
-
+        
         $flag_edit = 'true';
         foreach ($combineOrders as $k=>$combineOrder)
         {
@@ -1863,12 +1881,11 @@ class ome_ctl_admin_order extends desktop_controller{
         }
 
         $order['difftime'] = $difftime['d'] . '天' . $difftime['h'] . '小时' . $difftime['m'] . '分';
-
+        $this->pagedata['assign_express_code'] = '';
         //指定快递发货
         $assign_express = array();
-        if($order['shop_type'] == 'taobao'){
-            $assign_express = kernel::single('ome_order_func')->get_assign_express($order_id);
-
+        $assign_express = kernel::single('ome_order_func')->get_assign_express($order_id);
+        if($assign_express){
             $this->pagedata['assign_express_name'] = $assign_express['name'];
             $this->pagedata['assign_express_code'] = $assign_express['assign_express_code'];
         }
@@ -2066,7 +2083,7 @@ class ome_ctl_admin_order extends desktop_controller{
         }
     
         //预估发货快递白名单
-        $this->pagedata['assign_express_code'] = '';
+        
         if (isset($orderExtend['white_delivery_cps']) && is_string($orderExtend['white_delivery_cps'])) {
             $logiCodes = json_decode($orderExtend['white_delivery_cps'], true);
             if (is_array($logiCodes) && !empty($logiCodes)) {
@@ -2616,7 +2633,7 @@ class ome_ctl_admin_order extends desktop_controller{
                 //[门店自提]不支持拆单功能
                 $split_seting = '';
                 $splitting_product = '';
-			}elseif(($is_instatnt || $is_seller) && !$skipTypeCheck){ // 门店 O2O 豁免：$skipTypeCheck=true 时不进入同城/商家配送校验
+            }elseif(($is_instatnt || $is_seller) && !$skipTypeCheck){ // 门店 O2O 豁免：$skipTypeCheck=true 时不进入同城/商家配送校验
                 //同城配送&&商家配送,检查合并的订单
                 $orderList = $orderMdl->getList('order_id,order_bn,shop_type,shipping', array('order_id'=>$orders));
 
@@ -3569,6 +3586,20 @@ class ome_ctl_admin_order extends desktop_controller{
                 $obj_config = array_merge($obj_config,empty($tmp_conf)?array():$tmp_conf);
             }
         }
+        // 检查是否存在oid有值且不为-1的行明细
+        $has_oid_limit = false;
+        foreach ($item_list as $obj => $idata){
+            foreach ($idata as $obj_id => $ordObj_list)
+            {
+                // 检查oid限制
+                if (!empty($ordObj_list['oid']) && $ordObj_list['oid'] != '-1') {
+                    $has_oid_limit = true;
+                    break 2; // 跳出两层循环
+                }
+            }
+        }
+        $this->pagedata['has_oid_limit'] = $has_oid_limit;
+
         foreach ($item_list as $obj => $idata){
 
             //[拆单]计算订单商品已拆分数量
@@ -3683,11 +3714,21 @@ class ome_ctl_admin_order extends desktop_controller{
                 if (is_array($result) && isset($result['msg'])) {
                     $msg = $result['msg'];
                 }
-
             }else{
                 $result = true;
                 $msg = '成功';
+                
+                // orderIds
+                $orderIds = [$order_id];
+                
+                // 订单发货完成后，service扩展触发其他服务
+                foreach(kernel::servicelist('ome.service.order.finish.after') as $service) {
+                    if(method_exists($service, 'after_order_finish')) {
+                        $service->after_order_finish($orderIds);
+                    }
+                }
             }
+            
             $this->end($result, app::get('base')->_("余单撤消".$msg));
         }
     }
@@ -4069,6 +4110,9 @@ class ome_ctl_admin_order extends desktop_controller{
             //订单明细上的商品是否被修改
             if ($objtype && is_array($objtype)){
                 $is_order_change = kernel::single('ome_order_edit')->is_edit_order_item($objtype, $post);
+                if($is_order_change){
+                    $is_goods_modify = true;
+                }
             }else {
                 $this->end(false, "订单不能没有商品");
             }
@@ -4107,6 +4151,8 @@ class ome_ctl_admin_order extends desktop_controller{
             $new    = $rs['new'];
             $total  = $rs['total'];
             $pmt_goods = $rs['total_pmt_goods'];
+            $settlement_amount = $rs['settlement_amount'];
+            $actually_amount = $rs['actually_amount'];
 
             //新添加的基础物料
             $chk_item_ids = array();
@@ -4128,9 +4174,10 @@ class ome_ctl_admin_order extends desktop_controller{
 
                 $objMath    = kernel::single('eccommon_math');
                 $pro_total  = $order['cost_item'];
+                
                 $discount   = strval($post['discount']);
-
                 $pmt_order_price   = $post['pmt_order'];
+
                 $new_order['pmt_order']      = $pmt_order_price;
                 $new_order['order_id']      = $order_id;
                 $new_order['cost_item']     = $total;
@@ -4141,12 +4188,8 @@ class ome_ctl_admin_order extends desktop_controller{
                 $new_order['total_amount']  = $objMath->number_plus(array($new_order['total_amount'],$discount));
                 $new_order['discount']      = $discount;
                 $new_order['cur_amount'] = $new_order['total_amount'];
-
-                //限制编辑订单折扣金额不能为正数(TB:KTG-202)
-                if($discount > 0){
-
-                    $this->end(false, '禁止订单折扣金额大于0元,不允许膨胀订单金额.');
-                }
+                $new_order['settlement_amount'] = $settlement_amount + $post['cost_shipping'];
+                $new_order['actually_amount'] = $actually_amount + $post['cost_shipping'];
 
                 if ($new_order['total_amount'] < 0){
 
@@ -4324,7 +4367,7 @@ class ome_ctl_admin_order extends desktop_controller{
                     kernel::single('ome_order_func')->update_order_pay_status($order_id, true, __CLASS__.'::'.__FUNCTION__);
                 }
 
-               //修改交易收货人信息 API
+                //修改交易收货人信息 API
                 if ($is_address_change == true){
                     if ($service_order = kernel::servicelist('service.order')){
                         foreach($service_order as $object=>$instance){
@@ -4334,6 +4377,7 @@ class ome_ctl_admin_order extends desktop_controller{
                         }
                     }
                 }
+                
                 //订单编辑API
                 if ($is_order_change == true){
                     if ($service_order = kernel::servicelist('service.order')){
@@ -4410,6 +4454,20 @@ class ome_ctl_admin_order extends desktop_controller{
 
                     //log
                     $oOperation_log->write_log('order_modify@ome', $order_id, $log_msg);
+                }
+            }
+            
+            // [大家电订单]商品被修改、收货人地址被修改，订单需要重新预约时间
+            if($is_address_change){
+                kernel::single('ome_order_reservation')->againReservation($order_id, 'address_change');
+            }elseif($is_goods_modify){
+                kernel::single('ome_order_reservation')->againReservation($order_id, 'goods_change');
+            }
+            
+            // 增加service调用，便于扩展finish_edit后的处理逻辑
+            foreach (kernel::servicelist('ome.service.order.finishedit.after') as $service) {
+                if (method_exists($service, 'afterFinishEdit')) {
+                    $service->afterFinishEdit($order_id);
                 }
             }
 
@@ -4492,12 +4550,6 @@ class ome_ctl_admin_order extends desktop_controller{
 
             //check
             if ($objtype && is_array($objtype)){
-                //限制编辑订单折扣金额不能为正数(TB:KTG-202)
-                $discount = $post['discount'];
-                if($discount > 0){
-                    $this->end(false, '禁止订单折扣金额大于0元,不允许膨胀订单金额.');
-                }
-
                 //是否有数据提交
                 $rs = kernel::single("ome_order_edit")->is_null($objtype,$post);
                 if ($rs == true)
@@ -5146,6 +5198,14 @@ class ome_ctl_admin_order extends desktop_controller{
         if($lucky_falg){
             $luckyBagLib = kernel::single('ome_order_luckybag');
             $luckyBagLib->saveLuckyBagUseLogs($iorder);
+        }
+        
+        //[SAP创建]调用service进行SAP创建
+        foreach(kernel::servicelist('ome.service.order.create.after') as $object)
+        {
+            if(method_exists($object, 'after_create')){
+                $object->after_create($iorder);
+            }
         }
         
         $this->end(true, '创建成功','index.php?app=ome&ctl=admin_order&act=createOrderResult&order_bn='.$iorder['order_bn']);
@@ -6340,6 +6400,11 @@ class ome_ctl_admin_order extends desktop_controller{
         $salesMStockLib = kernel::single('material_sales_material_stock');
         $basicMaterialObj = app::get('material')->model('basic_material');
 
+        // 支持 is_bind 参数过滤
+        if (isset($_GET['from']) && $_GET['from'] == 'return_reshipping') {
+            $filter['sales_material_type'] = ['1', '2', '3'];
+        }
+
         $filter['use_like'] = 1;
         $data = $salesMaterialObj->getList('sm_id,sales_material_name,sales_material_bn,sales_material_type',$filter,0,-1,' sm_id ASC');
 
@@ -7017,6 +7082,7 @@ class ome_ctl_admin_order extends desktop_controller{
                     'order_type|in' => kernel::single('ome_order_func')->get_normal_order_type(),
                     'status' => 'active',
                     'is_auto' => 'false',
+                    'is_not_combine' => 0, //是否允许审核
                     'order_confirm_filter' => '( op_id IS NULL AND group_id IS NULL)',
                     //'createtime|lthan' => time()-10,#避免全选分派和自动审单并发导致赠品被拆分
                 );
@@ -7125,14 +7191,26 @@ class ome_ctl_admin_order extends desktop_controller{
 
             $order['uname'] = $member['uname'];
         }
-
+        
+        // 报备外呼主叫号码组
+        //@todo：700虚拟号拨打前必须上报主叫号码组，号码组之外的号码拨打不通
+        if(in_array($_GET['source'], ['reservation']) && in_array($order['shop_type'], ['taobao','360buy'])){
+            $secretResult = kernel::single('ome_order_reservation')->getOrderSecretMobiles($order);
+            if($secretResult['rsp'] == 'succ' && $secretResult['data']){
+                $result = kernel::single('erpapi_router_request')->set('shop', $order['shop_id'])->order_bindSecretMobiles($secretResult['data']);
+                if($result['rsp'] == 'succ'){
+                    //操作人
+                    $opinfo = kernel::single('ome_func')->get_system();
+                    
+                    //log
+                    app::get('ome')->model('operation_log')->write_log('order_confirm@ome', $order_id, '报备外呼主叫号码组，成功！', time(), $opinfo);
+                }
+            }
+        }
+        
         // 页面加密处理
         $order['encrypt_body'] = kernel::single('ome_security_router',$order['shop_type'])->get_encrypt_body($order, 'order', $fieldType);
-
-        // 推送日志
-        // kernel::single('base_hchsafe')->order_log(array('operation'=>'查看订单收货人信息','tradeIds'=>array($order['order_bn'])));
-
-
+        
         $this->splash('success',null,null,'redirect',$order);
     }
 
@@ -7223,8 +7301,7 @@ class ome_ctl_admin_order extends desktop_controller{
     {
         $ordersModel = app::get('ome')->model('orders');
         $orderItemModel = app::get('ome')->model('order_items');
-        $oExtendModel = app::get('ome')->model('order_extend');
-
+        
         $replace = (array)$_POST['replace']; //删除
         $replace = array_filter($replace);
 
@@ -7261,8 +7338,6 @@ class ome_ctl_admin_order extends desktop_controller{
         //foreach
         foreach($order_ids as $order_id)
         {
-            $data['order_id'] = $order_id;
-
             //订单信息
             $orderInfo = $ordersModel->dump($order_id, 'order_bn,pause,process_status');
             if(!in_array($orderInfo['process_status'], array('unconfirmed','confirmed','splitting'))){
@@ -7289,6 +7364,7 @@ class ome_ctl_admin_order extends desktop_controller{
 
             //提交事务
             kernel::database()->commit();
+            
             //成功
             $retArr['isucc']++;
         }
@@ -7655,5 +7731,77 @@ class ome_ctl_admin_order extends desktop_controller{
         $this->pagedata['error_msg'] = $error_msg;
 
         $this->display('admin/order/order_check_msg.html');
+    }
+    
+    /**
+     * Ajax获取订单收货人解密数据
+     *
+     * @param $order_id
+     * @param $fieldType
+     * @return void
+     */
+    public function ajaxShowSensitiveData($order_id)
+    {
+        $search = array('&nbsp;','"','&quot;',"\r\n","\r","\n",',');
+        
+        // order
+        $orderInfo = app::get('ome')->model('orders')->db_dump(array('order_id'=>$order_id), '*');
+        
+        // 补发订单类型,使用原平台订单信息进行解密
+        if(in_array($orderInfo['order_type'], array('bufa')) && $orderInfo['relate_order_bn']){
+            $orderInfo = app::get('ome')->model('orders')->db_dump(array('order_bn'=>$orderInfo['relate_order_bn']), '*');
+        }
+        
+        // 归档订单
+        if (empty($orderInfo)) {
+            $orderInfo = app::get('archive')->model('orders')->db_dump($order_id,'*');
+        }
+        
+        if ($orderInfo['member_id']) {
+            $member = app::get('ome')->model('members')->db_dump($orderInfo['member_id'],'uname');
+            $orderInfo['uname'] = $member['uname'];
+        }
+        
+        // 获取订单解密信息
+        //$orderInfo = app::get('ome')->model('orders')->dump(array('order_id'=>$order_id), '*');
+        //kernel::single('ome_order')->getEncryptOriginData($orderInfo);
+        
+        // area
+        $temp = explode(':', $orderInfo['ship_area']);
+        $area = $temp[1];
+        $area = str_replace('/', '-', $area);
+        
+        // 解密收货人信息
+        $encryptData = kernel::single('ome_security_router', $orderInfo['shop_type'])->decrypt($orderInfo, 'order');
+        
+        // telephone
+        $telephone = '';
+        if($encryptData['ship_mobile']){
+            $telephone = str_replace($search, '', $encryptData['ship_mobile']);
+        }elseif($encryptData['ship_tel']){
+            $telephone = str_replace($search, '', $encryptData['ship_tel']);
+        }
+        
+        // 收货人明文信息
+        $shipInfo = [
+            'ship_name' => str_replace($search, '', $encryptData['ship_name']),
+            'ship_mobile' => $telephone,
+            'area' => $area,
+            'ship_addr' => str_replace($search, '', $encryptData['ship_addr']),
+        ];
+        
+        $result = [
+            'rsp' => 'succ',
+            'error_msg' => '',
+            'order_id' => $order_id,
+            'order_bn' => $orderInfo['order_bn'],
+            'ship_info' => implode('，', $shipInfo), //订单明细手工复制收货人解密信息
+        ];
+        
+        // merge
+        $result = array_merge($result, $shipInfo);
+        
+        echo json_encode($result);
+        exit;
     }
 }

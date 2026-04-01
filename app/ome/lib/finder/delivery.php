@@ -14,10 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class ome_finder_delivery{
     var $detail_basic = "发货单详情";
-    var $detail_item = "货品详情";
+    var $detail_item = "物料详情";
 	var $detail_delivery = "物流单列表";//wujian@shopex.cn 2012年3月7日 增加物流单列表
     private $write = '1';
     private $write_memo = '1';
@@ -174,12 +173,6 @@ class ome_finder_delivery{
         return count($orderBn) > 1 ? '<span title="' . implode(',', $orderBn) . '">' . implode(',', $orderBn) . '</span>' : implode(',', $orderBn);
     }
 
-    /**
-     * 获取ViewPanel
-     * @param mixed $caption caption
-     * @param mixed $color color
-     * @return mixed 返回结果
-     */
     public function getViewPanel($caption, $color) {
         if ($color == '#eeeeee')
             $caption .= '未打印';
@@ -218,11 +211,6 @@ class ome_finder_delivery{
     var $column_beartime = "成单时间";
     var $column_beartime_width = '140';
     var $column_beartime_order_field= 'order_createtime';
-    /**
-     * column_beartime
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_beartime($row) {
         return $row[$this->col_prefix . 'order_createtime'] ? date('Y-m-d H:i:s',$row[$this->col_prefix . 'order_createtime']) : '-';
     }
@@ -534,11 +522,6 @@ EOF;
     }
     
     public $column_cpup= '物流升级标';
-    /**
-     * column_cpup
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_cpup($row)
     {
         $img = '';
@@ -587,11 +570,6 @@ EOF;
     
     var $column_promise_service = '物流服务标签';
     var $column_promise_service_width = 320;
-    /**
-     * column_promise_service
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_promise_service($row)
     {
         //check

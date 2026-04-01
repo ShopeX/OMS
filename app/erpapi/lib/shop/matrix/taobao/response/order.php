@@ -59,6 +59,7 @@ class erpapi_shop_matrix_taobao_response_order extends erpapi_shop_response_orde
 
     protected function _analysis()
     {
+        $this->_ordersdf['is_delivery'] = 'Y';#默认可以发货
         parent::_analysis();
         $this->_ordersdf['is_service_order'] = ($this->_ordersdf['is_service_order'] || $this->_ordersdf['service_order_objects']['service_order']);
         if($this->_ordersdf['ship_status'] == '2' && $this->_ordersdf['is_service_order']) {
@@ -74,6 +75,51 @@ class erpapi_shop_matrix_taobao_response_order extends erpapi_shop_response_orde
             $this->_setPlatformDelivery();
             $this->_ordersdf['is_sh_ship'] = 'true';
             $this->_ordersdf['sh_ship_exists'] = true;
+        }
+
+        // 国补自补处理逻辑
+        if (isset($this->_ordersdf['extend_field']['gov_subsidy'])) {
+            $gov_subsidy = $this->_ordersdf['extend_field']['gov_subsidy'];
+            
+            // 获取出资类型
+            $gov_subsidy_type_extra = isset($gov_subsidy['gov_subsidy_type_extra']) 
+                ? intval($gov_subsidy['gov_subsidy_type_extra']) 
+                : 0;
+            
+            // 商家出资金额（单位：元）
+            $merchant_subsidy_amount = 0;
+            
+            // 根据出资类型获取商家出资金额
+            if ($gov_subsidy_type_extra == 4) {
+                // 纯商家出资：使用 gov_subsidy_amount_exact
+                if (isset($gov_subsidy['gov_subsidy_amount_exact']) && $gov_subsidy['gov_subsidy_amount_exact'] > 0) {
+                    $merchant_subsidy_amount = floatval($gov_subsidy['gov_subsidy_amount_exact']) / 100;
+                }
+            } elseif (in_array($gov_subsidy_type_extra, [6, 7, 8])) {
+                // 平台和商家混合出资(6)、政府和商家混合出资(7)、政府商家平台三方混合出资(8)
+                // 从 gov_subsidy_funds_detail 中提取商家出资金额（b部分）
+                if (isset($gov_subsidy['gov_subsidy_funds_detail']) && $gov_subsidy['gov_subsidy_funds_detail']) {
+                    $funds_detail = explode('_', $gov_subsidy['gov_subsidy_funds_detail']);
+                    // 格式：a_b_c，其中 a:政府出资金额，b:商家出资金额，c:平台出资金额（单位：分）
+                    if (isset($funds_detail[1]) && $funds_detail[1] > 0) {
+                        $merchant_subsidy_amount = floatval($funds_detail[1]) / 100;
+                    }
+                }
+            }
+            
+            // 如果商家出资金额大于0，计算结算金额
+            if ($merchant_subsidy_amount > 0 && in_array($gov_subsidy_type_extra, [4, 6, 7, 8])) {
+                // 国补订单只有一个 order_object，直接处理第一个
+                if (isset($this->_ordersdf['order_objects'][0]['divide_order_fee'])) {
+                    $divide_order_fee = floatval($this->_ordersdf['order_objects'][0]['divide_order_fee']);
+                    
+                    // 计算 settlement_amount = divide_order_fee - 商家出资金额
+                    $settlement_amount = $divide_order_fee - $merchant_subsidy_amount;
+                    
+                    // 更新 order_object 的 settlement_amount
+                    $this->_ordersdf['order_objects'][0]['settlement_amount'] = sprintf('%.2f', $settlement_amount);
+                }
+            }
         }
 
         $shShip = app::get('ome')->getConf('ome.platform.order.consign');
@@ -92,8 +138,6 @@ class erpapi_shop_matrix_taobao_response_order extends erpapi_shop_response_orde
                 $this->_ordersdf['is_sh_ship'] = 'true';
             }
         }
-
-
 
         //商品总额扣掉服务费:淘宝的服务费算在总额上
         $total_fee = 0;
@@ -114,6 +158,63 @@ class erpapi_shop_matrix_taobao_response_order extends erpapi_shop_response_orde
             $this->_ordersdf["tax_title"] = $rs_invoice_order_taobao["payer_name"];
             $this->_ordersdf["payer_register_no"] = $rs_invoice_order_taobao["payer_register_no"];
             $this->_ordersdf["invoice_kind"] = $rs_invoice_order_taobao["invoice_kind"];
+        }
+        
+        // 喵速达
+        $label_code = '';
+        if (isset($this->_ordersdf['extend_field']['businessModel']) && $this->_ordersdf['extend_field']['businessModel']) {
+            $businessModel = intval($this->_ordersdf['extend_field']['businessModel']);
+            if ($businessModel >= 1 && $businessModel <= 4) {
+                $label_code = 'SOMS_ASCP';
+            }
+        }
+        
+        // 是否请求平台获取实付金额
+        //@todo：喵速达订单，不需要请求平台获取实付金额;
+        $is_request_payment = true;
+        if(in_array($label_code, ['SOMS_ASCP'])){
+            $is_request_payment = false;
+        }
+        
+        // 检查订单状态：只有在订单不存在或status为active时才处理实付金额
+        if ($is_request_payment) {
+            $orderModel = app::get('ome')->model('orders');
+            $filter = array(
+                'order_bn' => $this->_ordersdf['order_bn'], 
+                'shop_id' => $this->__channelObj->channel['shop_id']
+            );
+            $existingOrder = $orderModel->db_dump($filter, 'status');
+            
+            // 如果订单存在且status不是active，则不处理实付金额
+            if (!empty($existingOrder) && isset($existingOrder['status']) && $existingOrder['status'] != 'active') {
+                $is_request_payment = false;
+            }
+        }
+        
+        // 实付金额处理
+        $getPaymentEnabled = app::get('ome')->getConf('ome.order.get.payment');
+        if($this->_ordersdf['pay_status'] == '1' && $getPaymentEnabled === 'true' && $is_request_payment){
+            $router = kernel::single('erpapi_router_request');
+            $router->set('shop', $this->__channelObj->channel['shop_id']);
+            $actuallyPay = $router->order_getActuallyPay($this->_ordersdf['order_bn']);
+            
+            if ($actuallyPay && $actuallyPay['rsp'] == 'succ' && isset($actuallyPay['data']['actually_pay'])) {
+                $totalActuallyPay = floatval($actuallyPay['data']['actually_pay']); 
+                $totalActuallyPay = $totalActuallyPay - (float)$this->_ordersdf['shipping']['cost_shipping'];
+                if ($totalActuallyPay > 0 && isset($this->_ordersdf['order_objects']) && is_array($this->_ordersdf['order_objects'])) {
+                    // 使用均摊方法处理
+                    $options = [
+                        'part_total' => $totalActuallyPay,
+                        'part_field' => 'actually_amount',
+                        'porth_field' => 'divide_order_fee',
+                        'minuend_field' => 'divide_order_fee',
+                    ];
+                    $this->_ordersdf['coupon_actuallypay_field'] = 'actually_amount';
+                    $this->_ordersdf['order_objects'] = kernel::single('ome_order')->calculate_part_porth($this->_ordersdf['order_objects'], $options);
+                }
+            } else {
+                $this->_ordersdf['is_delivery'] = 'N';
+            }
         }
         $oidObject = [];
         $coupon = [];
@@ -149,7 +250,7 @@ class erpapi_shop_matrix_taobao_response_order extends erpapi_shop_response_orde
                         'coupon_type'   => '0',
                         'amount'        => $item['expand_card_expand_price_used_suborder'] / $object['quantity'],
                         'total_amount'  => $item['expand_card_expand_price_used_suborder'],
-                        'create_time'   => kernel::single('ome_func')->date2time($this->_ordersdf['createtime']),
+                        'create_time'   => sprintf('%.0f', time()),
                         'pay_time'      => kernel::single('ome_func')->date2time($this->_ordersdf['payment_detail']['pay_time']),
                         'shop_type'     => 'taobao',
                         'source'        => 'push',
@@ -163,22 +264,6 @@ class erpapi_shop_matrix_taobao_response_order extends erpapi_shop_response_orde
                     $this->_ordersdf['order_objects'][$k]['order_items'][$itemkey]['divide_order_fee'] = 
                         bcsub($item['divide_order_fee'], $item['expand_card_expand_price_used_suborder'], 2);
                 }
-            }
-        }
-        // 实付金额处理
-        if (isset($this->_ordersdf['coupon_fee']) && floatval($this->_ordersdf['coupon_fee']) > 0 && isset($this->_ordersdf['order_objects']) && is_array($this->_ordersdf['order_objects'])) {
-            $coupon_fee = floatval($this->_ordersdf['coupon_fee']/100);
-            // 分摊方法
-            $options = [
-                'part_total' => $coupon_fee,
-                'part_field' => 'coupon_fee',
-                'porth_field' => 'divide_order_fee',
-                'minuend_field' => 'divide_order_fee',
-            ];
-            $this->_ordersdf['order_objects'] = kernel::single('ome_order')->calculate_part_porth($this->_ordersdf['order_objects'], $options);
-            $this->_ordersdf['coupon_actuallypay_field'] = 'calcActuallyPay';
-            foreach($this->_ordersdf['order_objects'] as $k => $object) {
-                $this->_ordersdf['order_objects'][$k]['calcActuallyPay'] = sprintf('%.2f', $object['divide_order_fee'] - $object['coupon_fee']);
             }
         }
         if ($this->_ordersdf['pmt_detail']) {
@@ -210,7 +295,7 @@ class erpapi_shop_matrix_taobao_response_order extends erpapi_shop_response_orde
                             'coupon_type'   => '0',
                             'amount'        => $total_amount / $object['quantity'],
                             'total_amount'  => $total_amount,
-                            'create_time'   => kernel::single('ome_func')->date2time($this->_ordersdf['createtime']),
+                            'create_time'   => sprintf('%.0f', time()),
                             'pay_time'      => kernel::single('ome_func')->date2time($this->_ordersdf['payment_detail']['pay_time']),
                             'shop_type'     => 'taobao',
                             'source'        => 'push',
@@ -231,7 +316,7 @@ class erpapi_shop_matrix_taobao_response_order extends erpapi_shop_response_orde
                         'coupon_type'   => '0',
                         'amount'        => $value['kd_discount_fee'] / $object['quantity'],
                         'total_amount'  => $value['kd_discount_fee'],
-                        'create_time'   => kernel::single('ome_func')->date2time($this->_ordersdf['createtime']),
+                        'create_time'   => sprintf('%.0f', time()),
                         'pay_time'      => kernel::single('ome_func')->date2time($this->_ordersdf['payment_detail']['pay_time']),
                         'shop_type'     => 'taobao',
                         'source'        => 'push',
@@ -335,6 +420,18 @@ class erpapi_shop_matrix_taobao_response_order extends erpapi_shop_response_orde
                 if ($gov_subsidy['gov_store'] == 1 || $gov_subsidy['gov_main_subject']) {
 
                     $this->_ordersdf['guobu_info']['use_gov_subsidy_new'] = true;
+                    
+                    // 保存gov_main_subject到guobu_info中
+                    if ($gov_subsidy['gov_main_subject']) {
+                        $this->_ordersdf['guobu_info']['gov_main_subject'] = $gov_subsidy['gov_main_subject'];
+                    }
+                    
+                    // 检查是否为天猫优品订单
+                    if ($gov_subsidy['gov_main_subject'] && strpos($gov_subsidy['gov_main_subject'], 'FIN_TMYPT') === 0) {
+                        $this->_ordersdf['guobu_info']['guobu_type'][] = 2048; // 天猫优品
+                    }
+                    
+                    // 一品卖多地类型始终添加
                     $this->_ordersdf['guobu_info']['guobu_type'][] = 4; // 一品卖多地
                 }
 
@@ -356,6 +453,28 @@ class erpapi_shop_matrix_taobao_response_order extends erpapi_shop_response_orde
                         if ($gov_sn_check[2] == 1) {
                             $this->_ordersdf['guobu_info']['guobu_type'][] = 0x0100; // 需校验SN码
                             $this->_ordersdf['guobu_info']['guobu_type'][] = 0x0200; // 需校验IMEI码
+                        }
+                    }
+
+                    // 处理出资类型：根据 gov_subsidy_type_extra 判断具体补贴场景
+                    if (isset($gov_subsidy['gov_subsidy_type_extra'])) {
+                        $gov_subsidy_type_extra = intval($gov_subsidy['gov_subsidy_type_extra']);
+                        switch ($gov_subsidy_type_extra) {
+                            case 4:
+                                $this->_ordersdf['guobu_info']['guobu_type'][] = 0x2000; // 纯商家出资
+                                break;
+                            case 5:
+                                $this->_ordersdf['guobu_info']['guobu_type'][] = 0x4000; // 平台出资
+                                break;
+                            case 6:
+                                $this->_ordersdf['guobu_info']['guobu_type'][] = 0x8000; // 平台和商家混合出资
+                                break;
+                            case 7:
+                                $this->_ordersdf['guobu_info']['guobu_type'][] = 0x10000; // 政府和商家混合出资
+                                break;
+                            case 8:
+                                $this->_ordersdf['guobu_info']['guobu_type'][] = 0x20000; // 政府、商家和平台三方混合出资
+                                break;
                         }
                     }
 
@@ -462,6 +581,304 @@ class erpapi_shop_matrix_taobao_response_order extends erpapi_shop_response_orde
                             }
                         }
                     }
+                }
+            }
+        }
+        // 百补超级半托
+        $ypdsInfo = array();
+        $ypdsOrderSupplyPriceTotal = 0;
+        // 用于记录每个 object 的金额汇总
+        $objectAmounts = array();
+        foreach ($this->_ordersdf['order_objects'] as $k => $_object) {
+            $objectAmounts[$k] = array(
+                'amount' => 0,
+                'sale_price' => 0,
+                'divide_order_fee' => 0,
+                'pmt_price' => 0,
+                'part_mjz_discount' => 0,
+            );
+            
+            foreach ( $_object['order_items'] as $itemKey => $_item ){
+                if (isset($_item['extend_item_list']['ypds_order_type']) && $ypdsOrderType = $_item['extend_item_list']['ypds_order_type']) {
+                    // 提取百补字段
+                    $extendItemList = $_item['extend_item_list'];
+                    if (empty($ypdsInfo)) {
+                        $ypdsInfo = array(
+                            'ypds_platform_order_id' => isset($extendItemList['ypds_platform_order_id']) ? $extendItemList['ypds_platform_order_id'] : '',
+                            'ypds_platform_pay_order_id' => isset($extendItemList['ypds_platform_pay_order_id']) ? $extendItemList['ypds_platform_pay_order_id'] : '',
+                            'ypds_order_type' => $ypdsOrderType,
+                            'ypds_order_supply_price' => isset($extendItemList['ypds_order_supply_price']) ? floatval($extendItemList['ypds_order_supply_price']) : 0,
+                        );
+                    }
+                    
+                    // 获取供货总价
+                    $ypdsOrderSupplyPrice = isset($extendItemList['ypds_order_supply_price']) ? floatval($extendItemList['ypds_order_supply_price']) : 0;
+                    if ($ypdsOrderSupplyPrice > 0) {
+                        $ypdsOrderSupplyPriceTotal = bcadd($ypdsOrderSupplyPriceTotal, $ypdsOrderSupplyPrice, 2);
+                        
+                        // 获取数量
+                        $quantity = isset($_object['quantity']) ? floatval($_object['quantity']) : 1;
+                        if ($quantity <= 0) $quantity = 1;
+                        
+                        // 根据文档23-25行规则更新行明细金额
+                        // 行单价：price = ypds_order_supply_price / quantity
+                        $itemPrice = bcdiv($ypdsOrderSupplyPrice, $quantity, 2);
+                        
+                        // 行金额：amount = sale_price = divide_order_fee = ypds_order_supply_price
+                        // 优惠置零：pmt_price = 0，part_mjz_discount = 0
+                        $this->_ordersdf['order_objects'][$k]['order_items'][$itemKey]['price'] = $itemPrice;
+                        $this->_ordersdf['order_objects'][$k]['order_items'][$itemKey]['amount'] = $ypdsOrderSupplyPrice;
+                        $this->_ordersdf['order_objects'][$k]['order_items'][$itemKey]['sale_price'] = $ypdsOrderSupplyPrice;
+                        $this->_ordersdf['order_objects'][$k]['order_items'][$itemKey]['divide_order_fee'] = $ypdsOrderSupplyPrice;
+                        $this->_ordersdf['order_objects'][$k]['order_items'][$itemKey]['pmt_price'] = 0;
+                        $this->_ordersdf['order_objects'][$k]['order_items'][$itemKey]['part_mjz_discount'] = 0;
+                        
+                        // 累计 object 层金额
+                        $objectAmounts[$k]['amount'] = bcadd($objectAmounts[$k]['amount'], $ypdsOrderSupplyPrice, 2);
+                        $objectAmounts[$k]['sale_price'] = bcadd($objectAmounts[$k]['sale_price'], $ypdsOrderSupplyPrice, 2);
+                        $objectAmounts[$k]['divide_order_fee'] = bcadd($objectAmounts[$k]['divide_order_fee'], $ypdsOrderSupplyPrice, 2);
+                    }
+                }
+            }
+            
+            // 更新 object 层金额（汇总所有 items）
+            if ($objectAmounts[$k]['amount'] > 0) {
+                $objectQuantity = isset($_object['quantity']) ? floatval($_object['quantity']) : 1;
+                if ($objectQuantity <= 0) $objectQuantity = 1;
+                $objectPrice = bcdiv($objectAmounts[$k]['amount'], $objectQuantity, 2);
+                
+                $this->_ordersdf['order_objects'][$k]['price'] = $objectPrice;
+                $this->_ordersdf['order_objects'][$k]['amount'] = $objectAmounts[$k]['amount'];
+                $this->_ordersdf['order_objects'][$k]['sale_price'] = $objectAmounts[$k]['sale_price'];
+                $this->_ordersdf['order_objects'][$k]['divide_order_fee'] = $objectAmounts[$k]['divide_order_fee'];
+                $this->_ordersdf['order_objects'][$k]['pmt_price'] = 0;
+                $this->_ordersdf['order_objects'][$k]['part_mjz_discount'] = 0;
+            }
+        }
+        
+        // 如果有百补信息，更新订单级金额和设置相关字段
+        if (!empty($ypdsInfo) && $ypdsOrderSupplyPriceTotal > 0) {
+            // 设置订单级百补信息
+            $this->_ordersdf['ypds_info'] = $ypdsInfo;
+            
+            // 汇总更新订单级金额
+            // cost_item = 汇总所有行的 amount
+            $this->_ordersdf['cost_item'] = $ypdsOrderSupplyPriceTotal;
+            // total_amount = cost_item（根据文档，订单应收为供货总价汇总）
+            $this->_ordersdf['total_amount'] = $ypdsOrderSupplyPriceTotal;
+            // payed = total_amount（百补订单按供货价支付）
+            $this->_ordersdf['payed'] = $ypdsOrderSupplyPriceTotal;
+            
+            // 设置关联订单号
+            if (!empty($ypdsInfo['ypds_platform_order_id'])) {
+                $this->_ordersdf['relate_order_bn'] = $ypdsInfo['ypds_platform_order_id'];
+            }
+            
+            // 组织支付单数据到 payments 数组
+            if (!empty($ypdsInfo['ypds_platform_pay_order_id'])) {
+                // 初始化 payments 数组（如果不存在）
+                if (!isset($this->_ordersdf['payments']) || !is_array($this->_ordersdf['payments'])) {
+                    $this->_ordersdf['payments'] = array();
+                }
+                
+                // 获取支付时间
+                $payTime = isset($this->_ordersdf['payment_detail']['pay_time']) 
+                    ? kernel::single('ome_func')->date2time($this->_ordersdf['payment_detail']['pay_time'])
+                    : (isset($this->_ordersdf['paytime']) ? $this->_ordersdf['paytime'] : time());
+                
+                // 获取支付方式
+                $payBn = isset($this->_ordersdf['pay_bn']) ? $this->_ordersdf['pay_bn'] : 'alipay';
+                
+                // 组织支付单数据
+                $paymentData = array(
+                    'trade_no' => $ypdsInfo['ypds_platform_pay_order_id'],  // 支付单号
+                    'money' => $ypdsOrderSupplyPriceTotal,                    // 支付金额（供货总价）
+                    'pay_time' => $payTime,                                   // 支付时间
+                    'pay_bn' => $payBn,                                       // 支付方式
+                    'paycost' => 0,                                           // 支付手续费
+                    'account' => '',                                          // 支付账号
+                    'bank' => '',                                             // 银行
+                    'pay_account' => '',                                      // 支付账户
+                    'paymethod' => '',                                         // 支付方法
+                    'memo' => '百补超级半托订单支付',                          // 备注
+                    'op_name' => isset($this->_ordersdf['payment_detail']['op_name']) 
+                        ? $this->_ordersdf['payment_detail']['op_name'] 
+                        : $this->__channelObj->channel['node_type'],
+                );
+                
+                // 添加到 payments 数组
+                $this->_ordersdf['payments'][] = $paymentData;
+            }
+        }
+        
+        // 产地优选（超链）订单处理
+        $superlinkInfo = array();
+        $superlinkOrderSupplyPriceTotal = 0;
+        $superlinkPlatformPayment = 0;
+        // 用于记录每个 object 的金额汇总
+        $superlinkObjectAmounts = array();
+        
+        // 先从订单级 extend_field 提取订单级字段
+        $extendField = isset($this->_ordersdf['extend_field']) ? $this->_ordersdf['extend_field'] : array();
+        $superlinkPlatformOrderId = '';
+        $superlinkAlipayNo = '';
+        if (is_array($extendField)) {
+            $superlinkPlatformOrderId = isset($extendField['superlink_platform_order_id']) ? $extendField['superlink_platform_order_id'] : '';
+            $superlinkAlipayNo = isset($extendField['superlink_alipay_no']) ? $extendField['superlink_alipay_no'] : '';
+            if (isset($extendField['superlink_platform_payment'])) {
+                $superlinkPlatformPayment = floatval($extendField['superlink_platform_payment']);
+            }
+        }
+        
+        // 如果订单级没有，尝试从行级提取
+        if (empty($superlinkPlatformOrderId)) {
+            foreach ($this->_ordersdf['order_objects'] as $k => $_object) {
+                foreach ($_object['order_items'] as $itemKey => $_item) {
+                    if (isset($_item['extend_item_list']['superlink_platform_order_id']) && !empty($_item['extend_item_list']['superlink_platform_order_id'])) {
+                        $superlinkPlatformOrderId = $_item['extend_item_list']['superlink_platform_order_id'];
+                        break 2;
+                    }
+                }
+            }
+        }
+        
+        // 判断是否为产地优选订单
+        if (!empty($superlinkPlatformOrderId)) {
+            foreach ($this->_ordersdf['order_objects'] as $k => $_object) {
+                $superlinkObjectAmounts[$k] = array(
+                    'amount' => 0,
+                    'sale_price' => 0,
+                    'divide_order_fee' => 0,
+                    'pmt_price' => 0,
+                    'part_mjz_discount' => 0,
+                );
+                
+                foreach ($_object['order_items'] as $itemKey => $_item) {
+                    $extendItemList = isset($_item['extend_item_list']) ? $_item['extend_item_list'] : array();
+                    
+                    // 从行级提取字段
+                    $superlinkPlatformSubOrderId = isset($extendItemList['superlink_platform_sub_order_id']) ? $extendItemList['superlink_platform_sub_order_id'] : '';
+                    $superlinkOrderSupplyPrice = isset($extendItemList['superlink_order_supply_price']) ? floatval($extendItemList['superlink_order_supply_price']) : 0;
+                    $superlinkItemPayment = isset($extendItemList['superlink_platform_payment']) ? floatval($extendItemList['superlink_platform_payment']) : 0;
+                    
+                    // 如果订单级没有实付金额，尝试从行级获取
+                    if ($superlinkPlatformPayment <= 0 && $superlinkItemPayment > 0) {
+                        $superlinkPlatformPayment = $superlinkItemPayment;
+                    }
+                    
+                    // 初始化订单级信息（只初始化一次）
+                    if (empty($superlinkInfo)) {
+                        $superlinkInfo = array(
+                            'superlink_platform_order_id' => $superlinkPlatformOrderId,
+                            'superlink_platform_sub_order_id' => $superlinkPlatformSubOrderId,
+                            'superlink_platform_payment' => $superlinkPlatformPayment > 0 ? $superlinkPlatformPayment : 0,
+                            'superlink_alipay_no' => $superlinkAlipayNo,
+                            'superlink_order_supply_price' => 0, // 订单级汇总后设置
+                        );
+                    }
+                    
+                    // 如果有供货单价，进行金额计算
+                    if ($superlinkOrderSupplyPrice > 0) {
+                        // 获取数量
+                        $quantity = isset($_object['quantity']) ? floatval($_object['quantity']) : 1;
+                        if ($quantity <= 0) $quantity = 1;
+                        
+                        // 行金额计算：amount = sale_price = divide_order_fee = superlink_order_supply_price * quantity
+                        $itemAmount = bcmul($superlinkOrderSupplyPrice, $quantity, 2);
+                        
+                        // 累计订单级供货总价
+                        $superlinkOrderSupplyPriceTotal = bcadd($superlinkOrderSupplyPriceTotal, $itemAmount, 2);
+                        
+                        // 更新行明细金额
+                        // 行单价：price = superlink_order_supply_price
+                        $this->_ordersdf['order_objects'][$k]['order_items'][$itemKey]['price'] = $superlinkOrderSupplyPrice;
+                        // 行金额：amount = sale_price = divide_order_fee = superlink_order_supply_price * quantity
+                        $this->_ordersdf['order_objects'][$k]['order_items'][$itemKey]['amount'] = $itemAmount;
+                        $this->_ordersdf['order_objects'][$k]['order_items'][$itemKey]['sale_price'] = $itemAmount;
+                        $this->_ordersdf['order_objects'][$k]['order_items'][$itemKey]['divide_order_fee'] = $itemAmount;
+                        // 优惠置零：pmt_price = 0，part_mjz_discount = 0
+                        $this->_ordersdf['order_objects'][$k]['order_items'][$itemKey]['pmt_price'] = 0;
+                        $this->_ordersdf['order_objects'][$k]['order_items'][$itemKey]['part_mjz_discount'] = 0;
+                        
+                        // 累计 object 层金额
+                        $superlinkObjectAmounts[$k]['amount'] = bcadd($superlinkObjectAmounts[$k]['amount'], $itemAmount, 2);
+                        $superlinkObjectAmounts[$k]['sale_price'] = bcadd($superlinkObjectAmounts[$k]['sale_price'], $itemAmount, 2);
+                        $superlinkObjectAmounts[$k]['divide_order_fee'] = bcadd($superlinkObjectAmounts[$k]['divide_order_fee'], $itemAmount, 2);
+                    }
+                }
+                
+                // 更新 object 层金额（汇总所有 items）
+                if ($superlinkObjectAmounts[$k]['amount'] > 0) {
+                    $objectQuantity = isset($_object['quantity']) ? floatval($_object['quantity']) : 1;
+                    if ($objectQuantity <= 0) $objectQuantity = 1;
+                    $objectPrice = bcdiv($superlinkObjectAmounts[$k]['amount'], $objectQuantity, 2);
+                    
+                    $this->_ordersdf['order_objects'][$k]['price'] = $objectPrice;
+                    $this->_ordersdf['order_objects'][$k]['amount'] = $superlinkObjectAmounts[$k]['amount'];
+                    $this->_ordersdf['order_objects'][$k]['sale_price'] = $superlinkObjectAmounts[$k]['sale_price'];
+                    $this->_ordersdf['order_objects'][$k]['divide_order_fee'] = $superlinkObjectAmounts[$k]['divide_order_fee'];
+                    $this->_ordersdf['order_objects'][$k]['pmt_price'] = 0;
+                    $this->_ordersdf['order_objects'][$k]['part_mjz_discount'] = 0;
+                }
+            }
+            
+            // 如果有产地优选信息，更新订单级金额和设置相关字段
+            if (!empty($superlinkInfo) && $superlinkOrderSupplyPriceTotal > 0) {
+                // 更新订单级供货总价
+                $superlinkInfo['superlink_order_supply_price'] = $superlinkOrderSupplyPriceTotal;
+                
+                // 设置订单级产地优选信息
+                $this->_ordersdf['superlink_info'] = $superlinkInfo;
+                
+                // 汇总更新订单级金额
+                // cost_item = total_amount = payed = 汇总所有行的 divide_order_fee
+                $this->_ordersdf['cost_item'] = $superlinkOrderSupplyPriceTotal;
+                $this->_ordersdf['total_amount'] = $superlinkOrderSupplyPriceTotal;
+                // 实付金额：使用 superlink_platform_payment（如果存在），否则使用汇总的供货价
+                $this->_ordersdf['payed'] = $superlinkPlatformPayment > 0 ? $superlinkPlatformPayment : $superlinkOrderSupplyPriceTotal;
+                
+                // 设置关联订单号
+                if (!empty($superlinkInfo['superlink_platform_order_id'])) {
+                    $this->_ordersdf['relate_order_bn'] = $superlinkInfo['superlink_platform_order_id'];
+                }
+                
+                // 组织支付单数据到 payments 数组
+                if (!empty($superlinkInfo['superlink_alipay_no'])) {
+                    // 初始化 payments 数组（如果不存在）
+                    if (!isset($this->_ordersdf['payments']) || !is_array($this->_ordersdf['payments'])) {
+                        $this->_ordersdf['payments'] = array();
+                    }
+                    
+                    // 获取支付时间
+                    $payTime = isset($this->_ordersdf['payment_detail']['pay_time']) 
+                        ? kernel::single('ome_func')->date2time($this->_ordersdf['payment_detail']['pay_time'])
+                        : (isset($this->_ordersdf['paytime']) ? $this->_ordersdf['paytime'] : time());
+                    
+                    // 获取支付方式
+                    $payBn = isset($this->_ordersdf['pay_bn']) ? $this->_ordersdf['pay_bn'] : 'alipay';
+                    
+                    // 支付金额：使用 superlink_platform_payment（如果存在），否则使用汇总的供货价
+                    $paymentAmount = $superlinkPlatformPayment > 0 ? $superlinkPlatformPayment : $superlinkOrderSupplyPriceTotal;
+                    
+                    // 组织支付单数据
+                    $paymentData = array(
+                        'trade_no' => $superlinkInfo['superlink_alipay_no'],  // 支付单号（支付宝单号）
+                        'money' => $paymentAmount,                            // 支付金额
+                        'pay_time' => $payTime,                                // 支付时间
+                        'pay_bn' => $payBn,                                    // 支付方式
+                        'paycost' => 0,                                        // 支付手续费
+                        'account' => '',                                       // 支付账号
+                        'bank' => '',                                          // 银行
+                        'pay_account' => '',                                   // 支付账户
+                        'paymethod' => '',                                      // 支付方法
+                        'memo' => '产地优选超链订单支付',                       // 备注
+                        'op_name' => isset($this->_ordersdf['payment_detail']['op_name']) 
+                            ? $this->_ordersdf['payment_detail']['op_name'] 
+                            : $this->__channelObj->channel['node_type'],
+                    );
+                    
+                    // 添加到 payments 数组
+                    $this->_ordersdf['payments'][] = $paymentData;
                 }
             }
         }
@@ -603,7 +1020,6 @@ class erpapi_shop_matrix_taobao_response_order extends erpapi_shop_response_orde
             //$plugins[] = 'orderextend'; //公共类中已经定义
             $plugins[] = 'orderdetial';
         }
-        
         return $plugins;
     }
 
@@ -636,14 +1052,16 @@ class erpapi_shop_matrix_taobao_response_order extends erpapi_shop_response_orde
         if($this->_ordersdf['cn_info']['asdp_biz_type'] == 'aox' || $this->_ordersdf['cn_info']['logistics_agreement']['asdp_biz_type'] == 'aox'){
             $plugins[] = 'orderextend';
         }
-        
         return $plugins;
     }
 
     protected function get_update_components()
     {
         $components = array('markmemo','custommemo','marktype','oversold');
-
+        if($this->_tgOrder['is_delivery'] == 'N') {
+            $components[] = 'master';
+            $components[] = 'items';
+        }
         $rs = app::get('ome')->model('order_extend')->getList('extend_status',array('order_id'=>$this->_tgOrder['order_id']));
         // 如果ERP收货人信息未发生变动时，则更新淘宝收货人信息
         if ($rs[0]['extend_status'] != 'consignee_modified') {

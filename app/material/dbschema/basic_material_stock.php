@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * 基础物料库存数据结构
  *
@@ -90,6 +89,15 @@ $db['basic_material_stock']=array (
       'editable' => false,
       'comment' => '最大可下单库存最后更新时间',
     ),
+    'inc_store_lastmodify' =>
+    array (
+      'type' => 'time',
+      'editable' => false,
+      'default' => 0,
+      'comment' => '库存最后添加时间（仅库存增加时更新）',
+      'in_list' => false,
+      'default_in_list' => false,
+    ),
   ),
   'index' => array (
       'ind_last_modified' => array (
@@ -100,6 +108,11 @@ $db['basic_material_stock']=array (
       'ind_store_lastmodify' => array (
           'columns' => array (
               0 => 'max_store_lastmodify',
+          ),
+      ),
+      'ind_inc_store_lastmodify' => array (
+          'columns' => array (
+              0 => 'inc_store_lastmodify',
           ),
       ),
   ),

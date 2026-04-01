@@ -55,8 +55,6 @@ class inventorydepth_calculation_basicmaterial {
     protected $shopFreeze = [];
     //订单指定仓预占
     protected $appointBranchFreeze = [];
-    //全局预占
-    protected $globalsFreeze = [];
 
     // 专用供货仓信息
     protected $applySupplyBranches = [];
@@ -575,7 +573,7 @@ class inventorydepth_calculation_basicmaterial {
                 $this->actualStockMake[$sha1]['公式'] = '库存-仓库预占-指定仓预占';
             }
         } else {
-            list($globals_freeze, ) = $this->get_globals_freeze($bm_id, $shop_bn, $shop_id);
+            list($globals_freeze, $globals_freeze_detail) = $this->get_globals_freeze($bm_id, $shop_bn, $shop_id);
             $globals_freeze = (int) $globals_freeze;
             if($safe) {
                 $actual_stock = $safeActual - $globals_freeze;
@@ -585,6 +583,7 @@ class inventorydepth_calculation_basicmaterial {
                 $this->actualStockMake[$sha1]['公式'] = '库存-全局预占-仓库预占-指定仓预占';
             }
             $this->actualStockMake[$sha1]['全局预占'] = $globals_freeze;
+            $this->actualStockMake[$sha1]['全局预占明细'] = $globals_freeze_detail;
         }
         $this->actualStockMake[$sha1]['库存'] = $store_sum;
         $this->actualStockMake[$sha1]['仓库预占'] = $store_freeze_sum;
@@ -603,10 +602,6 @@ class inventorydepth_calculation_basicmaterial {
             return [false, ['error'=>'仓库未绑定店铺']];
         }
 
-        $sha1Str = $shop_bn.'-'.$bm_id;
-        $sha1 = sha1($sha1Str);
-        if(isset($this->globalsFreeze[$sha1])) return [$this->globalsFreeze[$sha1], []];
-
         # 获取这些仓所对应的所有店铺
         $shopListKey = sha1($shop_bn . '-' . json_encode($branches));
         if (!isset($this->shopList[$shopListKey])) {
@@ -623,13 +618,24 @@ class inventorydepth_calculation_basicmaterial {
         }
         # 根据订单计算店铺预占(未发货订单) 该店铺下的商品ID
         $globals_freeze = 0;
+        $shop_freeze_detail = [];
         foreach ($this->shopList[$shopListKey] as $key=>$value) {
             list($tmpNum, )= $this->get_shop_freeze($bm_id, $value['shop_bn'], $value['shop_id']);
             $globals_freeze += $tmpNum;
+            $shop_freeze_detail[$value['shop_bn']] = [
+                'shop_id' => $value['shop_id'],
+                'freeze' => $tmpNum
+            ];
         }
-        $this->globalsFreeze[$sha1] = $globals_freeze > 0 ? (int)$globals_freeze : 0;
+        $globals_freeze = $globals_freeze > 0 ? (int)$globals_freeze : 0;
 
-        return [$this->globalsFreeze[$sha1], []];
+        $detail = [
+            'shop_branches' => $shop_branches,
+            'branches' => $branches,
+            'shop_freeze_detail' => $shop_freeze_detail
+        ];
+
+        return [$globals_freeze, $detail];
     }
     //获取订单店铺预占
     public function get_shop_freeze($bm_id, $shop_bn, $shop_id) {

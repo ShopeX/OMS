@@ -17,9 +17,10 @@
 /**
  * 销售物料模型层
  *
- * @author kamisama.xia@gmail.com
+ * @author kamisama.xia@gmail.com 
  * @version 0.1
  */
+
 class material_mdl_sales_material extends dbeav_model{
     //是否有导出配置
     var $has_export_cnf = true;
@@ -36,7 +37,6 @@ class material_mdl_sales_material extends dbeav_model{
      * @param string $row 物料类型字段
      * @return string
      */
-
     function modifier_sales_material_type($row){
         if($row == '1'){
             return '普通';
@@ -59,7 +59,7 @@ class material_mdl_sales_material extends dbeav_model{
     
     /**
      * 搜索项
-     * 
+     *
      * @return array
      */
     public function searchOptions()
@@ -94,11 +94,6 @@ class material_mdl_sales_material extends dbeav_model{
     }
 
     //导出字段配置 移除不需要的字段
-    /**
-     * disabled_export_cols
-     * @param mixed $cols cols
-     * @return mixed 返回值
-     */
     public function disabled_export_cols(&$cols){
         unset($cols['column_edit']);
     }
@@ -146,8 +141,8 @@ class material_mdl_sales_material extends dbeav_model{
     }
     
     /**
-     * 销售物料的过滤方法
-     */
+    * 销售物料的过滤方法
+    */
     public function _filter($filter,$tableAlias=null,$baseWhere=null){
         $where = '';
         
@@ -219,7 +214,7 @@ class material_mdl_sales_material extends dbeav_model{
 
     /**
      * 导入模板的标题
-     * 
+     *
      * @param Null
      * @return Array
      */
@@ -245,7 +240,7 @@ class material_mdl_sales_material extends dbeav_model{
     );
     /**
      * 导入导出的标题
-     * 
+     *
      * @param Null
      * @return Array
      */
@@ -263,7 +258,7 @@ class material_mdl_sales_material extends dbeav_model{
 
     /**
      * 准备导入的参数定义
-     * 
+     *
      * @param Null
      * @return Null
      */
@@ -275,7 +270,7 @@ class material_mdl_sales_material extends dbeav_model{
     
     /**
      * 准备导入的数据主体内容部分检查和处理
-     * 
+     *
      * @param Array $data
      * @param Boolean $mark
      * @param String $tmpl
@@ -288,7 +283,7 @@ class material_mdl_sales_material extends dbeav_model{
     
     /**
      * 准备导入的数据明细内容部分检查和处理
-     * 
+     *
      * @param Array $row
      * @param String $title
      * @param String $tmpl
@@ -667,7 +662,7 @@ class material_mdl_sales_material extends dbeav_model{
 
     /**
      * 完成基础物料的导入
-     * 
+     *
      * @param Null
      * @return Null
      */
@@ -756,23 +751,12 @@ class material_mdl_sales_material extends dbeav_model{
         return mb_convert_encoding(implode(',',$title), 'GBK', 'UTF-8');
     }
 
-    /**
-     * 获取ExportDataByCustom
-     * @param mixed $fields fields
-     * @param mixed $filter filter
-     * @param mixed $has_detail has_detail
-     * @param mixed $curr_sheet curr_sheet
-     * @param mixed $start start
-     * @param mixed $end end
-     * @param mixed $op_id ID
-     * @return mixed 返回结果
-     */
     public function getExportDataByCustom($fields, $filter, $has_detail, $curr_sheet, $start, $end, $op_id)
     {
         
         //根据选择的字段定义导出的第一行标题
         if ($curr_sheet == 1) {
-            $data['content']['main'][] = $this->getExportTitle($fields).mb_convert_encoding(',基础物料编码,数量,福袋组合编码', 'GBK', 'UTF-8');
+            $data['content']['main'][] = $this->getExportTitle($fields).mb_convert_encoding(',基础物料编码,基础物料名称,数量,组合价格贡献占比,固定价,福袋组合编码', 'GBK', 'UTF-8');
         }
         
         if (!$list = $this->getList('*', $filter)) {
@@ -826,18 +810,27 @@ class material_mdl_sales_material extends dbeav_model{
                     //多选一
                     
                     $tmp[] = $basicMInfo['material_bn'];
+                    $tmp[] = isset($basicMInfo['material_name']) ? mb_convert_encoding($basicMInfo['material_name'], 'GBK', 'UTF-8') : '';
                     $tmp[] = mb_convert_encoding($rl_arr_select_type[$basicMInfo['select_type']], 'GBK', 'UTF-8');
+                    $tmp[] = isset($basicMInfo['rate']) ? $basicMInfo['rate'] : '';
+                    $tmp[] = isset($basicMInfo['fixed_price']) ? $basicMInfo['fixed_price'] : '';
                     $tmp[] = '';
                 }elseif ($salesMInfo['sales_material_type'] == 7) {
                     //福袋
                     
                     $tmp[] = $basicMInfo['material_bn'];
+                    $tmp[] = isset($basicMInfo['material_name']) ? mb_convert_encoding($basicMInfo['material_name'], 'GBK', 'UTF-8') : '';
                     $tmp[] = $basicMInfo['number'];
+                    $tmp[] = isset($basicMInfo['rate']) ? $basicMInfo['rate'] : '';
+                    $tmp[] = isset($basicMInfo['fixed_price']) ? $basicMInfo['fixed_price'] : '';
                     $tmp[] = $basicMInfo['combine_bn'];
                 } else {
                     
                     $tmp[] = $basicMInfo['material_bn'];
+                    $tmp[] = isset($basicMInfo['material_name']) ? mb_convert_encoding($basicMInfo['material_name'], 'GBK', 'UTF-8') : '';
                     $tmp[] = $basicMInfo['number'];
+                    $tmp[] = isset($basicMInfo['rate']) ? $basicMInfo['rate'] : '';
+                    $tmp[] = isset($basicMInfo['fixed_price']) ? $basicMInfo['fixed_price'] : '';
                     $tmp[] = '';
                 }
                 $data['content']['main'][] = implode(',', $tmp);

@@ -52,6 +52,7 @@ class finance_iostocksales
         $data['sale_amount'] = (empty($data['sale_amount']) ? 0 : $data['sale_amount']);
         $data['delivery_cost'] = (empty($data['delivery_cost']) ? 0 : $data['delivery_cost']);
         $data['actually_amount'] = (empty($data['actually_amount']) ? 0 : $data['actually_amount']);
+        $data['platform_amount'] = (empty($data['platform_amount']) ? 0 : $data['platform_amount']);
         
         //sdf
         $return_sdf                    = array();
@@ -66,6 +67,7 @@ class finance_iostocksales
         $return_sdf['sale_money']      = $data['sale_amount']; //商品成交金额
         $return_sdf['fee_money']       = $data['delivery_cost']; //运费
         $return_sdf['actually_money']  = $data['actually_amount']; //客户实付
+        $return_sdf['platform_amount'] = $data['platform_amount']; //平台补贴
         $return_sdf['money']           = $return_sdf['sale_money'] + $return_sdf['fee_money']; //商品成交金额+运费
         $return_sdf['serial_number']   = $data['sale_bn']; //默认销售单据号，没有自定义规则  todo
         $return_sdf['charge_status']   = 1; //默认已记账
@@ -94,6 +96,7 @@ class finance_iostocksales
             $aTmp['num']         = abs($val['nums']);
             $aTmp['money']       = $val['sales_amount'];
             $aTmp['actually_money']       = $val['actually_amount'];
+            $aTmp['platform_amount']      = $val['platform_amount'];
             $return_sale_itmes[] = $aTmp;
         }
         return $return_sale_itmes;

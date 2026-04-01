@@ -17,13 +17,6 @@
 
 class openapi_api_function_v1_transfer extends openapi_api_function_abstract implements openapi_api_function_interface{
 
-    /**
-     * 添加
-     * @param mixed $params 参数
-     * @param mixed $code code
-     * @param mixed $sub_msg sub_msg
-     * @return mixed 返回值
-     */
     public function add($params,&$code,&$sub_msg){
         $data = array();
         
@@ -51,13 +44,6 @@ class openapi_api_function_v1_transfer extends openapi_api_function_abstract imp
         return $rs;
     }
     
-    /**
-     * 获取List
-     * @param mixed $params 参数
-     * @param mixed $code code
-     * @param mixed $sub_msg sub_msg
-     * @return mixed 返回结果
-     */
     public function getList($params,&$code,&$sub_msg){
     
         $start_time = strtotime($params['start_time']);
@@ -116,13 +102,6 @@ class openapi_api_function_v1_transfer extends openapi_api_function_abstract imp
     
     }
 
-    /**
-     * 获取IsoList
-     * @param mixed $params 参数
-     * @param mixed $code code
-     * @param mixed $sub_msg sub_msg
-     * @return mixed 返回结果
-     */
     public function getIsoList($params, &$code, &$sub_msg)
     {
         $filter['start_time'] = $params['start_time'];

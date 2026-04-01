@@ -18,16 +18,12 @@
 class ome_preprocess_entrance {
 
     static private $__instance = array();
-
-    static private $__methods_list = array('label','tbgift','invoice','crm','outstorage');
+    
+    //订单打标记:label,已经提前到创建订单时调用;
+    static private $__methods_list = array('tbgift','invoice','crm','outstorage');
 
     private $__use_method = null;
 
-    /**
-     * 设置Method
-     * @param mixed $method method
-     * @return mixed 返回操作结果
-     */
     public function setMethod($method){
         $method = strtolower($method);
         if(in_array($method,self::$__methods_list)){
@@ -38,12 +34,6 @@ class ome_preprocess_entrance {
         return $this;
     }
 
-    /**
-     * 处理
-     * @param mixed $params 参数
-     * @param mixed $msg msg
-     * @return mixed 返回值
-     */
     public function process($params,&$msg){
         $orderIds = $this->_mergeGroup($params);
         $process_status = true;
