@@ -19,6 +19,7 @@
 + [任务管理](#任务管理)
 + [开发文档](#开发文档)
 + [常见问题](#常见问题)
++ [开源社群](#开源社群)
 + [许可证](#许可证)
 
 ---
@@ -141,6 +142,18 @@ wsl -d Ubuntu -e bash -c "curl -fsSL https://oss.shopex.cn/oms/install.sh | sudo
 + **文档中心**：[https://doc.shopex.cn/oms/100.rule/1.code.html](https://doc.shopex.cn/oms/100.rule/1.code.html)
 + **问题反馈**：[GitHub Issues](https://github.com/ShopeX/OMS/issues)
 + **开发指南**：[PHP编码规范](https://doc.shopex.cn/oms/100.rule/1.code.html)
+
+---
+
+## 💬 开源社群
+
+欢迎扫码加入 **ONEX OMS** 开源交流社群，获取更新动态、使用交流与问题互助。
+
+<p align="center">
+  <img src="app/desktop/statics/opensource-community01.png" alt="ONEX OMS Community Exchange 二维码" width="240" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="app/desktop/statics/opensource-community02.png" alt="商派开源交流社群 二维码" width="240" />
+</p>
 
 ---
 
