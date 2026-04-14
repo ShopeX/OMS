@@ -21,6 +21,9 @@ class desktop_ctl_appmgr extends desktop_controller{
     var $workground = 'desktop_ctl_dashboard';
     var $require_super_op = true;
 
+    /** @var int GET data 最大长度，防止超大序列化串消耗资源 */
+    private static $appmgr_data_max_len = 65536;
+
     public function __construct(&$app) 
     {
         if(defined('WITHOUT_DESKTOP_APPMGR') && constant('WITHOUT_DESKTOP_APPMGR')){
@@ -86,10 +89,20 @@ class desktop_ctl_appmgr extends desktop_controller{
     }
     
     public function command(){
-        if(method_exists($this,'command_'.$_GET['command_id'])){
-            $this->{'command_'.$_GET['command_id']}(unserialize($_GET['data']));
-            echo "\nok.";
+        if(kernel::single('base_setup_lock')->lockfile_exists()){
+            echo "\nError: ".app::get('desktop')->_('系统已安装，禁止通过此接口执行应用命令。');
+            return;
         }
+        if(!isset($_GET['command_id']) || !method_exists($this,'command_'.$_GET['command_id'])){
+            return;
+        }
+        $data = $this->_appmgr_unserialize_get_data('string');
+        if($data === false){
+            echo "\nError: invalid data.";
+            return;
+        }
+        $this->{'command_'.$_GET['command_id']}($data);
+        echo "\nok.";
     }
     
     public function maintenance(){
@@ -141,8 +154,8 @@ class desktop_ctl_appmgr extends desktop_controller{
     }
     
     public function install_options(){
-        $apps = unserialize($_GET['data']);
-        if(!$apps){
+        $apps = $this->_appmgr_unserialize_get_data('array');
+        if($apps === false){
             return;
         }
         $rows = app::get('base')->model('apps')->getList('app_id,app_name',array('app_id'=>$apps));
@@ -322,5 +335,52 @@ class desktop_ctl_appmgr extends desktop_controller{
         return $return;
     }
 
+    /**
+     * 安全反序列化 $_GET['data']：禁止实例化类，防止对象注入 gadget（如 CNVD 通报链）。
+     *
+     * @param string $expect string=单行 command 的 app_id；array=install_options 的 app_id 列表
+     * @return string|array|false
+     */
+    private function _appmgr_unserialize_get_data($expect){
+        if(!isset($_GET['data']) || !is_string($_GET['data'])){
+            return false;
+        }
+        $raw = $_GET['data'];
+        if($raw === '' || strlen($raw) > self::$appmgr_data_max_len){
+            return false;
+        }
+        $data = @unserialize($raw, array('allowed_classes' => false));
+        if($expect === 'string'){
+            if(!is_string($data) || $data === ''){
+                return false;
+            }
+            if(!$this->_appmgr_is_valid_app_id($data)){
+                return false;
+            }
+            return $data;
+        }
+        if($expect === 'array'){
+            if(!is_array($data) || empty($data)){
+                return false;
+            }
+            foreach($data as $app_id){
+                if(!$this->_appmgr_is_valid_app_id($app_id)){
+                    return false;
+                }
+            }
+            return $data;
+        }
+        return false;
+    }
+
+    /**
+     * app_id 白名单校验（目录名级，禁止路径与控制字符）
+     */
+    private function _appmgr_is_valid_app_id($app_id){
+        if(!is_string($app_id) || $app_id === '' || strlen($app_id) > 64){
+            return false;
+        }
+        return (bool)preg_match('/^[a-zA-Z0-9_\\-]+$/', $app_id);
+    }
 
 }
