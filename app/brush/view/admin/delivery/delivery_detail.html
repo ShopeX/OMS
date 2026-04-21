@@ -26,7 +26,7 @@
                 height: 20px;
             }
         </style>
-        <h4><{if $dly.is_encrypt}><a class="delivery-sensitive-btn data-hide" href="javascript:void(0);"></a><{/if}>发货单信息:</h4>
+        <h4><{if $dly.is_encrypt && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a class="delivery-sensitive-btn data-hide" href="javascript:void(0);"></a><{/if}>发货单信息:</h4>
         <div class="division" id="deliveryinfo">
             <table border="0" cellspacing="0" cellpadding="0">
                 <tr>

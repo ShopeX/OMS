@@ -94,7 +94,7 @@
                     </table>
                 </div></td>
                 <td valign="top" >
-                  <h4><{if $invoice_order.is_encrypt}><a class="invoice-sensitive-btn data-hide" href="javascript:void(0);"></a><{/if}>客户信息</h4>
+                  <h4><{if $invoice_order.is_encrypt && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a class="invoice-sensitive-btn data-hide" href="javascript:void(0);"></a><{/if}>客户信息</h4>
                   <div class="division" >
                     <table id="invoiceinfo" cellspacing="0" cellpadding="0"  border="0" class="data-hide">
                       <tbody>

@@ -393,6 +393,7 @@ class erpapi_shop_whitelist {
         SHOP_RESHIPPING_CONSIGNGOODS, //补寄发货
         SHOP_RESHIPPING_REFUSEREASON_GET, //查询拒绝原因列表
         STORE_VIRTUAL_NUMBER_GROUP_UPDATE,
+        SHOP_SUPPLIER_PRODUCTS_FIND, //供应商商品查询
     );
 
     /**

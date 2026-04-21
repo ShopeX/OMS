@@ -13,7 +13,6 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-
 <style>
 .gridlist th{
   width:140px;
@@ -36,7 +35,7 @@
           <td colspan="2">
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%" class="gridlist">
               <tr>
-               <th><{if $reship_data.is_encrypt}><a class="reship-sensitive-btn data-hide" href="javascript:void(0);"></a><{/if}>销售单:</th>
+               <th><{if $reship_data.is_encrypt && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a class="reship-sensitive-btn data-hide" href="javascript:void(0);"></a><{/if}>销售单:</th>
               <td><{$reship_data.order_bn}></td>
                <th>创建日期:</th><td><{$reship_data.createtime|cdate}></td>
                <th>会员名:</th><td><{$reship_data.member_id|ciphertext:'reship','ship_name',$reship_data.shop_type}></td>

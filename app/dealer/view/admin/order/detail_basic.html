@@ -86,28 +86,28 @@
                  </div>
                </td>
                <td style="vertical-align:top;">
-                <h4><{if $member.is_encrypt}><a class="member-sensitive-btn data-hide" href="javascript:void(0);"></a><{/if}>购买人信息</h4>
+                <h4><{if $member.is_encrypt && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a class="member-sensitive-btn data-hide" href="javascript:void(0);"></a><{/if}>购买人信息</h4>
                 <div class="division">
                   <table cellspacing="0" cellpadding="0" border="0" id="memberinfo">
                     <tbody><tr>
-                      <th><{if $member.is_encrypt && $order.shop_type == 'pinduoduo'}><a data-type = 'uname' class="member-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>用户名：</th>
+                      <th><{if $member.is_encrypt && $order.shop_type == 'pinduoduo' && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a data-type = 'uname' class="member-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>用户名：</th>
                       <td>
                         <span sensitive-field="uname"><{$member.account.uname|ciphertext:'member','uname',$order.shop_type}></span></td>
                       </tr>
                       <tr>
-                        <th><{if $member.is_encrypt  && $order.shop_type == 'pinduoduo'}><a data-type = 'name' class="member-sensitive-btn-detail data-hide"  style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>姓名：</th>
+                        <th><{if $member.is_encrypt  && $order.shop_type == 'pinduoduo' && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a data-type = 'name' class="member-sensitive-btn-detail data-hide"  style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>姓名：</th>
                         <td><span sensitive-field="name"><{$member.contact.name|ciphertext:'member','name',$order.shop_type}></span></td>
                       </tr>
                       <tr>
-                        <th><{if $member.is_encrypt  && $order.shop_type == 'pinduoduo'}><a data-type = 'mobile' class="member-sensitive-btn-detail data-hide" style="background-size: 13px 10px;"  href="javascript:void(0);"></a><{/if}>手机：</th>
+                        <th><{if $member.is_encrypt  && $order.shop_type == 'pinduoduo' && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a data-type = 'mobile' class="member-sensitive-btn-detail data-hide" style="background-size: 13px 10px;"  href="javascript:void(0);"></a><{/if}>手机：</th>
                         <td><span sensitive-field="mobile"><{$member.contact.phone.mobile|ciphertext:'member','mobile',$order.shop_type}></span></td>
                       </tr>
                       <tr>
-                        <th><{if $member.is_encrypt  && $order.shop_type == 'pinduoduo'}><a data-type = 'tel' class="member-sensitive-btn-detail data-hide"  style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>电话：</th>
+                        <th><{if $member.is_encrypt  && $order.shop_type == 'pinduoduo' && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a data-type = 'tel' class="member-sensitive-btn-detail data-hide"  style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>电话：</th>
                         <td><span sensitive-field="tel"><{$member.contact.phone.telephone|ciphertext:'member','tel',$order.shop_type}></span></td>
                       </tr>
                       <tr>
-                        <th><{if $member.is_encrypt  && $order.shop_type == 'pinduoduo'}><a data-type = 'address' class="member-sensitive-btn-detail data-hide" style="background-size: 13px 10px;"  href="javascript:void(0);"></a><{/if}>地区：</th>
+                        <th><{if $member.is_encrypt  && $order.shop_type == 'pinduoduo' && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a data-type = 'address' class="member-sensitive-btn-detail data-hide" style="background-size: 13px 10px;"  href="javascript:void(0);"></a><{/if}>地区：</th>
                         <td><{$member.contact.area|region}></td>
                       </tr>
                   </tbody>
@@ -116,29 +116,29 @@
           </td>
           <td style="vertical-align:top;">
             <h4>
-              <span><{if $order.is_encrypt}><a class="order-sensitive-btn data-hide" href="javascript:void(0);"></a><{/if}><{t}>收货人信息<{/t}></span>
+              <span><{if $order.is_encrypt && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a class="order-sensitive-btn data-hide" href="javascript:void(0);"></a><{/if}><{t}>收货人信息<{/t}></span>
             </h4>
               <div class="division">
                 <table cellspacing="0" cellpadding="0" border="0" id="consigneeinfo">
                   <tbody>
                   <tr>
-                    <th ><{if $member.is_encrypt && $order.shop_type == 'pinduoduo'}><a data-type = 'uname' class="order-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>姓名：</th>
+                    <th ><{if $member.is_encrypt && $order.shop_type == 'pinduoduo' && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a data-type = 'uname' class="order-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>姓名：</th>
                     <td><span sensitive-field="ship_name" data-order="2"><{$order.ship_name|ciphertext:'order','ship_name',$order.shop_type}></span></td>
                   </tr>
                   <tr>
-                    <th><{if $member.is_encrypt && $order.shop_type == 'pinduoduo'}><a data-type = 'mobile' class="order-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>手机：</th>
+                    <th><{if $member.is_encrypt && $order.shop_type == 'pinduoduo' && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a data-type = 'mobile' class="order-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>手机：</th>
                     <td><span sensitive-field="ship_mobile" data-order="4"><{$order.ship_mobile|ciphertext:'order','ship_mobile',$order.shop_type}></span></td>
                   </tr>
                   <tr>
-                    <th><{if $member.is_encrypt && $order.shop_type == 'pinduoduo'}><a data-type = 'tel' class="order-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>电话：</th>
+                    <th><{if $member.is_encrypt && $order.shop_type == 'pinduoduo' && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a data-type = 'tel' class="order-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>电话：</th>
                     <td><span sensitive-field="ship_tel" data-order="3"><{$order.ship_tel|ciphertext:'order','ship_tel',$order.shop_type}></span></td>
                   </tr>
                   <tr>
-                    <th><{if $member.is_encrypt  && $order.shop_type == 'pinduoduo'}><a data-type = 'address' class="order-sensitive-btn-detail data-hide" style="background-size: 13px 10px;"  href="javascript:void(0);"></a><{/if}>地区：</th>
+                    <th><{if $member.is_encrypt  && $order.shop_type == 'pinduoduo' && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a data-type = 'address' class="order-sensitive-btn-detail data-hide" style="background-size: 13px 10px;"  href="javascript:void(0);"></a><{/if}>地区：</th>
                     <td><{$order.ship_area|region}></td>
                   </tr>
                   <tr>
-                    <th><{if $member.is_encrypt  && $order.shop_type == 'pinduoduo'}><a data-type = 'receiver_address' class="order-sensitive-btn-detail data-hide" style="background-size: 13px 10px;"  href="javascript:void(0);"></a><{/if}>地址：</th>
+                    <th><{if $member.is_encrypt  && $order.shop_type == 'pinduoduo' && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a data-type = 'receiver_address' class="order-sensitive-btn-detail data-hide" style="background-size: 13px 10px;"  href="javascript:void(0);"></a><{/if}>地址：</th>
                     <td style="white-space: normal; line-height: 18px;"><span sensitive-field="ship_addr" data-order="1"><{$order.ship_addr|escape:'html'|ciphertext:'order','ship_addr',$order.shop_type}></span></td>
                   </tr>
                   <tr style="display: none;">

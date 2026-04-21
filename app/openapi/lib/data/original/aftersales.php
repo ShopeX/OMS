@@ -15,17 +15,9 @@
  * limitations under the License.
  */
 
+
 class openapi_data_original_aftersales
 {
-    /**
-     * 获取List
-     * @param mixed $filter filter
-     * @param mixed $start_time start_time
-     * @param mixed $end_time end_time
-     * @param mixed $offset offset
-     * @param mixed $limit limit
-     * @return mixed 返回结果
-     */
     public function getList($filter,$start_time,$end_time,$offset=0,$limit=100)
     {
         $aftersaleMdl = app::get('sales')->model('aftersale');
@@ -50,7 +42,12 @@ class openapi_data_original_aftersales
                 $branchInfos[$branch['branch_id']]['branch_bn'] = $branch['branch_bn'];
             }
             $aftersaleLists = $aftersaleMdl->getList('*', $filter, $offset, $limit,'aftersale_id ASC');
-
+            if(empty($aftersaleLists)){
+                return array(
+                    'lists' => array(),
+                    'count' => $count,
+                );
+            }
 
             $shopInfos = $shopObj->getList('shop_id,shop_bn,name,delivery_mode', [
                 'shop_id' => array_column($aftersaleLists, 'shop_id'),
@@ -58,13 +55,13 @@ class openapi_data_original_aftersales
             $shopInfos = array_column($shopInfos, null, 'shop_id');
 
 
-            $aftersaleIds = array();
-            $orderIds = array();
-            $memberIds = array();
-            $returnIds = array();
-            $reshipIds = array();
-            $refundApplyIds = array();
-            $opIds = array();
+            $aftersaleIds = array(-1);
+            $orderIds = array(-1);
+            $memberIds = array(-1);
+            $returnIds = array(-1);
+            $reshipIds = array(-1);
+            $refundApplyIds = array(-1);
+            $opIds = array(-1);
             foreach ($aftersaleLists as $k => $aftersale){
                 $aftersaleIds[] = $aftersale['aftersale_id'];
 
@@ -333,7 +330,7 @@ class openapi_data_original_aftersales
     }
     /**
      * 获取基础物料信息
-     * 
+     *
      * @param array $productIds
      * @return array
      */

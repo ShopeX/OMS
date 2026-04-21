@@ -4294,7 +4294,13 @@ class ome_ctl_admin_order extends desktop_controller{
                         $tmp = array();
                         $tmp = $o['items'];
                         unset($o['items']);
-
+                        
+                        // 更新pay_status状态值
+                        //@todo：解决手工批量删除赠品，又手工编辑订单进行恢复，导致pay_status='5'退款状态，无法审核订单;
+                        if($o['delete'] == 'false' && $o['price'] == '0'){
+                            $o['pay_status'] = '0';
+                        }
+                        
                         $oOrderObj->save($o);
                         foreach ($tmp as $oo){
 

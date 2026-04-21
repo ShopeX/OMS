@@ -78,6 +78,23 @@ class purchase_mdl_po extends dbeav_model{
         return $arr;
     }
 
+    /**
+     * 导入采购单号安全清洗
+     *
+     * 仅保留安全字符，避免引号、&、注释符等特殊字符进入后续 SQL/缓存/日志链路。
+     *
+     * @param string $poBn
+     * @return string
+     */
+    private function sanitizeImportPoBn($poBn)
+    {
+        $poBn = trim(str_replace('　', '', (string) $poBn));
+        $poBn = strip_tags($poBn);
+        $poBn = preg_replace('/[^A-Za-z0-9._\/-]/', '', $poBn);
+
+        return substr($poBn, 0, 32);
+    }
+
     function getSafeStock($data=null, $start=0, $end=1){
         $where = ' ';
 
@@ -572,7 +589,9 @@ class purchase_mdl_po extends dbeav_model{
             $memo = serialize($export_memo);
         }
         $pSdf['memo']           = $memo;
-        $pSdf['po_bn']          = $aP['purchase']['contents'][0][0];
+        
+        // 导入的采购单号
+        $pSdf['po_bn']          = $this->sanitizeImportPoBn($aP['purchase']['contents'][0][0]);
         $pSdf['supplier_id']    = $supplier['supplier_id'];
         $pSdf['branch_id']      = $branch['branch_id'];
         
@@ -750,6 +769,8 @@ class purchase_mdl_po extends dbeav_model{
 
                     $fileData['item']['contents'][] = $row;
                 }else {
+                    $row[0] = $this->sanitizeImportPoBn($row[0]);
+                    $row_0 = $row[0];
                     if (empty($row_0)){
                         $msg['error'] = "请填写采购单编号";
                         return false;

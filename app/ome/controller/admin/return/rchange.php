@@ -16,7 +16,6 @@
  */
 class ome_ctl_admin_return_rchange extends desktop_controller
 {
-
     public $name       = "退换货单";
     public $workground = "aftersale_center";
 
@@ -522,7 +521,6 @@ class ome_ctl_admin_return_rchange extends desktop_controller
             $is_auto_approve = app::get('ome')->getConf('return.auto_approve');
             if ($is_auto_approve == 'on') {
                 $reshipLib = kernel::single('ome_reship');
-
                 $result = $reshipLib->batch_reship_queue($reship[0]['reship_id']);
             }
         }
@@ -538,6 +536,7 @@ class ome_ctl_admin_return_rchange extends desktop_controller
 
     /**
      * 根据order_bn快速获取订单信息（售后申请、退换货单2处加载订单信息）
+     *
      * @author yangminsheng
      **/
     public function getOrderinfo()
@@ -640,7 +639,7 @@ class ome_ctl_admin_return_rchange extends desktop_controller
             $branchLib = kernel::single('ome_branch');
             $store_id  = $branchLib->isStoreBranch($order["branch_id"]);
             if ($store_id) {
-//是门店仓
+                //是门店仓
                 $order["branch_list"] = kernel::single('o2o_return')->get_aftersale_o2o_branch($order["branch_id"]);
                 //售后设置->退货仓库设置 类型选择：发货仓库的
                 $branchtype = app::get('wms')->getConf('wms.branchset.type');
@@ -659,7 +658,7 @@ class ome_ctl_admin_return_rchange extends desktop_controller
                     }
                 }
             } else {
-//是电商仓
+                //是电商仓
                 $order["branch_list"] = app::get('ome')->model('branch')->getlist('branch_id,name', array('disabled' => 'false', 'b_type' => 1));
             }
             $order['member_uname']       = $member['account']['uname'];
@@ -4166,7 +4165,6 @@ class ome_ctl_admin_return_rchange extends desktop_controller
             $this->pagedata['page_configs'] = array();
         }
     }
-    
     
     /**
      * 验证页面配置项

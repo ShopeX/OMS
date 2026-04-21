@@ -62,7 +62,7 @@
 <!-- 订单售后情况 END-->
 
 <div class="finder-detail">
-<h3><{if $order.is_encrypt}><a class="data-hide order-sensitive-btn" href="javascript:void(0);"></a><{/if}>配送信息</h3>
+<h3><{if $order.is_encrypt && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a class="data-hide order-sensitive-btn" href="javascript:void(0);"></a><{/if}>配送信息</h3>
 <div class="division" style="background:#fff; " id="order_edit_receiver">
     <a href="javascript:void(0);" id="consignee-edit">编辑</a>
     <{include file="admin/order/edit/consignee_info.html"}>
@@ -757,6 +757,7 @@ function do_refund()
     var height=550;
     ome_order_refund_dialog(id, newtotal, total, is_cod, pay_status, width, height);
 }
+
 function ome_order_refund_dialog(id, newtotal, total, is_cod, pay_status,width,height)
 {
     var url    = 'index.php?app=ome&ctl=admin_order&act=do_check&finder_id=<{$env.get.finder_id}>&p[0]='+id+'&p[1]='+newtotal+'&p[2]='+total+'&is_cod='+is_cod+'&pay_status='+pay_status;
@@ -776,10 +777,7 @@ function ome_order_refund_dialog(id, newtotal, total, is_cod, pay_status,width,h
 
 var callurl='index.php?app=ome&ctl=admin_order&act=getSalesMaterialgroup',store=[];
 if($('add-material-btn')){
-
     $('add-material-btn').addEvent('click',function(e) {
-
-
         var shop_id = $E('input[name=shop_id]').getValue();
         var url='index.php?app=desktop&act=alertpages&goto='+encodeURIComponent('index.php?app=material&ctl=admin_material_sales&act=findSalesMaterial&shop_id='+shop_id);
         Ex_Loader('modedialog',function() {
@@ -797,6 +795,5 @@ if($('add-material-btn')){
             });
         }.bind(this));
     });
-
 }
 </script>

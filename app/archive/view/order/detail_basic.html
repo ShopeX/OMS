@@ -13,7 +13,6 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-
 <table width="100%" cellspacing="0" cellpadding="0" border="0">
   <tbody>
     <tr>
@@ -131,7 +130,7 @@
                  </div>
                </td>
                <td >
-                <h4><{if $member.is_encrypt}><a class="member-sensitive-btn data-hide" href="javascript:void(0);"></a><{/if}>购买人信息</h4>
+                <h4><{if $member.is_encrypt && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a class="member-sensitive-btn data-hide" href="javascript:void(0);"></a><{/if}>购买人信息</h4>
                 <div class="division" id="memberinfo">
                   <table cellspacing="0" cellpadding="0" border="0">
 
@@ -180,7 +179,7 @@
           </td>
           <td >
             <h4>
-              <{if $order.is_encrypt}><a class="order-sensitive-btn data-hide" href="javascript:void(0);"></a><{/if}>
+              <{if $order.is_encrypt && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a class="order-sensitive-btn data-hide" href="javascript:void(0);"></a><{/if}>
               <span><{t}>收货人信息<{/t}></span>
               <span style="position:relative;" id="order_receiver_copy_span"><button class="btn" id="order_receiver_copy" stu="Y" info="<{$order.consignee.area|region}>,<{$order.consignee.addr|escape:'html'}>,<{$order.consignee.name}><{if $order.consignee.telephone}>,<{$order.consignee.telephone|escape:'html'}><{/if}><{if $order.consignee.mobile}>,<{$order.consignee.mobile|escape:'html'}><{/if}>,<{$order.consignee.zip|escape:'html'}>"><span><span><{t}>复制收货人信息<{/t}></span></span></button></span>
               <!-- <span style="font-size:12px;" class="sysiconBtnNoIcon" style="cursor:pointer" id="order_receiver_copy" status="Y" info="<{$order.consignee.area|escape:'html'}>,<{$order.consignee.addr|escape:'html'}>,<{$order.name}><{if $order.consignee.telephone}>,<{$order.consignee.telephone|escape:'html'}><{/if}><{if $order.consignee.mobile}>,<{$order.consignee.mobile|escape:'html'}><{/if}>,<{$order.consignee.zip|escape:'html'}>"><{t}>复制收货人信息<{/t}></span> -->

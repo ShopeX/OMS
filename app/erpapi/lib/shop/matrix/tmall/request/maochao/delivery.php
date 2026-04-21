@@ -172,7 +172,7 @@ class erpapi_shop_matrix_tmall_request_maochao_delivery extends erpapi_shop_requ
             // 喵速达：取平台推送的store_code
             $store_code = $storeCodes[0];
         }else{
-            $store_code = $sdf['branch']['branch_bn'];
+            $store_code = $sdf['store_code'] ?: $sdf['branch']['branch_bn'];
         }
         
         // params

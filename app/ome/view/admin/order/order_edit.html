@@ -13,7 +13,6 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-
 <{capture name="header"}>
 <{css app="ome" src="ome.css"}>
 <{script src="coms/autocompleter.js" app='desktop' }>
@@ -56,7 +55,7 @@
 </div>
 
 <div class="finder-detail">
-<h3><{if $order.is_encrypt}><a class="data-hide order-sensitive-btn" href="javascript:void(0);"></a><{/if}>配送信息</h3>
+<h3><{if $order.is_encrypt && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a class="data-hide order-sensitive-btn" href="javascript:void(0);"></a><{/if}>配送信息</h3>
 <div class="division" style="background:#fff; " id="order_edit_receiver">
     <a href="javascript:void(0);" id="consignee-edit">编辑</a>
     <{include file="admin/order/edit/consignee_info.html"}>

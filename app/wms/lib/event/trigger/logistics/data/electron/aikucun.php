@@ -14,22 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
- * @author ykm 216-01-25
- * @describe 京东电子面单
+ * @describe 爱库存电子面单 SDF 组装
  */
+
 class wms_event_trigger_logistics_data_electron_aikucun extends wms_event_trigger_logistics_data_electron_common
 {
 
     /**
-     * 获取DirectSdf
-     * @param mixed $arrDelivery arrDelivery
-     * @param mixed $arrBill arrBill
-     * @param mixed $shop shop
-     * @return mixed 返回结果
+     * 矩阵 orderInfo.orderChannelsType 固定值（与小红书多店铺映射不同）
      */
+    public function orderChannelsType()
+    {
+        return 'aikucun';
+    }
 
-    public function getDirectSdf($arrDelivery, $arrBill, $shop) {
+    public function getDirectSdf($arrDelivery, $arrBill, $shop)
+    {
         $delivery = $arrDelivery[0];
 
         if (empty($arrBill)) {

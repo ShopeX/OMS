@@ -13,7 +13,6 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-
 <form action="index.php?app=ome&ctl=admin_return_batch&act=set&finder_id=<{$finder_id}>" method="post" id="form1" enctype="multipart/form-data" target="upload">
 <div class="tableform">
     <div class="division">
@@ -31,8 +30,8 @@
           <th><{t}>类型:<{/t}></th>
           <td >
            <select name='batch_type' vtype="required">
-           <{foreach from=$batch_type item=batch_type key=key}>
-           <option value='<{$key}>'><{$batch_type}></option>
+           <{foreach from=$batch_type item=type_label key=key}>
+           <option value='<{$key}>' <{if $return_batch.batch_type == $key}>selected="selected"<{/if}>><{$type_label}></option>
            <{/foreach}>
            </select>
             <em class="c-red">*</em>

@@ -23,7 +23,7 @@
 <style>
 .logi-no-input{width:150px;height:20px;}
 </style>
-<h4><{if $dly.is_encrypt}><a class="delivery-sensitive-btn data-hide" href="javascript:void(0);"></a><{/if}>发货单信息:</h4>
+<h4><{if $dly.is_encrypt && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a class="delivery-sensitive-btn data-hide" href="javascript:void(0);"></a><{/if}>发货单信息:</h4>
 <input type="hidden" name="status" value="<{$status}>" />
 <input type="hidden" name="delivery_id" value="<{$dly.delivery_id}>" />
 <div class="division">
@@ -35,15 +35,15 @@
         <td ><{foreach from=$order_bn item=item}><{$item}><br><{/foreach}></td>
         <th >配送方式：</th>
         <td ><{$dly.delivery}></td>
-        <th ><{if $dly.is_encrypt && $dly.shop_type == 'pinduoduo'}><a data-type = 'uname' class="delivery-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>会员：</th>
+        <th ><{if $dly.is_encrypt && $dly.shop_type == 'pinduoduo' && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a data-type = 'uname' class="delivery-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>会员：</th>
         <td ><span sensitive-field="uname"><{$dly.member_name|ciphertext:'delivery','uname',$dly.shop_type}></span></td>
     </tr>
     <tr>
-        <th ><{if $dly.is_encrypt && $dly.shop_type == 'pinduoduo'}><a data-type = 'uname' class="delivery-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>收货人：</th>
+        <th ><{if $dly.is_encrypt && $dly.shop_type == 'pinduoduo' && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a data-type = 'uname' class="delivery-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>收货人：</th>
         <td ><span sensitive-field="ship_name"><{$dly.consignee.name|ciphertext:'delivery','ship_name',$dly.shop_type}></span></td>
-        <th ><{if $dly.is_encrypt && $dly.shop_type == 'pinduoduo'}><a data-type = 'tel' class="delivery-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>电话：</th>
+        <th ><{if $dly.is_encrypt && $dly.shop_type == 'pinduoduo' && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a data-type = 'tel' class="delivery-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>电话：</th>
         <td ><span sensitive-field="ship_tel"><{$dly.consignee.telephone|ciphertext:'delivery','ship_tel',$dly.shop_type}></span></td>
-        <th ><{if $dly.is_encrypt && $dly.shop_type == 'pinduoduo'}><a data-type = 'mobile' class="delivery-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>手机：</th>
+        <th ><{if $dly.is_encrypt && $dly.shop_type == 'pinduoduo' && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a data-type = 'mobile' class="delivery-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>手机：</th>
         <td ><span sensitive-field="ship_mobile"><{$dly.consignee.mobile|ciphertext:'delivery','ship_mobile',$dly.shop_type}></span></td>
         <th>Email：</th>
         <td><{$dly.consignee.email}></td>

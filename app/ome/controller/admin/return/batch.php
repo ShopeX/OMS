@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class ome_ctl_admin_return_batch extends desktop_controller {
 
     var $workground = "setting_tools";
@@ -54,6 +53,7 @@ class ome_ctl_admin_return_batch extends desktop_controller {
             }
         }
         $oReturn_batch = $this->app->model('return_batch');
+        $return_batch = array();
         if ($batch_id) {
             $return_batch = $oReturn_batch->dump($batch_id);
         }

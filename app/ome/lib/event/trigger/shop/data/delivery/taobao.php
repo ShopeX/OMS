@@ -55,11 +55,19 @@ class ome_event_trigger_shop_data_delivery_taobao extends ome_event_trigger_shop
 //            }
             
             $this->__sdf['order_extend'] = $this->_get_order_extend($delivery_id);
+
+            $this->__sdf['store_code']  = '';
+
             // BN对应的OID
             $oidList      = [];
             $orderObjects = $this->_get_all_order_objects($delivery_id);
             $this->__sdf['order_objects'] = $orderObjects;
             foreach ($orderObjects as $object) {
+
+                if ($object['store_code']) {
+                    $this->__sdf['store_code']  = $object['store_code'];
+                }
+                
                 foreach ($object['order_items'] as $item) {
                     if(empty($object['oid'])) {
                         continue;

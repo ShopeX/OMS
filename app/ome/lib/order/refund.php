@@ -37,13 +37,17 @@ class ome_order_refund {
         if($order['createway'] != 'matrix') {
             return [false, ['msg'=>'非平台订单']];
         }
-        $shop = app::get('ome')->model('shop')->db_dump(['shop_id'=>$order['shop_id']], 'node_id, node_type');
+        $shop = app::get('ome')->model('shop')->db_dump(['shop_id'=>$order['shop_id']], 'node_id, node_type, business_type');
         if(empty($shop['node_id'])) {
             return [false, ['msg'=>'店铺未绑定']];
         }
         if(!in_array($shop['node_type'], ['taobao'])) {
             return [false, ['msg'=>'非淘宝店铺']];
         }
+        if($shop['business_type'] == 'maochao') {
+            return [false, ['msg'=>'猫超国际']];
+        }
+        
         list($rs, $notice) = kernel::single('ome_order_refund_status')->fetch($order['order_bn'], $shop['node_id'], $order['shop_id']);
         if(!$rs) {
             return [true, ['msg'=>$notice['msg']]];

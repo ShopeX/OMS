@@ -17,15 +17,15 @@
 <table width="100%" border="0" cellspacing="0" cellpadding="0" class="delivery-info">
   <tbody>
     <tr>
-      <th><{if $member.is_encrypt && $order.shop_type == 'pinduoduo'}><a data-type = 'uname' class="order-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>收货人：</th>
+      <th><{if $member.is_encrypt && $order.shop_type == 'pinduoduo' && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a data-type = 'uname' class="order-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>收货人：</th>
       <td><span sensitive-field="ship_name"><{$order.consignee.name|ciphertext:'order','ship_name',$order.shop_type}></span>
         <input type="hidden" name="consignee[name]" value="<{$order.consignee.name}>" /></td>
-      <th><{if $member.is_encrypt && $order.shop_type == 'pinduoduo'}><a data-type = 'receiver_address' class="order-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>配送地址：</th>
+      <th><{if $member.is_encrypt && $order.shop_type == 'pinduoduo' && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a data-type = 'receiver_address' class="order-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>配送地址：</th>
       <td><span id='consignee[area]'><{$order.consignee.area|region}></span>
         <input type="hidden" name="consignee[area]" value="<{$order.consignee.area}>" />
         <span id='consignee[addr]' sensitive-field="ship_addr"><{$order.consignee.addr|ciphertext:'order','ship_addr',$order.shop_type}></span>
         <input type='hidden' name='consignee[addr]' value="<{$order.consignee.addr}>"/></td>
-      <th><{if $member.is_encrypt && $order.shop_type == 'pinduoduo'}><a data-type = 'tel' class="order-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>电话/手机：</th>
+      <th><{if $member.is_encrypt && $order.shop_type == 'pinduoduo' && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a data-type = 'tel' class="order-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>电话/手机：</th>
       <td>
         <span sensitive-field="ship_tel"><{$order.consignee.telephone|ciphertext:'order','ship_tel',$order.shop_type}></span>
         <span><{if $order.consignee.telephone}>/<{/if}></span>

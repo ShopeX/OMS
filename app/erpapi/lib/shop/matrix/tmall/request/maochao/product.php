@@ -18,6 +18,7 @@
  * @author ykm 2022/6/27 18:09:55
  * @describe 处理店铺商品相关类
  */
+
 class erpapi_shop_matrix_tmall_request_maochao_product extends erpapi_shop_request_product {
 
     protected function getUpdateStockApi() {
@@ -25,21 +26,40 @@ class erpapi_shop_matrix_tmall_request_maochao_product extends erpapi_shop_reque
         return $api_name;
     }
 
-    /**
-     * format_stocks
-     * @param mixed $stockList stockList
-     * @return mixed 返回值
-     */
+    private function getStoreCode($branch_bn) {
 
-    public function format_stocks($stockList) {
+        static $storeCode = [];
+        if(isset($storeCode[$branch_bn])) {
+            return $storeCode[$branch_bn];
+        }
+
+        $branch = app::get('ome')->model('branch')->dump(array ('branch_bn'=>$branch_bn,'check_permission'=>'false'));
+        if(empty($branch)) {
+            return $branch_bn;
+        }
+
+        $relation = app::get('ome')->model('branch_relation')->dump(array ('branch_id'=>$branch['branch_id'],'type' => '3pl'));
+        if(empty($relation)) {
+            return $branch_bn;
+        }
+
+        $storeCode[$branch_bn] = $relation['relation_branch_bn'];
+
+        return $storeCode[$branch_bn];
+    }
+
+
+    public function _getUpdateStockParams($stockList) {
         $firstStock = current($stockList);
         $shop_id = $this->__channelObj->channel['shop_id'];
+
         if(empty($firstStock['branch_bn'])) {
-            $memo  = '未使用分仓独立回写，不能回写';
-            $optLogModel = app::get('inventorydepth')->model('operation_log');
-            $optLogModel->write_log('shop', $shop_id, 'stockup',$memo);
-            return false;
+            // $memo  = '未使用分仓独立回写，不能回写';
+            // $optLogModel = app::get('inventorydepth')->model('operation_log');
+            // $optLogModel->write_log('shop', $shop_id, 'stockup',$memo);
+            return [];
         }
+
         $bns = array();
         foreach ($stockList as $key => $val)
         {
@@ -51,7 +71,7 @@ class erpapi_shop_matrix_tmall_request_maochao_product extends erpapi_shop_reque
         $skuObj = app::get('inventorydepth')->model('shop_skus');
         $tempList = $skuObj->getList('shop_sku_id,shop_product_bn,shop_iid', array('shop_id'=>$shop_id, 'shop_product_bn'=>$bns));
         if(empty($tempList)){
-            return false;
+            return [];
         }
         $shopBnList = [];
         foreach ($tempList as $key => $value) {
@@ -79,21 +99,21 @@ class erpapi_shop_matrix_tmall_request_maochao_product extends erpapi_shop_reque
                     "additional_info" => [
                         "attribute" => [
                             "inv_operate_mode" => "FULLAMOUNT",
-                            "supplier_id" => $val['shop_sku_id']
+                            "supplier_id" => $this->__channelObj->channel['config']['supplier_id'],
                         ]
                     ],
                     "location"=> [
-                        "store_code"=> $value['branch_bn']
+                        "store_code"=> $this->getStoreCode($value['branch_bn'])
                     ],
                     "detail_order"=> [
-                        "operation_detail_order_id"=> count($detail_operation_list)
+                        "operation_detail_order_id"=> time().rand(1000, 9999),
                     ]
                 ];
                 $detail_operation_list[] = $tmp;
             }
         }
         if(empty($list_quantity)) {
-            return false;
+            return [];
         }
         $inventory_main_operation = [[
             'main_order'=>[
@@ -110,16 +130,7 @@ class erpapi_shop_matrix_tmall_request_maochao_product extends erpapi_shop_reque
         return $return;
     }
 
-    protected function _getUpdateStockParams($stocks) {
-        return $stocks;
-    }
-
     #实时下载店铺商品
-    /**
-     * skuAllGet
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function skuAllGet($sdf)
     {
         $timeout = 20;
@@ -130,36 +141,86 @@ class erpapi_shop_matrix_tmall_request_maochao_product extends erpapi_shop_reque
             'end_time' => $sdf['end_time'],
             'supplier_id' => $sdf['supplier_id'],
         );
+
+        if ($sdf['scroll_id']) {
+            $param['scroll_id'] = $sdf['scroll_id'];
+        }
+
         $title = "获取店铺(" . $this->__channelObj->channel['name'] .')商品';
-        $result = $this->__caller->call(SHOP_GET_SUPPLIER_PRODUCTS,$param,array(),$title,$timeout, $param['supplier_id']);
+
+        $api_name = SHOP_GET_SUPPLIER_PRODUCTS;
+        if (is_array($this->__channelObj->channel['config']) && in_array('MCZZ',(array) $this->__channelObj->channel['config']['sub_business_type'])) {
+            $api_name = SHOP_SUPPLIER_PRODUCTS_FIND;
+        }
+
+        $result = $this->__caller->call($api_name,$param,array(),$title,$timeout, $param['supplier_id']);
         if ($result['res_ltype'] > 0) {
             for ($i=0;$i<3;$i++) {
-                $result = $this->__caller->call(SHOP_GET_SUPPLIER_PRODUCTS,$param,array(),$title,$timeout, $param['supplier_id']);
+                $result = $this->__caller->call($api_name,$param,array(),$title,$timeout, $param['supplier_id']);
                 if ($result['res_ltype'] == 0) {
                     break;
                 }
             }
         }
-        if($result['data']) {
-            $data = json_decode($result['data'], true);
-            $result['data'] = [];
-            if(empty($data['data']['data']['page_data']['page_data'])) {
-                return $result;
-            }
-            foreach ($data['data']['data']['page_data']['page_data'] as $value) {
-                $result['data'][] = [
-                    'iid' => $value['sc_item_id'],
-                    'title' => $value['sc_item_name'],
-                    'outer_id' => $value['outer_id'],
-                    'sku' => [
-                        'outer_id' => $value['outer_id'],
-                        'sku_id' => $value['supplier_id'],
-                        'barcode' => $value['barcode'],
-                    ]
-                ];
-            }
 
+        $data =  $result['data'] ? json_decode($result['data'], true) : [];
+
+        if ($api_name == SHOP_GET_SUPPLIER_PRODUCTS) {
+            $result['data'] = $this->supplierProductsGetResponse($data);
         }
+
+        if ($api_name == SHOP_SUPPLIER_PRODUCTS_FIND) {
+            $result['scroll_id'] = $data['data']['scroll_id'];
+            $result['total_count'] = $data['data']['total_count'];
+
+            $result['data'] = $this->supplierProductsFindResponse($data);
+        }
+        
         return $result;
+    }
+
+    private function supplierProductsGetResponse($data) {
+
+        $formatData = [];
+        if(!$data || empty($data['data']['data']['page_data']['page_data'])) {
+            return $formatData;
+        }
+        foreach ($data['data']['data']['page_data']['page_data'] as $value) {
+            $formatData[] = [
+                'iid' => $value['sc_item_id'],
+                'title' => $value['sc_item_name'],
+                'outer_id' => $value['outer_id'],
+                'sku' => [
+                    'outer_id' => $value['outer_id'],
+                    'sku_id' => $value['supplier_id'],
+                    'barcode' => $value['barcode'],
+                ]
+            ];
+        }
+
+        return $formatData;
+    }
+
+    private function supplierProductsFindResponse($data) {
+        $formatData = [];
+
+        if(!$data || empty($data['data']['data'])) {
+            return $formatData;
+        }
+
+        foreach ($data['data']['data']['supply_product_info_response'] as $value) {
+            $formatData[] = [
+                'iid' => $value['supplier_product_id'],
+                'title' => $value['supplier_product_name'],
+                'outer_id' => $value['outer_id'],
+                'sku' => [
+                    'outer_id' => $value['outer_id'],
+                    'sku_id' => $value['supplier_product_id'],
+                    'barcode' => $value['barcode'],
+                ]
+            ];
+        }
+
+        return $formatData;
     }
 }

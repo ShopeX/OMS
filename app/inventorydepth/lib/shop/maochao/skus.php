@@ -65,9 +65,15 @@ class inventorydepth_shop_maochao_skus {
             $sdf['page'] = $offset;
             $sdf['page_size'] = $limit;
             $rs = kernel::single('erpapi_router_request')->set('shop',$shop_id)->product_skuAllGet($sdf);
-            if(empty($rs['data'])) {
+            if(empty($rs['data']) && $sdf['page'] != 1) {
                 break;
             }
+
+            if ($rs['scroll_id']) {
+                $sdf['scroll_id'] = $rs['scroll_id'];
+            }
+
+
             $data = [];
             foreach ($rs['data'] as $item) {
                 $tmp = array(

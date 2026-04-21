@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 缺货列表
  */
@@ -28,11 +29,10 @@ class ome_ctl_admin_order_lack extends desktop_controller {
     }
     /**
      * 缺货搜索
-     * 
+     *
      * @param void
      * @return void
      */
-
     function index() {
 
         $params = array(
@@ -349,7 +349,7 @@ class ome_ctl_admin_order_lack extends desktop_controller {
 
     /**
      * 缺货订单列表
-     * 
+     *
      * @return void
      * @author
      */
@@ -383,10 +383,6 @@ class ome_ctl_admin_order_lack extends desktop_controller {
         $this->finder('ome_mdl_orders',$params);
     }
 
-    /**
-     * routerAgain
-     * @return mixed 返回值
-     */
     public function routerAgain() {
 
         $batchLogModel = app::get('ome')->model('batch_log');
@@ -429,10 +425,6 @@ class ome_ctl_admin_order_lack extends desktop_controller {
         return $params;
     }
 
-    /**
-     * routerSpilt
-     * @return mixed 返回值
-     */
     public function routerSpilt() {
 //        $key = 'ome-order-lack-router';
 //        cachecore::store($key, time(), 360);
@@ -457,10 +449,6 @@ class ome_ctl_admin_order_lack extends desktop_controller {
         echo json_encode($retArr);
     }
 
-    /**
-     * apply
-     * @return mixed 返回值
-     */
     public function apply() {
         $order_id = (int) $_GET['order_id'];
         $order = app::get('ome')->model('orders')->db_dump($order_id, 'shop_type, order_source');
@@ -480,7 +468,7 @@ class ome_ctl_admin_order_lack extends desktop_controller {
             exit;
         }
         $bmIds = array_column($order_items, 'product_id');
-        $branch_id = current($appointBranch)['branch_id'];
+        $branch_id = current($appointBranch);
         $branch_product = app::get('ome')->model('branch_product')->getList('product_id, store, store_freeze', 
             ['branch_id'=>$branch_id, 'product_id'=>$bmIds]);
         $branch_product = array_column($branch_product, null, 'product_id');
@@ -509,10 +497,6 @@ class ome_ctl_admin_order_lack extends desktop_controller {
         $this->singlepage('admin/order/lack/apply.html');
     }
 
-    /**
-     * dealApply
-     * @return mixed 返回值
-     */
     public function dealApply() {
         $order_id = (int) $_POST['order_id'];
         $out_stock = $_POST['out_stock'];

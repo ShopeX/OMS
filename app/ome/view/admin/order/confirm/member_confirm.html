@@ -23,8 +23,8 @@
         <table width="100%" cellspacing="0" cellpadding="0" border="0">
             <tbody>
             <tr>
-                <{if $member.is_encrypt}><th><a class="data-hide member-sensitive-btn" href="javascript:void(0);" ></a></th><{/if}>
-                <th><{if $member.is_encrypt && $order.shop_type == 'pinduoduo'}><a data-type = 'uname' class="member-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>会员用户名：</th>
+                <{if $member.is_encrypt && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><th><a class="data-hide member-sensitive-btn" href="javascript:void(0);" ></a></th><{/if}>
+                <th><{if $member.is_encrypt && $order.shop_type == 'pinduoduo' && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a data-type = 'uname' class="member-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>会员用户名：</th>
                 <td>
                     <span sensitive-field="uname">
                     
@@ -40,9 +40,9 @@
                     <{/if}>
                     </span>
                 </td>
-                <th><{if $member.is_encrypt && $order.shop_type == 'pinduoduo'}><a data-type = 'uname' class="member-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>姓名：</th>
+                <th><{if $member.is_encrypt && $order.shop_type == 'pinduoduo' && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a data-type = 'uname' class="member-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>姓名：</th>
                 <td><span sensitive-field="name"><{$member.contact.name|ciphertext:'member','name',$order.shop_type}></span></td>
-                <th><{if $member.is_encrypt && $order.shop_type == 'pinduoduo'}><a data-type = 'tel' class="member-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>联系电话：</th>
+                <th><{if $member.is_encrypt && $order.shop_type == 'pinduoduo' && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a data-type = 'tel' class="member-sensitive-btn-detail data-hide" style="background-size: 13px 10px;" href="javascript:void(0);"></a><{/if}>联系电话：</th>
                 <td>
                     <span sensitive-field="tel"><{$member.contact.phone.telephone|ciphertext:'member','tel',$order.shop_type}></span>
                     <span><{if $member.contact.phone.telephone}>/<{/if}></span>

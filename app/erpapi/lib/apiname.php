@@ -313,6 +313,8 @@ define("SHOP_GET_ITEMS_ALL_RPC", 'store.items.all.get');                        
 define("SHOP_GET_ITEMS_LIST_RPC", 'store.items.list.get');                              // 通过IID获取多个前端商品
 define("SHOP_GET_FENXIAO_PRODUCTS", 'store.fenxiao.products.get');                      // 淘分销商品下载
 define("SHOP_GET_SUPPLIER_PRODUCTS", 'store.supplier.item.list.info.query');            // 供应商商品下载
+define("SHOP_SUPPLIER_PRODUCTS_FIND",'store.supplier.products.find');                  // 供应商商品查询
+
 define("SHOP_ITEM_GET",'store.item.get');                                               // 通过IID获取单个商品
 define("SHOP_ITEM_SKU_GET",'store.item.sku.get');                                       // 单拉商品SKU
 define("SHOP_ORDER_SETTLE_GET",'store.trade.settle.get');                               //获取抖音订单明细

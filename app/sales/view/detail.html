@@ -13,14 +13,12 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-
-
 <{capture name="header"}>
   <link href="../app/ome/statics/ome.css" rel="stylesheet" type="text/css">
 <{/capture}>
 
 <div class="tableform" id="saleinfo">
-<h4><{if $deliveryinfo.is_encrypt}><a class="delivery-sensitive-btn data-hide" href="javascript:void(0);"></a><{/if}>基本信息</h4>
+<h4><{if $deliveryinfo.is_encrypt && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a class="delivery-sensitive-btn data-hide" href="javascript:void(0);"></a><{/if}>基本信息</h4>
 <div class="division">
     <table border="0" cellspacing="0" cellpadding="0">
         <tr>

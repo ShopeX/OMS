@@ -13,9 +13,8 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-
 <div class="tableform">
-<h4><span><{if $aftersales.is_encrypt}><a class="order-sensitive-btn data-hide" href="javascript:void(0);"></a><{/if}><{t}>售后单详情<{/t}></span></h4>
+<h4><span><{if $aftersales.is_encrypt && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a class="order-sensitive-btn data-hide" href="javascript:void(0);"></a><{/if}><{t}>售后单详情<{/t}></span></h4>
 <div class="division">
   <table width="100%" border="0" cellspacing="0" cellpadding="0" id="consigneeinfo">
   <tr>

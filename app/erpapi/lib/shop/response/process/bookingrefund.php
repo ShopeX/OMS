@@ -79,6 +79,12 @@ class erpapi_shop_response_process_bookingrefund{
         }else{ //异步asynchronous
             $orderInfo['pause_status'] = $pause_status;
             $ret = $this->ordermsg_back($orderInfo, $params);
+
+            // 如果是猫超主站退款回告成功，直接退款
+            if ($ret['rsp'] == 'succ' && in_array('MCZZ', (array) $params['sub_business_type'])) {
+                $this->_dealRefund($orderInfo);
+            }
+
             return array('rsp'=>'succ', 'msg' => $ret);
         }
     }

@@ -20,16 +20,12 @@
  * @author 334395174@qq.com
  * @version 0.1
  */
+
 class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
 {
 
     // 流水单
-    /**
-     * index
-     * @return mixed 返回值
-     */
-
-    public function index(){
+	public function index(){
 
         $params = array(
             'actions'=>[],
@@ -50,10 +46,6 @@ class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
     }
 
     //基础数据
-    /**
-     * base
-     * @return mixed 返回值
-     */
     public function base(){
         
         if(!isset($_POST['time_from'])) $_POST['time_from'] = date('Y-m-01', strtotime(date("Y-m-d")));
@@ -197,10 +189,6 @@ class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
     }
 
     //收支单导入 - 账单导入
-    /**
-     * bill_import
-     * @return mixed 返回值
-     */
     public function bill_import(){
         $platformConfig = $this->getPlatformConfig();
         
@@ -246,10 +234,6 @@ class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
     }
 
     // 待核销列表
-    /**
-     * unverification
-     * @return mixed 返回值
-     */
     public function unverification()
     {
 
@@ -276,10 +260,6 @@ class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
 
 
     // 导出设置页
-    /**
-     * export
-     * @return mixed 返回值
-     */
     public function export(){
   
         $this->pagedata['shop_list'] = financebase_func::getShopList(financebase_func::getShopType());
@@ -289,10 +269,6 @@ class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
     }
 
     // 检查是否允许导出
-    /**
-     * 检查Export
-     * @return mixed 返回验证结果
-     */
     public function checkExport(){
         $mdlBill = app::get('financebase')->model('bill');
         $bill_start_time = strtotime($_POST['time_from']);
@@ -305,14 +281,6 @@ class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
     }
 
     // 导出csv
-    /**
-     * doExport
-     * @param mixed $shop_id ID
-     * @param mixed $time_from time_from
-     * @param mixed $time_to time_to
-     * @param mixed $bill_status bill_status
-     * @return mixed 返回值
-     */
     public function doExport($shop_id,$time_from,$time_to,$bill_status='all'){
 
         set_time_limit(0);
@@ -395,10 +363,6 @@ class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
     }
 
     // 重新匹配页面
-    /**
-     * rematch
-     * @return mixed 返回值
-     */
     public function rematch(){
         $this->pagedata['request_url'] = $this->url .'&act=doMatch';
         /* if($_POST['bill_category'] != 'all' && empty($_POST['id'])) {
@@ -408,10 +372,6 @@ class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
         $this->dialog_batch('financebase_mdl_base', false, 100, 'incr');
     }
 
-    /**
-     * doMatch
-     * @return mixed 返回值
-     */
     public function doMatch(){
         $retArr = array(
             'itotal' => 0,
@@ -486,11 +446,6 @@ class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
     }
 
     //  重新设置订单号
-    /**
-     * 重置OrderBn
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function resetOrderBn($id)
     {
         $bill_info = app::get('financebase')->model("bill")->getList('order_bn,id,credential_number,trade_no,money',array('id'=>$id,'status|lthan'=>2),0,1);
@@ -499,10 +454,6 @@ class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
     }
 
     //  保存设置订单号
-    /**
-     * 保存OrderBn
-     * @return mixed 返回操作结果
-     */
     public function saveOrderBn()
     {
         $this->begin('index.php?app=financebase&ctl=admin_shop_settlement_bill&act=index');
@@ -548,10 +499,6 @@ class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
     }
 
     // 导出未匹配订单号
-    /**
-     * exportUnMatch
-     * @return mixed 返回值
-     */
     public function exportUnMatch(){
 
         $oFunc = kernel::single('financebase_func');
@@ -562,11 +509,6 @@ class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
         $this->display('admin/bill/export_unmatch.html');
     }
 
-    /**
-     * doUnMatchExport
-     * @param mixed $platform_type platform_type
-     * @return mixed 返回值
-     */
     public function doUnMatchExport($platform_type = 'alipay'){
         set_time_limit(0);
 
@@ -662,10 +604,6 @@ class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
     }
 
     // 导入未匹配订单号
-    /**
-     * importUnMatch
-     * @return mixed 返回值
-     */
     public function importUnMatch(){
 
         $oFunc = kernel::single('financebase_func');
@@ -676,10 +614,6 @@ class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
         $this->display('admin/bill/import_unmatch.html');
     }
 
-    /**
-     * doUnMatchImport
-     * @return mixed 返回值
-     */
     public function doUnMatchImport()
     {
 
@@ -722,11 +656,6 @@ class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
 
 
     // 查看核销详情
-    /**
-     * detailVerification
-     * @param mixed $order_bn order_bn
-     * @return mixed 返回值
-     */
     public function detailVerification($order_bn)
     {
         echo $order_bn;

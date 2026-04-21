@@ -73,7 +73,7 @@
                         <td width="180px">送货地址:</td>
                         <td id='consigneeinfo'>
                             <{$dly.ship_province}>&nbsp;<{$dly.ship_city}>&nbsp;<{$dly.ship_district}>&nbsp;&nbsp;<span sensitive-field="ship_addr"><{$dly.ship_addr|escape:'html'|ciphertext:'order','ship_addr',$dly.shop_type}></span>
-                            <{if $dly.is_encrypt}><a class="delivery-sensitive-btn data-hide" href="javascript:void(0);"></a><{/if}>
+                            <{if $dly.is_encrypt && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a class="delivery-sensitive-btn data-hide" href="javascript:void(0);"></a><{/if}>
                         </td>
                     </tr>
                     <tr>
