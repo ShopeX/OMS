@@ -28,6 +28,10 @@ class ome_autotask_timer_autoconfirmorderstockinc
 
     public function process($params, &$error_msg = '')
     {
+        
+        // 标品Saas线不开启此项功能
+        return true;
+        
         set_time_limit(0);
         ignore_user_abort(1);
         @ini_set('memory_limit', '512M');

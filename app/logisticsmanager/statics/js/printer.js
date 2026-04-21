@@ -37,6 +37,8 @@
                 return new SfPrinter(options);
             case 'xhs':
                 return new XhsPrinter(options);
+            case 'aikucun':
+                return new AikucunPrinter(options);
             case 'wxshipin':
                 return new WxshipinPrinter(options);
             case 'dewuppzf': // 得物品牌直发 
@@ -1819,6 +1821,468 @@ var CaiNiaoPrinter = new Class({
             }
             console.log(tasks);
             return tasks;
+        },
+        getRequestObject:function(cmd){
+            var request  = new Object();
+            request.requestID=this.getUUID(8, 16);
+            request.cmd=cmd;
+            request.version="1.0";
+            return request;
+        },
+    });
+
+    var AikucunPrinter = new Class({
+        Extends: Printer,
+        printerInfoQueryResolved: false,
+        aikucunTaskMap: {},
+        aikucunHandledResponseMap: {},
+        refreshingEncryptData: false,
+        signVerifyDialog: null,
+        initialize: function(options){
+            this.parent(options);
+            this.warmupAikucunPrepareData();
+            this.webSocket = new WebSocket('ws://localhost:2750');
+
+            this.webSocket.onopen = function(event) {
+
+                this.webSocket.onmessage = function(event)
+                {
+                    console.log('====onmessage:', event);
+                    eval('var data = ' + event.data);
+                    if (this.handleAikucunPrinterInfoQueryResponse(data)) {
+                        return;
+                    }
+                    if (this.handleAikucunPrintResponse(data)) {
+                        return;
+                    }
+                    switch(data.cmd) {
+                        case 'print':
+                            if (data.previewImage) {
+                                this.fireEvent('preview', data);break;
+                            } else {
+                                this.fireEvent('printComplete', data);break;
+                            }
+                        case 'notifyPrintResult':
+                            if(data.taskStatus == 'printed') {
+                                this.fireEvent('printSuccess', data);break;
+                            } else if(data.taskStatus == 'failed') {
+                                this.fireEvent('printFailure', data);break;
+                            }
+                    }
+                }.bind(this);
+
+                this.webSocket.onclose = function(event)
+                {
+                    this.fireEvent('close');
+                }.bind(this);
+
+                this.fireEvent('open');
+            }.bind(this);
+
+            this.webSocket.onerror = function(event)
+            {
+                this.fireEvent('error');
+            }.bind(this);
+        },
+        isReady:function(){
+            if (this.webSocket.readyState == 0) {
+                this.fireEvent('error',{errmsg:'正在连接爱库存打印组件，请稍后再试！'});
+
+                return false;
+            }
+
+            return true;
+        },
+        showAikucunSignVerifyDialog:function(){
+            if (this.signVerifyDialog) {
+                return;
+            }
+            this.signVerifyDialog = new Dialog(new Element("div.tableform",{html:'<div class="division"><div><h4>数据验证中......</h4><div style="margin-left: 5px;">正在请求签名参数，请稍等。</div></div></div>'}),
+            {
+                title:'打印数据校验',
+                width:420,
+                height:120,
+                resizeable:false,
+            });
+        },
+        closeAikucunSignVerifyDialog:function(){
+            if (!this.signVerifyDialog) {
+                return;
+            }
+            this.signVerifyDialog.close();
+            this.signVerifyDialog = null;
+        },
+        parseAikucunJsonPacket:function(jsonPacket){
+            if (typeof jsonPacket === 'string') {
+                return JSON.decode(jsonPacket.replace(/“/g, '"'));
+            }
+            return jsonPacket;
+        },
+        getAikucunOptionData:function(){
+            var data = this.options.data;
+            if (typeof data === 'string'){
+                data = JSON.decode(data);
+            }
+            return data || [];
+        },
+        requestAikucunPrepareData:function(printRow, callback){
+            new Request.JSON({
+                url:'index.php?app=logisticsmanager&ctl=admin_waybill&act=getEncryptPrintData',
+                data:{
+                    'logi_no':printRow['logi_no'],
+                    'batch_logi_no':printRow['batch_logi_no'],
+                    'delivery_id':printRow['delivery_id'],
+                    'channel_id':printRow['channel_id'],
+                    'mode':'prepare'
+                },
+                onComplete:function(rs) {
+                    if (rs && rs.rsp == 'succ' && rs.data) {
+                        callback(true, rs.data);
+                        return;
+                    }
+                    callback(false, null);
+                }
+            }).send();
+        },
+        warmupAikucunPrepareData:function(){
+            var data = this.getAikucunOptionData();
+            if (!data || !data.length) {
+                return;
+            }
+            var queueNum = 5;
+            var total = data.length;
+            var finished = 0;
+            var _this = this;
+            var process = function(idx){
+                if (idx >= total) {
+                    finished++;
+                    if (finished < queueNum) {
+                        return;
+                    }
+                    _this.options.data = typeof _this.options.data === 'string' ? _this.toUnicode(JSON.encode(data)) : data;
+                    return;
+                }
+                if (!data[idx]) {
+                    process(idx + queueNum);
+                    return;
+                }
+                var jsonPacket = _this.parseAikucunJsonPacket(data[idx]['json_packet']);
+                var prepareData = _this.resolveAikucunPrepareData(jsonPacket, data[idx]);
+                if (prepareData && prepareData.mxEctData) {
+                    process(idx + queueNum);
+                    return;
+                }
+                _this.requestAikucunPrepareData(data[idx], function(ok, prepareRsp){
+                    if (ok) {
+                        data[idx]['json_packet'] = prepareRsp;
+                    }
+                    process(idx + queueNum);
+                });
+            };
+            for (var i = 0; i < queueNum; i++) {
+                process(i);
+            }
+        },
+        refreshAikucunSignData:function(printName, onComplete){
+            var data = this.getAikucunOptionData();
+            var iTotal = data.length;
+            if (!iTotal) {
+                if (typeOf(onComplete) === 'function') {
+                    onComplete({success: true, failCount: 0, total: 0});
+                }
+                return;
+            }
+            var iFail = 0;
+            var queueNum = 5;
+            var finishQueueNum = 0;
+            var _this = this;
+            var process = function(idx){
+                if (idx >= iTotal) {
+                    finishQueueNum++;
+                    if (finishQueueNum < queueNum) {
+                        return;
+                    }
+                    _this.options.data = typeof _this.options.data === 'string' ? _this.toUnicode(JSON.encode(data)) : data;
+                    if (typeOf(onComplete) === 'function') {
+                        onComplete({success: iFail === 0, failCount: iFail, total: iTotal});
+                    }
+                    return;
+                }
+                if (!data[idx]) {
+                    process(idx + queueNum);
+                    return;
+                }
+                var jsonPacket = this.parseAikucunJsonPacket(data[idx]['json_packet']);
+                var prepareData = this.resolveAikucunPrepareData(jsonPacket, data[idx]);
+                var continueSign = function(currentPrepareData){
+                    if (!currentPrepareData || !currentPrepareData.mxEctData) {
+                        iFail++;
+                        process(idx + queueNum);
+                        return;
+                    }
+                    new Request.JSON({
+                        url:'index.php?app=logisticsmanager&ctl=admin_waybill&act=getEncryptPrintData',
+                        data:{
+                            'logi_no':data[idx]['logi_no'],
+                            'batch_logi_no':data[idx]['batch_logi_no'],
+                            'delivery_id':data[idx]['delivery_id'],
+                            'channel_id':data[idx]['channel_id'],
+                            'print_name':printName ? printName : '',
+                            'mode':'sign',
+                            'prepare_data':JSON.encode(currentPrepareData)
+                        },
+                        onComplete:function(rs) {
+                            if(rs.rsp == 'succ') {
+                                rs.data.prepareData = currentPrepareData;
+                                data[idx]['json_packet'] = rs.data;
+                            } else {
+                                iFail++;
+                            }
+                            process(idx + queueNum);
+                        }
+                    }).send();
+                };
+                if (!prepareData || !prepareData.mxEctData) {
+                    this.requestAikucunPrepareData(data[idx], function(ok, prepareRsp){
+                        if (!ok) {
+                            iFail++;
+                            process(idx + queueNum);
+                            return;
+                        }
+                        data[idx]['json_packet'] = prepareRsp;
+                        var fallbackPacket = this.parseAikucunJsonPacket(data[idx]['json_packet']);
+                        continueSign(this.resolveAikucunPrepareData(fallbackPacket, data[idx]));
+                    }.bind(this));
+                    return;
+                }
+                continueSign(prepareData);
+            }.bind(this);
+            for (var i = 0; i < queueNum; i++) {
+                process(i);
+            }
+        },
+        resolveAikucunPrepareData:function(jsonPacket, printData){
+            if (!jsonPacket || typeof jsonPacket !== 'object') {
+                return null;
+            }
+            if (jsonPacket.prepareData && typeof jsonPacket.prepareData === 'object' && jsonPacket.prepareData.mxEctData) {
+                return JSON.decode(JSON.encode(jsonPacket.prepareData));
+            }
+            var pd = jsonPacket.printData && typeof jsonPacket.printData === 'object' ? jsonPacket.printData : null;
+            if (!pd || !pd.mxEctData) {
+                return null;
+            }
+            return {
+                orderId: jsonPacket.orderId ? jsonPacket.orderId : '',
+                logisticsNo: pd.logisticsNo ? pd.logisticsNo : (jsonPacket.logisticsNo ? jsonPacket.logisticsNo : (printData.logi_no ? printData.logi_no : '')),
+                mxEctData: pd.mxEctData
+            };
+        },
+        executeAikucunPrint:function(printer, isPreview){
+            if (!this.isReady()) {
+               return false;
+            }
+            if (this.refreshingEncryptData) {
+                this.fireEvent('error', {errmsg:'正在刷新打印签名数据，请稍后再试'});
+                return false;
+            }
+            this.refreshingEncryptData = true;
+            this.showAikucunSignVerifyDialog();
+            this.refreshAikucunSignData(printer.name, function(result){
+                    this.refreshingEncryptData = false;
+                    this.closeAikucunSignVerifyDialog();
+                    if (!result || result.failCount > 0) {
+                        this.fireEvent('error', {errmsg:'获取打印签名数据失败，请重试'});
+                        return;
+                    }
+                    var tasks = this.formatData(this.options.data, isPreview);
+                    tasks.each(function(task){
+                        this.aikucunTaskMap[task.requestId] = {
+                            documentID: task.documentID,
+                            is_preview: isPreview
+                        };
+                        this.aikucunHandledResponseMap[task.requestId] = false;
+                        console.log(
+                            isPreview
+                                ? '======Aikucun send preview payload json(with params):'
+                                : '======Aikucun send print payload json(with params):',
+                            JSON.stringify(task.payload)
+                        );
+                        this.webSocket.send(JSON.stringify(task.payload));
+                    }.bind(this));
+                }.bind(this));
+            return true;
+        },
+        print:function(printer){
+            return this.executeAikucunPrint(printer, false);
+        },
+        preview:function(printer){
+            return this.executeAikucunPrint(printer, true);
+        },
+        getPrinters:function(){
+            if (!this.isReady()) {
+                return false;
+            }
+            this.printerInfoQueryResolved = false;
+            var req = {esubrc: 'printerInfoQuery'};
+            this.webSocket.send(JSON.stringify(req));
+
+            return true;
+        },
+        markPrinterInfoQueryResolved:function(){
+            this.printerInfoQueryResolved = true;
+        },
+        handleAikucunPrinterInfoQueryResponse:function(data){
+            if (!data || data.cmd) {
+                return false;
+            }
+            var isPrinterInfoRsp = data.esubrc === 'printerInfoQuery' || typeof data.printers !== 'undefined';
+            if (!isPrinterInfoRsp) {
+                return false;
+            }
+            if (String(data.code || '') !== '' && String(data.code) !== '00000') {
+                this.markPrinterInfoQueryResolved();
+                this.fireEvent('error', {errmsg: data.message ? data.message : '获取打印机列表失败'});
+                return true;
+            }
+            if (this.printerInfoQueryResolved) {
+                return true;
+            }
+            var normalized = this.normalizeAikucunPrintersResponse(data);
+            if (!normalized) {
+                this.markPrinterInfoQueryResolved();
+                this.fireEvent('error', {errmsg: data.message ? data.message : '获取打印机列表失败'});
+                return true;
+            }
+            this.markPrinterInfoQueryResolved();
+            this.fireEvent('getPrinters', normalized);
+
+            return true;
+        },
+        normalizeAikucunPrintersResponse:function(data){
+            if (!data || !data.printers || !data.printers.length) {
+                return false;
+            }
+            var printers = [];
+            var defaultPrinter = '';
+            data.printers.each(function(item){
+                var name = item.printName ? item.printName : item.name;
+                if (!name) {
+                    return;
+                }
+                printers.push({name: name});
+                if (!defaultPrinter && String(item.defaultPrinter) === '1') {
+                    defaultPrinter = name;
+                }
+            });
+            if (!printers.length) {
+                return false;
+            }
+            if (!defaultPrinter) {
+                defaultPrinter = printers[0].name;
+            }
+
+            return {
+                printers: printers,
+                defaultPrinter: defaultPrinter,
+                msg: data.message ? data.message : ''
+            };
+        },
+        extractAikucunPushMessage:function(data){
+            var push = data.pushBackMessage ? data.pushBackMessage : {};
+            if (push && push.length && push[0]) {
+                return push[0];
+            }
+            return push;
+        },
+        resolveAikucunResponseRequestId:function(data, push){
+            if (push && push.requestId) {
+                return String(push.requestId);
+            }
+            if (data.requestId) {
+                return String(data.requestId);
+            }
+            return '';
+        },
+        buildAikucunResponsePayload:function(data, meta, push, isSuccess){
+            var logiNo = (push && push.logisticsNo) ? push.logisticsNo : '';
+            var documentID = meta && meta.documentID ? meta.documentID : ((meta && meta.is_preview ? '1_' : '0_') + (logiNo || this.getUUID(8, 16)));
+            var rsp = {
+                status: isSuccess ? 'success' : 'fail',
+                msg: data.message ? data.message : '',
+                printStatus: [{
+                    documentID: documentID,
+                    status: isSuccess ? 'success' : 'fail',
+                    detail: data.message ? data.message : ''
+                }],
+                taskID: documentID
+            };
+            if (data.previewImage) {
+                rsp.previewImage = data.previewImage;
+            }
+            return rsp;
+        },
+        fireAikucunResultEvent:function(meta, isSuccess, rsp){
+            if (meta && meta.is_preview) {
+                this.fireEvent('preview', rsp);
+                return;
+            }
+            this.fireEvent(isSuccess ? 'printSuccess' : 'printFailure', rsp);
+        },
+        formatData:function(data,is_preview){
+            var tasks = [];
+            data.each(function(printData){
+                var jsonPacket = this.parseAikucunJsonPacket(printData.json_packet);
+                if(!jsonPacket) {
+                    alert('数据结构不完整，\n无法打印');
+                    return;
+                }
+                if (typeof jsonPacket.printData === 'string') {
+                    var printDataObj = JSON.decode(jsonPacket.printData.replace(/“/g, '"'))
+                } else {
+                    var printDataObj = jsonPacket.printData;
+                }
+                if (!printDataObj || typeof printDataObj !== 'object') {
+                    return;
+                }
+                var payload = JSON.decode(JSON.encode(printDataObj));
+                var reqId = payload.requestId ? String(payload.requestId) : this.getUUID(16, 16);
+                payload.requestId = reqId;
+
+                var logiNo = printData.batch_logi_no ? printData.batch_logi_no : printData.logi_no;
+                var docId = logiNo ? logiNo : reqId;
+                tasks.push({
+                    documentID:(is_preview ? '1_' : '0_') + docId,
+                    requestId: reqId,
+                    payload: payload,
+                    logisticsNo: logiNo
+                });
+            }.bind(this));
+
+            return tasks;
+        },
+        handleAikucunPrintResponse:function(data){
+            if (!data || data.cmd || (typeof data.code === 'undefined' && typeof data.success === 'undefined')) {
+                return false;
+            }
+            var code = String(data.code);
+            var isSuccess = (code === '00000') || (code === '200') || (data.success === true);
+            var push = this.extractAikucunPushMessage(data);
+            var reqId = this.resolveAikucunResponseRequestId(data, push);
+            if (reqId && this.aikucunHandledResponseMap[reqId]) {
+                return true;
+            }
+            var meta = reqId && this.aikucunTaskMap[reqId] ? this.aikucunTaskMap[reqId] : null;
+            var rsp = this.buildAikucunResponsePayload(data, meta, push, isSuccess);
+            if (reqId && this.aikucunTaskMap[reqId]) {
+                delete this.aikucunTaskMap[reqId];
+            }
+            if (reqId) {
+                this.aikucunHandledResponseMap[reqId] = true;
+            }
+            this.fireAikucunResultEvent(meta, isSuccess, rsp);
+
+            return true;
         },
         getRequestObject:function(cmd){
             var request  = new Object();

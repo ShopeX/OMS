@@ -117,6 +117,17 @@ class ome_auth_config
                             'node_id'                 => '节点',
                         ),
                 ),
+            'b2b'    =>
+                array(
+                    'label'  => 'B2B',
+                    'desc'   => 'B2B平台对接',
+                    'params' =>
+                        array(
+                            'b2b_url'             => 'API地址',
+                            'b2b_response_secret' => 'RESPONSE SECRET',
+                            'node_id'                 => '节点',
+                        ),
+                ),
         );
 
         foreach (ome_shop_type::get_shop_type() as $key => $value) {

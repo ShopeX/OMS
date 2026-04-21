@@ -457,6 +457,9 @@
                                 </svg>
                             </div>
                         </div>
+                        <p class="complete-order-traffic-entry">
+                            <a href="<{$order_traffic_purchase_url}>" target="_blank" rel="noopener noreferrer" class="order-traffic-purchase-link">订单流量购买</a>
+                        </p>
                         
                         <{/if}>
                         <{if $is_node_binded}>
@@ -992,6 +995,23 @@
 .complete-submessage {
     font-size: 13px;
     color: #8c8c8c;
+}
+
+.complete-order-traffic-entry {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: #595959;
+}
+
+.order-traffic-purchase-link {
+    color: #1890ff;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.order-traffic-purchase-link:hover {
+    color: #40a9ff;
+    text-decoration: underline;
 }
 
 /* 未完成步骤列表 */

@@ -226,7 +226,6 @@
     </tbody></table>
 <{/capture}>
 
-
 <script>
 if ($defined($E('.order-sensitive-btn'))) {
     $E('.order-sensitive-btn').addEvent('click',function(e){
@@ -234,7 +233,6 @@ if ($defined($E('.order-sensitive-btn'))) {
             new Security({url:'index.php?app=ome&ctl=admin_order&act=showSensitiveData&p[0]=<{$order.order_id}>',clickElement:$(e.target)}).desHtml($E('.delivery-info'));
         });
     });
-
 }
 
 if($defined($('consignee-edit'))){
@@ -747,9 +745,10 @@ function do_refund()
  var height=550;
  ome_order_refund_dialog(id, newtotal, total, is_cod, pay_status, width, height);
 }
+
 function ome_order_refund_dialog(id, newtotal, total, is_cod, pay_status,width,height)
 {
- var url = 'index.php?app=ome&ctl=admin_order&act=do_check&finder_id=<{$env.get.finder_id}>&p[0]='+id+'&p[1]='+newtotal+'&p[2]='+total+'&is_cod='+is_cod+'&pay_status='+pay_status;
+    var url = 'index.php?app=ome&ctl=admin_order&act=do_check&finder_id=<{$env.get.finder_id}>&p[0]='+id+'&p[1]='+newtotal+'&p[2]='+total+'&is_cod='+is_cod+'&pay_status='+pay_status;
     new Dialog(url,{
         title:'生成退款单',
         width:width,

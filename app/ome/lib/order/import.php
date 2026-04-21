@@ -374,6 +374,8 @@ class ome_order_import  implements omecsv_data_split_interface
             $orderSdf['consignee']['mobile']  = trim($orderSdf['consignee']['mobile']);
             $orderSdf['shipping']['is_cod'] = $is_code;
             $orderSdf['shipping']['cost_shipping'] = $orderSdf['shipping']['cost_shipping'] ? $orderSdf['shipping']['cost_shipping'] : '0';
+            $orderSdf['shipping']['cost_shipping'] = (float)$orderSdf['shipping']['cost_shipping'];
+            
             $orderSdf['is_tax']             = $is_tax;
             $orderSdf['cost_tax']           = $orderSdf['cost_tax'] ? $orderSdf['cost_tax'] : '0';
             $orderSdf['discount']           = $orderSdf['discount'] ? $orderSdf['discount'] : '0';

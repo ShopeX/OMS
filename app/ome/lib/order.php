@@ -33,8 +33,7 @@ class ome_order {
         $instance = kernel::service('service.order');
         return $instance->update_iframe($order_id,$is_request,$ext);
     }
-
-
+    
     /**
    * 更新订单同步状态
    * @access public
@@ -83,7 +82,7 @@ class ome_order {
         if (empty($oid)) return NULL;
         
         if ($this->order_is_exists($oid,$node_id)){
-            return $oid;#子订单与订单号相同,直接返回
+            return $oid; //子订单与订单号相同,直接返回
         }
 
         $objModel = app::get('ome')->model('order_objects');
@@ -234,8 +233,8 @@ class ome_order {
         $orderItemMdl     = app::get('ome')->model('order_items');
         $branchMdl        = app::get('ome')->model('branch');
         $branchProductMdl = app::get('ome')->model('branch_product');
-
-
+        
+        // order
         $order = $orderMdl->db_dump($order_id, 'auto_status,abnormal_status');
 
         if (!$order) return array(false,'订单不存在');

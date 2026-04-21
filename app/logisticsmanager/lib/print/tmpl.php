@@ -150,7 +150,7 @@ class logisticsmanager_print_tmpl {
             }
             return array('rs'=>'fail', 'msg'=>$title);
         }
-        if (!in_array($data['template_type'],array('normal', 'electron', 'delivery', 'stock','cainiao', 'cainiao_standard', 'cainiao_user', 'pdd_standard', 'pdd_user','jd_standard','jd_user', 'douyin_standard', 'douyin_user','kuaishou_standard','kuaishou_user','wphvip_standard','wphvip_user','sf','xhs_standard','xhs_user','wxshipin_standard','wxshipin_user','dewu_ppzf','dewu_ppzf_zy','meituan4bulkpurchasing_user','youzan_standard'))) {
+        if (!in_array($data['template_type'],array('normal', 'electron', 'delivery', 'stock','cainiao', 'cainiao_standard', 'cainiao_user', 'pdd_standard', 'pdd_user','jd_standard','jd_user', 'douyin_standard', 'douyin_user','kuaishou_standard','kuaishou_user','wphvip_standard','wphvip_user','sf','xhs_standard','xhs_user','aikucun_standard','aikucun_user','wxshipin_standard','wxshipin_user','dewu_ppzf','dewu_ppzf_zy','meituan4bulkpurchasing_user','youzan_standard'))) {
             return array('rs'=>'fail', 'msg'=>'面单类型不符合规则！');
         }
         if(!$data['template_width'] || !$data['template_height']){

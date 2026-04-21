@@ -111,8 +111,12 @@ class erpapi_shop_matrix_taobao_request_delivery extends erpapi_shop_request_del
         // 淘宝直销、分销是否是国补订单的发货回写
         $order_id = $sdf['orderinfo']['order_id'];
         $isGuobu  = kernel::single('ome_bill_label')->getBillLabelInfo($order_id, 'order', 'SOMS_GB');
-        if ($isGuobu && ($isGuobu['label_value'] & 0x0040 || $isGuobu['label_value'] & 0x0080)) {
-            if ($sdf['feature'] && !$param['feature']) $param['feature'] = $sdf['feature'];
+        if ($isGuobu) {
+            if ($isGuobu['label_value'] & 0x0040 || $isGuobu['label_value'] & 0x0080) {
+                if ($sdf['feature'] && !$param['feature']) $param['feature'] = $sdf['feature'];
+            } else {
+                unset($param['feature']);
+            }
         }
         
         //同城配场景

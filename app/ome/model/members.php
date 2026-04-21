@@ -28,6 +28,8 @@ class ome_mdl_members extends dbeav_model{
         'tel'    => 'simple',
         'name'   => 'simple',
         'email'  => 'simple',
+        'addr'   => 'simple',
+        'zip'    => 'simple',
     );
 
     /**
@@ -85,9 +87,12 @@ class ome_mdl_members extends dbeav_model{
      */
     public function insert(&$data)
     {
+        $security = kernel::single('ome_security_factory');
         foreach ($this->__encrypt_cols as $field => $type) {
             if (isset($data[$field])) {
-                $data[$field] = (string) kernel::single('ome_security_factory')->encryptPublic($data[$field],$type);
+                if (!$security->isLocalEncryptData($data[$field], $type)) {
+                    $data[$field] = (string) $security->encryptPublic($data[$field],$type);
+                }
             }
         }
 
@@ -96,9 +101,12 @@ class ome_mdl_members extends dbeav_model{
 
     public function update($data,$filter=array(),$mustUpdate = null)
     {
+        $security = kernel::single('ome_security_factory');
         foreach ($this->__encrypt_cols as $field => $type) {
             if (isset($data[$field])) {
-                $data[$field] = (string) kernel::single('ome_security_factory')->encryptPublic($data[$field],$type);
+                if (!$security->isLocalEncryptData($data[$field], $type)) {
+                    $data[$field] = (string) $security->encryptPublic($data[$field],$type);
+                }
             }
         }
 

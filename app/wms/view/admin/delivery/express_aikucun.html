@@ -1,0 +1,105 @@
+<{capture name="header"}>
+<style>
+    .order-box{ height:auto; padding:10px; margin:5px 20px; border:1px solid #ddd}
+    .order-box li{ padding:3px 0}
+    .sorder-box li{ padding:3px 3px; font-size: 13px;}
+    .order-box td{ padding:3px 5px}
+</style>
+<{/capture}>
+<script type="text/javascript">
+    var err = <{$err}>;
+    if (err==true){
+        new Dialog(new Element("div.tableform",'<div class="division">部分发货单已被合并或者拆分</div><div class="table-action"><{button label="关闭" onclick="re_finder();"}></div>'),{
+            title:'提示',
+            width:230,
+            height:130,
+            modal:true,
+            resizeable:false});
+    }
+
+    function re_finder(){
+        opener.finderGroup['<{$env.get.finder_id}>'].unselectAll();
+        opener.finderGroup['<{$env.get.finder_id}>'].refresh.delay(400,opener.finderGroup['<{$env.get.finder_id}>']);
+        window.close();
+    }
+
+    var count = <{$count}>;
+    var ExpressCheck = {
+        hasOnePrint: '<{$hasOnePrint}>',
+
+        alertMsg: function() {
+            if(this.hasOnePrint > 0) {
+                if(confirm('您的选择含有已打印快递单，你确定要重复打印吗？')==false) {
+                    window.close();
+                }
+            }
+        },
+
+        checkConfirm: function() {
+            if(this.hasOnePrint > 0) {
+                return confirm('您的选择含有已打印快递单，请核对快递面单上的单号和收货人姓名是否对应正确！');
+            }
+
+            return true;
+        }
+    };
+
+    ExpressCheck.alertMsg();
+</script>
+<{ if $err=='false' }>
+    <div class="">
+        <div id='information' class="error" style="display:none; font-weight:700;"></div>
+        <div id='content' class="order-box" style="display:none"></div>
+        <div id="formContent" class="order-box">
+            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td>
+                        <h2><font color="red"><{$logi_name}></font> 打印 <font color="red"><{$count}></font> 份快递单</h2>
+                        <{if $extend_message}>
+                        <h2 class="notice" style="font-size: 20px;"><{$extend_message}></h2>
+                        <{/if}>
+
+                        <div id ="printPreview" class="note">
+                            <div style="padding:5px;margin-bottom: 8px;" id="printPreview_1">
+                                <{ if $delibery_bill_flag }>
+                                    <{button label="打印快递单" id="onlyprint_btn" type="button" class="btn btn-primary"}>&nbsp;&nbsp;&nbsp;&nbsp;
+                                <{ else }>
+                                    <{button label="打印快递单" id="doprint_btn" class="btn-primary" }>&nbsp;&nbsp;&nbsp;&nbsp;
+                                <{ /if }>
+                                <{button label="打印预览" id="preview_btn" class="btn-primary" style="display:none" }>&nbsp;&nbsp;&nbsp;&nbsp;
+                                <span id="printerSpan"></span>
+                            </div>
+                            <span id="printPreview_3" style="display:none;font-size:14px;font-weight:bold;">
+                                <span id="printPreview_3_msg">无法打印</span>
+                                <{button label="关闭页面" id="printPreview_close" class="btn-primary" }>
+                            </span>
+                        </div>
+
+                        <div id="dly_printer_box" style="overflow: auto; position: relative;">
+                            <div id="dly_printer_div" style="float:left;width: 80%;" ></div>
+                            <div id="dly_printer" style="float:right;width:19%;"></div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <script type="text/javascript">
+        <{ if $errIds }>
+            var alertMsg = '';
+            <{ foreach from=$errIds item=cid }>
+                alertMsg = alertMsg + "<{$errBns[$cid]}>：" + "<{$errInfo[$cid]}> <br/>" ;
+                alertMsg = alertMsg + '';
+            <{/foreach}>
+            alertMsg = alertMsg + '<br/>以上发货单在本次打印列表中已被剔除，请在处理后重新打印。';
+            $('information').style.display='';
+            if ($('information').innerHTML != '') {
+                $('information').innerHTML = $('information').innerHTML + alertMsg;
+            } else {
+                $('information').innerHTML = alertMsg;
+            }
+        <{ /if }>
+    </script>
+    <{include file="admin/delivery/include/template_aikucun.html" app="wms"}>
+<{ /if }>
+

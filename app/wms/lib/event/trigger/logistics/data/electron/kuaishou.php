@@ -69,8 +69,8 @@ class wms_event_trigger_logistics_data_electron_kuaishou extends wms_event_trigg
                 $deliveryExtend = array();
                 foreach($arrBill as $bill) {
                     $tmp = $dlyExtend;
-                    $this->needRequestId[] = $bill['log_id'];
-                    $tmp['delivery_bn'] = $this->setChildRqOrdNo($dlyExtend['delivery_bn'], $bill['log_id']);
+                    $this->needRequestId[] = $bill['b_id'];
+                    $tmp['delivery_bn'] = $this->setChildRqOrdNo($dlyExtend['delivery_bn'], $bill['b_id']);
                     $deliveryExtend[] = $tmp;
                 }
                 break;

@@ -9,16 +9,18 @@
     <permission id="ticket_workflow_record_list">审批流记录列表</permission>
     <permission id="ticket_workflow_record_operate">审批流记录操作</permission>
   </permissions>
+
   <workground name="工单管理" id="ticket_manager" order="120" icon="icon-dingdanguanli-01">
     <menugroup name="审批流管理" en="ticket-workflow">
-      <menu controller='admin_workflow_template' action='index' permission='ticket_workflow_template_list' display='true' order='20100' target='/m-audit-template-list'>审批流模板列表</menu>
+      <!-- <menu controller='admin_workflow_template' action='index' permission='ticket_workflow_template_list' display='true' order='20100' target='/m-audit-template-list'>审批流模板列表</menu> -->
       <!-- <menu controller='admin_workflow_template' action='operate' permission='ticket_workflow_template_operate' display='false' order='20110'>审批流模板操作</menu> -->
       <!-- <menu controller='admin_workflow_node' action='index' permission='ticket_workflow_node_list' display='true' order='20120'>审批流节点列表</menu> -->
-      <menu controller='admin_workflow_node' action='operate' permission='ticket_workflow_node_operate' display='false' order='20130'>审批流节点操作</menu>
-      <menu controller='admin_workflow_case' action='index' permission='ticket_workflow_case_list' display='true' order='20140'>赠品审批列表</menu>
-      <menu controller='admin_workflow_case' action='operate' permission='ticket_workflow_case_operate' display='false' order='20150'>赠品审批操作</menu>
-      <menu controller='admin_workflow_record' action='index' permission='ticket_workflow_record_list' display='true' order='20160'>审批结果列表</menu>
-      <menu controller='admin_workflow_record' action='operate' permission='ticket_workflow_record_operate' display='false' order='20170'>审批结果操作</menu>
+      <!-- <menu controller='admin_workflow_node' action='operate' permission='ticket_workflow_node_operate' display='false' order='20130'>审批流节点操作</menu> -->
+      <!-- <menu controller='admin_workflow_case' action='index' permission='ticket_workflow_case_list' display='true' order='20140'>赠品审批列表</menu> -->
+      <!-- <menu controller='admin_workflow_case' action='operate' permission='ticket_workflow_case_operate' display='false' order='20150'>赠品审批操作</menu> -->
+      <!-- <menu controller='admin_workflow_record' action='index' permission='ticket_workflow_record_list' display='true' order='20160'>审批结果列表</menu> -->
+      <!-- <menu controller='admin_workflow_record' action='operate' permission='ticket_workflow_record_operate' display='false' order='20170'>审批结果操作</menu> -->
     </menugroup>
   </workground>
+
 </desktop>

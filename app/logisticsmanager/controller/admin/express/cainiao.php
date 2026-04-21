@@ -40,6 +40,7 @@ class logisticsmanager_ctl_admin_express_cainiao extends desktop_controller {
             'dewu'=>'得物品牌直发电子面单',
             'meituan4bulkpurchasing'=>'美团电商',
             'youzan'=>'有赞电子面单',
+            'aikucun'=>'爱库存电子面单',
         ];
         $this->display('admin/express/pre_sync_tpl.html');
     }

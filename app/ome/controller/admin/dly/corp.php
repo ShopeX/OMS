@@ -117,7 +117,7 @@ class ome_ctl_admin_dly_corp extends desktop_controller
             //新版控件打印
             $templateObj = app::get("logisticsmanager")->model('express_template');
             $templates   = $templateObj->getList("template_id,template_name,template_type");
-            $normalTmpl  = $cainiaoTmpl  = $electronTmpl = $kuaishouTmpl = $wphvipTmpl  = $huaweiTmpl  = $xhsTmpl = $wxshipinTmpl = $meituan4bulkpurchasingTmpl = array();
+            $normalTmpl  = $cainiaoTmpl  = $electronTmpl = $kuaishouTmpl = $wphvipTmpl  = $huaweiTmpl  = $xhsTmpl = $wxshipinTmpl = $meituan4bulkpurchasingTmpl = $akcTmpl = array();
             foreach ($templates as $val) {
                 if ($val['template_type'] == 'normal') {
                     $normalTmpl[] = $val;
@@ -139,6 +139,8 @@ class ome_ctl_admin_dly_corp extends desktop_controller
                     $sfTmpl[] = $val;
                 }elseif(in_array($val['template_type'], array('xhs_standard','xhs_user'))){
                     $xhsTmpl[] = $val;
+                }elseif(in_array($val['template_type'], array('aikucun_standard','aikucun_user'))){
+                    $akcTmpl[] = $val;
                 }elseif(in_array($val['template_type'], array('wxshipin_standard','wxshipin_user'))){
                     $wxshipinTmpl[] = $val;
                 }elseif(in_array($val['template_type'], array('youzan_standard'))){
@@ -161,6 +163,7 @@ class ome_ctl_admin_dly_corp extends desktop_controller
             $this->pagedata['youzanTmpl']   = $youzanTmpl;
             $this->pagedata['electronTmpl'] = $electronTmpl;
             $this->pagedata['xhsTmpl']      = $xhsTmpl;
+            $this->pagedata['akcTmpl']      = $akcTmpl;
             $this->pagedata['wxshipinTmpl'] = $wxshipinTmpl;
             $this->pagedata['dewuTmpl'] = $dewuTmpl;
             $this->pagedata['meituan4bulkpurchasingTmpl'] = $meituan4bulkpurchasingTmpl;
@@ -190,7 +193,7 @@ class ome_ctl_admin_dly_corp extends desktop_controller
 
                 if ($val['channel_type'] == '360buy') {
                     $channelType[$val['channel_id']] = 'JDCOD';
-                } elseif (in_array($val['channel_type'], array('taobao', 'unionpay', 'pinjun', 'pdd','douyin','kuaishou','xhs','wxshipin', 'meituan4bulkpurchasing','dewu')) || ($val['channel_type']=='jdalpha' && in_array($val['logistics_code'], ['JDDJ']))) {
+                } elseif (in_array($val['channel_type'], array('taobao', 'unionpay', 'pinjun', 'pdd','douyin','kuaishou','xhs','wxshipin', 'meituan4bulkpurchasing','dewu','aikucun')) || ($val['channel_type']=='jdalpha' && in_array($val['logistics_code'], ['JDDJ']))) {
 
                     $channelType[$val['channel_id']] = $val['logistics_code'];
                 } else {
@@ -267,7 +270,7 @@ class ome_ctl_admin_dly_corp extends desktop_controller
             //新版控件打印
             $templateObj = app::get("logisticsmanager")->model('express_template');
             $templates   = $templateObj->getList("template_id,template_name,template_type");
-            $canniaoId  = $kuaishouTmpl = $wphvipTmpl = $xhsTmpl = $wxshipinTmpl = array();
+            $canniaoId  = $kuaishouTmpl = $wphvipTmpl = $xhsTmpl = $wxshipinTmpl = $akcTmpl = array();
             foreach ($templates as $val) {
                 if ($val['template_type'] == 'normal') {
                     $normalTmpl[] = $val;
@@ -290,6 +293,8 @@ class ome_ctl_admin_dly_corp extends desktop_controller
                     $sfTmpl[] = $val;
                 }elseif(in_array($val['template_type'], array('xhs_standard','xhs_user'))){
                     $xhsTmpl[] = $val;
+                }elseif(in_array($val['template_type'], array('aikucun_standard','aikucun_user'))){
+                    $akcTmpl[] = $val;
                 }elseif(in_array($val['template_type'], array('wxshipin_standard','wxshipin_user'))){
                     $wxshipinTmpl[] = $val;
                 }elseif(in_array($val['template_type'], array('youzan_standard'))){
@@ -313,6 +318,7 @@ class ome_ctl_admin_dly_corp extends desktop_controller
             $this->pagedata['electronTmpl'] = $electronTmpl;
             $this->pagedata['canniaoId']    = $canniaoId;
             $this->pagedata['xhsTmpl']      = $xhsTmpl;
+            $this->pagedata['akcTmpl']      = $akcTmpl;
             $this->pagedata['wxshipinTmpl'] = $wxshipinTmpl;
             $this->pagedata['youzanTmpl']   = $youzanTmpl;
             $this->pagedata['meituan4bulkpurchasingTmpl'] = $meituan4bulkpurchasingTmpl;
@@ -338,7 +344,7 @@ class ome_ctl_admin_dly_corp extends desktop_controller
                 $channelShop[$val['channel_id']]['name']           = $shopList[$val['shop_id']];
                 $channelShop[$val['channel_id']]['logistics_code'] = $val['logistics_code'];
 
-                if (in_array($val['channel_type'], array('taobao','pdd','unionpay','pinjun','jdalpha','hqepay','douyin','kuaishou','xhs','wxshipin'))) {
+                if (in_array($val['channel_type'], array('taobao','pdd','unionpay','pinjun','jdalpha','hqepay','douyin','kuaishou','xhs','wxshipin','aikucun'))) {
                     if ($val['logistics_code'] == 'JTSD' && !in_array($val['channel_type'],['wxshipin'])) {
                         $val['logistics_code'] = 'jitu';
                     }
@@ -436,6 +442,8 @@ class ome_ctl_admin_dly_corp extends desktop_controller
                     $dlycorp['prt_tmpl_id'] = $dlycorp['sf_tmpl_id'];
                 } elseif ($dlycorp['electron_type'] == 'xhs') {
                     $dlycorp['prt_tmpl_id'] = $dlycorp['xhs_tmpl_id'];
+                } elseif ($dlycorp['electron_type'] == 'aikucun') {
+                    $dlycorp['prt_tmpl_id'] = $dlycorp['akc_tmpl_id'];
                 } elseif ($dlycorp['electron_type'] == 'wxshipin') {
                     $dlycorp['prt_tmpl_id'] = $dlycorp['wxshipin_tmpl_id'];
                 } elseif ($dlycorp['electron_type'] == 'meituan4bulkpurchasing') {

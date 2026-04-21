@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class ome_print_tmpl_express{
 	
 	public $smarty = null;
@@ -24,7 +23,7 @@ class ome_print_tmpl_express{
     static $logi_list = array('amazon','dangdang');//需要根据物流公司自定义快递单输入信息列表
 
     /**
-     * 
+     *
      * @param String $logi
      * @param Object $controller
      * @return ome_print_tmpl_express
@@ -105,6 +104,10 @@ class ome_print_tmpl_express{
 
             $this->smarty->singlepage("admin/delivery/express_xhs.html", 'wms');
 
+        }elseif(in_array($template_type, array('aikucun_standard','aikucun_user'))) {
+
+            $this->smarty->singlepage("admin/delivery/express_aikucun.html", 'wms');
+
         }elseif(in_array($template_type, array('wxshipin_standard','wxshipin_user'))) {
 
             $this->smarty->singlepage("admin/delivery/express_wxshipin.html", 'wms');
@@ -163,11 +166,6 @@ class ome_print_tmpl_express{
         return $brower;
     }
 
-    /**
-     * 获取ExpressTpl
-     * @param mixed $corp corp
-     * @return mixed 返回结果
-     */
     public function getExpressTpl($corp) {
         $prtTmplId = $corp['prt_tmpl_id'];
         $templateObj = app::get("logisticsmanager")->model('express_template');
@@ -182,7 +180,7 @@ class ome_print_tmpl_express{
             $printTmpl['template_select'] = json_encode(unserialize($printTmpl['template_select']));
         }
         $this->printTpl = $printTmpl;
-        if(in_array($printTmpl['template_type'], array('cainiao', 'cainiao_standard', 'cainiao_user','pdd_standard','pdd_user','jd_standard','jd_user', 'douyin_standard', 'douyin_user','kuaishou_standard','kuaishou_user','sf','xhs_standard','xhs_user','meituan4bulkpurchasing_user','youzan_standard'))) {
+        if(in_array($printTmpl['template_type'], array('cainiao', 'cainiao_standard', 'cainiao_user','pdd_standard','pdd_user','jd_standard','jd_user', 'douyin_standard', 'douyin_user','kuaishou_standard','kuaishou_user','sf','xhs_standard','xhs_user','aikucun_standard','aikucun_user','meituan4bulkpurchasing_user','youzan_standard'))) {
             $rs = $this->_dealUnShopexWidgetField($corp['channel_id']);
             if(!$rs) {
                 return false;
@@ -350,6 +348,11 @@ class ome_print_tmpl_express{
 
                 $this->printField = array('batch_logi_no','logi_no','print_config','channel_id','delivery_id','json_packet','user_id');
                 // 获取自定义模板url和自定义模板内容
+                $this->_xhs_custom();
+                break;
+            case 'aikucun_standard':
+            case 'aikucun_user':
+                $this->printField = array('batch_logi_no','logi_no','print_config','channel_id','delivery_id','json_packet','user_id');
                 $this->_xhs_custom();
                 break;
             default : break;

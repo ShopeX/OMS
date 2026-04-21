@@ -146,6 +146,10 @@ define('STORE_WAYBILL_ADRESS', 'store.waybill.i.search'); //抖音订购地址
 define('STORE_WAYBILL_GET', 'store.waybill.i.get'); //电子面单获取
 define('STORE_STANDARD_DY_TEMPLATE', 'store.waybill.template.get'); //抖音获取模板
 define('STORE_WAYBILL_PRINTDATA', 'store.waybill.printdata'); //抖音获取打印数据
+// 爱库存等矩阵取号（method 与 STORE_WAYBILL_GET 相同，语义区分便于检索）
+define('STORE_WAYBILL_DY_GET', 'store.waybill.i.get');
+// 矩阵生成打印控件签名 params（爱库存 prepare/sign 的 sign 阶段）
+define('STORE_API_SIGN_GET', 'store.api.sign.get');
 
 // 小红书电子面单
 define('STORE_STANDARD_XHS_TEMPLATE', 'store.waybill.stdtemplates.get'); //小红书获取模板

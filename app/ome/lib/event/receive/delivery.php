@@ -1004,13 +1004,6 @@ class ome_event_receive_delivery extends ome_event_response
                 $service->after_consign($this->__currDlyId);
             }
         }
-        
-        // 订单发货完成后，service扩展触发其他服务
-        foreach(kernel::servicelist('ome.service.order.finish.after') as $service) {
-            if(method_exists($service, 'after_order_finish')) {
-                $service->after_order_finish($orderIds);
-            }
-        }
     }
 
     //自动开蓝票处理

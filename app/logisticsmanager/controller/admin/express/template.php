@@ -20,7 +20,7 @@ class logisticsmanager_ctl_admin_express_template extends desktop_controller{
     var $workground = "setting_tools";
     
     function index(){
-        $base_filter = array('template_type' => array('normal', 'electron' , 'cainiao', 'cainiao_standard', 'cainiao_user', 'pdd_standard', 'pdd_user', 'jd_standard', 'jd_user', 'douyin_standard', 'douyin_user','kuaishou_standard','kuaishou_user','wphvip_standard','wphvip_user', 'sf', 'xhs_standard', 'xhs_user', 'wxshipin_standard', 'wxshipin_user','dewu_ppzf','dewu_ppzf_zy','meituan4bulkpurchasing_user','youzan_standard'));
+        $base_filter = array('template_type' => array('normal', 'electron' , 'cainiao', 'cainiao_standard', 'cainiao_user', 'pdd_standard', 'pdd_user', 'jd_standard', 'jd_user', 'douyin_standard', 'douyin_user','kuaishou_standard','kuaishou_user','wphvip_standard','wphvip_user', 'sf', 'xhs_standard', 'xhs_user', 'aikucun_standard', 'aikucun_user', 'wxshipin_standard', 'wxshipin_user','dewu_ppzf','dewu_ppzf_zy','meituan4bulkpurchasing_user','youzan_standard'));
         $params = array(
             'title'=>'快递面单管理',
             'actions' => array(
@@ -78,6 +78,7 @@ class logisticsmanager_ctl_admin_express_template extends desktop_controller{
             'wphvip'  => array('label' => app::get('base')->_('唯品会vip'), 'filter' => array('filter_sql' => 'template_type in("wphvip_user","wphvip_standard")', 'status' => 'true'), 'optional' => false),
             'sf'  => array('label' => app::get('base')->_('顺丰'), 'filter' => array('filter_sql' => 'template_type in("sf")', 'status' => 'true'), 'optional' => false),
             'xhs'  => array('label' => app::get('base')->_('小红书'), 'filter' => array('filter_sql' => 'template_type in("xhs_standard","xhs_user")', 'status' => 'true'), 'optional' => false),
+            'aikucun'  => array('label' => app::get('base')->_('爱库存'), 'filter' => array('filter_sql' => 'template_type in("aikucun_standard","aikucun_user")', 'status' => 'true'), 'optional' => false),
             'wxshipin'  => array('label' => app::get('base')->_('微信视频号'), 'filter' => array('filter_sql' => 'template_type in("wxshipin_standard","wxshipin_user")', 'status' => 'true'), 'optional' => false),
             'youzan'  => array('label' => app::get('base')->_('有赞'), 'filter' => array('filter_sql' => 'template_type in("youzan_standard")', 'status' => 'true'), 'optional' => false),
             'dewu'  => array('label' => app::get('base')->_('得物'), 'filter' => array('filter_sql' => 'template_type in("dewu_ppzf","dewu_ppzf_zy")', 'status' => 'true'), 'optional' => false),

@@ -348,7 +348,8 @@ EOF;
             $data['shop_id']  = $_POST['shop_id'];
 
             $is_ome_bind_unionpay = false;
-            #检测是否已绑定银联
+            
+            //检测是否已绑定银联
             base_kvstore::instance('ome/bind/unionpay')->fetch('ome_bind_unionpay', $is_ome_bind_unionpay);
             if (!$is_ome_bind_unionpay) {
                 $bind_status = kernel::single('erpapi_router_request')->set('unionpay', '1705101437')->unionpay_bind();
@@ -359,7 +360,7 @@ EOF;
                 }
             }
         } elseif ($data['channel_type'] == 'jdalpha') {
-            #编辑的时候，支付方式,不允许改
+            //编辑的时候，支付方式,不允许改
             if ($_POST['channel_id']) {
                 $channel = $channelObj->dump(array('channel_id' => $_POST['channel_id']));
                 $sfinfo  = explode('|||', $channel['shop_id']);
@@ -518,13 +519,11 @@ EOF;
             kernel::single('wms_event_trigger_logistics_electron')->bufferGetWaybill($data['channel_id']);
         }
         if (in_array($data['channel_type'], ['taobao','jdalpha'])) {
-//默认获取发货地址
+            //默认获取发货地址
             $extendObj = app::get('logisticsmanager')->model('channel_extend');
             $extend    = $extendObj->dump(array('channel_id' => $data['channel_id']), 'id');
             if (!$extend) {
-
                 kernel::single('erpapi_router_request')->set('logistics', $data['channel_id'])->electron_getWaybillISearch();
-
             }
         }
         echo "SUCC";
@@ -852,11 +851,14 @@ EOF;
                 if ($res['request_logistics_code']!=$v['delivery_id']) {
                     continue;
                 }
-                $key = $v['acct_id'];
-                if (isset($v['_unique_acct_id']) && $v['_unique_acct_id']) {
-                    $key = $v['_unique_acct_id'];
+                // 与云起一致：xhs/美团医药/爱库存等接口可能返回空 acct_id，不能用 acct_id 作数组键，否则单选 value 为空且 POST 校验失败
+                $uniqueKey = $v['acct_id'];
+                if (in_array($res['channel_type'], array('xhs', 'meituan4medicine', 'aikucun'))) {
+                    $uniqueKey = $k + 1;
+                } elseif (isset($v['_unique_acct_id']) && $v['_unique_acct_id']) {
+                    $uniqueKey = $v['_unique_acct_id'];
                 }
-                $accountList[$key] = [
+                $accountList[$uniqueKey] = [
                     'available'      => $v['available'],
                     'status'         => $v['status'],
                     'delivery_id'    => $v['delivery_id'],
@@ -882,6 +884,7 @@ EOF;
                     'district_name'  => $v['district_name'],
                     'city_code'      => $v['city_code'],
                     'province_name'  => $v['province_name'],
+                    'bizLine'        => isset($v['bizLine']) ? $v['bizLine'] : '',
                 ];
             }
         }
@@ -906,7 +909,8 @@ EOF;
         }
 
         $accountList = json_decode($_POST['account_list_json'], 1);
-        $accountInfo = $accountList[$_POST['_unique_acct_id']];
+        $pickKey       = (string) $_POST['_unique_acct_id'];
+        $accountInfo   = isset($accountList[$pickKey]) ? $accountList[$pickKey] : null;
         if (!$accountInfo) {
             $this->end(false, '电子面单账号id无效');
         }
@@ -926,8 +930,8 @@ EOF;
             'address_detail' => $accountInfo['detail_address'],
             'street'         => $accountInfo['street_name'],
             'default_sender' => $accountInfo['name'],
-            'mobile'         => $accountInfo['mobile'],
-            'tel'            => $accountInfo['phone'],
+            'mobile'         => $accountInfo['mobile'] ? $accountInfo['mobile'] : $accountInfo['phone'],
+            'tel'            => $accountInfo['phone'] ? $accountInfo['phone'] : $accountInfo['mobile'],
             'shop_name'      => $accountInfo['site_name'],
             'seller_id'      => $accountInfo['acct_id'],
         );
@@ -938,6 +942,7 @@ EOF;
                 'site_code' => $accountInfo['site_code'],
                 'acct_id'   => $accountInfo['acct_id'],
                 'shop_id'   => $accountInfo['shop_id'],
+                'bizLine'   => isset($accountInfo['bizLine']) ? $accountInfo['bizLine'] : '',
             ];
         }
 
@@ -1124,10 +1129,6 @@ EOF;
         if (!$channelMdl->save($channel)) {
             $this->end(false, '保存失败：'.$channelMdl->db->errorinfo());
         }
-        
-
-        
-
         
         $channelExt = [
             'channel_id' => $channel['channel_id'],

@@ -18,24 +18,134 @@
 class ome_mdl_member_address extends dbeav_model{
 
     /**
+     * 须加密字段（本地加密，支持透明读写）
+     *
+     * @var array
+     */
+    private $__encrypt_cols = array(
+        'ship_name'   => 'simple',
+        'ship_addr'   => 'simple',
+        'ship_mobile' => 'phone',
+        'ship_tel'    => 'phone',
+    );
+
+    /**
+     * 加密数据（写入前）
+     *
+     * @param array $data
+     * @return void
+     */
+    protected function _encryptData(&$data)
+    {
+        $security = kernel::single('ome_security_factory');
+        foreach ($this->__encrypt_cols as $field => $type) {
+            if (!isset($data[$field])) {
+                continue;
+            }
+            // 避免重复加密（本地密文）
+            if ($security->isLocalEncryptData($data[$field], $type)) {
+                continue;
+            }
+            $data[$field] = (string)$security->encryptPublic($data[$field], $type);
+        }
+    }
+
+    /**
+     * 解密数据（读出后）
+     *
+     * @param array $data
+     * @return void
+     */
+    protected function _decryptData(&$data)
+    {
+        $security = kernel::single('ome_security_factory');
+        foreach ($this->__encrypt_cols as $field => $type) {
+            if (isset($data[$field])) {
+                $data[$field] = (string)$security->decryptPublic($data[$field], $type);
+            }
+        }
+    }
+
+    public function insert(&$data)
+    {
+        $this->_encryptData($data);
+        return parent::insert($data);
+    }
+
+    public function update($data, $filter = array(), $mustUpdate = null)
+    {
+        $this->_encryptData($data);
+        return parent::update($data, $filter, $mustUpdate);
+    }
+
+    public function getList($cols='*', $filter=array(), $offset=0, $limit=-1, $orderType=null)
+    {
+        $rows = parent::getList($cols, $filter, $offset, $limit, $orderType);
+        foreach ((array)$rows as $k => $row) {
+            $this->_decryptData($row);
+            $rows[$k] = $row;
+        }
+        return $rows;
+    }
+
+    public function finder_getList($cols='*', $filter=array(), $offset=0, $limit=-1, $orderType=null)
+    {
+        $rows = parent::finder_getList($cols, $filter, $offset, $limit, $orderType);
+        foreach ((array)$rows as $k => $row) {
+            $this->_decryptData($row);
+            $rows[$k] = $row;
+        }
+        return $rows;
+    }
+
+    public function dump($filter, $cols='*', $subSdf=false)
+    {
+        $row = parent::dump($filter, $cols, $subSdf);
+        if ($row) {
+            $this->_decryptData($row);
+        }
+        return $row;
+    }
+
+    /**
      * 创建_address
      * @param mixed $data 数据
      * @return mixed 返回值
      */
     public function create_address($data){
-        $member_id = $data['member_id'];
-        if($member_id){
-            $address_hash = sprintf('%u',crc32($data['ship_name'].'-'.$data['ship_area'].$data['ship_addr'].'-'.$data['ship_mobile'].'-'.$data['ship_tel'].'-'.$data['ship_zip'].'-'.$data['ship_email']));
-            $data['address_hash'] = $address_hash;
-            $address_detail = $this->dump(array('address_hash'=>$address_hash,'member_id'=>$member_id),'address_id');
-            if(!$address_detail['address_id']){
-                $result = $this->save($data);
-            }
-            
-            if($data['is_default'] == '1' && $data['address_id']){
-                $this->db->exec("UPDATE sdb_ome_member_address SET is_default='0' WHERE member_id=".$data['member_id']." AND address_id!=".$data['address_id']);
-                $this->db->exec("UPDATE sdb_ome_members SET  area='".$data['ship_area']."',addr='".$data['ship_addr']."',mobile='".$data['ship_mobile']."',tel='".$data['ship_tel']."',email='".$data['ship_email']."', zip='".$data['ship_zip']."' WHERE member_id=".$data['member_id']);
-            }
+        $member_id = (int)$data['member_id'];
+        if (!$member_id) {
+            return;
+        }
+
+        // 使用明文计算 address_hash，避免被透明加密影响去重逻辑
+        $plain = $data;
+        $address_hash = sprintf('%u', crc32(
+            (string)($plain['ship_name'] ?? '') . '-' . (string)($plain['ship_area'] ?? '') . (string)($plain['ship_addr'] ?? '')
+            . '-' . (string)($plain['ship_mobile'] ?? '') . '-' . (string)($plain['ship_tel'] ?? '')
+            . '-' . (string)($plain['ship_zip'] ?? '') . '-' . (string)($plain['ship_email'] ?? '')
+        ));
+
+        $data['address_hash'] = $address_hash;
+        $address_detail = $this->dump(array('address_hash'=>$address_hash,'member_id'=>$member_id),'address_id');
+        if(!$address_detail['address_id']){
+            $this->save($data);
+        }
+
+        $address_id = (int)($data['address_id'] ? $data['address_id'] : $address_detail['address_id']);
+        if($data['is_default'] == '1' && $address_id){
+            $this->db->exec("UPDATE sdb_ome_member_address SET is_default='0' WHERE member_id=".$member_id." AND address_id!=".$address_id);
+
+            // 同步更新会员默认联系方式，交由 members 模型做透明加密
+            $membersObj = app::get('ome')->model('members');
+            $membersObj->update(array(
+                'area'   => $plain['ship_area'] ?? '',
+                'addr'   => $plain['ship_addr'] ?? '',
+                'mobile' => $plain['ship_mobile'] ?? '',
+                'tel'    => $plain['ship_tel'] ?? '',
+                'email'  => $plain['ship_email'] ?? '',
+                'zip'    => $plain['ship_zip'] ?? '',
+            ), array('member_id' => $member_id));
         }
         
     }

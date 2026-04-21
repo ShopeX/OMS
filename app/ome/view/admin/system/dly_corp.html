@@ -326,6 +326,7 @@
                         <input id='electron_type_youzan'  type="radio" value="youzan" name="electron_type" onchange="electronTypeChange()" <{if $electronType!='electron'}>checked<{/if}>/><{t}>有赞控件（菜鸟）<{/t}>
                         <input id='electron_type_dewu'  type="radio" value="dewu" name="electron_type" onchange="electronTypeChange()" <{if $electronType!='electron'}>checked<{/if}>/><{t}>得物品牌直发控件<{/t}>
                         <input id='electron_type_meituan4bulkpurchasing'  type="radio" value="meituan4bulkpurchasing" name="electron_type" onchange="electronTypeChange()" <{if $electronType!='electron'}>checked<{/if}>/><{t}>美团电商控件<{/t}>
+                        <input id='electron_type_aikucun'  type="radio" value="aikucun" name="electron_type" onchange="electronTypeChange()" <{if $electronType!='electron'}>checked<{/if}>/><{t}>爱库存控件<{/t}>
                     </td>
                 </tr>
                 <tr id="electronTmplName">
@@ -343,6 +344,7 @@
                     <td id='youzanTmpl'><{input type="select" name='youzan_tmpl_id' rows=$youzanTmpl  valueColumn="template_id" labelColumn="template_name" value=$dt_info.prt_tmpl_id vtype="required" style="width:100px;"}> <em><font color='red'>*</font></em></td>
                     <td id='dewuTmpl'><{input type="select" name='dewu_tmpl_id' rows=$dewuTmpl  valueColumn="template_id" labelColumn="template_name" value=$dt_info.prt_tmpl_id vtype="required" style="width:100px;"}> <em><font color='red'>*</font></em></td>
                     <td id='meituan4bulkpurchasingTmpl'><{input type="select" name='meituan4bulkpurchasing_tmpl_id' rows=$meituan4bulkpurchasingTmpl  valueColumn="template_id" labelColumn="template_name" value=$dt_info.prt_tmpl_id vtype="required" style="width:100px;"}> <em><font color='red'>*</font></em></td>
+                    <td id='akcTmpl'><{input type="select" name='akc_tmpl_id' rows=$akcTmpl  valueColumn="template_id" labelColumn="template_name" value=$dt_info.prt_tmpl_id vtype="required" style="width:100px;"}> <em><font color='red'>*</font></em></td>
                 </tr>
                 <{else}>
                 <{if $prttpl}>
@@ -426,6 +428,7 @@
             $('youzanTmpl').hide();
             $('dewuTmpl').hide();
             $('meituan4bulkpurchasingTmpl').hide();
+            $('akcTmpl').hide();
             if(jsonelectronchannel[channel_id]['channel_type']=='taobao'){
                 if($$('input[name=electron_type]:checked').get('value') == 'electron'){
                     $('electronTmpl').show();
@@ -507,6 +510,10 @@
                     $('electronTmpl').hide();
                     $('meituan4bulkpurchasingTmpl').show();
                 }
+            }else if(jsonelectronchannel[channel_id]['channel_type']=='aikucun'){
+                $('electron_type_aikucun').set('checked','checked');
+                $('electronTmpl').hide();
+                $('akcTmpl').show();
             }else if(jsonelectronchannel[channel_id]['channel_type']=='360buy' || jsonelectronchannel[channel_id]['channel_type']=='jdalpha' || jsonelectronchannel[channel_id]['channel_type']=='jdgxd'){
                 if($$('input[name=electron_type]:checked').get('value') == 'electron'){
                     $('electronTmpl').show();
@@ -552,6 +559,7 @@
             $('dewuTmpl').hide();
             $('meituan4bulkpurchasingTmpl').hide();
             $('youzanTmpl').hide();
+            $('akcTmpl').hide();
         }
     }
 

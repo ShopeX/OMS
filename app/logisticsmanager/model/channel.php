@@ -17,7 +17,7 @@
 
 class logisticsmanager_mdl_channel extends dbeav_model {
 
-    public $getWaybillAccountFromApi = ['wxshipin', 'xhs', 'meituan4bulkpurchasing'];
+    public $getWaybillAccountFromApi = ['wxshipin', 'xhs', 'meituan4bulkpurchasing', 'aikucun'];
     
     function modifier_status($row){
             if ($row == 'false') {

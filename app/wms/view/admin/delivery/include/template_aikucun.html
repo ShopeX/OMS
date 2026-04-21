@@ -1,0 +1,194 @@
+<textarea id="template_select" name="template_select" style="display:none">
+<{$printTmpl.template_select}>
+</textarea>
+<textarea id="template_data" name="template_data" style="display:none">
+<{if $printTmpl.template_data}>
+<{$printTmpl.template_data}>
+<{/if}>
+</textarea>
+<input type="hidden" value="<{$printTmpl.custom_area_url}>" />
+<textarea id="jsondata_newdata" style="display:none">
+<{$jsondata}>
+</textarea>
+<script type="text/javascript">
+    (function() {
+        Ex_Loader('<{$env.BASE_URL}>/app/logisticsmanager/statics/js/printer.js?v=20260331',function(){
+            var printerOpt = {};
+            var waitPrintTime = 10;
+            var isPrintWaybill = false;
+            var waitPreviewGenerate = '预览生成中.......';
+            var optionsData = JSON.decode($('jsondata_newdata').get('value'));
+            var jsonPacket = {};
+            try {
+                if (optionsData[0] && optionsData[0].json_packet) {
+                    jsonPacket = JSON.decode(optionsData[0].json_packet.replace(/“/g, '"'));
+                }
+            } catch (e) {}
+            var options = {
+                data:optionsData,
+                billVersion: (jsonPacket && jsonPacket.billVersion != null) ? jsonPacket.billVersion : 2,
+                template:"<{$printTmpl.template_url}>",
+                custom_template_url:"<{$printTmpl.custom_area_url}>",
+                custom_data:JSON.decode($('template_select').get('value')),
+                onGetPrinters:function(data){
+                    if(!data.printers || data.printers.length == 0) {
+                        alert(data.msg ? data.msg : '没有打印机');
+                        return null;
+                    }
+                    var temp = '<select id="printerlist" name="printerlist" class="x-input-select inputstyle" style="width:130px;">';
+                    var hasDefault = false;
+                    Object.each(data.printers,function(i,index){
+                        if (i.name.contains("<{$express_company_no}>")) {
+                            hasDefault = i.name
+                        }
+                    });
+                    Object.each(data.printers,function(i,index){
+                        var selected = '';
+
+                        if (hasDefault && i.name == hasDefault) {
+                            selected = ' selected="selected" ';
+                        }
+                        if(!hasDefault && i.name == data.defaultPrinter){
+                            selected = ' selected="selected" ';
+                        }
+
+                        temp+='<option value="'+i.name+'" ' + selected + '>'+i.name+'</option>';
+                    });
+                    temp+='</select>';
+                    $('printerSpan').set('html', temp);
+                },
+                onError:function(data){
+                    var msg = (typeof data == 'object' && data.errmsg) ? data.errmsg : '与爱库存打印组件通信失败，确认是否已安装并打开爱库存组件,然后刷新页面';
+                    $('printPreview_3_msg').setHTML(msg);
+                    $('printPreview_3').style.display = 'block';
+                },
+                onClose:function(){
+                    $$('printPreview_3_msg').setHTML('与爱库存打印组件连接断开，请重启爱库存打印组件,然后刷新页面');
+                },
+                onOpen:function(){
+                    printerObj.getPrinters();
+                },
+                onPreview:function(data) {
+                    if(data.status != 'success') {
+                        alert(data.msg);
+                    }
+                    if(data.previewImage) {
+                        if($('dly_printer_div').getHTML() == waitPreviewGenerate) {
+                            $('dly_printer_div').setHTML('');
+                        }
+                        var aTaskId = data.taskID.split('_');
+                        data.previewImage.each(function(item, index, all) {
+                            var previewDiv = document.createElement('div');
+                            previewDiv.style.margin = '5px 10px 5px 10px';
+                            previewDiv.style.border = '1px solid';
+                            previewDiv.style.float = 'left';
+                            previewDiv.className = 'task-' + aTaskId[0];
+                            previewDiv.setHTML('<img src="' + item + '" width="400px" height="720px" />');
+                            var nextIndex = '.task-'+(parseInt(aTaskId[0])+1);
+                            if($E(nextIndex)) {
+                                previewDiv.inject($E(nextIndex), 'before');
+                            } else {
+                                previewDiv.inject($('dly_printer_div'));
+                            }
+                        });
+                    }
+                },
+                onPrintSuccess:function(data){
+                    printFinishShow(data);
+                },
+                onPrintFailure:function(data){
+                    printFinishShow(data);
+                }
+            };
+
+            function printFinishShow(data) {
+                var oHtml = $('dly_printer').getHTML();
+                for (var i=0,len = data.printStatus.length; i<len; i++) {
+                    var item = data.printStatus[i];
+                    var dIDSplit = item.documentID.split('_', 2);
+                    var msg = '<br/><span style="margin: 5px;font-weight: bold;">' + (dIDSplit[0] == 1 ? '预览' : '打印') + '</span>物流单号：' + dIDSplit[1] + ' ';
+                    if (dIDSplit[0] == 0) {
+                        isPrintWaybill = false;
+                    }
+                    if (item.status == 'success') {
+                        oHtml += msg + '成功';
+                    } else {
+                        oHtml += msg + '失败：' + item.detail;
+                    }
+                }
+                $('dly_printer').setHTML(oHtml);
+            }
+
+            var printerObj = initPrinter('aikucun',options);
+
+            if($('onlyprint_btn')) {
+                $('onlyprint_btn').addEvent('click', function () {
+                    if(isPrintWaybill) {
+                        alert('打印中，请耐心等待');
+                        return false;
+                    }
+                    isPrintWaybill = true;
+                    printerObj.print.delay(waitPrintTime,printerObj,[{name:$('printerlist').value}]);
+                });
+            }
+            var hasprintlist=[];
+            if($('doprint_btn')) {
+                $('doprint_btn').addEvent('click', function(){
+                    if(isPrintWaybill) {
+                        alert('打印中，请耐心等待');
+                        return false;
+                    }
+                    new Dialog(new Element("div.tableform",{html:'<div id="pause" class="division">正在提交...<{img app="desktop" src="loading.gif"}></div><div class="table-action"><{button label="关闭" onclick="re_finder();"}></div>'}),{
+                        title:'提示',
+                        width:230,
+                        height:130,
+                        modal:true,
+                        resizeable:false}
+                    );
+                    if ($('printname')) {
+                        var printname= $('printname').value;
+                    } else {
+                        printname= '<{$vid}>';
+                    }
+                    if (hasprintlist.length>0){
+                        for(var i=0;i<hasprintlist.length;i++){
+                            if(hasprintlist[i] == printname )
+                                if(confirm('您的选择含有已打印快递单，你确定要重复打印吗？')==false) {
+                                    window.close();
+                                }
+                        }
+                    }
+                    hasprintlist.push(printname);
+
+                    var printpos = '<{$printpos}>';
+                    new Request({url:'index.php?<{$appCtl}>&act=setPrintStatus',method:'post',
+                        data:{
+                            type:'express',
+                            str:printname,
+                            printpos:printpos
+                        },
+                        onSuccess:function(json){
+                            isPrintWaybill = true;
+                            if (json == '6003' && confirm('您的选择含有已打印快递单，你确定要重复打印吗？') == false) {
+                                $('pause').getParent('.dialog').retrieve('instance').close();
+                                return window.close();
+                            }
+
+                            if (json == '6003' || json == 'true'){
+
+                                $('pause').getParent('.dialog').retrieve('instance').close();
+                                printerObj.print.delay(waitPrintTime,printerObj,[{name:$('printerlist').value}]);
+
+                            } else {
+                                $('pause').set('text',json);
+                            }
+                        }
+                    }).send();
+                });
+            }
+        });
+        $('printPreview_close').addEvent('click', function(){
+            window.close();
+        });
+    })();
+</script>

@@ -42,7 +42,7 @@ class o2o_task{
         );
         $save_dlycorp = $dlyCorpLib->save($o2o_ship_data);
         
-        #自动插入线下服务端数据
+        //自动插入线下服务端数据
         $serverObj    = app::get('o2o')->model('server');
         $type_list    = o2o_conf_server::getTypeList('wap');
         

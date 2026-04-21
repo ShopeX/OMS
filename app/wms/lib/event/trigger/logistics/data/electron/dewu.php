@@ -35,8 +35,8 @@ class wms_event_trigger_logistics_data_electron_dewu extends wms_event_trigger_l
         if (empty($arrBill)) {
             $this->needRequestId[] = $delivery['delivery_id'];
         } else {
-            $this->needRequestId[]   = $arrBill[0]['log_id'];
-            $delivery['delivery_bn'] = $this->setChildRqOrdNo($delivery['delivery_bn'], $arrBill[0]['log_id']);
+            $this->needRequestId[]   = $arrBill[0]['b_id'];
+            $delivery['delivery_bn'] = $this->setChildRqOrdNo($delivery['delivery_bn'], $arrBill[0]['b_id']);
         }
         
         $sdf                   = parent::getDirectSdf($arrDelivery, $arrBill, $shop);

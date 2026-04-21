@@ -31,31 +31,69 @@ class wms_event_trigger_logistics_data_electron_aikucun extends wms_event_trigge
 
     public function getDirectSdf($arrDelivery, $arrBill, $shop) {
         $delivery = $arrDelivery[0];
-        if(empty($arrBill)) {
+
+        if (empty($arrBill)) {
             $this->needRequestId[] = $delivery['delivery_id'];
         } else {
-            $this->needRequestId[] = $arrBill[0]['b_id'];
+            $this->needRequestId[]   = $arrBill[0]['b_id'];
             $delivery['delivery_bn'] = $this->setChildRqOrdNo($delivery['delivery_bn'], $arrBill[0]['b_id']);
         }
 
-        $dOrder = $this->getDeliveryOrder($this->needRequestId);
-        $order_bn = $dOrder[0]['order_bn'];
-        $shop_type = $dOrder[0]['shop_type'];
-        if($shop_type != 'aikucun'){
+        $deliveryItems = $this->getDeliveryItems($delivery['delivery_id']);
+
+        if (empty($shop)) {
+            $shop   = [];
+            $branch = app::get('ome')->model('branch')->db_dump($delivery['branch_id']);
+
+            list(, $mainland)             = explode(':', $branch['area']);
+            list($province, $city, $area) = explode('/', $mainland);
+
+            $shop['shop_name']      = $branch['name'];
+            $shop['province']       = $province;
+            $shop['city']           = $city;
+            $shop['area']           = $area;
+            $shop['street']         = '';
+            $shop['address_detail'] = $branch['address'];
+            $shop['default_sender'] = $branch['uname'];
+            $shop['mobile']         = $branch['mobile'];
+            $shop['tel']            = $branch['phone'];
+            $shop['zip']            = $branch['zip'];
+        }
+
+        $orders = app::get('ome')->model('orders')->getList('total_amount,shop_type,order_bn,custom_mark,mark_text,order_id', array('order_bn|in' => $delivery['order_bns']));
+
+        if (empty($orders) || $orders[0]['shop_type'] != 'aikucun') {
             return false;
         }
 
-        $primary_bn = uniqid('oet');
+        $orderIdArr  = array_column($orders, 'order_id');
+        $orderExtend = app::get('ome')->model('order_extend')->getList('*', ['order_id|in' => $orderIdArr]);
+        $orderExtend = array_column($orderExtend, null, 'order_id');
 
-        $sdf = parent::getDirectSdf($arrDelivery, $arrBill, $shop);
-        $sdf['primary_bn'] = $primary_bn;
-        $sdf['order_bn'] = $order_bn;
-        $sdf['delivery'] = $delivery;
+        $total_amount = 0;
+        foreach ($orders as $k => $order) {
+            $total_amount += $order['total_amount'];
+            $shop['shop_type'] = $order['shop_type'];
+
+            if ($orderExtend[$order['order_id']]) {
+                $orders[$k]['order_extend'] = [
+                    'extend_field' => json_decode($orderExtend[$order['order_id']]['extend_field'], 1),
+                ];
+            }
+        }
+
+        $dlyCorp = app::get('ome')->model('dly_corp')->dump(array('corp_id' => $delivery['logi_id']));
+        app::get('ome')->model('dly_corp_channel')->getChannel($dlyCorp, array($delivery));
+
+        $sdf                  = parent::getDirectSdf($arrDelivery, $arrBill, $shop);
+        $sdf['primary_bn']    = $delivery['delivery_bn'];
+        $sdf['delivery']      = $delivery;
+        $sdf['delivery_item'] = $deliveryItems;
+        $sdf['shop']          = $shop;
+        $sdf['dly_corp']      = $dlyCorp;
+        $sdf['total_amount']  = $total_amount;
+        $sdf['order']         = $orders;
+
         return $sdf;
     }
-
-
-
-
-
 }

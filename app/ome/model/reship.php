@@ -1168,6 +1168,39 @@ class ome_mdl_reship extends dbeav_model{
         $order_sdf['mark_text'] = $mark_text;
         $tostr=array();
         list($actually_amount, $settlement_amount) = $this->getActuallyAmount($reshipinfo['reship_id']);
+        // 按各行 sale_price（num*price）均摊实付与结算金额，与 ome_order::calculate_part_porth 一致
+        $orderLib = kernel::single('ome_order');
+        $divideRows = array();
+        foreach ($reship_items as $objKey => $row) {
+            $divideRows[$objKey] = array(
+                'sale_price' => bcmul(strval($row['num']), strval($row['price']), 10),
+            );
+        }
+        $porth_total = '0';
+        foreach ($divideRows as $r) {
+            if (floatval($r['sale_price']) > 0) {
+                $porth_total = bcadd($porth_total, $r['sale_price'], 10);
+            }
+        }
+        if (floatval($porth_total) > 0) {
+            $divideRows = $orderLib->calculate_part_porth($divideRows, array(
+                'part_total' => $actually_amount,
+                'part_field' => 'actually_amount',
+                'porth_field' => 'sale_price',
+                'minuend_field' => null,
+            ));
+            $divideRows = $orderLib->calculate_part_porth($divideRows, array(
+                'part_total' => $settlement_amount,
+                'part_field' => 'settlement_amount',
+                'porth_field' => 'sale_price',
+                'minuend_field' => null,
+            ));
+        } else {
+            foreach ($divideRows as $k => $_) {
+                $divideRows[$k]['actually_amount'] = '0.00';
+                $divideRows[$k]['settlement_amount'] = '0.00';
+            }
+        }
         //[销售物料层]格式化订单明细
         $item_cost = 0;
         foreach ( $reship_items as $objKey => &$items )
@@ -1185,8 +1218,8 @@ class ome_mdl_reship extends dbeav_model{
             $items['name']        = $items['product_name'];
             $items['quantity']    = $items['num'];
             $items['amount']      = $items['sale_price'] = $items['num'] * $items['price'];
-            $items['actually_amount'] = $actually_amount;
-            $items['settlement_amount'] = $settlement_amount;
+            $items['actually_amount'] = $divideRows[$objKey]['actually_amount'];
+            $items['settlement_amount'] = $divideRows[$objKey]['settlement_amount'];
             if($order_sdf['order_type'] == 'platform') {
                 $items['is_sh_ship'] = 'true';
             }

@@ -40,8 +40,8 @@ class wms_event_trigger_logistics_data_electron_wxshipin extends wms_event_trigg
         if (empty($arrBill)) {
             $this->needRequestId[] = $delivery['delivery_id'];
         } else {
-            $this->needRequestId[]   = $arrBill[0]['log_id'];
-            $delivery['delivery_bn'] = $this->setChildRqOrdNo($delivery['delivery_bn'], $arrBill[0]['log_id']);
+            $this->needRequestId[]   = $arrBill[0]['b_id'];
+            $delivery['delivery_bn'] = $this->setChildRqOrdNo($delivery['delivery_bn'], $arrBill[0]['b_id']);
         }
 
         $deliveryItems = $this->getDeliveryItems($delivery['delivery_id']);

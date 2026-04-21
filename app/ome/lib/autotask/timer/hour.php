@@ -60,7 +60,7 @@ class ome_autotask_timer_hour
         //kernel::single('erpapi_misc_task')->hour();
         
         // 每小时触发：库存增加自动审核订单
-        kernel::single('ome_autotask_timer_autoconfirmorderstockinc')->process($params, $error_msg);
+        //kernel::single('ome_autotask_timer_autoconfirmorderstockinc')->process($params, $error_msg);
         
         return true;
     }

@@ -74,18 +74,32 @@ class logisticsmanager_ctl_admin_waybill extends desktop_controller{
      * @return mixed 返回结果
      */
     public function getEncryptPrintData() {
-        $logiNo         = trim($_POST['logi_no']);
-        $batchLogiNo    = trim($_POST['batch_logi_no']);
-        $deliveryId     = intval($_POST['delivery_id']);
-        $channelId      = trim($_POST['channel_id']);
+        $logiNo        = trim($_POST['logi_no']);
+        $batchLogiNo   = trim($_POST['batch_logi_no']);
+        $deliveryId    = intval($_POST['delivery_id']);
+        $channelId     = trim($_POST['channel_id']);
+        $requestData   = [
+            'logi_no'       => $logiNo,
+            'batch_logi_no' => $batchLogiNo,
+            'delivery_id'   => $deliveryId,
+        ];
+
+        $channelType = '';
+        if ($channelId) {
+            $channel = app::get('logisticsmanager')->model('channel')->dump(['channel_id' => $channelId], 'channel_type');
+            $channelType = isset($channel['channel_type']) ? $channel['channel_type'] : '';
+        }
+        if ($channelType === 'aikucun') {
+            $requestData['print_name']   = isset($_POST['print_name']) ? trim($_POST['print_name']) : '';
+            $requestData['mode']         = isset($_POST['mode']) ? trim($_POST['mode']) : '';
+            $requestData['prepare_data'] = isset($_POST['prepare_data']) ? $_POST['prepare_data'] : '';
+        } elseif (isset($_POST['custom_data'])) {
+            $requestData['custom_data'] = $_POST['custom_data'];
+        }
+
         $rs = kernel::single('erpapi_router_request')
-                ->set('logistics',$channelId)
-                ->electron_getEncryptPrintData([
-                    'logi_no'       =>$logiNo,
-                    'batch_logi_no' =>$batchLogiNo,
-                    'delivery_id'   =>$deliveryId,
-                    'custom_data'   => $_POST['custom_data']
-                ]);
+            ->set('logistics', $channelId)
+            ->electron_getEncryptPrintData($requestData);
         echo json_encode($rs);
     }
 }

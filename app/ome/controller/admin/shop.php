@@ -592,6 +592,8 @@ class ome_ctl_admin_shop extends desktop_controller {
         $this->pagedata['ent_email'] = $entEmail;
         $this->pagedata['is_certified'] = $is_certified;
         $this->pagedata['need_enterprise_auth'] = $need_enterprise_auth; // 是否需要系统节点注册步骤（openapi 不强制）
+        // 绑定完成页：订单流量购买入口
+        $this->pagedata['order_traffic_purchase_url'] = 'https://open-console.shopex.cn/organization/list';
         
         // 渲染模板
         $this->display('admin/shop/bind_guide.html');
