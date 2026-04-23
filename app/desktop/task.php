@@ -87,5 +87,9 @@ class desktop_task{
         $deploy_info = base_setup_config::deploy_info();
         $logo = substr($deploy_info['product_name'],strlen('商派ONex  '));
         app::get('desktop')->setConf('logo',$logo);
+
+        if (!pam_account::get_account_type('desktop')){
+            pam_account::register_account_type('desktop','shopadmin','后台管理系统');
+        }
     }
 }

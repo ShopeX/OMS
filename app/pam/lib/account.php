@@ -93,8 +93,7 @@ class pam_account{
     {
         $aType = app::get('pam')->getConf('account_type');
         //todo
-        return $aType[$app_id]['type'];
-        //return 'member';
+        return is_array($aType[$app_id]) ? $aType[$app_id]['type'] : false;
     }//End Function
     
     /**
