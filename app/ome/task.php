@@ -19,7 +19,8 @@ class ome_task{
 
     function post_install($options){
 
-        kernel::single('base_initial', 'ome')->init();
+        // base_initial 已在 base_application_manage::install() 中于 post_install 前执行，勿重复 init，
+        // 否则 initial/*.sql（如 ome.branch_type.sql）会执行两次并触发唯一键冲突。
 
         $this->_insert_role();
 
