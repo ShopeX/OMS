@@ -32,14 +32,17 @@ class desktop_roles{
         $workground = $sdf['workground'];
         $aMenus = $menus->getList('*',array('menu_type' => 'menu','workground' => $workground));
         
-        $aTmp = array();
+        $aTmp = array(
+            'menu_group' => array(),
+            'permission' => array(),
+        );
         $menu_group = array();
         foreach($aMenus as $val )
         {
             $aTmp['menu_group'][] = $val['menu_group'];
             $aTmp['permission'][] = $val['permission'];
         }
-        $aMenus = array_unique($aTmp['permission']); //所有的permissions
+        $aMenus = array_unique((array)$aTmp['permission']); //所有的permissions
         $permissions = array();
 
         foreach($aMenus as $val)
@@ -47,7 +50,7 @@ class desktop_roles{
             
             $sdf = $menus->dump(array('menu_type' => 'permission','permission' => $val));
             if($sdf){
-                if(in_array($sdf['permission'],$wg)){
+                if(in_array($sdf['permission'], (array)$wg)){
                     $sdf['checked'] = 1;
                 }
                 else{
