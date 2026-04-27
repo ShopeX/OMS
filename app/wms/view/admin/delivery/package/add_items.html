@@ -179,7 +179,7 @@
             }
         }
 
-        $('package-form').submit();
+        $('package-form').fireEvent('submit',{stop:$empty});
 
         $('package-btn').getParent('.dialog').retrieve('instance').close();
     });

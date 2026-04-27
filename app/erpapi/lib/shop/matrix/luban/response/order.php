@@ -270,9 +270,27 @@ class erpapi_shop_matrix_luban_response_order extends erpapi_shop_response_order
             if($this->_ordersdf['extend_field']['sku_order_tag_ui']){
                 foreach ($this->_ordersdf['extend_field']['sku_order_tag_ui'] as $oid => $skuVal) {
                     foreach ($skuVal as $sk => $sv) {
-                        if ($sv['key'] == 'sf_free_shipping') {
-                            $this->_ordersdf['sf_free_shipping'] = 'true';
-                            break;
+                        $sv['extra'] = is_string($sv['extra']) ? json_decode($sv['extra'], true) : [];
+                        switch ($sv['key']) {
+                            case 'sf_free_shipping':
+                                $this->_ordersdf['sf_free_shipping'] = 'true';
+                                break;
+                            case 'PriorityDelivery':
+                                if ($sv['extra'] && $sv['extra']['suggestDeliveryUnix']) {
+                                    $this->_ordersdf['latest_delivery_time'] = $sv['extra']['suggestDeliveryUnix'];
+                                }
+                                break;
+                            case 'high_quality_express':
+                                if ($sv['extra'] && $sv['extra']['express_company_code']) {
+                                    $this->_ordersdf['biz_delivery_code'] = json_encode(is_string($sv['extra']['express_company_code']) ? [$sv['extra']['express_company_code']] : $sv['extra']['express_company_code']);
+                                }
+                                break;
+                            case 'paid_shunfeng_express':
+                            case 'paid_shunfeng_express_tk':
+
+                                $this->_ordersdf['shipping_name'] = 'SF';
+                                $this->_ordersdf['assign_express_code'] = 'SF';
+                                break;
                         }
                     }
                 }
@@ -280,7 +298,7 @@ class erpapi_shop_matrix_luban_response_order extends erpapi_shop_response_order
 
             if ($this->_ordersdf['sf_free_shipping'] == 'true') {
                 $dly = app::get('ome')->model('dly_corp')->db_dump([
-                    'type|in'     => ['shunfeng', 'shunfengkuaiyun'],
+                    'type|in'     => ['shunfeng', 'shunfengkuaiyun','SF'],
                     'disabled' => 'false',
                 ]);
                 if ($dly){

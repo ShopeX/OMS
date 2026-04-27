@@ -15,19 +15,15 @@
  * limitations under the License.
  */
 /**
- * @author ykm 2015-12-15
- * @describe 淘宝请求电子面单类
+ * @author ykm 2026-03
+ * @describe 爱库存电子面单
  */
 class erpapi_logistics_matrix_aikucun_request_electron extends erpapi_logistics_request_electron
 {
     protected $directNum = 1;
 
-    /**
-     * bufferRequest
-     * @return mixed 返回值
-     */
-
-    public function bufferRequest(){
+    public function bufferRequest($sdf)
+    {
         return $this->directNum;
     }
 

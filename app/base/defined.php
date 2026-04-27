@@ -99,6 +99,15 @@ $constants = array(
     
     // 奇门API接口
     'QIMEN_URL' => 'https://qimen.api.taobao.com/top/router/qm',
+
+    // 开源安装统计（上报 gwnextapi；未设置环境变量时用默认密钥；环境变量显式设为空字符串可关闭上报）
+    'OPEN_SOURCE_STAT_SECRET_OMS' => getenv('OPEN_SOURCE_STAT_SECRET_OMS') !== false
+        ? getenv('OPEN_SOURCE_STAT_SECRET_OMS')
+        : 'K9mN2xPq5RwT8yLz4CvB7',
+    'OPEN_SOURCE_STAT_PRODUCT' => getenv('OPEN_SOURCE_STAT_PRODUCT') ?: 'oms',
+    'OPEN_SOURCE_STAT_REPORT_URL' => getenv('OPEN_SOURCE_STAT_REPORT_URL') ?: 'https://gwnextapi.shopex.cn/usercenter/open_source/stat/report',
+    'OPEN_SOURCE_STAT_HTTP_TIMEOUT' => (int) (getenv('OPEN_SOURCE_STAT_HTTP_TIMEOUT') ?: 20),
+    'OPEN_SOURCE_STAT_SENTINEL_NAME' => getenv('OPEN_SOURCE_STAT_SENTINEL_NAME') ?: '.opensource_install_stat_reported',
 );
 
 $constants_ext = array();

@@ -78,10 +78,11 @@ class erpapi_router_mapping
         'store.item.skus.add'            =>  'shop.goods.add',
         'ome.reissue.query'              => 'shop.reissue.query',
         'ome.reissue.cancel'             => 'shop.reissue.cancel',
-        'qimen.taobao.erp.order.add'     => 'qimen.order.add',
-        'qimen.taobao.erp.order.update'  => 'qimen.order.update',
         'ome.shopbee.fxordermsg'         => 'shop.bookingrefund.fxordermsg', // 供销供应商订单信息同步
         'ome.reshipping.add'              => 'shop.reshipping.add',
+        'ome.order.tagchange'           => 'shop.shopbee.tagchange',
+        'qimen.taobao.erp.order.add'     => 'qimen.order.add',
+        'qimen.taobao.erp.order.update'  => 'qimen.order.update',
     );
 
     public static $_rsp_nodetype_mapping = array(

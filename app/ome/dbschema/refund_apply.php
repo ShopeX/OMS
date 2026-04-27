@@ -415,7 +415,7 @@ $db['refund_apply'] = array(
 
         'idx_abnormal_status' => array('columns' => array('abnormal_status')),
         'idx_oid' => array('columns' => array('oid')),
-        'idx_bn' => array('columns' => array('bn')),
+        'idx_bn' => array('columns' => array('bn(255)')),
         'idx_bool_type' => array('columns'=>array('bool_type')),
         'idx_tag_type' => array('columns'=>array('tag_type')),
         'ind_source_status' => array(

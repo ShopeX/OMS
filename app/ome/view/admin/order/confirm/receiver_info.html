@@ -14,7 +14,7 @@
   limitations under the License.
 -->
 
-<h3 style="border-bottom:none;" ><{if $order.is_encrypt}><a class="data-hide order-sensitive-btn" href="javascript:void(0);"></a><{/if}>收货人信息 <{if !$order.is_jy}><a href="javascript:void(0);" id="other_delivery">使用其他收货人信息</a><{/if}>
+<h3 style="border-bottom:none;" ><{if $order.is_encrypt && (!defined('SENSITIVE_DATA_SHOW') || constant('SENSITIVE_DATA_SHOW'))}><a class="data-hide order-sensitive-btn" href="javascript:void(0);"></a><{/if}>收货人信息 <{if !$order.is_jy}><a href="javascript:void(0);" id="other_delivery">使用其他收货人信息</a><{/if}>
 </h3>
 <div class="finder-detail" style="margin-top:10px;">
     <{include file="admin/order/confirm/member_confirm.html"}>

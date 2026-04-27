@@ -117,6 +117,10 @@ class erpapi_shop_response_plugins_order_orderextend extends erpapi_shop_respons
                 }
             }
         }
+
+        if ($platform->_ordersdf['assign_express_code'] && is_string($platform->_ordersdf['assign_express_code'])) {
+            $extend['assign_express_code'] = $platform->_ordersdf['assign_express_code'];
+        }
   
         // 抖店顺丰包邮，指定快递编码
         if ($platform->_ordersdf['sf_free_shipping']) {

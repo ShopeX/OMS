@@ -377,12 +377,12 @@ function delivery_verify(e){
                 }});
                 
             }else{
-                if (currentDeliveryIsPickup) { submitSend(e); } else { $('ome_single_delivery').submit(); }
+                if (currentDeliveryIsPickup) { submitSend(e); } else { $('ome_single_delivery').fireEvent('submit',{stop:$empty}); }
             }
 
         }
         }else{
-	                if (currentDeliveryIsPickup) { submitSend(e); } else { $('ome_single_delivery').submit(); }
+	                if (currentDeliveryIsPickup) { submitSend(e); } else { $('ome_single_delivery').fireEvent('submit',{stop:$empty}); }
                  }
 	            }
             }

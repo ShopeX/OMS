@@ -153,8 +153,15 @@ class erpapi_shop_matrix_tmall_request_delivery extends erpapi_shop_request_deli
             }
         }
         
+        // 判断订单是否编辑过商品
+        //@todo：只有平台子订单 oid 被删除且不存在对应未删除商品时，才算编辑过商品；
+        $isModifyGoods = false;
+        if ($sdf['orderinfo']['is_modify'] == 'true') {
+            $isModifyGoods = kernel::single('ome_order')->isOrderGoodsModified($sdf['orderinfo']['order_id']);
+        }
+        
         //[部分拆单 OR 多包裹]订单没有编辑过商品,按拆单子单回写
-        if(($sdf['is_split'] == 1 || $is_packages) && $sdf['orderinfo']['is_modify'] != 'true') {
+        if(($sdf['is_split'] == 1 || $is_packages) && !$isModifyGoods) {
             //按多包裹
             if($packageInfo){
                 $param['packages'] = json_encode($packageInfo['packages']);
@@ -176,7 +183,7 @@ class erpapi_shop_matrix_tmall_request_delivery extends erpapi_shop_request_deli
             $param['consign_type'] = 0;
             
             //订单编辑过商品
-            if($sdf['orderinfo']['is_modify'] == 'true'){
+            if($isModifyGoods){
                 //注销oid_list子订单列表
                 unset($param['oid_list']);
                 

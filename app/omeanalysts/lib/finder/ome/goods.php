@@ -14,16 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+ 
 class omeanalysts_finder_ome_goods{
 	var $detail_basic = '基础物料详情';
 
-    /**
-     * detail_basic
-     * @param mixed $goods_id ID
-     * @return mixed 返回值
-     */
-    public function detail_basic($goods_id) {
+	public function detail_basic($goods_id) {
         $filter = array(
             'goods_id'=>$goods_id,
             'time_from' => $_GET['time_from'],

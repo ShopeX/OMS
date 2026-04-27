@@ -53,6 +53,8 @@ class ome_bill_label
         'SOMS_IMEI'         => ['label_name' => '发货必传IMEI码', 'label_color' => 'Gold', 'label_to_delivery' => true],
         'SOMS_SERIALNUMBER' => ['label_name' => '发货必传SN码', 'label_color' => 'Gold', 'label_to_delivery' => true],
         'SOMS_EXPRESS_MUST' => ['label_name' => '自选快递', 'label_color' => 'CornflowerBlue'],
+        'SOMS_HIGH_EXPRESS' => ['label_name' => '优质快递', 'label_color' => 'GoldenRod'],
+        'SOMS_PAID_EXPRESS' => ['label_name' => '加价快递', 'label_color' => 'LightCoral'],
         'SOMS_HOST'         => ['label_name' => '达人', 'label_color' => 'Darkorange'],
         'SOMS_LOTTERY'      => ['label_name' => '抽奖', 'label_color' => 'GoldenRod'],
         'SOMS_GNJY'         => ['label_name' => '国内集运', 'label_color' => 'OliveDrab'],
@@ -182,6 +184,10 @@ class ome_bill_label
         ],
         'SOMS_PICKUP' => [
             0x0001 => ['label_name' => '官方'],
+        ],
+        'SOMS_PAID_EXPRESS' => [
+            0x0001 => ['label_name' => '加价选顺丰标准'],
+            0x0002 => ['label_name' => '加价选顺丰特快'],
         ],
     ];
 

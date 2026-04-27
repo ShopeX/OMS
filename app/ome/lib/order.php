@@ -2395,7 +2395,6 @@ class ome_order {
         //data
         $data = $params['sdfdata'];
         $order_id = $data['order_id'];
-        $order_bn = $data['order_bn'];
         if(empty($order_id)){
             $error_msg = '没有订单信息';
             return false;
@@ -2457,7 +2456,7 @@ class ome_order {
         }
         
         //订单对应发货单(合并发货单对应多个订单号)
-        $sql = "SELECT b.order_id FROM sdb_ome_delivery AS a LEFT JOIN sdb_ome_delivery_order AS b ON (a.delivery_id=b.delivery_id) 
+        $sql = "SELECT b.order_id FROM sdb_ome_delivery AS a LEFT JOIN sdb_ome_delivery_order AS b ON (a.delivery_id=b.delivery_id)
                 WHERE a.delivery_id=".$delivery_id." AND (a.parent_id=0 OR a.is_bind='true') AND a.disabled='false' AND a.status='ready'";
         $tempList = $deliveryObj->db->select($sql);
         if(empty($tempList)){
@@ -2471,35 +2470,64 @@ class ome_order {
             $order_ids[] = $val['order_id'];
         }
         
-        //[兼容]虚拟物流单号
-        $corpInfo = array();
+        // 物流公司ID
+        $logi_id = ($deliveryInfo['logi_id'] ? $deliveryInfo['logi_id'] : 1);
+        
+        // 获取物流公司
         if(empty($deliveryInfo['logi_no'])){
-            //默认读取仓库关联的第一个物流公司
-            $sql = "SELECT a.*, b.name FROM sdb_ome_branch_corp AS a LEFT JOIN sdb_ome_dly_corp AS b ON a.corp_id=b.corp_id WHERE a.branch_id=". $branch_id;
+            // 优先获取虚拟物流公司
+            $sql = "SELECT * FROM sdb_ome_dly_corp WHERE `type`='virtual_delivery'";
             $corpInfo = $deliveryObj->db->selectrow($sql);
             
-            //物流公司ID
-            $deliveryInfo['logi_id'] = $corpInfo['corp_id'];
+            // 获取发货单上指定的物流公司
+            if(empty($corpInfo) && $deliveryInfo['logi_id']){
+                $sql = "SELECT * FROM sdb_ome_dly_corp WHERE corp_id=". $deliveryInfo['logi_id'];
+                $corpInfo = $deliveryObj->db->selectrow($sql);
+            }
             
-            //物流单号
-            $logi_no = 'V'.uniqid();
-            $deliveryInfo['logi_no'] = $logi_no;
+            // 默认读取仓库关联的第一个物流公司
+            if(empty($corpInfo)){
+                $sql = "SELECT a.*, b.name FROM sdb_ome_branch_corp AS a LEFT JOIN sdb_ome_dly_corp AS b ON a.corp_id=b.corp_id WHERE a.branch_id=". $branch_id;
+                $corpInfo = $deliveryObj->db->selectrow($sql);
+            }
+            
+            // 获取第一个物流公司
+            if(empty($corpInfo)){
+                $sql = "SELECT * FROM `sdb_ome_dly_corp` WHERE `type` NOT IN('o2o_pickup', 'o2o_ship')";
+                $corpInfo = $deliveryObj->db->selectrow($sql);
+            }
+            
+            //物流公司ID
+            $logi_id = ($corpInfo['corp_id'] ? $corpInfo['corp_id'] : 1);
         }
+        
+        // 获取物流公司信息
+        $sql = "SELECT * FROM sdb_ome_dly_corp WHERE corp_id=". $logi_id;
+        $corpInfo = $deliveryObj->db->selectrow($sql);
+        
+        // 生成唯一性的物流单号
+        $logi_no = 'V'.uniqid();
+        
+        // 物流公司名称
+        $logi_name = ($corpInfo['name'] ? $corpInfo['name'] : '默认物流公司');
+        
+        //默认使用_商品重量
+        $weight = ($deliveryInfo['net_weight'] ? $deliveryInfo['net_weight'] : 0);
+        $weight = floatval($weight);
         
         //开启事务
         $deliveryObj->db->beginTransaction();
         
-        //默认使用_商品重量
-        $weight = ($deliveryInfo['net_weight'] ? $deliveryInfo['net_weight'] : 0);
+        // 更新ome发货单单物流信息和打印状态
+        $sql = "UPDATE sdb_ome_delivery SET stock_status='true',deliv_status='true',expre_status='true',verify='true',weight='". $weight ."'";
+        $sql .= ",print_status=1,logi_id=". $logi_id .",logi_name='". $logi_name ."'";
         
-        //更新ome发货单单物流信息和打印状态
-        if($corpInfo){
-            $sql = "UPDATE sdb_ome_delivery SET stock_status='true',deliv_status='true',expre_status='true',verify='true',weight='". $weight ."'";
-            $sql .= ",print_status=1,logi_id=". $corpInfo['corp_id'] .",logi_name='". $corpInfo['name'] ."',logi_no='". $logi_no ."' WHERE delivery_id=". $delivery_id;
-        }else{
-            $sql = "UPDATE sdb_ome_delivery SET stock_status='true',deliv_status='true',expre_status='true',verify='true',weight='". $weight ."',print_status=1 
-                    WHERE delivery_id=". $delivery_id;
+        // logi_no
+        if(empty($deliveryInfo['logi_no'])){
+            $sql .= ", logi_no='". $logi_no ."'";
         }
+        
+        $sql .= " WHERE delivery_id=". $delivery_id;
         $deliveryObj->db->exec($sql);
         
         //更新订单打印状态
@@ -2509,62 +2537,67 @@ class ome_order {
             $update_order['order_id'] = $order_id;
             $update_order['print_finish'] = 'true';
             $update_order['print_status'] = 7;
-            $update_order['logi_id'] = $deliveryInfo['logi_id'];
-            $update_order['logi_no'] = $deliveryInfo['logi_no'];
+            $update_order['logi_id'] = $logi_id;
+            $update_order['logi_no'] = $logi_no;
+            
             $orderObj->save($update_order);
         }
         
         //是否自有仓储
-        $is_selfWms = false;
         $wms_id = $branchLib->getWmsIdById($branch_id);
         $is_selfWms = $channelLib->isSelfWms($wms_id);
         
-        //自动发货流程
+        // 自有仓储发货单信息
+        $wmsDlyInfo = [];
         if($is_selfWms){
-            //变更wms发货单打印状态物流信息
             $wmsDlyInfo = $wmsDlyObj->dump(array('outer_delivery_bn'=>$deliveryInfo['delivery_bn']), 'delivery_id');
-            if($wmsDlyInfo){
-                $dlyData = array();
-                $dlyData['logi_id'] = $deliveryInfo['logi_id'];
-                $dlyData['logi_name'] = $deliveryInfo['logi_name'];
-                $dlyData['weight'] = $weight;
-                $dlyData['print_status'] = 7;//已打印
-                
-                $dly_result = $wmsDlyObj->update($dlyData, array('delivery_id'=>$wmsDlyInfo['delivery_id']));
-                
-                $sql = "UPDATE sdb_wms_delivery_bill SET logi_no='". $logi_no ."' WHERE delivery_id=". $wmsDlyInfo['delivery_id'];
-                $deliveryObj->db->exec($sql);
-            }
+        }
+        
+        // 自动发货流程
+        if($wmsDlyInfo){
+            // 更新wms发货单打印状态物流信息
+            $dlyData = array();
+            $dlyData['logi_id'] = $logi_id;
+            $dlyData['logi_name'] = $logi_name;
+            $dlyData['weight'] = $weight;
+            $dlyData['print_status'] = 7;//已打印
+            
+            // update wms_delivery
+            $wmsDlyObj->update($dlyData, array('delivery_id'=>$wmsDlyInfo['delivery_id']));
+            
+            // update wms_delivery_bill
+            $sql = "UPDATE sdb_wms_delivery_bill SET logi_no='". $logi_no ."' WHERE delivery_id=". $wmsDlyInfo['delivery_id'];
+            $deliveryObj->db->exec($sql);
             
             //触发wms自动发货流程
             foreach ($order_ids as $ordKey => $order_id)
             {
-                $result = $this->wmsConsignDelivery($order_id, $logi_no, $weight);
+                $result = $this->wmsConsignDelivery($order_id, $logi_no, $weight, $error_msg);
                 if(!$result){
                     //回滚事务
                     $deliveryObj->db->rollBack();
                     
-                    $error_msg = 'WMS发货单发货失败';
+                    $error_msg = 'WMS发货单发货失败：'. $error_msg;
                     return false;
                 }
             }
-            
         }else{
-            //OMS发货
+            // 模拟response自动响应发货
             $data = array(
-                    'delivery_bn' => $deliveryInfo['delivery_bn'],
-                    'delivery_time' => time(),
-                    'weight' => $weight,
-                    'delivery_cost_actual' => 0,
-                    'status' => 'delivery',
+                'delivery_bn' => $deliveryInfo['delivery_bn'],
+                'delivery_time' => time(),
+                'weight' => $weight,
+                'delivery_cost_actual' => 0,
+                'status' => 'delivery',
+                'logistics' => $logi_id,
+                'logi_no' => $logi_no,
             );
-            
             $result = kernel::single('erpapi_router_response')->set_channel_id($wms_id)->set_api_name('wms.delivery.status_update')->dispatch($data);
             if($result['rsp'] == 'fail'){
                 //回滚事务
                 $orderObj->db->rollBack();
                 
-                $error_msg = '发货单发货失败';
+                $error_msg = '发货单自动发货失败：'. ($result['msg'] ? $result['msg'] : $result['error_msg']);
                 return false;
             }
         }
@@ -2586,9 +2619,10 @@ class ome_order {
      * @param number $weight
      * @return boolean
      */
-    function wmsConsignDelivery($order_id, $logi_no, $weight)
+    function wmsConsignDelivery($order_id, $logi_no, $weight, &$error_msg=null)
     {
         if(empty($order_id) || empty($logi_no)){
+            $error_msg = '订单ID或者物流单号不能为空';
             return false;
         }
         
@@ -2604,16 +2638,19 @@ class ome_order {
         $delivery_id = $deliveryBillLib->getDeliveryIdByPrimaryLogi($logi_no);
         if(empty($delivery_id)){
             $opObj->write_log('order_edit@ome', $order_id, '自动发货失败：未找到对应发货单号');
+            
+            $error_msg = '自动发货失败：未找到对应发货单号';
             return false;
         }
         
         $dly = $dlyObj->dump(array('delivery_id' => $delivery_id),'*',array('delivery_items'=>array('*')));
         if(empty($dly)){
             $opObj->write_log('order_edit@ome', $order_id, '自动发货失败：未找到发货单信息');
+            
+            $error_msg = '自动发货失败：未找到发货单信息';
             return false;
         }
         
-        $logi_number = $dly['logi_number'];
         $delivery_logi_number = $dly['delivery_logi_number']+1;
         
         //获取物流费用
@@ -2624,20 +2661,20 @@ class ome_order {
         
         //更新bill发货单
         $data = array(
-                'status' => '1',
-                'weight' => $weight,
-                'delivery_cost_actual' => $delivery_cost_actual,
-                'delivery_time' => time(),
-                'type' => 1,
+            'status' => '1',
+            'weight' => $weight,
+            'delivery_cost_actual' => $delivery_cost_actual,
+            'delivery_time' => time(),
+            'type' => 1,
         );
         $dlyBillObj->update($data, array('logi_no'=>$logi_no));
         
         //更新wms发货单
         $dly['delivery_cost_actual'] += $delivery_cost_actual;
         $data = array(
-                'delivery_logi_number' => $delivery_logi_number,
-                'weight' => $dly['weight'],
-                'delivery_cost_actual' => $dly['delivery_cost_actual'],
+            'delivery_logi_number' => $delivery_logi_number,
+            'weight' => $dly['weight'],
+            'delivery_cost_actual' => $dly['delivery_cost_actual'],
         );
         $dlyObj->update($data, array('delivery_id'=>$dly['delivery_id']));
         
@@ -2647,6 +2684,7 @@ class ome_order {
             return true;
         }else {
             $opObj->write_log('order_edit@ome', $order_id, '发货失败,发货单:'.$dly['delivery_bn']);
+            $error_msg = '发货失败,发货单:'.$dly['delivery_bn'];
             return false;
         }
     }
@@ -3241,5 +3279,74 @@ class ome_order {
         }
         
         return $fixedPriceData;
+    }
+    
+    /**
+     * 判断订单是否编辑过商品
+     * 规则：只有平台子订单 oid 被删除且不存在对应未删除商品时，才算编辑过商品；
+     *
+     * @param int $order_id 订单ID
+     * @return bool
+     */
+    public function isOrderGoodsModified($order_id)
+    {
+        $orderMdl = app::get('ome')->model('orders');
+        
+        // order
+        $orderInfo = $orderMdl->dump(array('order_id'=>$order_id), 'order_bn,process_status,status,pay_status,ship_status,is_modify');
+        if(empty($orderInfo)){
+            return false;
+        }
+        
+        if($orderInfo['is_modify'] != 'true'){
+            return false;
+        }
+        
+        // order_objects
+        $objectList = app::get('ome')->model('order_objects')->getList('obj_id,oid,`delete`', array('order_id'=>$order_id));
+        if (empty($objectList)) {
+            return false;
+        }
+        
+        $oidStatus = array();
+        foreach ($objectList as $object)
+        {
+            $oid = $object['oid'];
+            if (empty($oid)) {
+                continue;
+            }
+            
+            if (!isset($oidStatus[$oid])) {
+                $oidStatus[$oid] = array(
+                    'has_deleted' => false,
+                    'has_active' => false,
+                );
+            }
+            
+            if ($object['delete'] == 'true') {
+                $oidStatus[$oid]['has_deleted'] = true;
+            } else {
+                $oidStatus[$oid]['has_active'] = true;
+            }
+        }
+        
+        // 订单明细没有子订单oid
+        if(empty($oidStatus)){
+            if($orderInfo['is_modify'] == 'true'){
+                return true;
+            }else{
+                return false;
+            }
+        }
+        
+        // check
+        foreach ($oidStatus as $status)
+        {
+            if ($status['has_deleted'] && !$status['has_active']) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 }

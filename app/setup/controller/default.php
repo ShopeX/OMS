@@ -131,6 +131,11 @@ class setup_ctl_default extends setup_controller{
      * @return mixed 返回值
      */
     public function success(){
+        try {
+            kernel::single('entermembercenter_stat')->reportInstall();
+        } catch (Throwable $e) {
+            // 上报失败不阻断成功页
+        }
         $this->pagedata['statics_url'] = $this->app->res_url;
 		$this->pagedata['conf'] = base_setup_config::deploy_info();
 		$output = $this->fetch('installer-success.html');

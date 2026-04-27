@@ -243,6 +243,12 @@ EOF;
 		$this->install_app_by_install_queue($applist, $options);		
 		
 		$this->command_install_demodata('demodata');
+
+		try {
+			kernel::single('entermembercenter_stat')->reportInstall();
+		} catch (Throwable $e) {
+			// 安装统计上报失败不阻断 install_product
+		}
 	}
 	
 	var $command_install_demodata = "安装初始化数据";

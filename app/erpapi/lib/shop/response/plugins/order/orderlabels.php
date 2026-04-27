@@ -32,21 +32,39 @@ class erpapi_shop_response_plugins_order_orderlabels extends erpapi_shop_respons
             foreach ($platform->_ordersdf['extend_field']['sku_order_tag_ui'] as $oid => $skuVal) {
                 // 商品单标签，只要有一个商品是顺丰包邮，则整单打顺丰包邮的标签
                 foreach ($skuVal as $sk => $sv) {
-                    if ($sv['key'] == 'sf_free_shipping') {
-                        $labels[] = [
-                            'label_code' => 'sf_free_shipping',
-                            // 'label_name' => '顺丰包邮',
-                        ];
-                        break;
-                    }
-                }
-                // 全款预售
-                foreach ($skuVal as $sk => $sv) {
-                    if ($sv['key'] == 'pre_sale_label') {
-                        $labels[] = [
-                            'label_code' => 'SOMS_FULLPAY_PRESALE',
-                        ];
-                        break;
+
+                    switch ($sv['key']) {
+                        case 'sf_free_shipping':
+                            $labels[] = [
+                                'label_code' => 'sf_free_shipping',
+                            ];
+                            break;
+                        case 'pre_sale_label':
+                            $labels[] = [
+                                'label_code' => 'SOMS_FULLPAY_PRESALE',
+                            ];
+                            break;
+                        case 'PriorityDelivery':
+                            $labels[] = [
+                                'label_code' => 'priority_delivery',
+                            ];
+                            break;
+                        case 'high_quality_express':
+                            $labels[] = [
+                                'label_code' => 'SOMS_HIGH_EXPRESS',
+                            ];
+                        case 'paid_shunfeng_express':
+                            $labels[] = [
+                                'label_code' => 'SOMS_PAID_EXPRESS',
+                                'label_value' => 0x0001,
+                            ];
+                            break;
+                        case 'paid_shunfeng_express_tk':
+                            $labels[] = [
+                                'label_code' => 'SOMS_PAID_EXPRESS',
+                                'label_value' => 0x0002,
+                            ];
+                            break;
                     }
                 }
             }

@@ -25,7 +25,7 @@
             <menu controller='admin_wms' action='index' permission='setting_wms' display='true' order='1002'>第三方仓储管理</menu>
             <menu controller='admin_abnormal_code' action='index' permission='setting_wms' display='true' order='1003'>异常错误码管理</menu>
         </menugroup>
-        <menugroup name="报价系统授权">
+        <menugroup name="报价系统授权" en="price-system-auth">
             <menu controller='admin_smart' action='index' permission='setting_smart' display='true' order='2001'>报价系统授权</menu>
         </menugroup>
     </workground>
