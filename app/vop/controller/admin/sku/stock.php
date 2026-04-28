@@ -153,10 +153,14 @@ class vop_ctl_admin_sku_stock extends desktop_controller
         @ini_set('memory_limit','512M');
         set_time_limit(0);
         
-        //shop
+        // 获取绑定的唯品会店铺列表
         $shopObj = app::get('ome')->model('shop');
-        $sql = "SELECT shop_id,shop_bn,name AS shop_name,shop_type,node_id FROM sdb_ome_shop WHERE shop_type ='vop' AND node_id IS NOT NULL AND node_id != ''";
-        $shopList = $shopObj->db->select($sql);
+        $filter = [
+            'shop_type' => 'vop',
+            'filter_sql' => 'node_id IS NOT NULL AND node_id != ""',
+        ];
+        $shopList = $shopObj->getList('shop_id,shop_bn,name AS shop_name,shop_type,node_id', $filter);
+        
         $this->pagedata['shopList'] = $shopList;
         
         //开始时间(默认为昨天)
@@ -212,9 +216,13 @@ class vop_ctl_admin_sku_stock extends desktop_controller
             'err_msg' => array(),
         );
         
-        //shop
-        $sql = "SELECT shop_id,shop_bn,name,shop_type,node_id FROM sdb_ome_shop WHERE shop_type ='vop' AND shop_bn='". $_POST['shop_bn'] ."' AND node_id IS NOT NULL AND node_id != ''";
-        $shopInfo = $shopObj->db->selectrow($sql);
+        // 获取绑定的唯品会店铺
+        $filter = [
+            'shop_type' => 'vop',
+            'shop_bn' => $_POST['shop_bn'],
+            'filter_sql' => 'node_id IS NOT NULL AND node_id != ""',
+        ];
+        $shopInfo = $shopObj->dump($filter, '*');
         if(empty($shopInfo)){
             $retArr['err_msg'] = array('唯品会店铺不符合,无法拉取数据');
             echo json_encode($retArr);
