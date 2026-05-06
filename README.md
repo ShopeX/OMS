@@ -6,7 +6,7 @@
 
 ![PHP >=8.0](https://img.shields.io/badge/PHP-%3E%3D8.0-blue.svg)&nbsp;
 ![License Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-green.svg)&nbsp;
-![Version 8.0.0](https://img.shields.io/badge/Version-8.0.0-orange.svg)
+![Version 8.3.0](https://img.shields.io/badge/Version-8.3.0-orange.svg)
 
 </div>
 
@@ -150,9 +150,7 @@ wsl -d Ubuntu -e bash -c "curl -fsSL https://oss.shopex.cn/oms/install.sh | sudo
 欢迎扫码加入 **ONEX OMS** 开源交流社群，获取更新动态、使用交流与问题互助。
 
 <p align="center">
-  <img src="app/desktop/statics/opensource-community01.png" alt="ONEX OMS Community Exchange 二维码" width="240" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="app/desktop/statics/opensource-community02.png" alt="商派开源交流社群 二维码" width="240" />
+  <img src="app/desktop/statics/opensource-community.png" alt="ONEX OMS Community Exchange 二维码" width="240" />
 </p>
 
 ---
@@ -163,5 +161,5 @@ wsl -d Ubuntu -e bash -c "curl -fsSL https://oss.shopex.cn/oms/install.sh | sudo
 ----
 
 **最后更新**：2026年3月  
-**版本**：8.0.0
+**版本**：8.3.0
 
