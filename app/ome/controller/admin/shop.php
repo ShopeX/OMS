@@ -978,12 +978,12 @@ class ome_ctl_admin_shop extends desktop_controller {
         $shopInfo = app::get('ome')->model('shop')->dump(array('shop_id'=>$_POST['shop_id']), '*');
         
         // 按店铺类型获取指定订单
-        if(in_array($shopInfo['shop_type'], ['360buy', 'jd'])){
-            // request shop order
-            $rsp_data = kernel::single('erpapi_router_request')->set('shop', $_POST['shop_id'])->order_get_order_detial(trim($_POST['order_id']));
-        }else{
+        if(in_array($shopInfo['shop_type'], ['taobao', 'tmall'])){
             // 通过qimen路由拉取订单
             $rsp_data = kernel::single('erpapi_router_request')->set('qimen', $_POST['shop_id'])->order_get_order_detial(trim($_POST['order_id']));
+        }else{
+            // request shop order
+            $rsp_data = kernel::single('erpapi_router_request')->set('shop', $_POST['shop_id'])->order_get_order_detial(trim($_POST['order_id']));
         }
         
         // rsp
