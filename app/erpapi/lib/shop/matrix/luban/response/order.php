@@ -215,7 +215,11 @@ class erpapi_shop_matrix_luban_response_order extends erpapi_shop_response_order
             if($this->_ordersdf['extend_field']['platform_order_tag_ui']){
                 foreach($this->_ordersdf['extend_field']['platform_order_tag_ui'] as $tag_val){
                     $dy_added_service .= $tag_val['key'].',';
-
+                    
+                    //抽奖类型订单 只打标自发订单
+                    if ($tag_val['key'] == 'draw_lottery' && $this->__channelObj->channel['delivery_mode'] == 'self') {
+                        $this->_ordersdf['extend_field']['is_lucky_flag'] = true;
+                    }
                     // 集运标识转成oms本地标识（二期）
                     // 改用platform_order_tag_ui识别，
                     // key=logistics_transit是偏远中转；key=remote_derict是偏远直邮,偏远直邮不用打标

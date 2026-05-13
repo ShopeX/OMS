@@ -2040,7 +2040,7 @@ class erpapi_shop_response_process_aftersalev2 {
                 kernel::single('ome_order_object_amount')->recalculateOrderAmount($order_id, [$item]);
                 
                 // custom 根据子订单id查询是否有关联赠品
-                $this->__deletePlatformGift($item['oid'], $order_id, $needChangeFreezeItem);
+                $this->__deletePlatformGift($item['oid'], $order_id, $needChangeFreezeItem, $order_detail);
             }
         }
         if($needChangeFreezeItem) {
@@ -2358,7 +2358,7 @@ class erpapi_shop_response_process_aftersalev2 {
      * @param $order_id
      * @return void
      */
-    public function __deletePlatformGift($oid, $order_id, &$needChangeFreezeItem)
+    public function __deletePlatformGift($oid, $order_id, &$needChangeFreezeItem, $order_detail = [])
     {
         $orderObjectObj = app::get('ome')->model('order_objects');
         $orderItemObj = app::get('ome')->model("order_items");
@@ -2372,10 +2372,24 @@ class erpapi_shop_response_process_aftersalev2 {
             'delete' => 'false',
             'sale_price' => '0',
         ];
-        $giftOrderObjects = $orderObjectObj->getList('obj_id,main_oid,part_mjz_discount,divide_order_fee,amount,pmt_price', $giftFilter);
+        $giftOrderObjects = $orderObjectObj->getList('obj_id,main_oid,part_mjz_discount,divide_order_fee,amount,pmt_price,oid', $giftFilter);
 
         if (empty($giftOrderObjects)) {
             return;
+        }
+
+        $refundOids = [];
+        if ($order_detail['shop_type'] == 'taobao' || $order_detail['shop_type'] == 'tmall') {
+            $refundRs =  kernel::single('erpapi_router_request')->set('shop', $order_detail['shop_id'])->finance_getRefundStatus(['order_bn' => $order_detail['order_bn']]);
+
+            if ($refundRs['rsp'] == 'succ' && !empty($refundRs['data']) && is_array($refundRs['data'])) {
+                $refundOids = ['NON_PLATFORM_REFUND'];
+                foreach ($refundRs['data'] as $refund) {
+                    if ($refund['status'] == 'SUCCESS' && isset($refund['oid'])) {
+                        $refundOids[] = $refund['oid'];
+                    }
+                }
+            }
         }
 
         // 不为空,则逐个循环,检查关联销售子订单是否都已删除
@@ -2389,6 +2403,14 @@ class erpapi_shop_response_process_aftersalev2 {
             $splitGiftOrderObjectItemCount = $orderItemObj->count($splitGiftOrderObjectItemFilter);
 
             if ($splitGiftOrderObjectItemCount > 0) {
+                continue;
+            }
+
+            // 如果平台赠品未退款，则不处理
+            if (in_array($order_detail['shop_type'], ['taobao', 'tmall']) 
+                && $giftOrderObject['oid'] 
+                && $refundOids
+                && !in_array($giftOrderObject['oid'], $refundOids)) {
                 continue;
             }
 

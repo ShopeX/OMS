@@ -152,6 +152,10 @@ class dchain_order extends dchain_abstract
             if($white_delivery_cps && in_array($corpInfo['type'], $white_delivery_cps)){
                 return $this->succ();
             }
+
+            if ($extendInfo['cpup_service'] == '218') {
+                return $this->error('该订单为加价发顺丰平台集采订单，请修改为顺丰快递');
+            }
             
             $error_msg = '当前订单在猫淘平台对消费者进行了服务承诺，建议按照平台要求进行择配，否则存在赔付风险。';
             return $this->error($error_msg);

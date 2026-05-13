@@ -255,7 +255,7 @@ class erpapi_shop_matrix_luban_response_aftersalev2 extends erpapi_shop_response
                 $refundApplyInfo = $refundApplyObj->getList('refund_apply_bn', array('return_id'=>$refundOriginalInfo[0]['return_id'],'status' =>array('0','1','2','5','6')) , 0 , 1);
                 if($refundApplyInfo){
                     $sdf['refund_bn'] = $refundApplyInfo[0]['refund_apply_bn'];
-                    $sdf['has_finished_return_product'] = true;
+                    $sdf['tmall_has_finished_return_product'] = true;
                 }
             }
         }
@@ -278,7 +278,7 @@ class erpapi_shop_matrix_luban_response_aftersalev2 extends erpapi_shop_response
             }elseif($sdf['refund_refer'] == 'aftersale'){
                 //售后仅退款(场景：已发货、未签收)
                 return 'refund';
-            }elseif(in_array($sdf['order']['ship_status'],array('3','4')) && $sdf['has_finished_return_product']){
+            }elseif(in_array($sdf['order']['ship_status'],array('3','4')) && $sdf['tmall_has_finished_return_product']){
                 //退款单
                 return 'refund';
             }else{
