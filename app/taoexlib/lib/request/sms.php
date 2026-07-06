@@ -250,12 +250,28 @@ class taoexlib_request_sms{
     }
 
     /**
+     * 生成高熵回调 code（避免 microtime 可被穷举）
+     * @return string
+     */
+    protected static function generate_sms_callback_code()
+    {
+        if (function_exists('random_bytes')) {
+            return bin2hex(random_bytes(16));
+        }
+        if (function_exists('openssl_random_pseudo_bytes')) {
+            return bin2hex(openssl_random_pseudo_bytes(16));
+        }
+
+        return md5(uniqid((string) mt_rand(), true) . base_certificate::get('certificate_id'));
+    }
+
+    /**
      * 刷新短信回调 code 并写入 kv（带过期时间）
      * @return string
      */
     public static function refresh_sms_callback_code()
     {
-        $code = md5(microtime());
+        $code = self::generate_sms_callback_code();
         base_kvstore::instance('taoexlib')->store(
             self::SMS_CALLBACK_CODE_KEY,
             $code,
