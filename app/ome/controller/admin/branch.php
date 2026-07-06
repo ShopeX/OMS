@@ -68,20 +68,22 @@ class ome_ctl_admin_branch extends desktop_controller
             
             //一个主仓只有一个残仓
             if ($data['branch_type'] == 'damaged') {
-                if (!empty($data['branch_id'])) {
-                    if (!empty($data['main_branch'])) {
-                        $damaged = $oBranch->db->selectrow("SELECT count(*) as num FROM `sdb_ome_branch` WHERE  `type` = 'damaged' AND `parent_id` =" . $data['main_branch'] . " AND `branch_id` <> " . $data['branch_id']);
-                    } else {
-                        $damaged['num'] = 0;
+                $main_branch = intval($data['main_branch']);
+                $branch_id   = intval($data['branch_id']);
+                $damaged_num = 0;
+
+                if ($main_branch > 0) {
+                    $filter = array(
+                        'type'      => 'damaged',
+                        'parent_id' => $main_branch,
+                    );
+                    if ($branch_id > 0) {
+                        $filter['branch_id|noequal'] = $branch_id;
                     }
-                } else {
-                    if (!empty($data['main_branch'])) {
-                        $damaged = $oBranch->db->selectrow("SELECT count(*) as num FROM `sdb_ome_branch` WHERE  `type` = 'damaged' AND `parent_id` =" . $data['main_branch']);
-                    } else {
-                        $damaged['num'] = 0;
-                    }
+                    $damaged_num = $oBranch->count($filter);
                 }
-                if ($damaged['num'] >= 1) {
+
+                if ($damaged_num >= 1) {
                     $this->end(false, app::get('base')->_('该主仓下已存在一个残仓，请重新选择主仓！'));
                 }
                 $data['attr'] = 'false';
@@ -95,7 +97,7 @@ class ome_ctl_admin_branch extends desktop_controller
                     $data['type']            = $_POST['branch_type'];
                     $data['attr']            = 'false';
                     $data['is_deliv_branch'] = 'false';
-                    $data['parent_id']       = $_POST['main_branch'];
+                    $data['parent_id']       = intval($_POST['main_branch']);
                     #残仓售后仓wms_id复用主仓
                 }
             }
@@ -476,15 +478,20 @@ class ome_ctl_admin_branch extends desktop_controller
     public function get_branch_type($branch_type, $branch_bn, $wms_id)
     {
         $oBranch = $this->app->model("branch");
+        $wms_id  = intval($wms_id);
+        if ($wms_id <= 0) {
+            echo 'false';
+            return;
+        }
+
+        $p_id = array();
         if (!empty($branch_bn)) {
-            $p_id       = $oBranch->dump(array('branch_bn' => $branch_bn), 'branch_id,parent_id');
+            $p_id = $oBranch->dump(array('branch_bn' => $branch_bn), 'branch_id,parent_id');
         }
         
         if ($branch_type == 'damaged') {
             //残次仓
-            $b_sql = "SELECT * FROM `sdb_ome_branch` as s WHERE type='main' ";
-            $b_sql .= " AND wms_id=" . $wms_id;
-            $main_branchs = $oBranch->db->select($b_sql);
+            $main_branchs = $oBranch->getList('*', array('type' => 'main', 'wms_id' => $wms_id));
             
             $html = "<select id='main_branch' name='main_branch' vtype='required'>";
             foreach ($main_branchs as $v)
@@ -503,14 +510,11 @@ class ome_ctl_admin_branch extends desktop_controller
             $html .= "</select>";
         } else {
             //主仓
+            $filter = array('type' => 'main', 'wms_id' => $wms_id);
             if (!empty($p_id['branch_id'])) {
-                $sql = "SELECT `branch_id`,`name` FROM `sdb_ome_branch` WHERE `type`='main' AND `branch_id` <> " . $p_id['branch_id'];
-            } else {
-                $sql = "SELECT `branch_id`,`name` FROM `sdb_ome_branch` WHERE `type`='main' ";
+                $filter['branch_id|noequal'] = intval($p_id['branch_id']);
             }
-            $sql .= " AND wms_id=" . $wms_id;
-            
-            $main_branchs = $oBranch->db->select($sql);
+            $main_branchs = $oBranch->getList('branch_id,name', $filter);
             if (!empty($main_branchs)) {
                 $html = "<select id='main_branch' name='main_branch' vtype='required'>";
                 
