@@ -22,7 +22,6 @@
  */
 class taoexlib_rpc_sms
 {
-    
     /**
      * 更新短信审核状态
      * @param   array result
@@ -33,33 +32,50 @@ class taoexlib_rpc_sms
 
     function sms_callback($result)
     {
-        $result = $_POST;
-
-        $reason = $result['reason'];
-        $tplid= $result['tplid'];
-        $status = $result['status'];
-        $db = kernel::database();
-        // status=0｜1｜2(拒绝｜通过｜等待审核),
-        $sqlstr=array();
-        if (in_array($status,array('0','1'))) {
-            if ($status == '0') {
-                $approved = '2';
-                $sqlstr[]="sync_reason='".$reason."'";
-            }else if($status == '1'){
-                $approved = '1';
-            }
-            $approved_at = $re['approved_at'];
-             $sqlstr[]="approved='".$approved."',approvedtime=".$approved_at;
-            if ($sqlstr) {
-                $sqlstr = implode(',',$sqlstr);
-                $db->exec("UPDATE sdb_taoexlib_sms_sample_items SET ".$sqlstr." WHERE tplid='".$tplid."'");
-                $db->exec("UPDATE sdb_taoexlib_sms_sample SET approved='".$approved."' WHERE tplid='".$tplid."'");
-            }
-            
+        if (!taoexlib_request_sms::verify_sms_callback_code($result)) {
+            header('HTTP/1.1 403 Forbidden');
+            echo 'invalid code';
+            return false;
         }
+
+        $status = isset($_POST['status']) ? strval($_POST['status']) : '';
+        if (!in_array($status, array('0', '1'), true)) {
+            header('HTTP/1.1 400 Bad Request');
+            echo 'Invalid status';
+            return false;
+        }
+
+        $tplid = isset($_POST['tplid']) ? trim(strval($_POST['tplid'])) : '';
+        if ($tplid === '' || strlen($tplid) > 25 || !preg_match('/^[a-zA-Z0-9_-]+$/', $tplid)) {
+            header('HTTP/1.1 400 Bad Request');
+            echo 'Invalid tplid';
+            return false;
+        }
+
+        $reason = isset($_POST['reason']) ? substr(trim(strval($_POST['reason'])), 0, 200) : '';
+        $approved = ($status == '0') ? '2' : '1';
+
+        $approved_at = time();
+        if (isset($_POST['approved_at']) && preg_match('/^\d+$/', strval($_POST['approved_at']))) {
+            $approved_at = intval($_POST['approved_at']);
+        }
+
+        $itemsModel = app::get('taoexlib')->model('sms_sample_items');
+        $sampleModel = app::get('taoexlib')->model('sms_sample');
+        $filter = array('tplid' => $tplid);
+
+        $itemsData = array(
+            'approved' => $approved,
+            'approvedtime' => $approved_at,
+        );
+        if ($status == '0') {
+            $itemsData['sync_reason'] = $reason;
+        }
+
+        $itemsModel->update($itemsData, $filter);
+        $sampleModel->update(array('approved' => $approved), $filter);
+
         echo 'OK';
         return true;
     }
-} 
-
-?>
+}

@@ -19,6 +19,10 @@
 * 短信模板请求
 */
 class taoexlib_request_sms{
+    const SMS_CALLBACK_CODE_KEY = 'sms.callback.code';
+    /** 回调 code 有效期（秒），24 小时 */
+    const SMS_CALLBACK_CODE_TTL = 86400;
+
     public static $serverTimestamp = null;
     const VERSION = '1.0';
     const SERVICE_URL = '/sms-tpl/';
@@ -72,7 +76,7 @@ class taoexlib_request_sms{
                     'content'   =>  $this->_format_content($sms_data['content']),
                     'keys'      =>  $keys,
                     'tags'=>'',
-                    'callback'=> kernel::openapi_url('openapi.taoexlib.sms','sms_callback'),
+                    'callback'=> kernel::openapi_url('openapi.taoexlib.sms','sms_callback', array('code' => self::get_sms_callback_code())),
                 );
                 
             break;
@@ -151,7 +155,6 @@ class taoexlib_request_sms{
     * 模板列表请求
     */
     public function list_request($type,$method,$data){
-        $oSms_sample = app::get('taoexlib')->model('sms_sample');
         $params     = $this->_sms_templateParams($type,$data);
         $api_url    = $this->_sms_templateUrl($type);
         $result = $this->_request($api_url,$method,$params);
@@ -159,32 +162,7 @@ class taoexlib_request_sms{
         if ($result['res'] == 'succ') {
             $result = $result['data'];
             foreach ($result as $re ) {
-                $sqlstr = array();
-                if (in_array($re['approved'],array('0','1'))) {
-                    
-                    if ($re['approved']=='0') {
-                        $approved = '2';
-                        $reason = $re['reason'];
-                        $sqlstr[]="sync_reason='".$reason."'";
-                    }else if($re['approved']=='1'){
-                        $approved = '1';
-                    }
-                    $isapproved = $data['isapproved'];
-                    if ($isapproved == 'true') {
-                        $sqlstr[]=',`status`=\'1\'';
-                    }
-                    $approved_at = $re['approved_at'];
-                    $sqlstr[]="approved='".$approved."',approvedtime=".$approved_at;
-                    $tplid = $re['tplid'];
-                    $name = $re['name'];
-                    if ($sqlstr) {
-                        $sqlstr = implode(',',$sqlstr);
-                        $oSms_sample->db->exec("UPDATE sdb_taoexlib_sms_sample_items SET ".$sqlstr." WHERE tplid='".$tplid."'");
-                        $oSms_sample->db->exec("UPDATE sdb_taoexlib_sms_sample SET approved='".$approved."' WHERE tplid='".$tplid."'");
-                    }
-               }
-                
-                    //其它更新为不启用
+                $this->_update_sms_approval_status($re, $data);
             }
         }
         return true;
@@ -269,6 +247,100 @@ class taoexlib_request_sms{
             }
          }
         return md5($str . md5($token));
+    }
+
+    /**
+     * 刷新短信回调 code 并写入 kv（带过期时间）
+     * @return string
+     */
+    public static function refresh_sms_callback_code()
+    {
+        $code = md5(microtime());
+        base_kvstore::instance('taoexlib')->store(
+            self::SMS_CALLBACK_CODE_KEY,
+            $code,
+            self::SMS_CALLBACK_CODE_TTL
+        );
+        return $code;
+    }
+
+    /**
+     * 获取短信回调 code，不存在或已过期则重新生成
+     * @return string
+     */
+    public static function get_sms_callback_code()
+    {
+        if (base_kvstore::instance('taoexlib')->fetch(self::SMS_CALLBACK_CODE_KEY, $code) && $code) {
+            return strval($code);
+        }
+
+        return self::refresh_sms_callback_code();
+    }
+
+    /**
+     * 校验短信模板审核回调 code（URL 路径中的 code 与 kv 中未过期的值一致）
+     * @param array $result
+     * @return bool
+     */
+    public static function verify_sms_callback_code($result)
+    {
+        $code = isset($result['code']) ? trim(strval($result['code'])) : '';
+        if ($code === '') {
+            return false;
+        }
+
+        if (!base_kvstore::instance('taoexlib')->fetch(self::SMS_CALLBACK_CODE_KEY, $storedCode) || !$storedCode) {
+            return false;
+        }
+
+        return $code === strval($storedCode);
+    }
+
+    /**
+     * 根据审核结果更新短信模板状态
+     * @param array $item
+     * @param array $data
+     * @return void
+     */
+    protected function _update_sms_approval_status($item, $data)
+    {
+        if (!in_array($item['approved'], array('0', '1'))) {
+            return;
+        }
+
+        $tplid = isset($item['tplid']) ? trim(strval($item['tplid'])) : '';
+        if ($tplid === '' || strlen($tplid) > 25 || !preg_match('/^[a-zA-Z0-9_-]+$/', $tplid)) {
+            return;
+        }
+
+        if ($item['approved'] == '0') {
+            $approved = '2';
+        } else {
+            $approved = '1';
+        }
+
+        $approved_at = time();
+        if (isset($item['approved_at']) && preg_match('/^\d+$/', strval($item['approved_at']))) {
+            $approved_at = intval($item['approved_at']);
+        }
+
+        $itemsModel = app::get('taoexlib')->model('sms_sample_items');
+        $sampleModel = app::get('taoexlib')->model('sms_sample');
+        $filter = array('tplid' => $tplid);
+
+        $itemsData = array(
+            'approved' => $approved,
+            'approvedtime' => $approved_at,
+        );
+        if ($item['approved'] == '0' && isset($item['reason'])) {
+            $itemsData['sync_reason'] = substr(trim(strval($item['reason'])), 0, 200);
+        }
+        if (isset($data['isapproved']) && $data['isapproved'] == 'true') {
+            $itemsData['status'] = '1';
+        }
+
+        $itemsModel->update($itemsData, $filter);
+        $sampleModel->update(array('approved' => $approved), $filter);
     }
     /**
      *格式化内容
