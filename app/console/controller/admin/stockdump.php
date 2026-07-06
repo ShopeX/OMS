@@ -238,65 +238,15 @@ class console_ctl_admin_stockdump extends desktop_controller{
         }
     }
 
-
-    /**
-     * more_items
-     * @return mixed 返回值
-     */
-    public function more_items(){
-        $finder_id = $_GET['_finder']['finder_id'];
-        $appr_id = $_GET['apprid'];
-        $render = app::get('console')->render();
-        
-        $basicMaterialObj    = app::get('material')->model('basic_material');
-        $basicMaterialLib    = kernel::single('material_basic_material');
-        
-        $itemObj = app::get('console')->model('stockdump_items');
-        $omeObj = app::get('ome')->render();
-        $page = $_GET['page'] ? $_GET['page'] : 1;
-        $pagelimit = 10;
-        $offset = ($page-1)*$pagelimit;
-        $sql = "SELECT COUNT(*) FROM `sdb_console_stockdump_items` WHERE stockdump_id =".$appr_id;
-        $tmp = kernel::database()->select($sql);
-        $items = $itemObj->getList('*',array('stockdump_id'=>$appr_id),$offset,$pagelimit);
-        $count = $tmp[0]['COUNT(*)'];
-        $total_page = ceil($count/$pagelimit);
-        $pager = $this->ui()->pager(array(
-            'current'=>$page,
-            'total'=>$total_page,
-            'link'=>'index.php?app=console&ctl=admin_stockdump&act=more_items&apprid='.$appr_id.'&page=%d&finder_id='.$finder_id,
-        ));
-        
-        if ($items)
-        foreach ($items as $key => $item)
-        {
-            //将商品的显示名称改为后台的显示名称
-            $bm_ids    = $basicMaterialObj->dump(array('material_bn'=>$items[$key]['bn']), 'bm_id');
-            
-            $product_name    = $basicMaterialLib->getBasicMaterialExt($bm_ids['bm_id']);
-            
-            $items[$key]['product_name'] = $product_name['material_name'];
-            $items[$key]['spec_info'] = $product_name['specifications'];
-            $items[$key]['unit'] = $product_name['unit'];
-        
-        }
-
-        $render->pagedata['items'] = $items;
-        $render->pagedata['pager'] = $pager;
-        $this->singlepage('admin/stockdump/stockdump_more_item.html');
-    }
-
-    /**
-     * 获取_wms_branch
-     * @return mixed 返回结果
-     */
     public function get_wms_branch(){
-        $branch_id = $_POST['branch_id'];
+        $branch_id = intval($_POST['branch_id']);
+        if ($branch_id <= 0) {
+            echo '';
+            return;
+        }
         $branch_model = app::get('ome')->model('branch');
-       
-        $sql = "SELECT wb.wms_id,wb.branch_bn FROM `sdb_ome_branch` as wb 
-        
-        WHERE wb.branch_id = ".$branch_id;
+
+        $sql = "SELECT wb.wms_id,wb.branch_bn FROM `sdb_ome_branch` as wb WHERE wb.branch_id = ".$branch_id;
         $wms_info = kernel::database()->select($sql);
         $bn_array = array();    
         $bn_str = '';    

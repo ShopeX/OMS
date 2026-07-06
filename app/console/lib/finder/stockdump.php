@@ -37,7 +37,7 @@ class console_finder_stockdump{
         
         $appObj = app::get('console')->model('stockdump');
         $itemObj = app::get('console')->model('stockdump_items');
-        $items = $itemObj->getList('*',array('stockdump_id'=>$appr_id),0,100);
+        $items = $itemObj->getList('*',array('stockdump_id'=>$appr_id),0,-1);
         
         if ($items)
         foreach ($items as $key => $item)
@@ -56,22 +56,14 @@ class console_finder_stockdump{
             $showPurchasePrice = false;
         }
         $render->pagedata['show_purchase_price'] = $showPurchasePrice;
-        $finder_id = $_GET['_finder']['finder_id'];
 
         $render->pagedata['items'] = $items;
-        $render->pagedata['finder_id'] = $finder_id;
-        $render->pagedata['appr_id'] = $appr_id;
         return $render->fetch('admin/stockdump/stockdump_detail_item.html');
     }
 
 
     var $column_operation = '操作';
     var $column_operation_width = 90;
-    /**
-     * column_operation
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_operation($row){
         $return = '';
         $stockdump_id = $row['stockdump_id'];
@@ -99,11 +91,6 @@ class console_finder_stockdump{
 
     var $column_confirm_type = '确认状态';
     var $column_confirm_type_width = 80;
-    /**
-     * column_confirm_type
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_confirm_type($row){
         $return = '';
         $stockdump_id = $row['stockdump_id'];
@@ -124,11 +111,6 @@ class console_finder_stockdump{
 
     var $column_confirm_name = '确认人';
     var $column_confirm_name_width = 80;
-    /**
-     * column_confirm_name
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_confirm_name($row){
         $return = '';
         $stockdump_id = $row['stockdump_id'];
@@ -140,11 +122,6 @@ class console_finder_stockdump{
 
     var $column_confirm_time = '确认日期';
     var $column_confirm_time_width = 140;
-    /**
-     * column_confirm_time
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_confirm_time($row){
         $return = '';
         $stockdump_id = $row['stockdump_id'];
@@ -160,11 +137,6 @@ class console_finder_stockdump{
 
     var $column_op_time = ' 处理时长';
     var $column_op_time_width = 80;
-    /**
-     * column_op_time
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_op_time($row){
         $stockdump_id = $row['stockdump_id'];
         $appObj = app::get('console')->model('stockdump');
@@ -186,11 +158,6 @@ class console_finder_stockdump{
     
     var $column_time_remind = ' 超时提醒';
     var $column_time_remind_width = 80;
-    /**
-     * column_time_remind
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_time_remind($row){
         $stockdump_remind_setting_days = app::get("omestorage")->getConf("stockdump_remind_setting_days");
         if($stockdump_remind_setting_days == 'nosetting')
@@ -209,11 +176,6 @@ class console_finder_stockdump{
 
     var $column_sync_status = ' 同步状态';
     var $column_sync_status_width = 80;
-    /**
-     * column_sync_status
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_sync_status($row){
         $stockdump_id = $row['stockdump_id'];
         $appObj = app::get('console')->model('stockdump');
@@ -238,11 +200,6 @@ class console_finder_stockdump{
 
     var $column_type = '单据状态';
     var $column_type_width = 80;
-    /**
-     * column_type
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_type($row){
         $return = '';
         $stockdump_id = $row['stockdump_id'];
@@ -272,11 +229,6 @@ class console_finder_stockdump{
 
     var $column_to_branch_id = '调入仓库';
     var $column_to_branch_id_width = 120;
-    /**
-     * column_to_branch_id
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_to_branch_id($row){
         $return = '';
         $stockdump_id = $row['stockdump_id'];
@@ -291,11 +243,6 @@ class console_finder_stockdump{
 
     var $column_from_branch_name = '调出仓库';
     var $column_from_branch_name_width = 120;
-    /**
-     * column_from_branch_name
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_from_branch_name($row){
         $return = '';
         $stockdump_id = $row['stockdump_id'];
@@ -310,11 +257,6 @@ class console_finder_stockdump{
 
     var $column_memo = '备注';
     var $column_memo_width = 200;
-    /**
-     * column_memo
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_memo($row){
         $return = '';
         $stockdump_id = $row['stockdump_id'];
