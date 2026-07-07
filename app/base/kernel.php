@@ -122,7 +122,6 @@ class kernel{
                 cachemgr::init();
                 return kernel::single('base_misc_doc',1)->display($pathinfo);
             }elseif($part=='/qimen'){
-                //qimen路由(birkenstock勃肯中间件使用)
                 cachemgr::init();
                 return kernel::single('qimen_rpc_service',1)->process($pathinfo);
             }
