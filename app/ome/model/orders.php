@@ -81,9 +81,9 @@ class ome_mdl_orders extends dbeav_model{
 
     /**
      * 须加密字段
-     * 
+     *
      * @var string
-     * */
+     **/
     private $__encrypt_cols = array(
         'ship_name'   => 'simple',
         'ship_tel'    => 'phone',
@@ -487,6 +487,16 @@ class ome_mdl_orders extends dbeav_model{
             $where .= ' AND order_id IN ('. $sql .')';
         }
 
+        if (!empty($filter['order_label_code'])) {
+            $where .= ' AND EXISTS (
+                SELECT 1 FROM sdb_ome_bill_label bl
+                WHERE bl.bill_id = sdb_ome_orders.order_id
+                AND bl.label_code = "'.addslashes($filter['order_label_code']).'"
+                AND bl.bill_type = "order"
+            )';
+            unset($filter['order_label_code']);
+        }
+
         // 最晚发货时间
         if($filter['latest_delivery_time']){
 
@@ -548,12 +558,12 @@ class ome_mdl_orders extends dbeav_model{
     }
 
     /**
-     * 快速查询订单主表信息
-     * @access public
-     * @param mixed $filter 过滤条件,也可以直接是订单主键ID,如:$order_id
-     * @param String $cols 字段名
-     * @return Array 订单信息
-     */
+    * 快速查询订单主表信息
+    * @access public
+    * @param mixed $filter 过滤条件,也可以直接是订单主键ID,如:$order_id
+    * @param String $cols 字段名
+    * @return Array 订单信息
+    */
     function getRow($filter,$cols='*'){
         if (empty($filter)) return array();
 
@@ -579,11 +589,11 @@ class ome_mdl_orders extends dbeav_model{
     }
 
     /**
-     * 获取订单商品明细
-     * @access public
-     * @param Number $order_id 订单ID
-     * @return Array 订单商品明细
-     */
+    * 获取订单商品明细
+    * @access public
+    * @param Number $order_id 订单ID
+    * @return Array 订单商品明细
+    */
     function order_objects($order_id){
         if (empty($order_id)) return array();
 
@@ -640,13 +650,6 @@ class ome_mdl_orders extends dbeav_model{
         }
     }
 
-    /**
-     * modifier_shop_id
-     * @param mixed $shop_id ID
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_shop_id($shop_id,$list,$row){
         static $shopList;
 
@@ -661,13 +664,6 @@ class ome_mdl_orders extends dbeav_model{
         return $shopList[$shop_id];
     }
 
-    /**
-     * modifier_org_id
-     * @param mixed $org_id ID
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_org_id($org_id,$list,$row){
         static $orgList;
 
@@ -1518,7 +1514,7 @@ class ome_mdl_orders extends dbeav_model{
 
     /**
      * 确认组
-     * 
+     *
      * @param Integer $row 组ID
      * @return void
      */
@@ -1541,7 +1537,7 @@ class ome_mdl_orders extends dbeav_model{
 
     /**
      * 获取用户名
-     * 
+     *
      * @param Integer $gid
      * @return String;
      */
@@ -1566,7 +1562,7 @@ class ome_mdl_orders extends dbeav_model{
 
     /**
      * 获取组名
-     * 
+     *
      * @param Integer $gid
      * @return String;
      */
@@ -1592,7 +1588,7 @@ class ome_mdl_orders extends dbeav_model{
 
     /**
      * 确认人
-     * 
+     *
      * @param Integer $row 确认人ID
      * @return void
      */
@@ -1769,9 +1765,9 @@ class ome_mdl_orders extends dbeav_model{
 
     /**
      * 获得总数量
-     * 
+     *
      * @param string $where
-     * 
+     *
      * @return array()
      */
     function get_all($where){
@@ -1805,9 +1801,9 @@ class ome_mdl_orders extends dbeav_model{
 
     /**
      * 获得确认组订单数量
-     * 
+     *
      * @param string $where
-     * 
+     *
      * @return array
      */
     function get_group($where){
@@ -1847,10 +1843,10 @@ class ome_mdl_orders extends dbeav_model{
 
     /**
      * 获得已分派但未确认时间超过设定时间的订单数量
-     * 
+     *
      * @param string $where
      * @param string $type
-     * 
+     *
      * @return number
      */
     function get_operator($where){
@@ -1954,10 +1950,10 @@ class ome_mdl_orders extends dbeav_model{
 
     /**
      * 更新订单状态
-     * 
+     *
      * @param bigint $order_id
      * @param string $status
-     * 
+     *
      * @return boolean
      */
     function set_status($order_id, $status){
@@ -2595,7 +2591,6 @@ class ome_mdl_orders extends dbeav_model{
    /*
      * 快速查找订单信息
      */
-
     public function getOrders($name=null)
     {
         $sql = " SELECT order_id,order_bn FROM `sdb_ome_orders`
@@ -2663,8 +2658,8 @@ class ome_mdl_orders extends dbeav_model{
             return false;
         }
         
-        //brush特殊订单、补发订单,不需要后续功能
-        if(in_array($sdf['shop_type'], array('brsh', 'bufa'))){
+        // brush特殊订单、补发订单,不需要后续功能
+        if(in_array($sdf['order_type'], array('brsh', 'bufa'))){
             return true;
         }
         
@@ -2754,15 +2749,15 @@ class ome_mdl_orders extends dbeav_model{
      }
 
      /**
-      * 取消订单
-      * @access public
-      * @param Number $order_id 订单ID
-      * @param String $memo 取消备注
-      * @param Bool $is_request 是否询问请求
-      * @param string $mode 请求类型:sync同步  async异步
-      * @param Bool $must_log 订单收订叫回失败记录日志
-      * @return Array
-      */
+     * 取消订单
+     * @access public
+     * @param Number $order_id 订单ID
+     * @param String $memo 取消备注
+     * @param Bool $is_request 是否询问请求
+     * @param string $mode 请求类型:sync同步  async异步
+     * @param Bool $must_log 订单收订叫回失败记录日志
+     * @return Array
+     */
      function cancel($order_id,$memo,$is_request=true,$mode='sync', $must_log = false){
          $operLogMdl = $this->app->model('operation_log');
          
@@ -3038,11 +3033,11 @@ class ome_mdl_orders extends dbeav_model{
 
     /**
      * 统计导出数据
-     * 
+     *
      * @param Array $filter 过滤条件
      * @return void
      * @author
-     * */
+     **/
     public function fcount_csv($filter)
     {
         $count = $this->count($filter);
@@ -3292,7 +3287,7 @@ class ome_mdl_orders extends dbeav_model{
     
     /**
      * [第三步]最终,导入数据保存
-     * 
+     *
      * @return void
      */
     function finish_import_csv(){
@@ -3605,7 +3600,7 @@ class ome_mdl_orders extends dbeav_model{
     
     /**
      * [第一步]整理导入的数据
-     * 
+     *
      * @param $row
      * @param $title
      * @param $tmpl
@@ -3770,7 +3765,7 @@ class ome_mdl_orders extends dbeav_model{
     
     /**
      * [第二步]检查导入的订单商品明细
-     * 
+     *
      * @param $data
      * @param $mark
      * @param $tmpl
@@ -4051,12 +4046,7 @@ class ome_mdl_orders extends dbeav_model{
 
 
     //不能进行订单编辑的状态判断
-    /**
-     * not_allow_edit
-     * @param mixed $order_id ID
-     * @return mixed 返回值
-     */
-    public function not_allow_edit($order_id){
+   public function not_allow_edit($order_id){
         $order = $this->dump($order_id);
         //已取消的订单不允许编辑
         if($order['process_status'] == 'cancel'){
@@ -4133,11 +4123,11 @@ class ome_mdl_orders extends dbeav_model{
    }
 
 
-    /**
-     * 统计订单商品重量
-     * @param  order_id
-     * @return void
-     */
+   /**
+   * 统计订单商品重量
+   * @param  order_id
+   * @return void
+   */
     function getOrderWeight($order_id,$type='',$additional=''){
         $orderObj = $this->app->model('orders');
         $basicMaterialExtObj = app::get('material')->model('basic_material_ext');
@@ -4198,9 +4188,9 @@ class ome_mdl_orders extends dbeav_model{
     }
 
     /**
-     * 异常订单过滤条件
-     * 
-     */
+    * 异常订单过滤条件
+    *
+    */
 
     function _abnormalFilter($filter,$tableAlias=null,$baseWhere=null){
         $table_name = $this->table_name(true);
@@ -4794,13 +4784,6 @@ class ome_mdl_orders extends dbeav_model{
         return trim(str_replace(array("\t","\r","\n"),array("","",""),$str));
     }
 
-    /**
-     * modifier_ship_name
-     * @param mixed $ship_name ship_name
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_ship_name($ship_name,$list,$row)
     {
         if ($this->is_export_data) {
@@ -4829,13 +4812,6 @@ HTML;
         return $ship_name?$return:$ship_name;
     }
 
-    /**
-     * modifier_ship_tel
-     * @param mixed $tel tel
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_ship_tel($tel,$list,$row)
     {
         if ($this->is_export_data) {
@@ -4863,13 +4839,6 @@ HTML;
         return $tel?$return:$tel;
     }
 
-    /**
-     * modifier_ship_mobile
-     * @param mixed $mobile mobile
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_ship_mobile($mobile,$list,$row)
     {
         if ($this->is_export_data) {
@@ -4898,13 +4867,6 @@ HTML;
         return $mobile?$return:$mobile;
     }
 
-    /**
-     * modifier_ship_addr
-     * @param mixed $ship_addr ship_addr
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_ship_addr($ship_addr,$list,$row)
     {
         if ($this->is_export_data) {
@@ -4935,7 +4897,7 @@ HTML;
     
     /**
      * 增加旺旺联系方式
-     * 
+     *
      * @param integre $row 用户ID
      * @return String
      */
@@ -5007,11 +4969,6 @@ HTML;
         return $order_list[$row['order_id']]['uname'];
     }
     
-    /**
-     * insert
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function insert(&$data)
     {
         foreach ($this->__encrypt_cols as $field => $type) {
@@ -5075,11 +5032,6 @@ HTML;
         }
     }
     
-    /**
-     * 获取Area
-     * @param mixed $where where
-     * @return mixed 返回结果
-     */
     public function getArea($where) {
         $sql = 'SELECT order_id from sdb_ome_orders WHERE '.$where;
         return array_column($this->db->select($sql),'order_id');
@@ -5221,11 +5173,6 @@ HTML;
         return $data;
     }
     
-    /**
-     * 获取CustomExportTitle
-     * @param mixed $main_title main_title
-     * @return mixed 返回结果
-     */
     public function getCustomExportTitle($main_title)
     {
         $main_title = array_keys($main_title);
@@ -5234,10 +5181,6 @@ HTML;
         return mb_convert_encoding(implode(',', $title), 'GBK', 'UTF-8');    }
     
     
-    /**
-     * orderItemsExportTitle
-     * @return mixed 返回值
-     */
     public function orderItemsExportTitle()
     {
         $items_title = array(

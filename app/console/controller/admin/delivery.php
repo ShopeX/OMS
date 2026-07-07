@@ -14,8 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class console_ctl_admin_delivery extends desktop_controller {
+    const URGENT_LABEL_CODE = 'SOMS_URGENT_SHIP';
 
     var $name = "发货单列表";
     var $workground = "console_center";
@@ -26,7 +26,7 @@ class console_ctl_admin_delivery extends desktop_controller {
     function index(){
         $_GET['view'] = intval($_GET['view']);
         $user = kernel::single('desktop_user');
-        
+
         $actions = array();
         $base_filter = array(
             'type' => array('normal'),
@@ -34,7 +34,7 @@ class console_ctl_admin_delivery extends desktop_controller {
             'parent_id' => 0,
             'disabled' => 'false',
         );
-        
+
         $base_filter = array_merge($base_filter,$_GET);
         
         switch ($_GET['view']) {
@@ -68,7 +68,7 @@ class console_ctl_admin_delivery extends desktop_controller {
                                 'confirm' => '你确定要对勾选的发货单更新WMS发货状态为签收吗？',
                                 'target' => 'refresh',
                 );
-                
+
                 /***
                  * @todo：[禁止使用此按钮]升级大版本,sdb_ome_delivery表中logi_status字段加属性,好莱客户刷不动；
                  *
@@ -106,9 +106,15 @@ class console_ctl_admin_delivery extends desktop_controller {
            );
        }
 
+       // count
+       $operationOrgObj = app::get('ome')->model('operation_organization');
+       $countNum = $operationOrgObj->count();
+       
         //check shop permission
         $organization_permissions = kernel::single('desktop_user')->get_organization_permission();
-        if($organization_permissions){
+
+        //@todo：只有一个运营组织时，不需要查询org_id，否则查询很慢;
+        if($organization_permissions && $countNum > 1){
             $base_filter['org_id'] = $organization_permissions;
         }
 
@@ -132,7 +138,11 @@ class console_ctl_admin_delivery extends desktop_controller {
         $this->finder('console_mdl_delivery', $params);
     }
 
-    //未发货 已发货 全部
+    /**
+     * 构建发货单 Finder 视图，包括基于发货单标签的加急发货页签。
+     *
+     * @return array
+     */
     function _views(){
         $oDelivery = app::get('ome')->model('delivery');
         $base_filter = array(
@@ -150,6 +160,20 @@ class console_ctl_admin_delivery extends desktop_controller {
             4 => array('label' => app::get('base')->_('已揽收'), 'filter' => array('logi_status' => array('1'), 'process' => array('true'), 'status' => 'succ'), 'optional' => false),
             5 => array('label' => app::get('base')->_('已签收'), 'filter' => array('logi_status' => array('3'), 'process' => array('true'), 'status' => 'succ'), 'optional' => false),
             8 => array('label' => app::get('base')->_('截单失败'), 'filter' => array('logi_status' => array('8'), 'process' => array('true'), 'status' => 'succ'), 'optional' => false),
+            9 => array(
+                'label'=>app::get('base')->_('加急发货'),
+                'filter'=>array(
+                    'status' => array('ready','progress','succ'),
+                    'order_label_code' => self::URGENT_LABEL_CODE,
+                ),
+                'optional'=>false
+            ),
+
+            /*
+            3 => array('label'=>app::get('base')->_('待取件'),'filter'=>array('logi_status'=>array('0'),'process'=>array('TRUE'),'status'=>'succ'),'optional'=>false),
+            4 => array('label'=>app::get('base')->_('已揽收'),'filter'=>array('logi_status'=>array('1'),'process'=>array('TRUE'),'status'=>'succ'),'optional'=>false),
+            5 => array('label'=>app::get('base')->_('已签收'),'filter'=>array('logi_status'=>array('3'),'process'=>array('TRUE'),'status'=>'succ'),'optional'=>false),*/
+
         );
         
         $branch_ids = $this->getSearchBranchids();
@@ -157,10 +181,16 @@ class console_ctl_admin_delivery extends desktop_controller {
             $sub_menu[6] = array('label'=>app::get('base')->_('京仓待发货'),'filter'=>array('process'=>array('false'),'status'=>array('progress','ready'),'branch_id'=>$branch_ids),'optional'=>false);
             $sub_menu[7] = array('label'=>app::get('base')->_('京仓失败'),'filter'=>array('process'=>array('false'),'status'=>array('progress','ready'),'branch_id'=>$branch_ids,'sync_status'=>array('9')),'optional'=>false);
         }
-        
+
+        // count
+        $operationOrgObj = app::get('ome')->model('operation_organization');
+        $countNum = $operationOrgObj->count();
+
         //check shop permission
         $organization_permissions = kernel::single('desktop_user')->get_organization_permission();
-        if($organization_permissions){
+
+        //@todo：只有一个运营组织时，不需要查询org_id，否则查询很慢;
+        if($organization_permissions && $countNum > 1){
             $base_filter['org_id'] = $organization_permissions;
         }
 
@@ -375,7 +405,7 @@ class console_ctl_admin_delivery extends desktop_controller {
 
     /**
      * 打回操作
-     * 
+     *
      */
     function doReback()
     {
@@ -413,7 +443,7 @@ class console_ctl_admin_delivery extends desktop_controller {
 
         $order_ids = $dlyObj->getOrderIdByDeliveryId($deliveryInfo['delivery_id']);
         $err_msg = '';
-        
+
         //是否是合并发货单
         if($deliveryInfo['is_bind'] == 'true'){
             //取关联发货单号进行暂停
@@ -477,7 +507,7 @@ class console_ctl_admin_delivery extends desktop_controller {
 
     /**
      * 填写打回备注
-     * 
+     *
      * @param bigint $dly_id
      */
     function showmemo($dly_id){
@@ -508,7 +538,7 @@ class console_ctl_admin_delivery extends desktop_controller {
 
     /**
      * 强制撤销第三方仓储发货单
-     * 
+     *
      * return
      */
     public function deliveryCancel()
@@ -565,10 +595,6 @@ class console_ctl_admin_delivery extends desktop_controller {
     
 
 
-    /**
-     * toBatchSearch
-     * @return mixed 返回值
-     */
     public function toBatchSearch()
     {
         $base_filter = array(
@@ -591,9 +617,9 @@ class console_ctl_admin_delivery extends desktop_controller {
     }
 
     /**
-     * 查询京东沧海发货结果
-     *  sunjing
-     */
+    * 查询京东沧海发货结果
+    *  sunjing
+    */
     public function doBatchSearch()
     {
         
@@ -641,10 +667,6 @@ class console_ctl_admin_delivery extends desktop_controller {
 
     }
 
-    /**
-     * 获取SearchBranchids
-     * @return mixed 返回结果
-     */
     public function getSearchBranchids(){
         $channelObj = app::get('channel')->model('channel');
         $channel_list = $channelObj->getlist('channel_id',array('node_type'=>array('yph','jd_wms_cloud')));
@@ -659,12 +681,12 @@ class console_ctl_admin_delivery extends desktop_controller {
         return $branch_ids;
     }
 
-    /**
-     * 加密字段显示明文
-     * 
-     * @return void
-     * @author 
-     * */
+       /**
+        * 加密字段显示明文
+        *
+        * @return void
+        * @author 
+        **/
        public function showSensitiveData($delivery_id, $fieldType='')
        {
             // if (!kernel::single('desktop_user')->has_permission('sensitive_data_show')) {
@@ -1084,7 +1106,7 @@ class console_ctl_admin_delivery extends desktop_controller {
     {
         @ini_set('memory_limit','512M');
         set_time_limit(0);
-        
+
         $deliveryIds = $_POST['delivery_id'];
         
         //check
@@ -1107,7 +1129,7 @@ class console_ctl_admin_delivery extends desktop_controller {
         }
         $deliveryIds          = array_column($dataList, 'delivery_id');
         $_POST['delivery_id'] = $deliveryIds;
-        
+
         $this->pagedata['GroupList'] = json_encode($deliveryIds);
         
         $this->pagedata['request_url'] = $this->url .'&act=ajaxSyncWms';
@@ -1116,10 +1138,6 @@ class console_ctl_admin_delivery extends desktop_controller {
         parent::dialog_batch('ome_mdl_delivery', false, 50, 'incr');
     }
     
-    /**
-     * ajaxSyncWms
-     * @return mixed 返回值
-     */
     public function ajaxSyncWms()
     {
         $deliveryObj = app::get('ome')->model('delivery');
@@ -1253,15 +1271,11 @@ class console_ctl_admin_delivery extends desktop_controller {
         parent::dialog_batch('ome_mdl_delivery', false, 50, 'incr');
     }
     
-    /**
-     * ajaxDeliveryCancel
-     * @return mixed 返回值
-     */
     public function ajaxDeliveryCancel()
     {
         $deliveryObj = app::get('ome')->model('delivery');
         $operLogObj = app::get('ome')->model('operation_log');
-        
+
         $retArr = array(
                 'itotal' => 0,
                 'isucc' => 0,
@@ -1406,7 +1420,7 @@ class console_ctl_admin_delivery extends desktop_controller {
         
         $this->end(true, '强制修复发货单成功');
     }
-    
+
     /**
      * 批量对勾选的发货单进行物流拦截
      */
@@ -1414,45 +1428,41 @@ class console_ctl_admin_delivery extends desktop_controller {
     {
         @ini_set('memory_limit','512M');
         set_time_limit(0);
-        
+
         $deliveryObj = app::get('ome')->model('delivery');
-        
+
         $deliveryIds = $_POST['delivery_id'];
-        
+
         //check
         if($_POST['isSelectedAll'] == '_ALL_'){
             die('不能使用全选功能,每次最多选择500条;');
         }
-        
+
         if(empty($deliveryIds)){
             die('请选择需要操作的发货单;');
         }
-        
+
         if(count($deliveryIds) > 500){
             die('每次最多只能选择500条;');
         }
-        
+
         //data
         $filter = array('delivery_id'=>$deliveryIds, 'status'=>array('succ'), 'parent_id'=>0, 'logi_status'=>array('0','1','2','3','4','5','6','8'));
         $dataList = $deliveryObj->getList('delivery_id', $filter);
         if(empty($dataList)){
             die('没有可拦截的发货单，或者发货单已经通知WMS进行拦截中!');
         }
-        
+
         $deliveryIds = array_column($dataList, 'delivery_id');
-        
+
         $this->pagedata['GroupList'] = json_encode($deliveryIds);
-        
+
         $this->pagedata['request_url'] = $this->url .'&act=ajaxLogisticsInterception';
-        
+
         //调用desktop公用进度条(第4个参数是增量传offset,否则默认一直为0)
         parent::dialog_batch('ome_mdl_delivery', false, 50, 'incr');
     }
-    
-    /**
-     * ajaxLogisticsInterception
-     * @return mixed 返回值
-     */
+
     public function ajaxLogisticsInterception()
     {
         $ordermdl = app::get('ome')->model('orders');
@@ -1460,47 +1470,47 @@ class console_ctl_admin_delivery extends desktop_controller {
         $deliveryObj = app::get('ome')->model('delivery');
         $operLogObj = app::get('ome')->model('operation_log');
         $returnProductMdl = app::get('ome')->model('return_product');
-        
+
         $reshipLib = kernel::single('ome_reship');
         $productLib = kernel::single('ome_return_product');
-        
+
         $retArr = array(
             'itotal' => 0,
             'isucc' => 0,
             'ifail' => 0,
             'err_msg' => array(),
         );
-        
+
         //获取发货单号
         parse_str($_POST['primary_id'], $postdata);
         if(!$postdata){
             echo 'Error: 请先选择发货单';
             exit;
         }
-        
+
         //filter
         $filter = $postdata['f'];
         $offset = intval($postdata['f']['offset']);
         $limit = intval($postdata['f']['limit']);
-        
+
         if(empty($filter)){
             echo 'Error: 没有找到查询条件';
             exit;
         }
-        
+
         //物流跟踪状态
         $filter['logi_status'] = array('0','1','2','3','4','5','6','8');
-        
+
         //data
         $dataList = $deliveryObj->getList('delivery_id,delivery_bn,logi_name,logi_no,status,logi_status', $filter, $offset, $limit);
         if(empty($dataList)){
             echo 'Error: 没有可操作的发货单，或者发货单已经通知WMS进行拦截';
             exit;
         }
-        
+
         //count
         $retArr['itotal'] = count($dataList);
-        
+
         //list
         $error_msg = '';
         foreach ($dataList as $key => $deliveryInfo)
@@ -1508,56 +1518,56 @@ class console_ctl_admin_delivery extends desktop_controller {
             $delivery_id = $deliveryInfo['delivery_id'];
             $logi_name = $deliveryInfo['logi_name'];
             $logi_no = $deliveryInfo['logi_no'];
-            
+
             //check
             if(!in_array($deliveryInfo['status'], array('succ'))){
                 continue;
             }
-            
+
             if(empty($logi_no)){
                 continue;
             }
-            
+
             //请求WMS进行物流拦截
             $requestParams = ['logi_no'=>$logi_no];
             $res = ome_delivery_notice::cut($requestParams);
             if ($res['rsp'] == 'success' || $res['rsp'] == 'succ') {
                 //更新发货单状态为：拦截通知已发送
                 $deliveryObj->update(array('logi_status'=>'7'), array('delivery_id'=>$delivery_id));
-                
+
                 //logs
                 $operLogObj->write_log('delivery_back@ome', $delivery_id, '拦截通知已发送');
-                
+
                 //根据发货单信息获取售后服务单数据
                 $returnProductList = $productLib->getReturnProductByDelivery($delivery_id, $error_msg);
                 if(empty($returnProductList)){
                     //error
                     $retArr['ifail'] += 1;
                     $retArr['err_msg'][] = 'Error：'. $error_msg;
-                    
+
                     continue;
                 }
-                
+
                 //[按订单纬度]新建售后申请单,自动审核生成售后退货单,并且自动退货完成
                 $returnIds = array();
                 foreach ($returnProductList as $order_id => $returnProductSdf)
                 {
                     //是否检测明细已经创建过售后申请单
                     $returnProductSdf['is_check_items'] = true;
-                    
+
                     //exec
                     $return_id = $productLib->autoCreateReturnProduct($returnProductSdf, $error_msg);
                     if(empty($return_id)){
                         //error
                         $retArr['ifail'] += 1;
                         $retArr['err_msg'][] = 'Error：'. $error_msg;
-                        
+
                         continue 2;
                     }
-                    
+
                     $returnIds[$return_id] = $return_id;
                 }
-                
+
                 //exec
                 $reshipIds = array();
                 if($returnIds){
@@ -1575,34 +1585,34 @@ class console_ctl_admin_delivery extends desktop_controller {
                             //error
                             $retArr['ifail'] += 1;
                             $retArr['err_msg'][] = 'Error：创建退货单失败,'. $error_msg;
-                            
+
                             continue 2;
                         }
                     }
-                    
+
                     //获取创建成功的售后退货单ID
                     $reshipList = $reshipMdl->getList('reship_id,reship_bn,order_id,tmoney,totalmoney,had_refund', array('return_id'=>$returnIds, 'is_check'=>'0'));
                     if($reshipList){
                         $reshipIds = array_column($reshipList, 'reship_id');
-                        
+
                         //order_id
                         $orderIds = array_column($reshipList, 'order_id');
-                        
+
                         $orderList = $ordermdl->getList('order_id,order_bn,process_status,pay_status,ship_status,payed', ['order_id'=>$orderIds]);
                         $orderList = array_column($orderList, null, 'order_id');
-                        
+
                         //update
                         foreach ($reshipList as $reshipKey => $reshipInfo)
                         {
                             $order_id = $reshipInfo['order_id'];
                             $reship_id = $reshipInfo['reship_id'];
-                            
+
                             //使用发货单上的退回物流公司、退回物流单号进行更新
                             $updateData = [
                                 'return_logi_name' => $logi_name,
                                 'return_logi_no' => $logi_no
                             ];
-                            
+
                             //订单如果是全额退款,需要更新：已退金额
                             if(isset($orderList[$order_id])){
                                 if($orderList[$order_id]['pay_status'] == '5' || $orderList[$order_id]['payed'] <= 0){
@@ -1618,42 +1628,42 @@ class console_ctl_admin_delivery extends desktop_controller {
                                     }
                                 }
                             }
-                            
+
                             $reshipMdl->update($updateData, array('reship_id'=>$reship_id));
                         }
                     }
                 }
-                
+
                 //售后退换货自动审批
                 $is_auto_approve = app::get('ome')->getConf('return.auto_approve');
                 if($reshipIds && $is_auto_approve == 'on'){
                     $reshipLib = kernel::single('ome_reship');
-                    
+
                     //使用queue例任务自动审核退货单
                     foreach ($reshipIds as $reshipKey => $reship_id)
                     {
                         $reshipLib->batch_reship_queue($reship_id);
                     }
                 }
-                
+
                 //succ
                 $retArr['isucc'] += 1;
-                
+
                 //log
                 $operLogObj->write_log('delivery_back@ome', $delivery_id, '自动创建售后申请单成功');
             }else{
                 //error
                 $retArr['ifail'] += 1;
                 $retArr['err_msg'][] = $deliveryInfo['delivery_bn'].'请求物流拦截失败：'. $res['msg'];
-                
+
                 //拦截失败
                 $deliveryObj->update(array('logi_status'=>'8'), array('delivery_id'=>$delivery_id));
-                
+
                 //log
                 $operLogObj->write_log('delivery_back@ome', $delivery_id, '请求物流拦截发货单,失败：'.$res['msg']);
             }
         }
-        
+
         echo json_encode($retArr),'ok.';
         exit;
     }

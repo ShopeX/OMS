@@ -2813,31 +2813,29 @@ class ome_ctl_admin_return_rchange extends desktop_controller
         }elseif(in_array($reship_detail['shop_type'] ,array( 'luban','meituan4medicine'))){
             $lubanReutrnInfo = app::get('ome')->model('return_product_luban')->db_dump(array('return_id'=>$reship_detail['return_id']));
             if(!empty($lubanReutrnInfo)){
-                if ($_FILES['refuse_proof']['size']<=0) {
-                    $this->end(false, '请上传凭证图片!');
+                $memo = array(
+                    'reject_reason_code' => $_POST['seller_refuse_reason_id'],
+                    'remark'             => $_POST['refuse_message'],
+                    'parse'              => 'second',
+                );
+
+                if ($_FILES['refuse_proof']['size'] > 0) {
+                    if ($_FILES ['refuse_proof'] ['size'] > 512000) {
+                        $this->end(false, '上传文件不能超过500K!');
+                    }
+
+                    $type = array ('gif','jpg','png');
+                    $pathinfo = pathinfo($_FILES ['refuse_proof'] ['name']);
+                    if (!in_array($pathinfo['extension'], $type)) {
+                        $this->end(false, "您只能上传以下类型文件".implode('、', $type)."!");
+                    }
+
+                    $storager = kernel::single ( 'base_storager' );
+                    $id = $storager->save_upload ( $_FILES ['refuse_proof'], "file", "", $msg ); //返回file_id;
+                    $refuse_memo['image'] = $storager->getUrl ( $id, "file" );
+                    $memo['refuse_proof'] = $refuse_memo['image'];
                 }
-                
-                if ($_FILES ['refuse_proof'] ['size'] > 512000) {
-                    $this->end(false, '上传文件不能超过500K!');
-                }
-                
-                $type = array ('gif','jpg','png');
-                $pathinfo = pathinfo($_FILES ['refuse_proof'] ['name']);
-                if (!in_array($pathinfo['extension'], $type)) {
-                    $this->end(false, "您只能上传以下类型文件".implode('、', $type)."!");
-                }
-                
-                $storager = kernel::single ( 'base_storager' );
-                $id = $storager->save_upload ( $_FILES ['refuse_proof'], "file", "", $msg ); //返回file_id;
-                $refuse_memo['image'] = $storager->getUrl ( $id, "file" );
-                $imagebinary = $refuse_memo['image'];
-                
-                //memo
-                $memo['refuse_proof']   = $imagebinary;
-                $memo['reject_reason_code'] = $_POST['seller_refuse_reason_id'];
-                $memo['remark'] = $_POST['refuse_message'];
-                $memo['parse'] = 'second';
-                
+
                 //request
                 $result = kernel::single('ome_service_aftersale')->update_status($reship_detail['return_id'],'5','sync',$memo);
                 if ($result['rsp'] != 'succ' && !$_POST['forced_cancel']) {

@@ -170,10 +170,15 @@ class ome_mdl_order_retrial extends dbeav_model
         {
             $where    = ' WHERE '.$where;
         }
-        
-        $sql      = "SELECT count(*) as num FROM ". DB_PREFIX ."ome_order_retrial as a 
+
+        $needJoin = (strpos($where, 'b.') !== false);
+        if ($needJoin) {
+            $sql  = "SELECT count(*) as num FROM ". DB_PREFIX ."ome_order_retrial as a 
                       LEFT JOIN ". DB_PREFIX ."ome_orders as b ON a.order_id=b.order_id 
                       ". $where;
+        } else {
+            $sql  = "SELECT count(*) as num FROM ". DB_PREFIX ."ome_order_retrial as a ". $where;
+        }
         
         $row      = $this->db->select($sql);
         return $row[0]['num'];

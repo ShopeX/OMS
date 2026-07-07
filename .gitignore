@@ -27,3 +27,7 @@ composer.lock
 .sisyphus
 AGENTS.md
 /tools
+
+/upgrade
+/script
+/docker

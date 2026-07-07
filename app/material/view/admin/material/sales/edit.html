@@ -1,19 +1,3 @@
-<!--
-  Copyright 2012-2026 ShopeX (https://www.shopex.cn)
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
--->
-
 <{capture name="header"}>
 <{css app="ome" src="ome.css"}>
 <{css app="ome" src="style.css"}>
@@ -160,7 +144,7 @@
                 <th>编码</th>
                 <th style="width:240px;">名称</th>
                 <th><{$price_label}></th>
-                <th>固定价</th>
+                <th style="display: none;">固定价</th>
                 <th>数量</th>
                 <th>组合价格贡献占比(1-100数值)</th>
                 <th style="width:30px;">删除</th>
@@ -406,9 +390,9 @@
                     <span class="form-remark"> 建议填写此单位 开电子发票必要参数</span>
                 </div>
             </div>
-            <div id="cc" class="form-actions">
-                <button class="btn-primary" id="material-save-btn">保存</button>
-                <{button type="button" class="btn-secondary" id="return-btn" label="返 回" onclick="location.href=window.frameElement.src;"}>
+            <div id="cc" class="noprint table-action">
+                <{button type="button" id="sales_material_btn" label="保 存"}> &nbsp;
+                <{button type="button" class="btn-secondary" id="return-btn" label="取 消" onclick="javascript:void(window.close());"}>
             </div>
         </div>
     </form>
@@ -619,7 +603,7 @@ var sm_id = "<{$material_info.sm_id}>";
         if($('cantdel')){
             var tpl='<tr key="{bm_id}" id="bm_{bm_id}" title="点击选取/反选此条记录">'
                 +'  <td>{material_bn}</td><td class="material-name">{material_name}</td><td>{' + (priceField || 'retail_price') + '}</td>'
-                +'  <td>{fixed_price}</td>'
+                +'  <td style="display: none;">{fixed_price}</td>'
                 +'  <td><input type="text" value="{number}" key="number" vtype="number&amp;&amp;required" tname="at[_PRIMARY_]" size="6" readonly></td>'
                 +'  <td><input type="text" vtype="number&amp;&amp;required"  tname="pr[_PRIMARY_]" key="rate" value="{rate}" id="rate_{bm_id}" size="5"></td>'
                 +'  <td style="text-align:center;">-<{img src="bundle/delecate.gif" style="display:none;" app="desktop" key="state" class="pointer btn-delete-item"}></td>'
@@ -634,7 +618,7 @@ var sm_id = "<{$material_info.sm_id}>";
         }else{
             var tpl='<tr key="{bm_id}" id="bm_{bm_id}" title="点击选取/反选此条记录">'
                 +'  <td>{material_bn}</td><td class="material-name">{material_name}</td><td>{' + (priceField || 'retail_price') + '}</td>'
-                +'  <td>{fixed_price}</td>'
+                +'  <td style="display: none;">{fixed_price}</td>'
                 +'  <td><input type="text" value="{number}" key="number" vtype="number&amp;&amp;required" tname="at[_PRIMARY_]" size="6"></td>'
                 +'  <td><input type="text" vtype="number&amp;&amp;required"  tname="pr[_PRIMARY_]" key="rate" value="{rate}" id="rate_{bm_id}" size="5"></td>'
                 +'  <td><{img src="bundle/delecate.gif" app="desktop" key="state" class="pointer btn-delete-item"}></td>'
@@ -1001,7 +985,7 @@ var sm_id = "<{$material_info.sm_id}>";
             });
         }
 
-        $('material-save-btn').addEvent('click',function(e){
+        $('sales_material_btn').addEvent('click',function(e){
             var _this=this;
             var form=this.getParent('form');
 
@@ -1043,9 +1027,8 @@ var sm_id = "<{$material_info.sm_id}>";
                                 _this.disabled=false;
                             }else{
                                 _this.disabled=true;
-                                if(opener.finderGroup['<{$env.get.finder_id}>']) opener.finderGroup['<{$env.get.finder_id}>'].refresh.delay(100,opener.finderGroup['<{$env.get.finder_id}>']).chain(function(){
-                                    window.close()
-                                });
+                                if(opener.finderGroup['<{$env.get.finder_id}>']) opener.finderGroup['<{$env.get.finder_id}>'].refresh.delay(100,opener.finderGroup['<{$env.get.finder_id}>']);
+                                setTimeout('window.close()',200);
                             }
                         }catch(e){}
                     }
@@ -1062,9 +1045,8 @@ var sm_id = "<{$material_info.sm_id}>";
                                 _this.disabled=false;
                             }else{
                                 _this.disabled=true;
-                                if(opener.finderGroup['<{$env.get.finder_id}>']) opener.finderGroup['<{$env.get.finder_id}>'].refresh.delay(100,opener.finderGroup['<{$env.get.finder_id}>']).chain(function(){
-                                    window.close()
-                                });
+                                if(opener.finderGroup['<{$env.get.finder_id}>']) opener.finderGroup['<{$env.get.finder_id}>'].refresh.delay(100,opener.finderGroup['<{$env.get.finder_id}>']);
+                                setTimeout('window.close()',200);
                             }
                         }catch(e){}
                     }

@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 class wms_mdl_delivery extends dbeav_model{
+    const URGENT_LABEL_CODE = 'SOMS_URGENT_SHIP';
     public $filter_use_like = true;
     var $has_many = array(
         'delivery_items' => 'delivery_items',
@@ -53,6 +54,7 @@ class wms_mdl_delivery extends dbeav_model{
     public function _filter($filter,$tableAlias=null,$baseWhere=null){
         $baseWhere = (array) $baseWhere;
         $tPre = ($tableAlias?$tableAlias:'`'.$this->table_name(true).'`').'.';
+        $where = '';
         ///////////////////////////
         // 加密处理逻辑 2017/5/5 by cp //
         ///////////////////////////
@@ -199,6 +201,33 @@ class wms_mdl_delivery extends dbeav_model{
         if(isset($filter['addonSQL'])){
             $where .= ' AND '.$filter['addonSQL'];
             unset($filter['addonSQL']);
+        }
+        if (!empty($filter['delivery_label_code'])) {
+            $where .= ' AND EXISTS (
+                SELECT 1 FROM sdb_ome_bill_label bl
+                WHERE bl.bill_id = '.$tPre.'delivery_id
+                AND bl.bill_type = "delivery"
+                AND bl.label_code = "'.addslashes($filter['delivery_label_code']).'"
+            )';
+            unset($filter['delivery_label_code']);
+        }
+        if (isset($filter['urgent_delivery'])) {
+            if ($filter['urgent_delivery'] === 'true' || $filter['urgent_delivery'] === true || $filter['urgent_delivery'] == 1) {
+                $where .= ' AND EXISTS (
+                    SELECT 1 FROM sdb_ome_bill_label bl
+                    WHERE bl.bill_id = '.$tPre.'delivery_id
+                    AND bl.bill_type = "delivery"
+                    AND bl.label_code = "'.self::URGENT_LABEL_CODE.'"
+                )';
+            } else {
+                $where .= ' AND NOT EXISTS (
+                    SELECT 1 FROM sdb_ome_bill_label bl
+                    WHERE bl.bill_id = '.$tPre.'delivery_id
+                    AND bl.bill_type = "delivery"
+                    AND bl.label_code = "'.self::URGENT_LABEL_CODE.'"
+                )';
+            }
+            unset($filter['urgent_delivery']);
         }
         if (isset($filter['shop_id_in'])) {
             $where .= ' AND ' . $tPre . 'shop_id in("'.implode('","', $filter['shop_id_in']).'")';
@@ -1433,6 +1462,7 @@ class wms_mdl_delivery extends dbeav_model{
      */
     function extra_cols(){
         return array(
+            'column_delivery_label' => array('label'=>'发货单标记','width'=>'220','func_suffix'=>'delivery_label'),
             'column_custom_mark' => array('label'=>'买家留言','width'=>'180','func_suffix'=>'custom_mark'),
             'column_mark_text' => array('label'=>'客服备注','width'=>'180','func_suffix'=>'mark_text'),
             'column_tax_no' => array('label'=>'发票号','width'=>'180','func_suffix'=>'tax_no'),
@@ -1466,6 +1496,24 @@ class wms_mdl_delivery extends dbeav_model{
      */
     function extra_ident($rows){
         return kernel::single('wms_extracolumn_delivery_ident')->process($rows);
+    }
+
+    function extra_delivery_label($rows){
+        $deliveryIds = array_column((array)$rows, 'delivery_id');
+        if (!$deliveryIds) {
+            return array();
+        }
+        $labelRows = app::get('ome')->model('bill_label')->getBIllLabelList($deliveryIds, 'delivery');
+        $result = array();
+        foreach ((array)$labelRows as $label) {
+            $result[$label['bill_id']] .= sprintf(
+                "<span class='tag-label' title='%s' style='background-color:%s;color:#000000;'>%s</span>",
+                $label['label_name'],
+                $label['label_color'],
+                $label['label_name']
+            );
+        }
+        return $result;
     }
 
     //定义导出明细内容的相关字段

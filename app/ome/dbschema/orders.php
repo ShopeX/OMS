@@ -1281,6 +1281,13 @@ $db['orders'] = array(
                 3 => 'is_not_combine',
             ),
         ),
+        'idx_shopid_orderid_createtime' => [
+            'columns'   =>  [
+                'shop_id',
+                'order_id',
+                'createtime',
+            ],
+        ],
     ),
     'comment' => '订单表,用于存储全渠道订单',
     'engine'  => 'innodb',

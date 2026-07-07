@@ -25,6 +25,8 @@
  */
 class ome_event_trigger_shop_order
 {
+    const URGENT_LABEL_CODE = 'SOMS_URGENT_SHIP';
+
     /**
      * 淘宝全链路
      *
@@ -85,6 +87,86 @@ class ome_event_trigger_shop_order
                 kernel::single('erpapi_router_request')->set('shop',$shop_id)->order_message_produce($sdf,false);
             }
         }
+        //淘宝加急发货状态上传
+        $this->urgent_logistics_report($orderIds);
+    }
+
+    /**
+     * 遍历加急订单并向淘宝/天猫补发当前物流状态回告。
+     *
+     * @param array|int $orderIds
+     * @param string|array $scene
+     * @return void
+     */
+    public function urgent_logistics_report($orderIds, $scene = '')
+    {
+        $orderIds = (array)$orderIds;
+        if (is_array($scene)) {
+            if (!empty($scene['order_ids']) && is_array($scene['order_ids'])) {
+                $orderIds = $scene['order_ids'];
+            }
+            $scene = $scene['scene'];
+        }
+        if (!$orderIds) {
+            return;
+        }
+
+        $orderModel = app::get('ome')->model('orders');
+        $labelLib   = kernel::single('ome_bill_label');
+        $urgentLib  = kernel::single('ome_order_urgent');
+        $orderList  = $orderModel->getList('order_id,order_bn,shop_id,shop_type,source,createway', ['order_id' => $orderIds]);
+
+        foreach ((array)$orderList as $order) {
+            if ($order['source'] != 'matrix' || $order['createway'] != 'matrix') {
+                continue;
+            }
+            if (!in_array($order['shop_type'], ['taobao', 'tmall'])) {
+                continue;
+            }
+            if (!$labelLib->existLabel($order['order_id'], self::URGENT_LABEL_CODE)) {
+                continue;
+            }
+
+            $statusPayload = $urgentLib->buildUrgentOrderStatus($order['order_id']);
+            if (empty($statusPayload['orderStatus'])) {
+                continue;
+            }
+            if (in_array($statusPayload['orderStatus'], ['SHIPPED', 'CANCELLED']) && $this->isUrgentTerminalReported($order['order_id'], $statusPayload['orderStatus'])) {
+                continue;
+            }
+
+            $sdf = [
+                'tid'                => $order['order_bn'],
+                'orderStatus'        => $statusPayload['orderStatus'],
+                'scene'              => $scene,
+                'status_update_time' => $statusPayload['status_update_time'] ?: '',
+                'order_details'      => $statusPayload['order_details'] ?: [],
+                'tracking_number'    => $statusPayload['tracking_number'] ?: '',
+                'exception_reason'   => $statusPayload['exception_reason'] ?: '',
+                'is_split'           => (bool)($statusPayload['is_split'] ?? false),
+                'order_id'           => $order['order_id'],
+            ];
+
+            $result = kernel::single('erpapi_router_request')->set('shop', $order['shop_id'])->logistics_order_report($sdf, false);
+            if (($result['rsp'] == 'succ' || $result['rsp'] == 'success') && in_array($statusPayload['orderStatus'], ['SHIPPED', 'CANCELLED'])) {
+                app::get('ome')->model('operation_log')->write_log('order_modify@ome', $order['order_id'], '淘宝加急发货状态回告终态：' . $statusPayload['orderStatus']);
+            }
+        }
+    }
+
+    /**
+     * 通过操作日志判断终态回告是否已经成功落库，避免重复回告。
+     *
+     * @param int $orderId
+     * @param string $status
+     * @return bool
+     */
+    protected function isUrgentTerminalReported($orderId, $status)
+    {
+        $pattern = '淘宝加急发货状态回告终态：' . $status;
+        $sql     = "SELECT log_id FROM sdb_ome_operation_log WHERE obj_id=" . intval($orderId) . " AND obj_type='order_modify@ome' AND memo LIKE '%" . addslashes($pattern) . "%' LIMIT 1";
+        $rows    = kernel::database()->select($sql);
+        return !empty($rows);
     }
 
     public function received($orderId) {

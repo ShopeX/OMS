@@ -90,6 +90,7 @@ class erpapi_autotask_task_retryapi{
 
                     break;
                 case WMS_SALEORDER_CREATE:
+                case 'delivery_create':
                     // 销售出库
                     $delivery = app::get('ome')->model('delivery')->dump(array('delivery_bn'=>$params['obj_bn']),'delivery_id,status,pause,process');
 

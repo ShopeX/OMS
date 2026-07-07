@@ -183,6 +183,9 @@ class erpapi_shop_matrix_luban_response_order extends erpapi_shop_response_order
         if(empty($this->_ordersdf['order_objects']) && !is_array($this->_ordersdf['order_objects'])){
             return true;
         }
+
+        // 抖音券包类商品可能不下发商家编码，先用平台ID兜底，避免失败订单无法人工匹配销售物料。
+        $this->_fillEmptyBnWithPlatformIds();
         
         //抖音订单扩展信息
         $authoList = array();
@@ -545,6 +548,30 @@ class erpapi_shop_matrix_luban_response_order extends erpapi_shop_response_order
         //直降商品优惠更新订单商品优惠金额
         if($this->_ordersdf['extend_field']['campaign_info']){
             $this->updateOrderPmtGoods();
+        }
+    }
+
+    /**
+     * 抖音部分券包类商品只下发 shop_goods_id/shop_product_id，不下发商家编码 bn。
+     *
+     * 这种订单仍然会因为销售物料不存在进入失败订单，但如果 bn 为空，失败订单页面无法直接按编码人工匹配销售物料。
+     * 因此仅在 luban 且 bn 为空时，用平台商品ID/SKU ID兜底，保留可人工识别和匹配的编码。
+     *
+     * 注意：通用 formatItemsSdf() 对单 object 单 item 的老结构会把 item 提到 object 层，并用 item 字段覆盖 object 同名字段。
+     * 所以单 SKU 场景最终 order_objects.bn 会跟随 item.bn，使用 shop_product_id 作为兜底值。
+     */
+    protected function _fillEmptyBnWithPlatformIds()
+    {
+        foreach ((array)$this->_ordersdf['order_objects'] as $objectKey => $object) {
+            if (!$object['bn'] && $object['shop_goods_id'] && $object['shop_goods_id'] != '0') {
+                $this->_ordersdf['order_objects'][$objectKey]['bn'] = $object['shop_goods_id'];
+            }
+
+            foreach ((array)$object['order_items'] as $itemKey => $item) {
+                if (!$item['bn'] && $item['shop_product_id'] && $item['shop_product_id'] != '0') {
+                    $this->_ordersdf['order_objects'][$objectKey]['order_items'][$itemKey]['bn'] = $item['shop_product_id'];
+                }
+            }
         }
     }
     

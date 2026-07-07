@@ -28,12 +28,13 @@
 </form>
 
 <script>
+
+
+
+
   function update(order_id)
   {
-
-    alert(order_id+'========');
-
-
+      var process_status = '<{$order.process_status}>';
       var finder_id = '<{$env.get.finder_id}>';
       var oldsource = '<{$env.get.act}>';
       var base_url = '<{$base_url}>';
@@ -49,26 +50,24 @@
                 var p = window.open('about:blank');
                 p.location = 'index.php?app=ome&ctl=admin_order&act=view_edit&p[0]='+order_id+'&finder_id='+finder_id+'&oldsource='+oldsource;
             }else{
-              <{if $order.process_status == 'splited'}>
-                if(!confirm('该订单还存在发货单，是否需要进行打回？')){
-                    return false;
-                }else{
-                    var p = window.open('about:blank');
-                    p.location =  remote_url;
+              if(process_status == 'splited') {
+                if (!confirm('该订单还存在发货单，是否需要进行打回？')) {
+                  return false;
+                } else {
+                  var p = window.open('about:blank');
+                  p.location = remote_url;
                 }
-              <{else}>
+              }else{
                 var p = window.open('about:blank');
                 p.location =  remote_url;
-              <{/if}>
-            }            
+              }
+            }
          }
       }).send('p[0]='+order_id);
-  }  function modify_time(){
+  }
+
+  function modify_time(){
     $('order_action').value = "order_limit_time";
     $('order_process').fireEvent('submit',{stop:$empty});
   }
-
-
-
-
 </script>

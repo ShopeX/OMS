@@ -53,6 +53,21 @@ class ome_mdl_misc_task extends dbeav_model
             'class'  => 'ome_order_refund',
             'method' => 'reundCancelOrder',
         ),
+        'urgent_logistics_notify' => array(
+            'text'   => '淘宝加急发货状态回告',
+            'class'  => 'ome_event_trigger_shop_order',
+            'method' => 'urgent_logistics_report',
+        ),
+        'urgent_logistics_dly' => array(
+            'text'   => '淘宝加急发货状态回告',
+            'class'  => 'ome_event_trigger_shop_order',
+            'method' => 'urgent_logistics_report',
+        ),
+        'urgent_logistics_csg' => array(
+            'text'   => '淘宝加急发货状态回告',
+            'class'  => 'ome_event_trigger_shop_order',
+            'method' => 'urgent_logistics_report',
+        ),
     );
     
     /**

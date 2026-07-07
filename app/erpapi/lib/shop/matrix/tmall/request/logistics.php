@@ -18,13 +18,30 @@
  * @author ykm 2017/2/16
  * @describe 物流相关 请求接口类
  */
+
 class erpapi_shop_matrix_tmall_request_logistics extends erpapi_shop_request_logistics {
 
     /**
-     * 获取CorpServiceCode
-     * @param mixed $sdf sdf
-     * @return mixed 返回结果
+     * 回告天猫加急发货订单在 OMS 当前节点下的物流状态。
+     *
+     * @param array $sdf
+     * @param bool $queue
+     * @return array
      */
+    public function order_report($sdf, $queue = false)
+    {
+        $args = func_get_args();
+        array_pop($args);
+        $_in_mq = $this->__caller->caller_into_mq('logistics_order_report', 'shop', $this->__channelObj->channel['shop_id'], $args, $queue);
+        if ($_in_mq) {
+            return $this->succ('成功放入队列');
+        }
+
+        $params = $this->buildUrgentOrderReportRequestParams($sdf);
+
+        $title = sprintf('天猫加急发货状态回告[%s:%s]', $sdf['tid'], $sdf['orderStatus']);
+        return $this->__caller->call(SHOP_LOGISTICS_ORDER_REPORT, $params, array (), $title, 10, $sdf['tid']);
+    }
 
     public function getCorpServiceCode($sdf) {
         $params = array(
@@ -36,11 +53,6 @@ class erpapi_shop_matrix_tmall_request_logistics extends erpapi_shop_request_log
         return $result;
     }
 
-    /**
-     * timerule
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function timerule($sdf)
     {
         $params = [

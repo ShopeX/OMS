@@ -86,14 +86,22 @@ class ome_receipt_reship
         if (!empty($reship_item)) {
             $product_ids = array_column($reship_item, 'product_id');
             $basicMaterialObj = app::get('material')->model('basic_material');
-            $basic_materials = $basicMaterialObj->getList('bm_id,type', array('bm_id' => $product_ids));
+            $basic_materials = $basicMaterialObj->getList('bm_id,type,is_ctrl_store', array('bm_id' => $product_ids));
+            $basicMaterialList = array_column($basic_materials, null, 'bm_id');
+            
             $basic_materials = array_column($basic_materials, 'type', 'bm_id');
             $filtered_reship_item = array();
             foreach ($reship_item as $item) {
                 $bm_id = $item['product_id'];
+                
+                // 过滤掉基础物料属性为：虚拟类型 + 不管控库存（type=5 && is_ctrl_store=2）
                 if (isset($basic_materials[$bm_id]) && $basic_materials[$bm_id] == 5) {
-                    continue;
+                    // 只过滤不管控库存的虚拟类型基础物料
+                    if(isset($basicMaterialList[$bm_id]) && $basicMaterialList[$bm_id]['is_ctrl_store'] == 2){
+                        continue;
+                    }
                 }
+                
                 $filtered_reship_item[] = $item;
             }
             $reship_item = $filtered_reship_item;
@@ -101,6 +109,7 @@ class ome_receipt_reship
         if (empty($reship_item)) {
             return array();
         }
+        
         // 外部订单
         $dextMdl      = app::get('console')->model('delivery_extension');
         $delivery_ext = $dextMdl->dump(array('delivery_bn' => $delivery['delivery_bn']), 'original_delivery_bn');

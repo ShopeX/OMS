@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class erpapi_mdl_api_fail extends dbeav_model{
 
     public $objTypeProperty = array(
@@ -99,10 +98,6 @@ class erpapi_mdl_api_fail extends dbeav_model{
         ),
     );
 
-    /**
-     * 获取ObjTypeText
-     * @return mixed 返回结果
-     */
     public function getObjTypeText() {
         $arrText = array();
         foreach($this->objTypeProperty as $k => $val) {
@@ -111,21 +106,11 @@ class erpapi_mdl_api_fail extends dbeav_model{
         return $arrText;
     }
 
-    /**
-     * modifier_obj_type
-     * @param mixed $col col
-     * @return mixed 返回值
-     */
     public function modifier_obj_type($col)
     {
         return $this->objTypeProperty[$col] ? $this->objTypeProperty[$col]['text'] : $col;
     }
 
-    /**
-     * modifier_err_msg
-     * @param mixed $col col
-     * @return mixed 返回值
-     */
     public function modifier_err_msg($col){
         $col = strip_tags($col);
         return sprintf("<span alt='%s' title='%s'>%s</span>",$col, $col, $col);
@@ -133,12 +118,12 @@ class erpapi_mdl_api_fail extends dbeav_model{
 
     /**
      * 发布失败日志
-     * 
+     *
      * 已弃用 Thu May  5 11:04:32 2022 chenping@shopex.cn
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function publish_api_fail($method, $callback_params, $result)
     {
         
@@ -200,10 +185,6 @@ class erpapi_mdl_api_fail extends dbeav_model{
         return true;
     }
 
-        /**
-     * 获取retryapiErrcode
-     * @return mixed 返回结果
-     */
     public function getretryapiErrcode(){
 
         $errcode = kernel::single('erpapi_errcode')->errcode;
@@ -222,15 +203,6 @@ class erpapi_mdl_api_fail extends dbeav_model{
     }
 
     //异步请求重试 重新组装数据
-    /**
-     * 保存TriggerRequest
-     * @param mixed $objBn objBn
-     * @param mixed $objType objType
-     * @param mixed $api_method api_method
-     * @param mixed $errMsg errMsg
-     * @param mixed $sub_obj_bn sub_obj_bn
-     * @return mixed 返回操作结果
-     */
     public function saveTriggerRequest($objBn, $objType, $api_method='', $errMsg='', $sub_obj_bn = '') {
         $sdf = array(
             'obj_bn' => $objBn,
@@ -266,6 +238,7 @@ class erpapi_mdl_api_fail extends dbeav_model{
      */
     public function saveRunning($params) {
         $sdf = array(
+            'method' => $params['method'],
             'obj_bn' => $params['obj_bn'],
             'obj_type' => $params['obj_type'],
             'retry_params' => serialize(array(
@@ -303,11 +276,6 @@ class erpapi_mdl_api_fail extends dbeav_model{
     }
 
     # 同步请求重试 不重新组装数据
-    /**
-     * 保存SyncRequest
-     * @param mixed $params 参数
-     * @return mixed 返回操作结果
-     */
     public function saveSyncRequest($params) {
         if($params['rsp'] == 'succ') {
             $this->delete(array('obj_bn'=>$params['obj_bn'], 'obj_type'=>$params['obj_type']));
@@ -343,14 +311,6 @@ class erpapi_mdl_api_fail extends dbeav_model{
         return false;
     }
 
-    /**
-     * dealCallback
-     * @param mixed $status status
-     * @param mixed $apiFailId ID
-     * @param mixed $msg msg
-     * @param mixed $msg_id ID
-     * @return mixed 返回值
-     */
     public function dealCallback($status,$apiFailId, $msg, $msg_id) {
         if(strpos($apiFailId, '-')) {
             list($id, $page) = explode('-', $apiFailId);
@@ -402,13 +362,6 @@ class erpapi_mdl_api_fail extends dbeav_model{
         }
     }
 
-    /**
-     * 更新Fail
-     * @param mixed $id ID
-     * @param mixed $errMsg errMsg
-     * @param mixed $msgId ID
-     * @return mixed 返回值
-     */
     public function updateFail($id, $errMsg, $msgId) {
         $data = $this->getList('fail_times', array('id'=>$id), 0, 1);
         if(empty($data)) {
@@ -425,11 +378,6 @@ class erpapi_mdl_api_fail extends dbeav_model{
     }
 
     # 失败重试
-    /**
-     * retry
-     * @param mixed $log log
-     * @return mixed 返回值
-     */
     public function retry($log)
     {
         $property = $this->objTypeProperty[$log['obj_type']];

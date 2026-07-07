@@ -204,10 +204,13 @@ class invoice_autotask_timer_makeoutinvoice
      */
     public function invoiceBill()
     {
+        if (app::get('ome')->getConf('ome.order.autoinvoice') != 'on') {
+            return false;
+        }
+
         $db = kernel::database();
         $offset = 0;
         $limit  = 500;
-        $autoinvoice = app::get('ome')->getConf('ome.order.autoinvoice');
 
         //配置为空不进行处理
         if (!app::get('invoice')->model('order_setting')->db_dump([])) {
@@ -220,7 +223,17 @@ class invoice_autotask_timer_makeoutinvoice
             return false;
         }
 
-        $shop_id = array_column($selfShop,'shop_id');
+        $channelMdl = app::get('invoice')->model('channel');
+        $shop_id = [];
+        foreach ($selfShop as $shop) {
+            $channelInfo = $channelMdl->get_channel_info($shop['shop_id']);
+            if (!empty($channelInfo)) {
+                $shop_id[] = $shop['shop_id'];
+            }
+        }
+        if (!$shop_id) {
+            return false;
+        }
 
         do {
             //查询完结的单据
@@ -253,10 +266,8 @@ class invoice_autotask_timer_makeoutinvoice
                     }
                     
                     //蓝票自动开票
-                    if ($autoinvoice == 'on') {
-                        kernel::single('invoice_process')->billing(['id' => $val['id'], 'order_id' => $val['order_id'], 'msg' => '系统自动开票']);
-                        /**@used-by sales_aftersale::generate_aftersale  50行--售后自动冲红 * */
-                    }
+                    kernel::single('invoice_process')->billing(['id' => $val['id'], 'order_id' => $val['order_id'], 'msg' => '系统自动开票']);
+                    /**@used-by sales_aftersale::generate_aftersale  50行--售后自动冲红 * */
                 }
             }
         

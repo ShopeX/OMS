@@ -23,6 +23,9 @@ class finance_finder_monthly_report{
     var $column_edit_order=5;
     function column_edit($row){
         $confhref = '';
+        $finder_id = $_GET['_finder']['finder_id'];
+        $return_view = isset($_GET['view']) ? $_GET['view'] : 0;
+        $return_page = isset($_GET['page']) ? $_GET['page'] : 1;
 
         
 
@@ -36,7 +39,7 @@ class finance_finder_monthly_report{
             {
                 $confhref = '<a target="dialog::{title:\'关账确认页面\',width:400,height:400}" href="index.php?app=finance&ctl=monthend&act=closebook&_finder[finder_id]='.$_GET['_finder']['finder_id'].'&p[0]='.$row['monthly_id'].'">关账</a>&nbsp;&nbsp;&nbsp;&nbsp;';
             }
-            $confhref .= '<a href="index.php?app=finance&ctl=monthend_verification&act=index&p[0]='.$row['monthly_id'].'&finder_vid='.$_GET['finder_vid'].'">核销列表</a>&nbsp;&nbsp;&nbsp;&nbsp;';
+            $confhref .= '<a href="index.php?app=finance&ctl=monthend_verification&act=index&p[0]='.$row['monthly_id'].'&finder_id='.$finder_id.'&finder_vid='.$_GET['finder_vid'].'&return_view='.$return_view.'&return_page='.$return_page.'">核销列表</a>&nbsp;&nbsp;&nbsp;&nbsp;';
             // $confhref .= '<a href="index.php?app=finance&ctl=monthend_uncharge&act=index&p[0]='.$row['monthly_id'].'&finder_vid='.$_GET['finder_vid'].'">往期单据</a>&nbsp;&nbsp;&nbsp;&nbsp;';//核销更改， 该功能不可用 
 
             // $confhref .= '<a href="index.php?app=finance&ctl=monthend&act=reverify&p[0]='.$row['monthly_id'].'">重新核销</a>';//核销更改， 该功能不可用 

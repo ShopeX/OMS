@@ -124,7 +124,11 @@ class ome_order_fail
         if($pbn){
             $salesMLib = kernel::single('material_sales_material');
             
-            foreach($pbn as $obj_id=>$bn){
+            foreach($pbn as $obj_id=>$bn)
+            {
+                // trim
+                $bn = trim($bn);
+                
                 //获取对应的obj层数据
                 $objInfo = $Oorder_objects->getList('*',array('obj_id'=>$obj_id), 0 , 1);
                 //销售物料没对上，进行修复
@@ -172,10 +176,11 @@ class ome_order_fail
                                 $price = bcdiv($amount, $basicMInfo['number']*$quantity, 2);
                                 $sendnum = $orderInfo[0]['ship_status'] == '0' ? 0 : $basicMInfo['number']*$quantity;
 
+                                $shop_product_id = $this->_getWxshipinShopProductId($orderInfo[0], $objInfo[0], 0);
                                 $order_items[] = array(
                                     'shop_goods_id'   => $objInfo[0]['shop_goods_id'] ? $objInfo[0]['shop_goods_id'] : 0,
                                     'product_id'      => $basicMInfo['bm_id'] ? $basicMInfo['bm_id'] : 0,
-                                    'shop_product_id' => 0,
+                                    'shop_product_id' => $shop_product_id,
                                     'bn'              => $basicMInfo['material_bn'],
                                     'name'            => $basicMInfo['material_name'],
                                     'cost'            => $basicMInfo['cost'] ? $basicMInfo['cost'] : 0.00,
@@ -201,10 +206,11 @@ class ome_order_fail
                             //组织item数据
                             foreach($basicMInfos as $k => $basicMInfo){
                                 $sendnum = $orderInfo[0]['ship_status'] == '0' ? 0 : $basicMInfo['number'];
+                                $shop_product_id = $this->_getWxshipinShopProductId($orderInfo[0], $objInfo[0], 0);
                                 $order_items[] = array(
                                         'shop_goods_id' => $objInfo[0]['shop_goods_id'] ? $objInfo[0]['shop_goods_id'] : 0,
                                         'product_id' => $basicMInfo['bm_id'] ? $basicMInfo['bm_id'] : 0,
-                                        'shop_product_id' => 0,
+                                        'shop_product_id' => $shop_product_id,
                                         'bn' => $basicMInfo['material_bn'],
                                         'name' => $basicMInfo['material_name'],
                                         'cost' => (float)$objInfo[0]['cost'] ? $objInfo[0]['cost'] : $basicMInfo['cost'],
@@ -234,10 +240,11 @@ class ome_order_fail
                                 $luckybag_id = ($basicMInfo['combine_id'] ? $basicMInfo['combine_id'] : 0);
                                 
                                 //items
+                                $shop_product_id = $this->_getWxshipinShopProductId($orderInfo[0], $objInfo[0], 0);
                                 $order_items[] = array(
                                     'shop_goods_id' => $objInfo[0]['shop_goods_id'] ? $objInfo[0]['shop_goods_id'] : 0,
                                     'product_id' => $basicMInfo['bm_id'] ? $basicMInfo['bm_id'] : 0,
-                                    'shop_product_id' => 0,
+                                    'shop_product_id' => $shop_product_id,
                                     'bn' => $basicMInfo['material_bn'],
                                     'name' => $basicMInfo['material_name'],
                                     'cost' => $basicMInfo['cost'] ? $basicMInfo['cost'] : 0.00,
@@ -275,10 +282,11 @@ class ome_order_fail
                                 $sendnum = $orderInfo[0]['ship_status'] == '0' ? 0 : $objInfo[0]['sendnum']*$basicMInfo['number'];
 
                                 //普通销售物料item层数据以object为主,原本就是1:1的两层结构,item合并object,item层数据真实
+                                $shop_product_id = $this->_getWxshipinShopProductId($orderInfo[0], $objInfo[0], $objInfo[0]['shop_product_id']);
                                 $order_items[] = array(
                                     'shop_goods_id'   => $objInfo[0]['shop_goods_id'] ? $objInfo[0]['shop_goods_id'] : 0,
                                     'product_id'      => $basicMInfo['bm_id'] ? $basicMInfo['bm_id'] : 0,
-                                    'shop_product_id' => $objInfo[0]['shop_product_id'] ? $objInfo[0]['shop_product_id'] : 0,
+                                    'shop_product_id' => $shop_product_id,
                                     'bn'              => $basicMInfo['material_bn'],
                                     'name'            => $basicMInfo['material_name'],
                                     'cost'            => (float)$objInfo[0]['cost'] ? $objInfo[0]['cost'] : $basicMInfo['cost'],
@@ -583,10 +591,11 @@ class ome_order_fail
                             foreach($basicMInfos as $k => $basicMInfo){
                                 //$basicMInfo['retail_price'] ? $basicMInfo['retail_price'] : 0.00
                                 $sendnum = $orderInfo[0]['ship_status'] == '0' ? 0 : $basicMInfo['number']*$quantity;
+                                $shop_product_id = $this->_getWxshipinShopProductId($orderInfo[0], $objInfo[0], 0);
                                 $order_items[] = array(
                                     'shop_goods_id'   => $objInfo[0]['shop_goods_id'] ? $objInfo[0]['shop_goods_id'] : 0,
                                     'product_id'      => $basicMInfo['bm_id'] ? $basicMInfo['bm_id'] : 0,
-                                    'shop_product_id' => 0,
+                                    'shop_product_id' => $shop_product_id,
                                     'bn'              => $basicMInfo['material_bn'],
                                     'name'            => $basicMInfo['material_name'],
                                     'cost'            => $basicMInfo['cost'] ? $basicMInfo['cost'] : 0.00,
@@ -610,10 +619,11 @@ class ome_order_fail
                             //组织item数据
                             foreach($basicMInfos as $k => $basicMInfo){
                                 $sendnum = $orderInfo[0]['ship_status'] == '0' ? 0 : $basicMInfo['number'];
+                                $shop_product_id = $this->_getWxshipinShopProductId($orderInfo[0], $objInfo[0], 0);
                                 $order_items[] = array(
                                         'shop_goods_id' => $objInfo[0]['shop_goods_id'] ? $objInfo[0]['shop_goods_id'] : 0,
                                         'product_id' => $basicMInfo['bm_id'] ? $basicMInfo['bm_id'] : 0,
-                                        'shop_product_id' => 0,
+                                        'shop_product_id' => $shop_product_id,
                                         'bn' => $basicMInfo['material_bn'],
                                         'name' => $basicMInfo['material_name'],
                                         'cost' => (float)$objInfo[0]['cost'] ? $objInfo[0]['cost'] : $basicMInfo['cost'],
@@ -643,10 +653,11 @@ class ome_order_fail
                                 $luckybag_id = ($basicMInfo['combine_id'] ? $basicMInfo['combine_id'] : 0);
                                 
                                 //items
+                                $shop_product_id = $this->_getWxshipinShopProductId($orderInfo[0], $objInfo[0], 0);
                                 $order_items[] = array(
                                     'shop_goods_id' => $objInfo[0]['shop_goods_id'] ? $objInfo[0]['shop_goods_id'] : 0,
                                     'product_id' => $basicMInfo['bm_id'] ? $basicMInfo['bm_id'] : 0,
-                                    'shop_product_id' => 0,
+                                    'shop_product_id' => $shop_product_id,
                                     'bn' => $basicMInfo['material_bn'],
                                     'name' => $basicMInfo['material_name'],
                                     'cost' => $basicMInfo['cost'] ? $basicMInfo['cost'] : 0.00,
@@ -683,10 +694,11 @@ class ome_order_fail
                                 $sendnum = $orderInfo[0]['ship_status'] == '0' ? 0 : $objInfo[0]['sendnum']*$basicMInfo['number'];
 
                                 //普通销售物料item层数据以object为主,原本就是1:1的两层结构,item合并object,item层数据真实
+                                $shop_product_id = $this->_getWxshipinShopProductId($orderInfo[0], $objInfo[0], $objInfo[0]['shop_product_id']);
                                 $order_items[] = array(
                                     'shop_goods_id'   => $objInfo[0]['shop_goods_id'] ? $objInfo[0]['shop_goods_id'] : 0,
                                     'product_id'      => $basicMInfo['bm_id'] ? $basicMInfo['bm_id'] : 0,
-                                    'shop_product_id' => $objInfo[0]['shop_product_id'] ? $objInfo[0]['shop_product_id'] : 0,
+                                    'shop_product_id' => $shop_product_id,
                                     'bn'              => $basicMInfo['material_bn'],
                                     'name'            => $basicMInfo['material_name'],
                                     'cost'            => (float)$objInfo[0]['cost'] ? $objInfo[0]['cost'] : $basicMInfo['cost'],
@@ -914,6 +926,48 @@ class ome_order_fail
         $orderObj->write_log_detail($log_id,$orders);
     }
 
+    /**
+     * 获取微信视频号失败订单恢复时使用的平台 SKU ID。
+     *
+     * 非微信视频号订单保持原默认值；微信视频号订单优先使用已有 SKU，
+     * 没有时从 order_objects.addon 里备份的原始平台明细继承。
+     *
+     * @param array $orderInfo 订单主信息
+     * @param array $objectInfo 订单对象信息
+     * @param mixed $defaultShopProductId 默认平台 SKU ID
+     * @return mixed
+     */
+    private function _getWxshipinShopProductId($orderInfo, $objectInfo, $defaultShopProductId = 0)
+    {
+        if ($orderInfo['shop_type'] != 'wxshipin') {
+            return $defaultShopProductId ? $defaultShopProductId : 0;
+        }
+        if ($defaultShopProductId && $defaultShopProductId != '0') {
+            return $defaultShopProductId;
+        }
+
+        // 微信视频号发货回写依赖平台 SKU ID。失败订单恢复时 item 是重建的，
+        // 这里从订单转换阶段备份的原始平台明细中继承，避免恢复后 sku_id 变成 0。
+        $addon = $objectInfo['addon'];
+        $addonData = is_array($addon) ? $addon : ($addon ? json_decode($addon, true) : array());
+        if (!is_array($addonData) || empty($addonData['wxshipin_platform_items'])) {
+            return 0;
+        }
+
+        $platformItems = $addonData['wxshipin_platform_items'];
+        if ($platformItems['shop_product_id'] && $platformItems['shop_product_id'] != '0') {
+            return $platformItems['shop_product_id'];
+        }
+
+        foreach ((array)$platformItems['items'] as $item) {
+            if ($item['shop_product_id'] && $item['shop_product_id'] != '0') {
+                return $item['shop_product_id'];
+            }
+        }
+
+        return 0;
+    }
+
     public function getFailOrderByBn($smBns=array())
     {
         $orderObj = app::get('ome')->model('orders');
@@ -925,6 +979,7 @@ class ome_order_fail
         
         $sql = "SELECT I.order_id FROM sdb_ome_order_objects as I LEFT JOIN sdb_ome_orders AS O ON I.order_id=O.order_id ";
         $sql .= " WHERE O.org_id>0 AND O.is_fail='true' AND O.edit_status='true' AND O.archive='1' ";
+        $sql .= " AND O.process_status='unconfirmed' ";
         $sql .= " AND I.goods_id=0 AND I.bn IN('". implode("','", $smBns). "') GROUP BY order_id LIMIT 0,1000";
         
         $orderList = $orderObj->db->select($sql);
@@ -942,11 +997,66 @@ class ome_order_fail
         
         $sql = "SELECT I.order_id FROM sdb_ome_order_objects as I LEFT JOIN sdb_ome_orders AS O ON I.order_id=O.order_id ";
         $sql .= " WHERE O.org_id>0 AND O.is_fail='true' AND O.edit_status='true' AND O.archive='1' ";
+        $sql .= " AND O.process_status='unconfirmed' ";
         $sql .= " AND I.goods_id=0 AND I.shop_goods_id IN('". implode("','", $shopGoodsIds). "') GROUP BY order_id LIMIT 0,1000";
         
         $orderList = $orderObj->db->select($sql);
         
         return $orderList;
+    }
+
+    /**
+     * 统计可批量修复的失败订单数量
+     *
+     * @param array $smBns
+     * @param bool $requireUnconfirmed true=与批量修复条件一致(未确认)
+     * @return int
+     */
+    public function countFailOrderByBn($smBns = array(), $requireUnconfirmed = true)
+    {
+        $orderObj = app::get('ome')->model('orders');
+
+        if (empty($smBns)) {
+            return 0;
+        }
+
+        $sql = "SELECT COUNT(DISTINCT O.order_id) AS cnt FROM sdb_ome_order_objects as I LEFT JOIN sdb_ome_orders AS O ON I.order_id=O.order_id ";
+        $sql .= " WHERE O.org_id>0 AND O.is_fail='true' AND O.edit_status='true' AND O.archive='1' ";
+        if ($requireUnconfirmed) {
+            $sql .= " AND O.process_status='unconfirmed' ";
+        }
+        $sql .= " AND I.goods_id=0 AND I.bn IN('". implode("','", $smBns). "')";
+
+        $row = $orderObj->db->selectrow($sql);
+
+        return intval($row['cnt']);
+    }
+
+    /**
+     * 统计可批量修复的失败订单数量(按平台商品ID)
+     *
+     * @param array $shopGoodsIds
+     * @param bool $requireUnconfirmed true=与批量修复条件一致(未确认)
+     * @return int
+     */
+    public function countFailOrderByName($shopGoodsIds = array(), $requireUnconfirmed = true)
+    {
+        $orderObj = app::get('ome')->model('orders');
+
+        if (empty($shopGoodsIds)) {
+            return 0;
+        }
+
+        $sql = "SELECT COUNT(DISTINCT O.order_id) AS cnt FROM sdb_ome_order_objects as I LEFT JOIN sdb_ome_orders AS O ON I.order_id=O.order_id ";
+        $sql .= " WHERE O.org_id>0 AND O.is_fail='true' AND O.edit_status='true' AND O.archive='1' ";
+        if ($requireUnconfirmed) {
+            $sql .= " AND O.process_status='unconfirmed' ";
+        }
+        $sql .= " AND I.goods_id=0 AND I.shop_goods_id IN('". implode("','", $shopGoodsIds). "')";
+
+        $row = $orderObj->db->selectrow($sql);
+
+        return intval($row['cnt']);
     }
     
     /**

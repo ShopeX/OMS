@@ -15,8 +15,30 @@
  * limitations under the License.
  */
 class ome_ctl_admin_delivery extends desktop_controller{
+    const URGENT_LABEL_CODE = 'SOMS_URGENT_SHIP';
     var $name = "发货单";
     var $workground = "console_center";
+
+    function _views(){
+        $mdl_delivery = $this->app->model('delivery');
+        $baseFilter = array(
+            'type' => 'normal',
+            'pause' => 'false',
+            'parent_id' => 0,
+            'disabled' => 'false',
+            'status' => array('ready','progress','succ')
+        );
+        $sub_menu = array(
+            0 => array('label' => app::get('base')->_('全部'), 'filter' => $baseFilter, 'optional' => false),
+            1 => array('label' => app::get('base')->_('加急发货'), 'filter' => array_merge($baseFilter, array('delivery_label_code' => self::URGENT_LABEL_CODE)), 'optional' => false),
+        );
+        foreach ($sub_menu as $k => $v) {
+            $sub_menu[$k]['filter'] = $v['filter'];
+            $sub_menu[$k]['addon'] = $mdl_delivery->count($v['filter']);
+            $sub_menu[$k]['href'] = 'index.php?app=ome&ctl='.$_GET['ctl'].'&act='.$_GET['act'].'&view='.$k;
+        }
+        return $sub_menu;
+    }
 
     function index(){
         $filter = array(
@@ -50,6 +72,7 @@ class ome_ctl_admin_delivery extends desktop_controller{
             'use_buildin_export'=>false,
             'use_buildin_import'=>false,
             'use_buildin_filter'=>true,
+            'use_view_tab'=>true,
        ));
     }
 

@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * 出库单
  *
@@ -114,7 +113,13 @@ class erpapi_wms_response_stockout extends erpapi_wms_response_abstract
                   $val['batch'] = isset($val['batch']['batch'][0]) ? $val['batch']['batch'] : [$val['batch']['batch']];
                   foreach ($val['batch'] as $v) {
                       if ($v['actualQty'] == 0) continue;
-
+                      
+                      // 过滤掉batchCode批次号为空的记录
+                      //@todo：birkenStock客户反馈仓库那边有些商品不做批次管理，所以batchCode批次号为空；
+                      if(empty($v['batchCode'])){
+                          continue;
+                      }
+                      
                       $stockout_items[$val['product_bn']]['batch'][] = array(
                           'purchase_code' => $v['batchCode'],
                           'produce_code'  => $v['produceCode'],

@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * @author ykm 2018/12/7
  * @describe 京东供应商订单
@@ -71,7 +70,11 @@ class erpapi_shop_matrix_jd_response_order extends erpapi_shop_response_order
             }
             $arrField = explode('/', $field);
             $object['actually_amount'] = current($object['order_items'])[$arrField[0]][$arrField[1]];
+            // 因为厂直是跟平台结算,所以商家结算(settlement_amount)要取采购价 
+            $object['settlement_amount'] = $object['purchase_price'];
             foreach ($object['order_items'] as &$item) {
+                // 因为厂直是跟平台结算,所以商家结算(settlement_amount)要取采购价 
+                $item['settlement_amount'] = $item['purchase_price'];
                 if ($this->_ordersdf['timing_confirm']) {
                     $item['estimate_con_time'] = (int)$this->_ordersdf['timing_confirm'];
                 }

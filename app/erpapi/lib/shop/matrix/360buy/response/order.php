@@ -154,7 +154,14 @@ class erpapi_shop_matrix_360buy_response_order extends erpapi_shop_response_orde
     protected function _analysis()
     {
         $this->_ordersdf['is_delivery'] = 'Y';#默认可以发货
+
+        $platformSourceStatus = $this->_ordersdf['source_status'];
+
         parent::_analysis();
+
+        if ($platformSourceStatus == 'PAUSE') {
+            $this->_ordersdf['source_status'] = $this->_sourceStatus['PAUSE'];
+        }
 
         if(!$this->_ordersdf['lastmodify']){
             $this->_ordersdf['lastmodify'] = date('Y-m-d H:i:s',time());
@@ -338,7 +345,7 @@ class erpapi_shop_matrix_360buy_response_order extends erpapi_shop_response_orde
                     //@todo：官方文档：https://open.jd.com/v2/#/doc/scene?listId=2168
                     // type = 244 代表：244-新品国补立减
                     // type = 1080 代表：1080-政府消费券（可开票）
-                    if(in_array($value['type'], [244, 1080])) {
+                    if(in_array($value['type'], [244, 1080, 233])) {
                         foreach ($value['orderCostAmounts'] as $orderCostAmount) {
 
                             if($orderCostAmount['bearer'] == 5 && $orderCostAmount['bearAmount'] > 0) {
@@ -769,9 +776,11 @@ class erpapi_shop_matrix_360buy_response_order extends erpapi_shop_response_orde
 
     protected function _canUpdate()
     {
-        
-        if ($this->_tgOrder['order_type'] == 'presale' && empty($this->_ordersdf['step_trade_status'])) {
-            $this->__apilog['result']['msg'] = '预售订单中间以普通订单下来的不接收';
+        // 京东预售：仅付定金、平台 PAUSE 时不接收
+        if ($this->_tgOrder['order_type'] == 'presale'
+            && $this->_tgOrder['pay_status'] == '3'
+            && $this->_ordersdf['source_status'] == $this->_sourceStatus['PAUSE']) {
+            $this->__apilog['result']['msg'] = '预售订单中间以普通订单下来的不接收，平台 PAUSE';
             return false;
         }
 

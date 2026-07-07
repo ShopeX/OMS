@@ -117,6 +117,24 @@ $db['monthly_report']=array (
         'default_in_list' => true,
         'comment' => '平台补贴退（不包含支付优惠）',
     ),
+    'verified_count' => array(
+        'type' => 'number',
+        'default' => 0,
+        'label' => '已核销数量',
+        'editable' => false,
+        'in_list' => true,
+        'default_in_list' => true,
+        'order' => 105,
+    ),
+    'unverified_count' => array(
+        'type' => 'number',
+        'default' => 0,
+        'label' => '未核销数量',
+        'editable' => false,
+        'in_list' => true,
+        'default_in_list' => true,
+        'order' => 106,
+    ),
     'begin_time' => 
     array (
       'type' => 'time',

@@ -130,4 +130,7 @@ $db['regions']=array (
     ),
   ),
   'comment' => '电商商务通用应用区域表',
+  'engine' => 'innodb',
+  'version' => '$Rev:  $',
+  'charset' => 'utf8mb4',
 );

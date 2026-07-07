@@ -117,7 +117,7 @@ class erpapi_shop_response_params_aftersalev2 extends erpapi_shop_response_param
                 }
                 
                 //检查更新时间是否变化
-                if($sdf['modified'] <= $refundApply['outer_lastmodify']) {
+                if($sdf['modified'] < $refundApply['outer_lastmodify']) {
                     return array('rsp' => 'fail', 'msg' => '更新时间未变化,不更新');
                 }
             }

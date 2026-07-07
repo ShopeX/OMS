@@ -59,12 +59,6 @@ class ome_sales_price{
         return $order;
     }
 
-    /**
-     * calculate
-     * @param mixed $order_original_data 数据
-     * @param mixed $sales_data 数据
-     * @return mixed 返回值
-     */
     public function calculate($order_original_data,&$sales_data){
 
         if(!$this->_check($order_original_data, $sales_data)){
@@ -121,6 +115,8 @@ class ome_sales_price{
             $all_sale_price += $sale_item['price']*$sale_item['nums'];
             $all_pmt_price += $sale_item['pmt_price'];
         }
+        
+        $all_pmt_price = sprintf('%.2f', $all_pmt_price);
         $all_sale_price = sprintf('%.2f', $all_sale_price);
         $old_discount = sprintf('%.2f', $sales_data['discount']);
 
@@ -223,13 +219,6 @@ class ome_sales_price{
         $sales_data['actually_amount'] += $sales_data['service_price'];
     }
 
-    /**
-     * 获取ItemProductSalePrice
-     * @param mixed $saleData 数据
-     * @param mixed $arrOrder arrOrder
-     * @param mixed $productGoods productGoods
-     * @return mixed 返回结果
-     */
     public function getItemProductSalePrice($saleData, $arrOrder, $productGoods) {
         $itemSalePrice = array();
         foreach ($saleData as $orderId => $val) {

@@ -304,9 +304,8 @@ class material_sales_material_import
         
         //组合、福袋组合
         if (in_array($salesMaterial['sales_material_type'], ['2', '7'])) {
+            $is_check_rate = false;
             $tmp_rate      = 0;
-            $allHaveValues = true;
-            $allNoValues   = true;
             foreach ($salesMaterial['items'] as $key => $val)
             {
                 if ($salesMaterial['sales_material_type'] == '7' && empty($val['*:组合价格贡献占比'])) {
@@ -319,19 +318,15 @@ class material_sales_material_import
                     }
                     $tmp_rate += $val['*:组合价格贡献占比'];
                     
-                    $allHaveValues = false;
+                    // 是否检测贡献占比
+                    $is_check_rate = true;
                 } else {
                     $salesMaterial['items'][$key]['*:组合价格贡献占比'] = 0;
-                    $allNoValues                                = false;
                 }
             }
             
-            if (!$allHaveValues && !$allNoValues) {
-                return [false, ['msg' => sprintf('%s组合价格贡献占比必须全部有值或者全部没有值', $salesMaterial['*:销售物料编码'])]];
-            }
-            
             //检测贡献占比是否等于100
-            if (!$allHaveValues) {
+            if($is_check_rate){
                 if ($tmp_rate > 100) {
                     return [false, ['msg' => sprintf('%s组合价格贡献百分比：%s,已超100%s', $salesMaterial['*:销售物料编码'], $tmp_rate,'%')]];
                 } elseif ($tmp_rate < 100) {
@@ -534,9 +529,8 @@ class material_sales_material_import
         
         //组合、福袋组合
         if (in_array($salesMaterial['sales_material_type'], ['2', '7'])) {
+            $is_check_rate = false;
             $tmp_rate      = 0;
-            $allHaveValues = true;
-            $allNoValues   = true;
             foreach ($salesMaterial['items'] as $key => $val) {
                 if ($salesMaterial['sales_material_type'] == '7' && empty($val['*:组合价格贡献占比'])) {
                     return [false, ['msg' => sprintf('%s组合价格贡献占比不能为空', $val['*:基础物料编码/福袋组合编码'])]];
@@ -547,19 +541,15 @@ class material_sales_material_import
                     }
                     $tmp_rate += $val['*:组合价格贡献占比'];
                     
-                    $allHaveValues = false;
+                    // 是否检测贡献占比
+                    $is_check_rate = true;
                 } else {
                     $salesMaterial['items'][$key]['*:组合价格贡献占比'] = 0;
-                    $allNoValues                                = false;
                 }
             }
             
-            if (!$allHaveValues && !$allNoValues) {
-                return [false, ['msg' => sprintf('%s组合价格贡献占比必须全部有值或者全部没有值', $salesMaterial['*:销售物料编码'])]];
-            }
-            
             //检测贡献占比是否等于100
-            if (!$allHaveValues) {
+            if($is_check_rate){
                 if ($tmp_rate > 100) {
                     return [false, ['msg' => sprintf('%s组合价格贡献百分比：%s,已超100%s', $salesMaterial['*:销售物料编码'], $tmp_rate,'%')]];
                 } elseif ($tmp_rate < 100) {

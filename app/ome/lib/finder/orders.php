@@ -33,10 +33,20 @@ class ome_finder_orders
     var $detail_freeze = '订单冻结流水';
 
     function __construct(){
-        if($_GET['act'] == 'index' || $_GET['act'] == 'confirm' || $_GET['act'] == 'pending' || $_GET['act'] == 'processed'){
+        if(($_GET['ctl'] == 'admin_order'
+                && ($_GET['act'] == 'confirm' || $_GET['act'] == 'index' || $_GET['flt'] == 'buffer' || $_GET['flt'] == 'assigned'))
+            || $_GET['ctl']=='admin_order_lack'){
             //nothing
         }else{
-           unset($this->column_confirm);
+            unset($this->column_confirm);
+        }
+        
+        //剔除复审操作按扭
+        if($_GET['ctl'] == 'admin_order' && $_GET['act'] == 'retrial'){
+            //nothing
+        }else{
+            unset($this->column_abnormal_status);
+            unset($this->column_mark_text);
         }
     }
 
@@ -1634,7 +1644,57 @@ EOF;
         }
         return date('Y-m-d H:i:s', $timeConfirm);
     }
-
+    
+    var $column_abnormal_status = '复审操作';
+    var $column_abnormal_status_width = '110';
+    var $column_abnormal_status_order = '10';
+    function column_abnormal_status($row)
+    {
+        $find_id = $_GET['_finder']['finder_id'];
+        $order_id = $row['order_id'];
+        
+        //不是复审订单,直接返回
+        if($row[$this->col_prefix.'process_status'] != 'is_retrial'){
+            return '';
+        }
+        
+        $sql    = "SELECT id, retrial_type, status FROM ".DB_PREFIX."ome_order_retrial WHERE order_id='".$order_id."' AND status in('0', '2') ORDER BY dateline DESC";
+        $result = kernel::database()->select($sql);
+        
+        $str    = '<a href="index.php?app=ome&ctl=admin_order&act=view_edit&p[0]='.$order_id.'&finder_id='.$find_id.'&oldsource=active" target="_blank">编辑</a>';
+        if($result[0]['status'] == '2' && $result[0]['retrial_type'] == 'normal')
+        {
+            return $str.' | <a href="index.php?app=ome&ctl=admin_order&act=retrial_rollback&p[0]='.$order_id.'&finder_id='.$find_id.'&oldsource=retrial" target="_blank" style="color:red;">恢复原订单</a>';
+        }
+        elseif($result[0]['status'] == '2')
+        {
+            return $str.'<span style="color:#999">(价格复审)</span>';
+        }
+        else
+        {
+            return '<span style="color:#999">未审核</span>';
+        }
+    }
+    
+    var $column_mark_text = '复审备注';
+    var $column_mark_text_width = '130';
+    var $column_mark_text_order = '15';
+    function column_mark_text($row)
+    {
+        $order_id = $row['order_id'];
+        
+        //不是复审订单,直接返回
+        if($row[$this->col_prefix.'process_status'] != 'is_retrial'){
+            return '';
+        }
+        
+        $sql = "SELECT id, remarks, lastdate FROM ".DB_PREFIX."ome_order_retrial WHERE order_id='".$order_id."' AND status in('0', '2') ORDER BY dateline DESC";
+        $result = kernel::database()->select($sql);
+        
+        $html   = strip_tags(htmlspecialchars($result[0]['remarks']));
+        return "<div onmouseover='bindFinderColTip(event)' rel='".$html.' by '.date('Y-m-d H:i:s', $result[0]['lastdate'])."'>".$html."<div>";
+    }
+    
     var $column_order_combined_confirm = '已合并审单';
     var $column_order_combined_confirm_width = "60";
     function column_order_combined_confirm($row) {

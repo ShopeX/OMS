@@ -404,7 +404,7 @@ class ome_ctl_admin_order_lack extends desktop_controller {
 
     protected function _getOlistFilter() {
         $params = array(
-            'assigned'      => 'assigned',
+            //'assigned'      => 'assigned',
             'abnormal'       => 'false',
             'is_fail'        => 'false',
             'status'         => 'active',
@@ -417,7 +417,7 @@ class ome_ctl_admin_order_lack extends desktop_controller {
 //        }
         if(!kernel::single('desktop_user')->is_super()){
             $op_id = kernel::single('desktop_user')->get_id();
-            $params['op_id'] = $op_id;
+            $params['op_id'] = array($op_id, 0);
         }
         /*$flag = omeauto_auto_const::__STORE_CODE;
         $params['order_confirm_filter'] = sprintf("(sdb_ome_orders.auto_status & %s = %s)", $flag, $flag); */

@@ -14,8 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
+/**
+* @copyright shopex.cn
+* @author Kris.wang 406048119@qq.com
+* @version ocs
+*/
 class finance_monthly_report
 {
     public $monthly_report = array();
@@ -146,7 +149,7 @@ class finance_monthly_report
 
     /**
      * 根据时间获取账期ID
-     * 
+     *
      * @param      String  $shop_id  
      * @param      String $time     
      */
@@ -231,6 +234,22 @@ class finance_monthly_report
                 }
             }
 
+            $monthly_count = array();
+            $item_list = $mdlMonthlyReport->db->select('select count(*) as cnt,monthly_id,verification_status from sdb_finance_monthly_report_items where monthly_id in ('.implode(',', $monthly_list).') group by monthly_id,verification_status');
+            if($item_list)
+            {
+                foreach ($item_list as $v) {
+                    if($v['verification_status'] == 2)
+                    {
+                        $monthly_count[$v['monthly_id']]['verified_count'] = $v['cnt'];
+                    }
+                    else
+                    {
+                        $monthly_count[$v['monthly_id']]['unverified_count'] = $v['cnt'];
+                    }
+                }
+            }
+
             foreach ($monthly_list as $monthly_id) {
                 $data = array();
 
@@ -242,6 +261,8 @@ class finance_monthly_report
                 $data['platform_amount'] = isset($monthly_amount[$monthly_id]['platform_amount']) ? $monthly_amount[$monthly_id]['platform_amount'] : 0;
                 $data['refund_actually_amount'] = isset($monthly_amount[$monthly_id]['refund_actually_amount']) ? $monthly_amount[$monthly_id]['refund_actually_amount'] : 0;
                 $data['refund_platform_amount'] = isset($monthly_amount[$monthly_id]['refund_platform_amount']) ? $monthly_amount[$monthly_id]['refund_platform_amount'] : 0;
+                $data['verified_count'] = isset($monthly_count[$monthly_id]['verified_count']) ? $monthly_count[$monthly_id]['verified_count'] : 0;
+                $data['unverified_count'] = isset($monthly_count[$monthly_id]['unverified_count']) ? $monthly_count[$monthly_id]['unverified_count'] : 0;
                 $mdlMonthlyReport->update($data,array('monthly_id'=>$monthly_id));
             }
         }

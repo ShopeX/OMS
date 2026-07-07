@@ -1662,6 +1662,12 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
         if($oaid){
             //consignee
             foreach ($this->_ordersdf['consignee'] as $key => $value) {
+                // 指定字段不参与 oaid 加密拼接
+                //@todo：sdb_ome_member_address数据库表中ship_email字段只有150个字符长度，不能使用oaid进行加密拼接；
+                if (in_array($key, ['email', 'zip', 'ship_zip'])) {
+                    continue;
+                }
+                
                 if(strpos($value, '*') !== false) {
                     $this->_ordersdf['consignee'][$key] .= '>>' . $oaid . $hashCode;
                 }elseif($key == 'mobile' && $receiver_mobile_index){

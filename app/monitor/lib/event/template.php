@@ -36,7 +36,7 @@ class monitor_event_template
             // 'wms_reship_finish'        => 'WMS退货失败报警',
             // 'wms_stockin_finish'       => 'WMS入库失败报警',
             // 'wms_stockout_finish'      => 'WMS出库失败报警',
-            // 'wms_stock_change'         => 'WMS异动失败报警',
+             'wms_stock_change'         => 'WMS异动失败报警',
             // 'wms_stockprocess_confirm' => 'WMS加工单确认失败报警',
             // 'wms_transferorder_finish' => 'WMS移库失败报警',
 

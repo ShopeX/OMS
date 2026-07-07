@@ -2,6 +2,7 @@
 
 class ome_mdl_delivery extends dbeav_model
 {
+    const URGENT_LABEL_CODE = 'SOMS_URGENT_SHIP';
     //public $filter_use_like = true;
     public $has_many = array(
         'delivery_items' => 'delivery_items',
@@ -38,16 +39,24 @@ class ome_mdl_delivery extends dbeav_model
         parent::__construct($app);
     }
 
+    /**
+     * 扩展发货单 Finder 过滤条件，支持加急标签相关筛选与自定义 SQL 条件。
+     *
+     * @param array $filter
+     * @param string|null $tableAlias
+     * @param array|null $baseWhere
+     * @return string
+     */
     public function _filter($filter, $tableAlias = null, $baseWhere = null)
     {
         $tPre      = ($tableAlias ? $tableAlias : '`' . $this->table_name(true) . '`') . '.';
         $tmpBaseWhere = kernel::single('ome_filter_encrypt')->encrypt($filter, $this->__encrypt_cols, $tPre, 'delivery');
         $baseWhere = $baseWhere ? array_merge((array)$baseWhere, (array)$tmpBaseWhere) : (array)$tmpBaseWhere;
-        
+
         //setting
         $deliveryIds = array();
         $where = '';
-        
+
         //filter
         if (isset($filter['extend_delivery_id'])) {
             //delivery_id
@@ -56,17 +65,17 @@ class ome_mdl_delivery extends dbeav_model
             {
                 $tempDlyIds[$extend_delivery_id] = $extend_delivery_id;
             }
-            
+
             //intersection
             if(empty($deliveryIds)){
                 $deliveryIds = $tempDlyIds;
             }else{
                 $deliveryIds = array_intersect($deliveryIds, $tempDlyIds);
             }
-            
+
             unset($filter['extend_delivery_id']);
         }
-        
+
         if (isset($filter['member_uname'])) {
             $memberObj  = $this->app->model("members");
             $rows       = $memberObj->getList('member_id', array('uname|has' => $filter['member_uname']));
@@ -94,23 +103,23 @@ class ome_mdl_delivery extends dbeav_model
 
             $deliOrderObj = $this->app->model("delivery_order");
             $rows         = $deliOrderObj->getList('delivery_id', array('order_id' => $orderId));
-            
+
             //delivery_id
             $tempDlyIds = array(0);
             foreach($rows as $row)
             {
                 $temp_dly_id = $row['delivery_id'];
-                
+
                 $tempDlyIds[$temp_dly_id] = $temp_dly_id;
             }
-            
+
             //intersection
             if(empty($deliveryIds)){
                 $deliveryIds = $tempDlyIds;
             }else{
                 $deliveryIds = array_intersect($deliveryIds, $tempDlyIds);
             }
-            
+
             unset($filter['order_bn']);
         }
         
@@ -118,30 +127,30 @@ class ome_mdl_delivery extends dbeav_model
         if (isset($filter['material_bn'])){
             if(strpos($filter['material_bn'], "\n") !== false){
                 $material_bns = array_unique(array_map('trim', array_filter(explode("\n", $filter['material_bn']))));
-                
+
                 $filter['material_bn'] = $material_bns;
             }
             
             //search_delivery_items
             $itemsObj = app::get('ome')->model("delivery_items");
             $rows = $itemsObj->getDeliveryIdByPbn($filter);
-            
+
             //delivery_id
             $tempDlyIds = array(0);
             foreach($rows as $row)
             {
                 $temp_dly_id = $row['delivery_id'];
-                
+
                 $tempDlyIds[$temp_dly_id] = $temp_dly_id;
             }
-            
+
             //intersection
             if(empty($deliveryIds)){
                 $deliveryIds = $tempDlyIds;
             }else{
                 $deliveryIds = array_intersect($deliveryIds, $tempDlyIds);
             }
-            
+
             unset($filter['material_bn']);
         }
         
@@ -156,23 +165,23 @@ class ome_mdl_delivery extends dbeav_model
             //search_delivery_items
             $itemsObj = $this->app->model("delivery_items");
             $rows = $itemsObj->getDeliveryIdByPbarcode($filter);
-            
+
             //delivery_id
             $tempDlyIds = array(0);
             foreach($rows as $row)
             {
                 $temp_dly_id = $row['delivery_id'];
-                
+
                 $tempDlyIds[$temp_dly_id] = $temp_dly_id;
             }
-            
+
             //intersection
             if(empty($deliveryIds)){
                 $deliveryIds = $tempDlyIds;
             }else{
                 $deliveryIds = array_intersect($deliveryIds, $tempDlyIds);
             }
-            
+
             //unset
             unset($filter['product_barcode']);
         }
@@ -180,35 +189,61 @@ class ome_mdl_delivery extends dbeav_model
         if (isset($filter['logi_no_ext'])) {
             $logObj       = $this->app->model("delivery_log");
             $rows         = $logObj->getDeliveryIdByLogiNO($filter['logi_no_ext']);
-            
+
             //delivery_id
             $tempDlyIds = array(0);
             foreach($rows as $row)
             {
                 $temp_dly_id = $row['delivery_id'];
-                
+
                 $tempDlyIds[$temp_dly_id] = $temp_dly_id;
             }
-            
+
             //intersection
             if(empty($deliveryIds)){
                 $deliveryIds = $tempDlyIds;
             }else{
                 $deliveryIds = array_intersect($deliveryIds, $tempDlyIds);
             }
-            
+
             unset($filter['logi_no_ext']);
         }
-        
+
         if (isset($filter['addonSQL'])) {
             $where .= ' AND ' . $filter['addonSQL'];
             unset($filter['addonSQL']);
         }
-        
+        if (!empty($filter['delivery_label_code'])) {
+            $where .= ' AND EXISTS (
+                SELECT 1 FROM sdb_ome_bill_label bl
+                WHERE bl.bill_id = '.$tPre.'delivery_id
+                AND bl.bill_type = "delivery"
+                AND bl.label_code = "'.addslashes($filter['delivery_label_code']).'"
+            )';
+            unset($filter['delivery_label_code']);
+        }
+        if (isset($filter['urgent_delivery'])) {
+            if ($filter['urgent_delivery'] === 'true' || $filter['urgent_delivery'] === true || $filter['urgent_delivery'] == 1) {
+                $where .= ' AND EXISTS (
+                    SELECT 1 FROM sdb_ome_bill_label bl
+                    WHERE bl.bill_id = '.$tPre.'delivery_id
+                    AND bl.bill_type = "delivery"
+                    AND bl.label_code = "'.self::URGENT_LABEL_CODE.'"
+                )';
+            } else {
+                $where .= ' AND NOT EXISTS (
+                    SELECT 1 FROM sdb_ome_bill_label bl
+                    WHERE bl.bill_id = '.$tPre.'delivery_id
+                    AND bl.bill_type = "delivery"
+                    AND bl.label_code = "'.self::URGENT_LABEL_CODE.'"
+                )';
+            }
+            unset($filter['urgent_delivery']);
+        }
         if (isset($filter['delivery_ident'])) {
             //delivery_id
             $tempDlyIds = array(0);
-            
+
             $arr_delivery_ident = explode('_', $filter['delivery_ident']);
             $mdl_queue          = app::get('ome')->model("print_queue");
             if (count($arr_delivery_ident) == 2) {
@@ -236,37 +271,37 @@ class ome_mdl_delivery extends dbeav_model
                     }
                 }
             }
-            
+
             //intersection
             if(empty($deliveryIds)){
                 $deliveryIds = $tempDlyIds;
             }else{
                 $deliveryIds = array_intersect($deliveryIds, $tempDlyIds);
             }
-            
+
             unset($filter['delivery_ident']);
         }
-        
+
         if (isset($filter['ship_tel_mobile'])) {
             $where .= ' AND (ship_tel=\'' . $filter['ship_tel_mobile'] . '\' or ship_mobile=\'' . $filter['ship_tel_mobile'] . '\')';
             unset($filter['ship_tel_mobile']);
         }
-        
+
         if ($filter['todo'] == 1) {
             $where .= " AND ({$tPre}stock_status='false' or {$tPre}expre_status='false' or {$tPre}deliv_status='false')";
             unset($filter['todo']);
         }
-        
+
         if ($filter['todo'] == 2) {
             $where .= " AND ({$tPre}stock_status='false' or {$tPre}expre_status='false')";
             unset($filter['todo']);
         }
-        
+
         if ($filter['todo'] == 3) {
             $where .= " AND ({$tPre}expre_status='false' or {$tPre}deliv_status='false')";
             unset($filter['todo']);
         }
-        
+
         if ($filter['todo'] == 4) {
             $where .= " AND {$tPre}expre_status='false'";
             unset($filter['todo']);
@@ -323,17 +358,17 @@ class ome_mdl_delivery extends dbeav_model
                 foreach ($_rows as $_orders)
                 {
                     $temp_dly_id = $_orders['delivery_id'];
-                    
+
                     $tempDlyIds[$temp_dly_id] = $temp_dly_id;
                 }
-                
+
                 //intersection
                 if(empty($deliveryIds)){
                     $deliveryIds = $tempDlyIds;
                 }else{
                     $deliveryIds = array_intersect($deliveryIds, $tempDlyIds);
                 }
-                
+
                 unset($filter['mark_text']);
             }
         }
@@ -348,17 +383,17 @@ class ome_mdl_delivery extends dbeav_model
                 foreach ($_rows as $_orders)
                 {
                     $temp_dly_id = $_orders['delivery_id'];
-                    
+
                     $tempDlyIds[$temp_dly_id] = $temp_dly_id;
                 }
-                
+
                 //intersection
                 if(empty($deliveryIds)){
                     $deliveryIds = $tempDlyIds;
                 }else{
                     $deliveryIds = array_intersect($deliveryIds, $tempDlyIds);
                 }
-                
+
                 unset($filter['custom_mark']);
             }
         }
@@ -367,7 +402,7 @@ class ome_mdl_delivery extends dbeav_model
         if($deliveryIds){
             $where .= " AND delivery_id IN (". implode(',', $deliveryIds) .")";
         }
-        
+
         return parent::_filter($filter, $tableAlias, $baseWhere) . $where;
     }
 
@@ -622,10 +657,10 @@ class ome_mdl_delivery extends dbeav_model
             }else{
                 $ids = array($parent_id);
             }
-            
+
             return $ids;
         }
-        
+
         foreach ($rows as $item) {
             $data[] = $item['delivery_id'];
         }
@@ -864,40 +899,40 @@ class ome_mdl_delivery extends dbeav_model
                 if($dly['delivery_time']){
                     $delivery_time = $delivery_time ? min($delivery_time, $dly['delivery_time']) : $dly['delivery_time'];
                 }
-                
+
                 //承诺最晚送达时间(取最早时间)
                 if($dly['promised_sign_time']){
                     $promised_sign_time = $promised_sign_time ? min($promised_sign_time, $dly['promised_sign_time']) : $dly['promised_sign_time'];
                 }
-                
+
                 //计划发货时间(取最早时间)
                 if($dly['promised_collect_time']){
                     $promised_collect_time = $promised_collect_time ? min($promised_collect_time, $dly['promised_collect_time']) : $dly['promised_collect_time'];
                 }
-                
+
                 //计划发货时间(取最早时间)
                 if($dly['promise_outbound_time']){
                     $promise_outbound_time = $promise_outbound_time ? min($promise_outbound_time, $dly['promise_outbound_time']) : $dly['promise_outbound_time'];
                 }
-                
+
                 //计划发货时间(取最早时间)
                 if($dly['plan_sign_time']){
                     $plan_sign_time = $plan_sign_time ? min($plan_sign_time, $dly['plan_sign_time']) : $dly['plan_sign_time'];
                 }
-                
+
                 //物流服务标签(取合集)
                 if($dly['promise_service']){
                     $promiseServiceList = array_merge($promiseServiceList, explode(',', $dly['promise_service']));
                     $promiseServiceList = array_unique($promiseServiceList);
                 }
-                
+
                 //物流升级服务
                 if($dly['cpup_service']){
                     $cpup_service = array_merge($cpup_service, explode(',', $dly['cpup_service']));
                     $cpup_service = array_unique($cpup_service);
                 }
             }
-            
+
         }
 
         #获取发货单累计重量
@@ -968,12 +1003,12 @@ class ome_mdl_delivery extends dbeav_model
         if ($r_time) {
             $new_dly['ship_time'] = $r_time;
         }
-        
+
         //未发货之前,不能赋值,否则客户导出时有异议
 //        if ($delivery_time){
 //            $new_dly['delivery_time'] = $delivery_time;
 //        }
-        
+
         if ($promised_collect_time){
             $new_dly['promised_collect_time'] = $promised_collect_time;
         }
@@ -985,22 +1020,22 @@ class ome_mdl_delivery extends dbeav_model
         if ($order_createtime) {
             $new_dly['order_createtime'] = $order_createtime;
         }
-        
+
         //承诺最晚出库时间
         if($promise_outbound_time){
             $new_dly['promise_outbound_time'] = $promise_outbound_time;
         }
-        
+
         //承诺计划送达时间
         if($plan_sign_time){
             $new_dly['plan_sign_time'] = $plan_sign_time;
         }
-        
+
         //物流服务标签
         if($promiseServiceList){
             $new_dly['promise_service'] = implode(',', $promiseServiceList);
         }
-        
+
         //save
         if ($this->save($new_dly)) {
             //创建大发货单
@@ -1327,12 +1362,12 @@ class ome_mdl_delivery extends dbeav_model
         } else {
             $ids[] = $dly_ids;
         }
-        
+
         $memo_log = '';
         if ($memo) {
             $memo_log .= ',备注:' . $memo;
         }
-        
+
         $data['memo']      = $memo;
         $data['status']    = 'back';
         $data['logi_no']   = null;
@@ -1377,7 +1412,7 @@ class ome_mdl_delivery extends dbeav_model
                 }
 
                 $opObj->write_log('delivery_back@ome', $item, '发货单撤销成功' . $memo_log);
-                
+
                 // 发货单取消成功通知
                 $this->sendDeliveryCancelSuccessNotify($deliveryInfo, $memo);
 
@@ -2015,7 +2050,7 @@ class ome_mdl_delivery extends dbeav_model
         }
         return ($arr1['product_id'] < $arr2['product_id']) ? -1 : 1;
     }
-    
+
     /**
      * 新建发货单
      *
@@ -2045,7 +2080,7 @@ class ome_mdl_delivery extends dbeav_model
             $deliveryEventStartTime = microtime(true);
             kernel::single('ome_event_trigger_shop_delivery')->delivery_add($data['delivery_id']);
             $deliveryEventTime = microtime(true) - $deliveryEventStartTime;
-            
+
             // 记录发货单事件触发性能数据
             ome_api_log::add_message('event', 'delivery_add', $deliveryEventTime, array(
                 'delivery_id' => $data['delivery_id']
@@ -2075,7 +2110,7 @@ class ome_mdl_delivery extends dbeav_model
             $objIdArr = array_column($order_items, 'obj_id');
             $objectsList = $orderObjMdl->getList('obj_id,goods_id', ['order_id'=>$order_id, 'obj_id'=>$objIdArr]);
             $objectsList = array_column($objectsList, null, 'obj_id');
-    
+
             foreach ($delivery['delivery_items'] as $di => $dv) {
                 $sm_id = 0;
                 foreach ($order_items as $ov) {
@@ -2127,7 +2162,7 @@ class ome_mdl_delivery extends dbeav_model
         }elseif($order['platform_order_bn']){
             $data['platform_order_bn'] = $order['platform_order_bn'];
         }
-        
+
         $logi_name = "";
         if ($is_diff_order) {
             //补差价订单直接生成已发货的发货单 不涉及库存
@@ -2141,11 +2176,11 @@ class ome_mdl_delivery extends dbeav_model
         if ($delivery['type']) {
             $data['type'] = $delivery['type'];
         }
-        
+
         //计算预计物流费用
         // 记录运费和重量计算开始时间
         $freightStartTime = microtime(true);
-        
+
         $weight = 0;
         if (isset($delivery['weight'])) {
             $weight = $delivery['weight'];
@@ -2168,7 +2203,7 @@ class ome_mdl_delivery extends dbeav_model
             $price     = $this->getDeliveryFreight($area_id, $delivery['logi_id'], $weight);
             $dly_corp  = $oDly_corp->dump($delivery['logi_id']);
             $logi_name = $dly_corp['name'];
-            
+
             // 计算保价费用
             $protect = $dly_corp['protect'];
             if ($protect == 'true') {
@@ -2177,10 +2212,10 @@ class ome_mdl_delivery extends dbeav_model
                 $cost_protect  = max($protect_price, $dly_corp['minprice']);
             }
         }
-        
+
         // 计算运费和重量计算总耗时
         $freightTime = microtime(true) - $freightStartTime;
-        
+
         // 记录运费和重量计算性能数据
         ome_api_log::add_message('freight', 'freight_calculation', $freightTime, array(
             'delivery_id' => $data['delivery_id'] ?? '',
@@ -2189,7 +2224,7 @@ class ome_mdl_delivery extends dbeav_model
             'weight' => $weight,
             'freight_price' => $price
         ));
-        
+
         //[同城配]配送方式
         if($dly_corp['corp_model'] == 'instatnt'){
             //同城配送
@@ -2198,7 +2233,7 @@ class ome_mdl_delivery extends dbeav_model
             //商家配送
             $data['delivery'] = 'seller';
         }
-        
+
         //order has logi_info：aikucun
         if ($delivery['delivery_waybillCode']) {
             $data['logi_no'] = $delivery['delivery_waybillCode'];
@@ -2217,15 +2252,15 @@ class ome_mdl_delivery extends dbeav_model
         $data['member_id']            = $delivery['member_id'] ? $delivery['member_id'] : $order['member_id'];
         $data['shop_id']              = $order['shop_id'];
         $data['shop_type']            = $order['shop_type'];
-        
+
         $data['delivery_items'] = $delivery['delivery_items'];
         $data['consignee']      = $ship_info;
-        
+
         //权限相关
         $data['org_id'] = $order['org_id']; //运营组织
         $data['betc_id'] = $order['betc_id']; //贸易公司ID
         $data['cos_id'] = $order['cos_id']; //组织架构ID
-        
+
         //支持四、五级地区
         $temp_area                     = explode('/', $area_chs);
         $data['consignee']['province'] = $temp_area[0];
@@ -2244,7 +2279,7 @@ class ome_mdl_delivery extends dbeav_model
         if ($order['order_type'] == 'jisuxianhuo') {
             $data['bool_type'] = $data['bool_type'] | ome_delivery_bool_type::__JISU_CODE;
         }
-        
+
         if ($order['order_type'] == 'platform') {
             $data['original_delivery_bn'] = $delivery_bn;
             $data['bool_type'] = ($data['bool_type'] ? $data['bool_type'] : 0) | ome_delivery_bool_type::__PLATFORM_CODE;
@@ -2254,13 +2289,13 @@ class ome_mdl_delivery extends dbeav_model
                 $data['bool_type'] = ($data['bool_type'] ? $data['bool_type'] : 0) | ome_delivery_bool_type::__SHSM_CODE;
             }
         }
-        
+
         // format
         $bns      = array();
         $totalNum = 0;
         foreach ($data['delivery_items'] as $dlyItemKey => $v) {
             $product_id = $v['product_id'];
-            
+
             $totalNum += $v['number'];
             $bns[$v['product_id']] = $v['bn'];
         }
@@ -2279,17 +2314,17 @@ class ome_mdl_delivery extends dbeav_model
     
         if (kernel::single('ome_order_bool_type')->isCPUP($order['order_bool_type'])) {
             $data['bool_type'] = $data['bool_type'] | ome_delivery_bool_type::__CPUP_CODE;
-            
+
             //未发货之前,不能赋值,否则客户导出时有异议
             //$data['delivery_time'] = $orderExtend['latest_delivery_time'];
-            
+
             $data['cpup_service'] = $orderExtend['cpup_service'];
             $data['promise_service'] = $orderExtend['promise_service'];
             $data['promised_collect_time'] = $orderExtend['promised_collect_time'];
             $data['promised_sign_time'] = $orderExtend['promised_sign_time'];
             $data['cpup_addon'] = serialize($orderExtend);
         }
-        
+
         //[翱象]相关信息
         if(in_array($order['shop_type'], array('taobao', 'tmall')) && $order['order_bool_type'] && $orderExtend){
             //是否翱象订单
@@ -2298,25 +2333,25 @@ class ome_mdl_delivery extends dbeav_model
             if($isAoxiang){
                 //翱象发货单标识
                 $data['bool_type'] = $data['bool_type'] | ome_delivery_bool_type::__AOXIANG_CODE;
-                
+
                 //物流升级服务
                 $data['cpup_service'] = $orderExtend['cpup_service'];
-                
+
                 //最晚发货时间
                 //$data['delivery_time'] = $orderExtend['latest_delivery_time'];
-                
+
                 //承诺最晚送达时间
                 $data['promised_sign_time'] = $orderExtend['promised_sign_time'];
-                
+
                 //承诺最晚揽收时间
                 $data['promised_collect_time'] = $orderExtend['promised_collect_time'];
-                
+
                 //承诺最晚出库时间
                 $data['promise_outbound_time'] = $orderExtend['latest_delivery_time'];
-                
+
                 //承诺计划送达时间
                 $data['plan_sign_time'] = $orderExtend['plan_sign_time'];
-                
+
                 //物流服务标签(多个订单合并取消合集)
                 $data['promise_service'] = $orderExtend['promise_service'];
             }
@@ -2327,12 +2362,12 @@ class ome_mdl_delivery extends dbeav_model
             //分销订单
             $data['platform_order_bn'] = $order['platform_order_bn'];
         }
-        
+
         //save
         $saveStartTime = microtime(true);
         $result           = $this->save($data);
         $saveTime = microtime(true) - $saveStartTime;
-        
+
         // 记录发货单保存性能数据
         ome_api_log::add_message('database', 'delivery_save', $saveTime, array(
             'delivery_id' => $data['delivery_id'] ?? '',
@@ -2346,10 +2381,10 @@ class ome_mdl_delivery extends dbeav_model
 
         if ($delivery['type'] != 'reject') {
             $err_msg = '';
-            
+
             // product_id
             $productIds = array_column($delivery['delivery_items'], 'product_id');
-            
+
             // 获取指定不需要管控库存的基础物料
             $notCtrlStoreBmList = kernel::single('material_basic_material')->getNotCtrlStoreProducts($productIds);
             if($notCtrlStoreBmList){
@@ -2357,7 +2392,7 @@ class ome_mdl_delivery extends dbeav_model
                 foreach ($delivery['delivery_items'] as $dlyItemKey => $dlyItemVal)
                 {
                     $product_id = $dlyItemVal['product_id'];
-                    
+
                     // 是否管控库存
                     if(isset($notCtrlStoreBmList[$product_id]) && $notCtrlStoreBmList[$product_id]){
                         $delivery['delivery_items'][$dlyItemKey]['is_product_ctrl_store'] = false;
@@ -2366,7 +2401,7 @@ class ome_mdl_delivery extends dbeav_model
                     }
                 }
             }
-            
+
             //库存管控
             $storeManageLib = kernel::single('ome_store_manage');
             $storeManageLib->loadBranch(array('branch_id' => $delivery['branch_id']));
@@ -2375,19 +2410,19 @@ class ome_mdl_delivery extends dbeav_model
             $params['params']    = array_merge($delivery, array('order_id' => $order_id, 'shop_id' => $order['shop_id'], 'delivery_id' => $data['delivery_id'], 'order_type' => $order['order_type']));
             $params['node_type'] = 'addDly';
             $shop = app::get('ome')->model('shop')->db_dump(['shop_id'=>$order['shop_id']], 'delivery_mode');
-            
+
             // 记录库存冻结开始时间
             $inventoryFreezeStartTime = microtime(true);
-            
+
             if($shop['delivery_mode'] == 'jingxiao') {
                 $processResult = true; //经销发货单不产生冻结
             } else {
                 $processResult       = $storeManageLib->processBranchStore($params, $err_msg);
             }
-            
+
             // 计算库存冻结耗时
             $inventoryFreezeTime = microtime(true) - $inventoryFreezeStartTime;
-            
+
             // 记录库存冻结操作
             ome_api_log::add_message('inventory', 'inventory_freeze', $inventoryFreezeTime, array(
                 'delivery_id' => $data['delivery_id'],
@@ -2402,7 +2437,7 @@ class ome_mdl_delivery extends dbeav_model
             
             // 记录拆单处理开始时间
             $splitProcessStartTime = microtime(true);
-            
+
             if (!kernel::single('ome_order_object_splitnum')->addDeliverySplitNum($order_items)) {
                 $this->db->rollBack();
                 return array('rsp' => 'fail', 'msg' => '明细已经生成发货单');
@@ -2414,10 +2449,10 @@ class ome_mdl_delivery extends dbeav_model
             
             //有优惠明细记录，实付进行重算
             $order_items = $this->_regroupDeliveryItemDetailData($order_id,$order_items);
-            
+
             // 计算拆单处理耗时
             $splitProcessTime = microtime(true) - $splitProcessStartTime;
-            
+
             // 记录优惠明细重算性能数据
             ome_api_log::add_message('discount', 'discount_recalculation', $splitProcessTime, array(
                 'delivery_id' => $data['delivery_id'] ?? '',
@@ -2441,10 +2476,17 @@ class ome_mdl_delivery extends dbeav_model
 
         //更新订单相应状态
         $this->updateOrderLogi($data['delivery_id'], $data);
+        //订单标签插入到发货单上
+        if (in_array(strtolower($order['shop_type']),['vop','luban','taobao'])) {
+            kernel::single('ome_bill_label')->transferLabel('omeorders_to_omedelivery', [
+                'order_id'          => $order_id,
+                'ome_delivery_id'   => $data['delivery_id'],
+            ]);
+        }
 
         // 记录标签处理开始时间
         $labelProcessStartTime = microtime(true);
-        
+
         //  jitx 检测订单是否有标签
         if (in_array(strtolower($order['shop_type']),['vop','luban'])) {
                 kernel::single('ome_bill_label')->transferLabel('omeorders_to_omedelivery', [
@@ -2452,22 +2494,22 @@ class ome_mdl_delivery extends dbeav_model
                 'ome_delivery_id'   => $data['delivery_id'],
             ]);
         }
-        
+
         // 标签扩展信息(Json格式)
         $bill_extend_info = '';
         if($extendInfo){
             $bill_extend_info = is_array($extendInfo) ? json_encode($extendInfo, JSON_UNESCAPED_UNICODE) : $extendInfo;
         }
-        
+
         //标签写入发货单
         kernel::single('ome_bill_label')->orderToDeliveryLabel($order_id, $data['delivery_id'], 'ome_delivery', $bill_extend_info);
-        
+
         //打上标
         kernel::single('ome_bill_label_delivery')->ToDeliveryPresaleLabel($order, $data['delivery_id']);
-        
+
         // 计算标签处理耗时
         $labelProcessTime = microtime(true) - $labelProcessStartTime;
-        
+
         // 记录标签处理性能数据
         ome_api_log::add_message('label', 'label_process', $labelProcessTime, array(
             'delivery_id' => $data['delivery_id'] ?? '',
@@ -2579,7 +2621,7 @@ class ome_mdl_delivery extends dbeav_model
             
             // 客户实付
             $actually_amount = (isset($orderItemList[$item_id]['actually_amount']) ? $orderItemList[$item_id]['actually_amount'] : 0);
-            
+
             //PKG捆绑商品
             if($item['item_type'] == 'pkg'){
                 //平台支付明细
@@ -2713,7 +2755,7 @@ class ome_mdl_delivery extends dbeav_model
             
             // 客户实付
             $order_items[$key]['actually_amount'] = $actually_amount;
-            
+
             //SKU商品优惠
             $diff_promotion_amount = $total_promotion_amount - $dly_total_promotion_amount;
             $diff_promotion_amount = ($diff_promotion_amount <= 0 ? $total_promotion_amount : $diff_promotion_amount);
@@ -2883,7 +2925,11 @@ class ome_mdl_delivery extends dbeav_model
     }
 
     /**
-     * 淘宝全链路 已验货
+     * 发货单验货后触发淘宝全链路消息，并补投加急发货状态回告任务。
+     *
+     * @param int $delivery_id
+     * @param array $statusArr
+     * @return void
      */
     public function sendMessageProduce($delivery_id, $statusArr)
     {
@@ -2897,6 +2943,16 @@ class ome_mdl_delivery extends dbeav_model
         }
 
         kernel::single('ome_event_trigger_shop_order')->order_message_produce($orderIds, $statusArr);
+        if ($orderIds) {
+            foreach (array_values(array_unique(array_map('intval', $orderIds))) as $orderId) {
+                app::get('ome')->model('misc_task')->saveMiscTask([
+                    'obj_id' => $orderId,
+                    'obj_type' => 'urgent_logistics_dly',
+                    'exec_time' => time(),
+                    'addon' => json_encode(['scene' => 'delivery_status'], JSON_UNESCAPED_UNICODE),
+                ]);
+            }
+        }
     }
     /**
      * 发送CRM赠品日志
@@ -3409,7 +3465,16 @@ class ome_mdl_delivery extends dbeav_model
     //        return $data;
     //    }
 
-    //从载方法 以解决 发货中未录入快递单号不能过滤的bug
+    /**
+     * 重载带物流单号的列表查询，并在启用时让加急发货单优先排序。
+     *
+     * @param string $cols
+     * @param array $filter
+     * @param int $offset
+     * @param int $limit
+     * @param string|array|null $orderType
+     * @return array
+     */
     public function getlist_logi_no($cols = '*', $filter = array(), $offset = 0, $limit = -1, $orderType = null)
     {
         if (!$cols) {
@@ -3421,7 +3486,7 @@ class ome_mdl_delivery extends dbeav_model
         if ($this->use_meta) {
             $meta_info = $this->prepare_select($cols);
         }
-        $orderType = $orderType ? $orderType : $this->defaultOrder;
+        $orderType = $orderType ? $orderType : $this->getUrgentPriorityOrder($this->defaultOrder, $filter);
 
         if ($filter['logi_no'] == 'NULL') {
             unset($filter['logi_no']);
@@ -3609,7 +3674,11 @@ class ome_mdl_delivery extends dbeav_model
     }
 
     /**
-     * 重载 save 方法，发现有打印状态的更新及 logi_no 的更新，就回传至对应订单
+     * 重载 save 方法：同步订单物流信息，并把订单加急标签继承到发货单。
+     *
+     * @param array $data
+     * @param bool|null $mustUpdate
+     * @return bool
      */
     public function save(&$data, $mustUpdate = null)
     {
@@ -3619,9 +3688,91 @@ class ome_mdl_delivery extends dbeav_model
 
         if ($data['delivery_id'] > 0) {
             $this->updateOrderLogi($data['delivery_id'], $data);
+            $this->inheritUrgentLabelFromOrders($data['delivery_id']);
         }
 
         return $result;
+    }
+
+    /**
+     * 在加急优先配置开启时，构造发货单列表的加急优先排序 SQL。
+     *
+     * @param string|array $orderType
+     * @param array $filter
+     * @return string|array
+     */
+    protected function getUrgentPriorityOrder($orderType, $filter = [])
+    {
+        if (!$this->isUrgentPriorityEnabledByFilter($filter)) {
+            return $orderType;
+        }
+        $orderSql = is_array($orderType) ? implode( ' ', $orderType) : $orderType;
+        $prefix = "CASE WHEN EXISTS (
+            SELECT 1 FROM sdb_ome_bill_label bl
+            WHERE bl.bill_id = ".$this->table_name(true).".delivery_id
+            AND bl.bill_type = 'delivery'
+            AND bl.label_code = '".self::URGENT_LABEL_CODE."'
+        ) THEN 0 ELSE 1 END ASC";
+        return $prefix . ($orderSql ? ',' . $orderSql : '');
+    }
+
+    /**
+     * 判断当前查询上下文是否开启加急单优先排序。
+     *
+     * @param array $filter
+     * @return bool
+     */
+    protected function isUrgentPriorityEnabledByFilter($filter = [])
+    {
+        $shopId   = null;
+        $branchId = null;
+        if (!empty($filter['shop_id']) && !is_array($filter['shop_id'])) {
+            $shopId = $filter['shop_id'];
+        }
+        if (!empty($filter['branch_id']) && !is_array($filter['branch_id'])) {
+            $branchId = $filter['branch_id'];
+        } elseif (!empty($filter['ext_branch_id']) && is_array($filter['ext_branch_id']) && count($filter['ext_branch_id']) == 1) {
+            $branchId = current($filter['ext_branch_id']);
+        }
+
+        $shopConf = $shopId ? app::get('ome')->getConf('ome.urgent_delivery.prioritize_wave.shop.' . $shopId) : null;
+        if ($shopConf !== null && $shopConf !== '') {
+            return $shopConf !== 'off';
+        }
+        $branchConf = $branchId ? app::get('ome')->getConf('ome.urgent_delivery.prioritize_wave.branch.' . $branchId) : null;
+        if ($branchConf !== null && $branchConf !== '') {
+            return $branchConf !== 'off';
+        }
+        $globalConf = app::get('ome')->getConf('ome.urgent_delivery.prioritize_wave');
+        return $globalConf === null || $globalConf === '' || $globalConf === 'on';
+    }
+
+    /**
+     * 在发货单保存后，把关联订单上的加急标签补写到发货单标签表。
+     *
+     * @param int $deliveryId
+     * @return bool
+     */
+    public function inheritUrgentLabelFromOrders($deliveryId)
+    {
+        if (!$deliveryId) {
+            return false;
+        }
+        $labelLib = kernel::single('ome_bill_label');
+        if ($labelLib->existLabel($deliveryId, self::URGENT_LABEL_CODE, 'delivery')) {
+            return true;
+        }
+        $orderRows = app::get('ome')->model('delivery_order')->getList('order_id', ['delivery_id' => $deliveryId]);
+        if (!$orderRows) {
+            return false;
+        }
+        foreach ($orderRows as $row) {
+            if ($labelLib->existLabel($row['order_id'], self::URGENT_LABEL_CODE)) {
+                $err = '';
+                return $labelLib->markBillLabel($deliveryId, '', self::URGENT_LABEL_CODE, 'delivery', $err);
+            }
+        }
+        return false;
     }
 
     /**
@@ -4451,6 +4602,7 @@ class ome_mdl_delivery extends dbeav_model
     public function extra_cols()
     {
         return array(
+            'column_delivery_label' => array('label' => '发货单标记', 'width' => '220', 'func_suffix' => 'delivery_label'),
             'column_custom_mark' => array('label' => '买家留言', 'width' => '180', 'func_suffix' => 'custom_mark'),
             'column_mark_text'   => array('label' => '客服备注', 'width' => '180', 'func_suffix' => 'mark_text'),
             'column_tax_no'      => array('label' => '发票号', 'width' => '180', 'func_suffix' => 'tax_no'),
@@ -4488,6 +4640,31 @@ class ome_mdl_delivery extends dbeav_model
     public function extra_ident($rows)
     {
         return kernel::single('ome_extracolumn_delivery_ident')->process($rows);
+    }
+
+    /**
+     * 渲染发货单列表的标签列，包含加急发货标签展示。
+     *
+     * @param array $rows
+     * @return array
+     */
+    public function extra_delivery_label($rows)
+    {
+        $deliveryIds = array_column((array)$rows, 'delivery_id');
+        if (!$deliveryIds) {
+            return array();
+        }
+        $labelRows = app::get('ome')->model('bill_label')->getBIllLabelList($deliveryIds, 'delivery');
+        $result = array();
+        foreach ((array)$labelRows as $label) {
+            $result[$label['bill_id']] .= sprintf(
+                "<span class='tag-label' title='%s' style='background-color:%s;color:#000000;'>%s</span>",
+                $label['label_name'],
+                $label['label_color'],
+                $label['label_name']
+            );
+        }
+        return $result;
     }
 
     public function getDlyId($logi_nos = false)
@@ -4586,7 +4763,7 @@ class ome_mdl_delivery extends dbeav_model
 
         return $delivery_nums['nums'];
     }
-    
+
     /**
      * 获取订单下所有发货单
      * @param $order_id

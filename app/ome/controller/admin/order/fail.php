@@ -116,7 +116,7 @@ class ome_ctl_admin_order_fail extends desktop_controller
         }
         
         //修正订单项
-        if (kernel::single("ome_order_fail")->modifyOrderItems($order_id, $oldPbn, $pbn)) {
+        if (kernel::single('ome_order_fail')->modifyOrderItems($order_id, $oldPbn, $pbn)) {
             $this->splash('success', $url, '订单处理成功');
         } else {
             $this->splash('error', $url, '存在异常商品，订单修正失败！');
@@ -140,15 +140,25 @@ class ome_ctl_admin_order_fail extends desktop_controller
         }
         
         //type
+        $failLib = kernel::single('ome_order_fail');
         if ($type == 'bn') {
-            $orderData = kernel::single('ome_order_fail')->getFailOrderByBn($oldPbn);
+            $orderData      = $failLib->getFailOrderByBn($oldPbn);
+            $totalCount     = $failLib->countFailOrderByBn($oldPbn, false);
+            $batchableCount = $failLib->countFailOrderByBn($oldPbn, true);
         } else {
-            $orderData = kernel::single('ome_order_fail')->getFailOrderByName($oldPbn);
+            $orderData      = $failLib->getFailOrderByName($oldPbn);
+            $totalCount     = $failLib->countFailOrderByName($oldPbn, false);
+            $batchableCount = $failLib->countFailOrderByName($oldPbn, true);
         }
         
         // check
         if(empty($orderData)){
-            echo "<button id='close_btn'>没有找到匹配的失败订单！</button><script>;if(finderGroup['{$finder_id}']) finderGroup['{$finder_id}'].refresh.delay(100,finderGroup['{$finder_id}']);var oDialog = $('close_btn').getParent('.dialog').retrieve('instance');oDialog.close.delay(2000, oDialog);</script>";
+            if ($totalCount > 0) {
+                $msg = sprintf('存在 %d 条匹配的失败订单，但流程状态不是【未确认】，无法批量修复！', $totalCount);
+            } else {
+                $msg = '没有找到匹配的失败订单！';
+            }
+            echo "<button id='close_btn'>{$msg}</button><script>;if(finderGroup['{$finder_id}']) finderGroup['{$finder_id}'].refresh.delay(100,finderGroup['{$finder_id}']);var oDialog = $('close_btn').getParent('.dialog').retrieve('instance');oDialog.close.delay(2000, oDialog);</script>";
             exit;
         }
         
@@ -180,6 +190,13 @@ class ome_ctl_admin_order_fail extends desktop_controller
             }
         }
         $GroupList = array_column($orderData, 'order_id');
+        $excludedCount = $totalCount - $batchableCount;
+        if ($excludedCount > 0) {
+            $this->pagedata['batch_exclude_notice'] = sprintf(
+                '另有 %d 条同条件失败订单因流程状态不是【未确认】已排除，不在本次批量范围内。',
+                $excludedCount
+            );
+        }
         $this->pagedata['oldPbn'] = base64_encode(json_encode($oldPbn));
         $this->pagedata['pbn'] = base64_encode(json_encode($pbn));
         $this->pagedata['modifyType'] = $type;

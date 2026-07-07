@@ -111,6 +111,11 @@ class finance_monthly_report_items {
             }
         }
 
+        $itemRow = $oMRI->db_dump($itemId, 'monthly_id');
+        if(!empty($itemRow['monthly_id'])) {
+            finance_monthly_report::updateMonthlyAmount(array('monthly_id'=>$itemRow['monthly_id']));
+        }
+
         return [$rs, $rsData];
     }
 
@@ -358,8 +363,9 @@ class finance_monthly_report_items {
         if($init_time['according'] == 'shi_shou') {
             $itemId = $oMonthlyReportItems->getItemId($arRow, false);
             if(empty($itemId) && $arRow['ar_type'] == 1) {
-                $order = app::get('ome')->model('orders')->db_dump(['order_bn'=>$arRow['order_bn']], 'source_status');
-                if($order['source_status'] == 'TRADE_CLOSED') {
+                $order = app::get('ome')->model('orders')->db_dump(['order_bn'=>$arRow['order_bn']], 'source_status,end_time,shop_type');
+                // ar_type=1:应退；source_status=TRADE_CLOSED:平台关闭；shop_type=luban:抖音；end_time为空:未确认收货。
+                if($order && ($order['source_status'] == 'TRADE_CLOSED' || ($order['shop_type'] == 'luban' && empty($order['end_time'])))) {
                     $itemId = $oMonthlyReportItems->getItemId($arRow);
                     $arRows = $oAr->getList('ar_id',['order_bn'=>$arRow['order_bn'], 'monthly_item_id'=>0, 'ar_id|noequal'=>$arRow['ar_id']]);
                     if($arRows) {

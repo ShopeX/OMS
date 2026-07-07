@@ -14,15 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class console_ctl_admin_stockdump extends desktop_controller{
 
     var $name = "库内转储";
     var $workground = "console_center";
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index(){
         
         $this->title = '库内转储';
@@ -77,17 +72,12 @@ class console_ctl_admin_stockdump extends desktop_controller{
    /*
     * 新建调拨单
     */
-
     public function add(){
         $OBranch = app::get('ome')->model('branch');
 
-        $where = '';
-        $is_super = kernel::single('desktop_user')->is_super();
-        if (!$is_super) {            
-            $branch_id= $OBranch->getBranchByUser(true);
-            if($branch_id){
-                $where= " AND wb.branch_id in(".implode(',', $branch_id).")";
-            }
+        $branch_id= $OBranch->getBranchByUser(true);
+        if($branch_id){
+            $where= " AND wb.branch_id in(".implode(',', $branch_id).")";
         }
         #获取非自有WMS_id
         $wms_list = kernel::single('console_goodssync')->get_wms_list('selfwms','notequal');
@@ -103,10 +93,6 @@ class console_ctl_admin_stockdump extends desktop_controller{
 
     /*
      * 库存入库单保存
-     */
-    /**
-     * do_save
-     * @return mixed 返回值
      */
     public function do_save()
     {
@@ -190,11 +176,11 @@ class console_ctl_admin_stockdump extends desktop_controller{
     }
 
     /**
-     * 取消转储单
-     * @access public
-     * @param String $stockdump_id 转储单编号
-     * @return 
-     */
+    * 取消转储单
+    * @access public
+    * @param String $stockdump_id 转储单编号
+    * @return 
+    */
     function do_cancel($stockdump_id){
         $oStockdump = $this->app->model('stockdump');
         if (empty($stockdump_id)){
@@ -212,10 +198,6 @@ class console_ctl_admin_stockdump extends desktop_controller{
         die(json_encode($result));
     }
 
-    /**
-     * do_save_operation
-     * @return mixed 返回值
-     */
     public function do_save_operation(){
         $this->begin('index.php?app=console&ctl=admin_stockdump&act=index');
 
@@ -262,15 +244,12 @@ class console_ctl_admin_stockdump extends desktop_controller{
         $where .= ' AND branch_bn in(\''.join('\',\'',$bn_array).'\')';
         
 
-        $is_super = kernel::single('desktop_user')->is_super();
-        if (!$is_super) {            
-            $obranch_id= $branch_model->getBranchByUser(true);
-            if($obranch_id){
-                foreach($obranch_id as $k=>&$v){
-                    if($v == $branch_id) unset($obranch_id[$k]);
-                }
-                $where .= " AND branch_id in(".implode(',', $obranch_id).")";
+        $obranch_id= $branch_model->getBranchByUser(true);
+        if($obranch_id){
+            foreach($obranch_id as $k=>&$v){
+                if($v == $branch_id) unset($obranch_id[$k]);
             }
+            $where .= " AND branch_id in(".implode(',', $obranch_id).")";
         }
         
         //过滤掉门店仓
@@ -290,7 +269,6 @@ class console_ctl_admin_stockdump extends desktop_controller{
     }
 
     /*下载导入模版*/
-
     public function exportTemplate(){
         $filename = "转储单".date('Y-m-d').".csv";
         $encoded_filename = urlencode($filename);
@@ -421,10 +399,6 @@ class console_ctl_admin_stockdump extends desktop_controller{
         echo json_encode($product);
     }
 
-    /**
-     * 获取_products
-     * @return mixed 返回结果
-     */
     public function get_products(){
         $name = $_GET['name'];
         $bn = $_GET['bn'];
@@ -463,13 +437,13 @@ class console_ctl_admin_stockdump extends desktop_controller{
     }
 
     /**
-     * 取消出入库单确定框
-     * @access public
-     * @param Number $stock_id 入库单ID
-     * @param String $stock_bn 入库单编号
-     * @param String $type 出入库,stockin入库;stockout出库
-     * @return 
-     */
+    * 取消出入库单确定框
+    * @access public
+    * @param Number $stock_id 入库单ID
+    * @param String $stock_bn 入库单编号
+    * @param String $type 出入库,stockin入库;stockout出库
+    * @return 
+    */
     function cancel($stock_id,$stock_bn){
         $this->pagedata['stock_id'] = $stock_id;
         $this->pagedata['stock_bn'] = $stock_bn;
@@ -481,14 +455,14 @@ class console_ctl_admin_stockdump extends desktop_controller{
         $this->display('admin/stockdump/cancel_confirm.html');
     }
 
-    /**
-     * 转储单查异查看
-     * @access public
-     * @param Number $stock_id 入库单ID
-     * @param String $stock_bn 入库单编号
-     * @param String $type 出入库,stockin入库;stockout出库
-     * @return 
-     */
+     /**
+    * 转储单查异查看
+    * @access public
+    * @param Number $stock_id 入库单ID
+    * @param String $stock_bn 入库单编号
+    * @param String $type 出入库,stockin入库;stockout出库
+    * @return 
+    */
     function difference($stockdump_id){
         $branchObj = app::get('ome')->model('branch');
         
@@ -522,10 +496,6 @@ class console_ctl_admin_stockdump extends desktop_controller{
         $this->singlepage('admin/stockdump/stockin_diff_item.html');
     }
 
-    /**
-     * do_save_confirm_type
-     * @return mixed 返回值
-     */
     public function do_save_confirm_type(){
         $this->begin('javascript:finderGroup["'.$_GET['finder_id'].'"].refresh();');
         

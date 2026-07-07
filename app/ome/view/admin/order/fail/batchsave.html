@@ -1,3 +1,6 @@
 <input class="dailog-batch-ipt" type="hidden" name="oldPbn" value="<{$oldPbn}>">
 <input class="dailog-batch-ipt" type="hidden" name="pbn" value="<{$pbn}>">
 <input class="dailog-batch-ipt" type="hidden" name="modifyType" value="<{$modifyType}>">
+<{if $batch_exclude_notice}>
+<p style="color:#e6a23c;margin:0 0 8px 0;"><{$batch_exclude_notice}></p>
+<{/if}>

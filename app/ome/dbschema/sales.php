@@ -364,6 +364,8 @@ $db['sales'] = array(
             'type'    => 'money',
             'default' => '0',
             'label'   => '结算金额',//客户实付 + 平台支付总额
+            'in_list'         => true,
+            'default_in_list' => true,
         ),
         'actually_amount' => array(
             'type'    => 'money',

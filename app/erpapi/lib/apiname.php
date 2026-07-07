@@ -256,6 +256,7 @@ define('SHOP_REFUND_NOTIFY_GET','store.tmc.refundcreated.get');                 
 define('SHOP_REFUND_STATUS_GET','store.refund.status.get');                             // 退款状态查询
 define('SHOP_COMPENSATE_REFUND_GET','store.special.refunds.receive.get');               // 赔付单获取
 define('SHOP_TRADE_REFUND_GET', 'store.trade.refund.get');                             // 查询售后单详情
+define('SHOP_LOGISTICS_ORDER_REPORT','store.logistics.order.report');                    // 淘宝加急发货回传平台订单状态接口
 
 define('SHOP_LOGISTICS_SUBSCRIBE','store.trade.pub.appreciation');                                    // 增强版华强宝订阅（订单分发的信息：分给了的网点，业务员的信息）
 define('SHOP_LOGISTICS_BIND','erp.logistics.bind');                                     // ERP自己定义的

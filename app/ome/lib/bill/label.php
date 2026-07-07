@@ -71,6 +71,7 @@ class ome_bill_label
         'SOMS_QN_DISTR'      => ['label_name' => '清仓', 'label_color' => '#ff6f61'],
         'SOMS_CHANGE_CANCEL'      => ['label_name' => '换货取消', 'label_color' => '#cca4e3'],
         'SOMS_UPDATE_ITEM'  => ['label_name' => '改SKU', 'label_color' => 'PaleVioletRed'],//#DB7093
+        'SOMS_MATERIAL_REPLACE' => ['label_name' => '物料替换', 'label_color' => 'MediumSlateBlue', 'label_thumb' => '替换'],
         'SOMS_COMBINE_ORDER'  => ['label_name' => '合单', 'label_color' => 'Salmon', 'label_to_delivery' => true],//#FA8072
         'SOMS_GXD'          => ['label_name' => '工小达', 'label_color' => 'MediumTurquoise','label_to_delivery' => true],
         'SOMS_GB'           => ['label_name' => '国补', 'label_color' => 'Coral', 'label_thumb'=>'国补'],
@@ -86,10 +87,11 @@ class ome_bill_label
         'SOMS_GIFT_RELATED_ORDER'  => ['label_name' => '赠品子单', 'label_color' => '#cca4e3', 'label_thumb'=>'赠品子单'],
         'SOMS_YPDS'        => ['label_name' => '百亿补贴', 'label_color' => '#FF6B6B', 'label_thumb'=>'百补'],
         'SOMS_SUPERLINK'   => ['label_name' => '超链', 'label_color' => '#FF6B6B', 'label_thumb'=>'超链'],
-        
+
         'SOMS_TMYP' => ['label_name' => '天猫优品国补', 'label_color' => 'Coral', 'label_thumb'=>'天猫优品国补'],
         'SOMS_LARGE_APPLIANCE' => ['label_name'=>'大家电', 'label_color'=>'#c25975', 'label_to_delivery'=>true],
         'SOMS_PICKUP'          => ['label_name' => '物流提货', 'label_color' => 'Teal'],
+        'SOMS_URGENT_SHIP'     => ['label_name' => '加急发货', 'label_color' => 'OrangeRed', 'label_to_delivery' => true, 'label_thumb' => '加急'],
     ];
     // 小标
     public $labelValuePreset = [
@@ -307,7 +309,7 @@ class ome_bill_label
             'label_value' => $label_value?:0,
             'extend_info' => $extend_info,
             'create_time' => time(),
-            'label_desc'  => $labelInfo['label_desc'],  
+            'label_desc'  => $labelInfo['label_desc'],
         );
         $billLabelMdl = app::get('ome')->model('bill_label');
         $isCheck      = $billLabelMdl->db_dump(['bill_type' => $bill_type, 'bill_id' => $bill_id, 'label_id' => $labelInfo['label_id']], 'id,label_value');
@@ -338,7 +340,7 @@ class ome_bill_label
             'source'        => 'system',
             'create_time'   => time(),
             'last_modified' => time(),
-            'label_desc'    => $info['label_desc'],  
+            'label_desc'    => $info['label_desc'],
         ];
 
         $labelMdl = app::get('omeauto')->model('order_labels');
@@ -525,7 +527,7 @@ class ome_bill_label
             }
         }
     }
-    
+
     /**
      * 获取指定标签编码关联的标记信息
      *
@@ -539,31 +541,31 @@ class ome_bill_label
     {
         $labelMdl = app::get('omeauto')->model('order_labels');
         $billLabelMdl = app::get('ome')->model('bill_label');
-        
+
         //check
         if(empty($bill_id) || empty($bill_type) || empty($label_code)){
             $error_msg = '无效的传参,请检查';
             return array();
         }
-        
+
         $lableInfo = $labelMdl->db_dump(array('label_code'=>$label_code), '*');
         if(empty($lableInfo)){
             $error_msg = '标签编码：'. $label_code .'不存在';
             return array();
         }
-        
+
         $billLableInfo = $billLabelMdl->db_dump(array('bill_type'=>$bill_type, 'bill_id'=>$bill_id, 'label_id'=>$lableInfo['label_id']), '*');
         if(empty($billLableInfo)){
             $error_msg = '标签编码：'. $label_code .'没有单据打标记信息';
             return array();
         }
-        
+
         //merge
         $billLableInfo = array_merge($billLableInfo, $lableInfo);
-        
+
         return $billLableInfo;
     }
-    
+
     public function isExpressMust()
     {
         return 'SOMS_EXPRESS_MUST';
@@ -573,11 +575,11 @@ class ome_bill_label
 
         //京东变成可发货
         $ordLabelObj = app::get('ome')->model('bill_label');
-       
+
         $bills = $ordLabelObj->dump(array('label_code'=>'SOMS_JDZD','bill_type'=>'order','bill_id'=>$order_id),'bill_id');
 
         $extendMdl = app::get('ome')->model('order_extend');
-       
+
         if($bills){
             $extends = $extendMdl->dump(array('order_id'=>$order_id),'extend_field');
             $extend_field = json_decode($extends['extend_field'],true);
@@ -604,20 +606,20 @@ class ome_bill_label
 
         //京东变成可发货
         $ordLabelObj = app::get('ome')->model('bill_label');
-       
+
         $bills = $ordLabelObj->dump(array('label_code'=>'SOMS_CLOUDBRANCH','bill_type'=>'order','bill_id'=>$order_id),'bill_id');
 
         $extendMdl = app::get('ome')->model('order_extend');
-       
+
         if($bills){
            return true;
-            
+
         }
 
         return false;
 
     }
-    
+
     //工小达标识
     public function isSomsGxd()
     {
@@ -643,7 +645,7 @@ class ome_bill_label
         }
 
         $billLabelMdl = app::get('ome')->model('bill_label');
-        
+
         // 检查是否有小时达标签
         $xiaoshiLabel = $billLabelMdl->dump([
             'label_code' => 'SOMS_XSDBC',
@@ -663,7 +665,7 @@ class ome_bill_label
         }
 
         $label_value = intval($xiaoshiLabel['label_value']);
-        
+
         // 根据二进制值判断配送方式
         $is_third_party = (bool)($label_value & 0x0001);       // 第三方运力
         $is_self_delivery = (bool)($label_value & 0x0002);     // 商家自配运力
@@ -674,7 +676,7 @@ class ome_bill_label
         if ($is_third_party) $delivery_methods[] = '第三方运力';
         if ($is_self_delivery) $delivery_methods[] = '商家自配运力';
         if ($is_platform_delivery) $delivery_methods[] = '平台运力';
-        
+
         $delivery_method = implode('、', $delivery_methods);
 
         return [
@@ -684,5 +686,29 @@ class ome_bill_label
             'is_self_delivery' => $is_self_delivery,
             'is_platform_delivery' => $is_platform_delivery
         ];
+    }
+    /**
+     * 判断指定单据上是否已存在目标标签，兼容订单与发货单。
+     * @param $bill_id
+     * @param $label_code
+     * @param string $bill_type
+     * @return bool
+     */
+    public function existLabel($bill_id, $label_code, $bill_type = 'order')
+    {
+        $labelInfo = $this->getBillLabelInfo($bill_id, $bill_type, $label_code);
+        return !empty($labelInfo);
+    }
+
+    /**
+     * 获取标签信息
+     * @param $order_id
+     * @param $label_code
+     * @return false|mixed|null
+     */
+    public function getLabelInfo($order_id, $label_code)
+    {
+        $labelInfo = $this->getBillLabelInfo($order_id, 'order', $label_code);
+        return $labelInfo;
     }
 }

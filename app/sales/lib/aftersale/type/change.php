@@ -1,27 +1,6 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class sales_aftersale_type_change
 {
-    /**
-     * generate_aftersale
-     * @param mixed $reship_id ID
-     * @return mixed 返回值
-     */
     public function generate_aftersale($reship_id = null)
     {
         if (empty($reship_id)) {
@@ -189,7 +168,7 @@ class sales_aftersale_type_change
         $data['refund_op_id']   = $apply_detail[0]['verify_op_id'];
         $data['refund_op_name'] = $pam_data[$apply_detail[0]['verify_op_id']];
 
-        $data['aftersale_time']    = $apply_detail[0]['last_modified'] ? $apply_detail[0]['last_modified'] : ($reshipData[0]['t_end'] ? : time());
+        $data['aftersale_time']    = time();
         $data['diff_order_bn']     = $reshipData[0]['diff_order_bn'];
         $data['change_order_bn']   = $reshipData[0]['change_order_bn'];
         $data['pay_type']          = $apply_detail[0]['pay_type'];
@@ -338,6 +317,21 @@ class sales_aftersale_type_change
                 $propertyList[$product_id]['defective'] = $defective_num;
             }
         }
+
+        // 售后明细组装后扩展：客户 app 可补全 WMS 短收时被标品遗漏的退货明细行
+        // service: sales.service.aftersale.change.items.after，方法 append_missing_items
+        if ($services = kernel::servicelist('sales.service.aftersale.change.items.after')) {
+            foreach ($services as $instance) {
+                if (method_exists($instance, 'append_missing_items')) {
+                    $aftersale_items = $instance->append_missing_items($aftersale_items, array(
+                        'reshipitemData' => $reshipitemData,
+                        'branch_id'      => $branch_id,
+                        'iostockInfos'   => $iostockInfos,
+                    ));
+                }
+            }
+        }
+
         unset($reshipitemData);
         
         //获取退货关联的订单明细
@@ -468,12 +462,6 @@ class sales_aftersale_type_change
         return $data;
     }
 
-    /**
-     * 获取OrderObj
-     * @param mixed $order_id ID
-     * @param mixed $is_archive is_archive
-     * @return mixed 返回结果
-     */
     public function getOrderObj($order_id,$is_archive){
         if ($is_archive) {
 
@@ -495,11 +483,6 @@ class sales_aftersale_type_change
         return $objs;
     }
 
-    /**
-     * 获取SaleAmount
-     * @param mixed $order_id ID
-     * @return mixed 返回结果
-     */
     public function getSaleAmount($order_id){
         $db = kernel::database();
         $items = $db->select("SELECT sales_material_bn,bn,sales_amount,nums FROM sdb_ome_sales_items AS I LEFT JOIN sdb_ome_sales as S ON I.sale_id=S.sale_id WHERE S.order_id=".$order_id." AND I.product_id>0");

@@ -1,0 +1,213 @@
+<div class="tableform">
+    <div class="division">
+        <table width="100%" cellpadding="0" cellspacing="0">
+            <tbody>
+                <tr>
+                    <th>差异类型：<em class="c-red" id="batch-gap-type-required" style="display:none;">*</em></th>
+                    <td>
+                        <select name="gap_type" id="batch-gap-type-select" class="dailog-batch-ipt" data-tail-select>
+                            <option value="">请选择差异类型</option>
+                            <{foreach from=$gap_list item=gap}>
+                            <option value="<{$gap.gap_name}>"><{$gap.gap_name}></option>
+                            <{/foreach}>
+                        </select>
+                        <span class="notice-inline" style="color:#999;margin-left:8px;">强制核销时必填</span>
+                    </td>
+                </tr>
+                <tr>
+                    <th>是否强制核销：</th>
+                    <td>
+                        <input type="hidden" name="is_verification" id="batch-is-verification" class="dailog-batch-ipt" value="0">
+                        <label><input type="radio" name="is_verification_radio" value="0" checked> 否</label>
+                        &nbsp;&nbsp;
+                        <label><input type="radio" name="is_verification_radio" value="1"> 是</label>
+                    </td>
+                </tr>
+                <tr>
+                    <th>核销备注：</th>
+                    <td>
+                        <textarea name="verification_memo" class="dailog-batch-ipt" style="width:400px;height:60px;" placeholder="强制核销时必填"></textarea>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<script type="text/javascript">
+Ex_Loader("tail.select", function(){
+    tail.select('#batch-gap-type-select', {
+        search: true,
+        width: 'auto',
+        height: 200,
+        searchMinLength: 0,
+        searchPlaceholder: '输入关键词搜索差异类型',
+        searchFocus: true,
+        searchMark: true,
+        searchMarkPlaceholder: '未找到匹配项'
+    });
+});
+
+(function(){
+    window.__batchVerificationLastResult = null;
+    window.__batchVerificationHooked = false;
+    window.__batchVerificationBound = false;
+
+    function getGapType() {
+        var el = $('batch-gap-type-select');
+        return el ? String(el.value || '').trim() : '';
+    }
+
+    function isForceVerification() {
+        return $$('input[name=is_verification_radio][value=1]:checked').length > 0;
+    }
+
+    function toggleGapTypeRequired() {
+        var mark = $('batch-gap-type-required');
+        if (mark) {
+            mark.setStyle('display', isForceVerification() ? '' : 'none');
+        }
+    }
+
+    function validateBatchForm() {
+        var showError = $('showError');
+        var isForce = isForceVerification();
+        if (isForce && !getGapType()) {
+            if (showError) {
+                showError.setHTML('强制核销时差异类型不能为空');
+            }
+            return false;
+        }
+        var memoEl = $$('textarea[name=verification_memo]');
+        var memo = memoEl.length ? String(memoEl[0].value || '').trim() : '';
+        if (isForce && !memo) {
+            if (showError) {
+                showError.setHTML('填写强制核销备注');
+            }
+            return false;
+        }
+        return true;
+    }
+
+    function resetStartButton() {
+        var btn = $('btn-run');
+        if (!btn) {
+            return;
+        }
+        btn.disabled = false;
+        btn.set('html', '<span><span>开始</span></span>');
+    }
+
+    function hookBatchRequest() {
+        if (window.__batchVerificationHooked) {
+            return;
+        }
+        window.__batchVerificationHooked = true;
+        var _send = Request.prototype.send;
+        Request.prototype.send = function(){
+            var req = this;
+            var origComplete = req.options.onComplete;
+            req.options.onComplete = function(result){
+                try {
+                    if (req.options.url && req.options.url.indexOf('doBatchVerification') >= 0) {
+                        window.__batchVerificationLastResult = JSON.decode(result);
+                        if (window.__batchVerificationLastResult.validation_error) {
+                            resetStartButton();
+                        }
+                    }
+                } catch (ex) {}
+                if (origComplete) {
+                    origComplete(result);
+                }
+            };
+            return _send.apply(req, arguments);
+        };
+    }
+
+    function bindStartValidation() {
+        if (window.__batchVerificationBound) {
+            return;
+        }
+        var btn = $('btn-run');
+        if (!btn) {
+            return false;
+        }
+        window.__batchVerificationBound = true;
+
+        $$('input[name=is_verification_radio]').addEvent('change', function(){
+            var hidden = $('batch-is-verification');
+            if (hidden) {
+                hidden.value = this.value;
+            }
+            toggleGapTypeRequired();
+        });
+        toggleGapTypeRequired();
+
+        btn.addEvent('click', function(e){
+            if (!validateBatchForm()) {
+                e.stop();
+                return false;
+            }
+            var showError = $('showError');
+            if (showError) {
+                showError.setHTML('');
+            }
+        }, true);
+        return true;
+    }
+
+    function setupBatchVerification() {
+        hookBatchRequest();
+        if (!bindStartValidation()) {
+            setupBatchVerification.delay(50);
+        }
+    }
+
+    setupBatchVerification();
+
+    var _done = false;
+    var _timer = setInterval(function(){
+        var btn = $('btn-run');
+        if (!btn || _done) {
+            return;
+        }
+        var html = btn.get('html') || '';
+        if (html.indexOf('处理已完成') === -1) {
+            return;
+        }
+
+        var last = window.__batchVerificationLastResult || {};
+        if (last.validation_error) {
+            resetStartButton();
+            clearInterval(_timer);
+            return;
+        }
+
+        var succEl = $('iSucc');
+        var failEl = $('iFail');
+        var succNum = succEl ? succEl.get('html').toInt() : 0;
+        var failNum = failEl ? failEl.get('html').toInt() : 0;
+
+        _done = true;
+        clearInterval(_timer);
+
+        var finderId = '<{$env.get.finder_id|default:""}>';
+        if (finderId && window.finderGroup && finderGroup[finderId]) {
+            finderGroup[finderId].refresh();
+        }
+
+        // 仅全部执行成功才自动关闭；校验失败或未产生成功记录均保留弹窗
+        if (succNum > 0 && failNum === 0) {
+            btn.set('html', '<span><span>处理完成，3秒后自动关闭！</span></span>');
+            setTimeout(function(){
+                try {
+                    btn.getParent('.dialog').retrieve('instance').close();
+                } catch (e) {}
+            }, 3000);
+        } else if (failNum > 0) {
+            btn.set('html', '<span><span>处理完成，存在失败项，请查看下方错误信息</span></span>');
+        } else {
+            resetStartButton();
+        }
+    }, 300);
+})();
+</script>

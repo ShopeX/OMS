@@ -157,4 +157,7 @@ $db['platform_regions'] = array(
         ),
     ),
     'comment' => '平台地区表',
+    'engine' => 'innodb',
+    'version' => '$Rev:  $',
+    'charset' => 'utf8mb4',
 );

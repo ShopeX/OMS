@@ -1406,9 +1406,12 @@ class ome_event_trigger_shop_data_delivery_common
         
         //获取删除的平台商品
         $deleteOidList = array();
+        $objectByObjId = array();
         $objectList = $orderObjMdl->getList('obj_id,obj_type,bn,oid,divide_order_fee,pay_status,`delete`,main_oid', array('order_id'=>$order_id));
         foreach ($objectList as $key => $val)
         {
+            $objectByObjId[$val['obj_id']] = $val;
+
             $oid = $val['oid'];
             
             //check
@@ -1476,6 +1479,14 @@ class ome_event_trigger_shop_data_delivery_common
             
             //删除已经退款的oid子订单
             if($deleteOidList[$oid]){
+                //换货/改SKU：同oid下可能存在已退款旧子单与有效新子单，以发货明细关联的obj_id为准
+                $orderObjId = $itemVal['order_obj_id'];
+                if ($orderObjId && isset($objectByObjId[$orderObjId])) {
+                    $linkedObj = $objectByObjId[$orderObjId];
+                    if ($linkedObj['delete'] == 'false' && !in_array($linkedObj['pay_status'], array('4', '5'))) {
+                        continue;
+                    }
+                }
                 unset($this->__sdf['delivery_items'][$itemKey]);
             }
         }

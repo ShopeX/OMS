@@ -20,6 +20,7 @@
  */
 
 class ome_ctl_admin_receipts_print extends desktop_controller {
+    const URGENT_LABEL_CODE = 'SOMS_URGENT_SHIP';
 
     var $name = "发货中心";
     var $workground = "delivery_center";
@@ -97,9 +98,14 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
             'filter' => $tmp_filter,
             'optional' => false
         );
+        $sub_menu[$c++] = array(
+            'label' => app::get('base')->_('加急发货'),
+            'filter' => array_merge($tmp_filter, array('delivery_label_code' => self::URGENT_LABEL_CODE)),
+            'optional' => false
+        );
         #第三方发货时，显示已发货、未发货
         if($_GET['ctl'] == 'admin_receipts_outer') {
-            $c = 3;#物流公司view在未发货之后
+            $c = $c + 2;
             $outer_filter = $tmp_filter;
             #让已发货、未发货显示在全部之后
             $outer = $this->shipStatus();

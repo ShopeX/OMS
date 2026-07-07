@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
  *
@@ -14,26 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class console_mdl_delivery extends dbeav_model{
     var $defaultOrder = array('delivery_id',' DESC');
     /**
      * 须加密字段
-     * 
+     *
      * @var string
-     * */
+     **/
     private $__encrypt_cols = array(
         'ship_name'   => 'simple',
         'ship_tel'    => 'phone',
         'ship_mobile' => 'phone',
         'ship_addr'     => 'simple',
     );
-       /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
-    public function table_name($real = false){
+   public function table_name($real = false){
         if($real){
            $table_name = 'sdb_ome_delivery';
         }else{
@@ -42,10 +37,6 @@ class console_mdl_delivery extends dbeav_model{
         return $table_name;
 	}
 
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema(){
         return app::get('ome')->model('delivery')->get_schema();
     }
@@ -65,26 +56,15 @@ class console_mdl_delivery extends dbeav_model{
         return array_merge($childOptions,$parentOptions);
     }
 
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter,$tableAlias=null,$baseWhere=null)
     {
         $baseWhere = (array) $baseWhere;
         $tPre = ($tableAlias?$tableAlias:'`'.$this->table_name(true).'`').'.';
-        
+
         //setting
         $deliveryIds = array();
         $where = '';
-        
-        //filter - 加密字段处理
-        $encryptWhere = kernel::single('ome_filter_encrypt')->encrypt($filter, $this->__encrypt_cols, $tPre, 'delivery');
-        $baseWhere = array_merge($baseWhere, $encryptWhere);
-        
+
         if(isset($filter['ship_tel_mobile'])){
             $encryptVal = kernel::single('ome_security_factory')->encryptPublic($filter['ship_tel_mobile'],'phone');
             $encryptVal  = utils::addslashes_array($encryptVal);
@@ -99,7 +79,7 @@ class console_mdl_delivery extends dbeav_model{
             $where .= ' OR delivery_id IN ('.implode(',', $filter['extend_delivery_id']).')';
             unset($filter['extend_delivery_id']);
         }
-        
+
         if (isset($filter['member_uname'])){
             $memberObj = app::get('ome')->model("members");
             $rows = $memberObj->getList('member_id',array('uname|has'=>$filter['member_uname']));
@@ -110,7 +90,7 @@ class console_mdl_delivery extends dbeav_model{
             $where .= '  AND member_id IN ('.implode(',', $memberId).')';
             unset($filter['member_uname']);
         }
-        
+
         if(isset($filter['outer_dlybn'])) {
             if(strpos($filter['outer_dlybn'], "\n") !== false){
                 $filter['outer_dlybn'] = array_unique(array_map('trim', array_filter(explode("\n", $filter['outer_dlybn']))));
@@ -121,7 +101,7 @@ class console_mdl_delivery extends dbeav_model{
             $rows[] = 0;
             $where .= '  AND delivery_bn IN ("'.implode('","', $rows).'")';
         }
-        
+
         if (isset($filter['order_bn'])){
             // 多订单号查询
             if(strpos($filter['order_bn'], "\n") !== false){
@@ -136,156 +116,156 @@ class console_mdl_delivery extends dbeav_model{
 
             $deliOrderObj = app::get('ome')->model("delivery_order");
             $rows = $deliOrderObj->getList('delivery_id',array('order_id'=>$orderId));
-            
+
             //delivery_id
             $tempDlyIds = array(0);
             foreach($rows as $row)
             {
                 $temp_dly_id = $row['delivery_id'];
-                
+
                 $tempDlyIds[$temp_dly_id] = $temp_dly_id;
             }
-            
+
             //intersection
             if(empty($deliveryIds)){
                 $deliveryIds = $tempDlyIds;
             }else{
                 $deliveryIds = array_intersect($deliveryIds, $tempDlyIds);
             }
-            
+
             unset($filter['order_bn']);
         }
-        
+
         //按基础物料搜索
         if (isset($filter['material_bn'])){
             //多货号查询
             if(strpos($filter['material_bn'], "\n") !== false){
                 $material_bns = array_unique(array_map('trim', array_filter(explode("\n", $filter['material_bn']))));
-                
+
                 $filter['material_bn'] = $material_bns;
             }
-            
+
             //search_delivery_items
             $itemsObj = app::get('ome')->model("delivery_items");
             $rows = $itemsObj->getDeliveryIdByPbn($filter);
-            
+
             //delivery_id
             $tempDlyIds = array(0);
             foreach($rows as $row)
             {
                 $temp_dly_id = $row['delivery_id'];
-    
+
                 $tempDlyIds[$temp_dly_id] = $temp_dly_id;
             }
-            
+
             //intersection
             if(empty($deliveryIds)){
                 $deliveryIds = $tempDlyIds;
             }else{
                 $deliveryIds = array_intersect($deliveryIds, $tempDlyIds);
             }
-            
+
             //unset
             unset($filter['material_bn']);
         }
-        
+
         //按货号搜索
         if(isset($filter['product_bn'])){
             //search_delivery_items
             $itemsObj = app::get('ome')->model("delivery_items");
             $rows = $itemsObj->getDeliveryIdByFilter($filter);
-            
+
             //delivery_id
             $tempDlyIds = array(0);
             foreach($rows as $row)
             {
                 $temp_dly_id = $row['delivery_id'];
-    
+
                 $tempDlyIds[$temp_dly_id] = $temp_dly_id;
             }
-            
+
             //intersection
             if(empty($deliveryIds)){
                 $deliveryIds = $tempDlyIds;
             }else{
                 $deliveryIds = array_intersect($deliveryIds, $tempDlyIds);
             }
-            
+
             //unset
             unset($filter['product_bn']);
         }
-        
+
         //按条形码搜索
         if(isset($filter['product_barcode'])){
             //search_delivery_items
             $itemsObj = app::get('ome')->model("delivery_items");
-            
+
             //获取条形码关联的货号
             $codeSql = "SELECT a.code, b.bm_id,b.material_bn FROM sdb_material_codebase AS a LEFT JOIN sdb_material_basic_material AS b ON a.bm_id=b.bm_id ";
             $codeSql .= " WHERE a.code='". addslashes($filter['product_barcode']) ."'";
             $materialInfo = $itemsObj->db->selectrow($codeSql);
-            
+
             //用货号进行搜索
             $filter['product_bn'] = $materialInfo['material_bn'];
-            
+
             //unset(一定要注销掉,防止重复调用)
             unset($filter['product_barcode']);
-            
+
             //list
             $rows = $itemsObj->getDeliveryIdByFilter($filter);
-            
+
             //delivery_id
             $tempDlyIds = array(0);
             foreach($rows as $row)
             {
                 $temp_dly_id = $row['delivery_id'];
-                
+
                 $tempDlyIds[$temp_dly_id] = $temp_dly_id;
             }
-            
+
             //intersection
             if(empty($deliveryIds)){
                 $deliveryIds = $tempDlyIds;
             }else{
                 $deliveryIds = array_intersect($deliveryIds, $tempDlyIds);
             }
-            
+
             //unset
             unset($filter['product_bn']);
         }
-        
+
         if(isset($filter['logi_no_ext'])){
             $logObj = app::get('ome')->model("delivery_log");
             $rows = $logObj->getDeliveryIdByLogiNO($filter['logi_no_ext']);
-            
+
             //delivery_id
             $tempDlyIds = array(0);
             foreach($rows as $row)
             {
                 $temp_dly_id = $row['delivery_id'];
-                
+
                 $tempDlyIds[$temp_dly_id] = $temp_dly_id;
             }
-            
+
             //intersection
             if(empty($deliveryIds)){
                 $deliveryIds = $tempDlyIds;
             }else{
                 $deliveryIds = array_intersect($deliveryIds, $tempDlyIds);
             }
-            
+
             unset($filter['logi_no_ext']);
         }
-        
+
         if(isset($filter['addonSQL'])){
             $where .= ' AND '.$filter['addonSQL'];
             unset($filter['addonSQL']);
         }
-        
+
         if(isset($filter['delivery_ident'])){
             //delivery_id
             $tempDlyIds = array(0);
-            
+
             $arr_delivery_ident = explode('_',$filter['delivery_ident']);
             $mdl_queue = app::get('ome')->model("print_queue");
             if(count($arr_delivery_ident) == 2){
@@ -312,14 +292,14 @@ class console_mdl_delivery extends dbeav_model{
                     }
                 }
             }
-            
+
             //intersection
             if(empty($deliveryIds)){
                 $deliveryIds = $tempDlyIds;
             }else{
                 $deliveryIds = array_intersect($deliveryIds, $tempDlyIds);
             }
-            
+
             unset($filter['delivery_ident']);
         }
         if($filter['todo']==1){
@@ -379,21 +359,21 @@ class console_mdl_delivery extends dbeav_model{
             $delivery_id = $obj_delivery_bill->dump(array('logi_no'=>$filter['logi_no']),'delivery_id');
             if(!empty($delivery_id['delivery_id'])){
                 $temp_dly_id = $delivery_id['delivery_id'];
-                
+
                 $tempDlyIds = array(0);
                 $tempDlyIds[$temp_dly_id] = $temp_dly_id;
-                
+
                 //intersection
                 if(empty($deliveryIds)){
                     $deliveryIds = $tempDlyIds;
                 }else{
                     $deliveryIds = array_intersect($deliveryIds, $tempDlyIds);
                 }
-                
+
                 unset($filter['logi_no']);
             }
         }
-        
+
         //客服备注
         if(isset($filter['mark_text'])){
             $mark_text = $filter['mark_text'];
@@ -404,22 +384,22 @@ class console_mdl_delivery extends dbeav_model{
                 foreach($_rows as $_orders)
                 {
                     $temp_dly_id = $_orders['delivery_id'];
-                    
+
                     $tempDlyIds[$temp_dly_id] = $temp_dly_id;
                 }
-                
+
                 //intersection
                 if(empty($deliveryIds)){
                     $deliveryIds = $tempDlyIds;
                 }else{
                     $deliveryIds = array_intersect($deliveryIds, $tempDlyIds);
                 }
-                
+
                 unset($filter['mark_text']);
             }
 
         }
-        
+
         //买家留言
         if(isset($filter['custom_mark'])){
             $custom_mark = $filter['custom_mark'];
@@ -430,28 +410,49 @@ class console_mdl_delivery extends dbeav_model{
                 foreach($_rows as $_orders)
                 {
                     $temp_dly_id = $_orders['delivery_id'];
-                    
+
                     $tempDlyIds[$temp_dly_id] = $temp_dly_id;
                 }
-                
+
                 //intersection
                 if(empty($deliveryIds)){
                     $deliveryIds = $tempDlyIds;
                 }else{
                     $deliveryIds = array_intersect($deliveryIds, $tempDlyIds);
                 }
-                
+
                 unset($filter['custom_mark']);
             }
         }
-        
-        //同步状态筛查
+
+        //订单标记
+        if($filter['order_label']){
+            // 优化：使用EXISTS子查询提高性能，避免SQL注入
+            $where .= ' AND EXISTS (
+                SELECT 1 FROM sdb_ome_bill_label bl 
+                LEFT JOIN sdb_ome_delivery o ON bl.bill_id = o.delivery_id
+                WHERE bl.bill_id = sdb_ome_delivery.delivery_id 
+                AND bl.label_id = "'.addslashes($filter['order_label']).'"
+                AND bl.bill_type = "ome_delivery"
+            )';
+            unset($filter['order_label']);
+        }
+        if (!empty($filter['order_label_code'])) {
+            $where .= ' AND EXISTS (
+                SELECT 1 FROM sdb_ome_bill_label bl
+                WHERE bl.bill_id = sdb_ome_delivery.delivery_id 
+                AND bl.label_code = "'.addslashes($filter['order_label_code']).'"
+                AND bl.bill_type = "ome_delivery"
+            )';
+            unset($filter['order_label_code']);
+        }
+        #同步状态筛查
         if (isset($filter['sync_filter'])) {
             $boolSync            = kernel::single('console_delivery_bool_sync')->getBoolSync($filter['sync_filter']);
             $where .= ' AND sync IN ("'.implode('","', $boolSync).'")';
             unset($filter['sync_filter']);
         }
-        
+
         //delivery_ids
         if($deliveryIds){
             $where .= " AND delivery_id IN ('". implode("','", $deliveryIds) ."')";
@@ -466,15 +467,15 @@ class console_mdl_delivery extends dbeav_model{
                 foreach ($tempData as $tempKey => $tempVal)
                 {
                     $temp_order_id = $tempVal['bill_id'];
-                    
+
                     $orderId[$temp_order_id] = $temp_order_id;
                 }
-                
+
                 $where .= ' AND delivery_id IN ("'. implode('","', $orderId) .'")';
             }else{
                 $where .= ' AND delivery_id = "-1"';
             }
-            
+
             unset($filter['order_label'], $tempData);
         }
         if (isset($filter['delivery_bn'])){
@@ -522,12 +523,7 @@ class console_mdl_delivery extends dbeav_model{
          return $result;
      }
 
-    /**
-     * insert
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
-    public function insert(&$data)
+     public function insert(&$data)
      {
          foreach ($this->__encrypt_cols as $field => $type) {
              if (isset($data[$field])) {
@@ -568,13 +564,6 @@ class console_mdl_delivery extends dbeav_model{
          return $data;
      }
 
-    /**
-     * modifier_ship_name
-     * @param mixed $ship_name ship_name
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_ship_name($ship_name,$list,$row)
     {
         if ($this->is_export_data) {
@@ -596,13 +585,6 @@ HTML;
         return $ship_name?$return:$ship_name;
     }
 
-    /**
-     * modifier_ship_tel
-     * @param mixed $tel tel
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_ship_tel($tel,$list,$row)
     {
         if ($this->is_export_data) {
@@ -624,13 +606,6 @@ HTML;
         return $tel?$return:$tel;
     }
 
-    /**
-     * modifier_ship_mobile
-     * @param mixed $mobile mobile
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_ship_mobile($mobile,$list,$row)
     {
         if ($this->is_export_data) {
@@ -652,13 +627,6 @@ HTML;
         return $mobile?$return:$mobile;
     }
 
-    /**
-     * modifier_ship_addr
-     * @param mixed $ship_addr ship_addr
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_ship_addr($ship_addr,$list,$row)
     {
         if ($this->is_export_data) {
@@ -680,13 +648,6 @@ HTML;
         return $ship_addr?$return:$ship_addr;
     }
 
-    /**
-     * modifier_member_id
-     * @param mixed $member_id ID
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_member_id($member_id,$list,$row)
     {
         static $members;

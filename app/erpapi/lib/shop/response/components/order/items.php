@@ -330,6 +330,8 @@ class erpapi_shop_response_components_order_items extends erpapi_shop_response_c
                 }
             }
             
+            $object_addon = $this->_formatObjectAddon($object);
+
             $this->_platform->_newOrder['order_objects'][] = array(
                 'obj_type'          => $obj_type ? $obj_type : 'goods',
                 'obj_alias'         => $object['obj_alias'] ? $object['obj_alias'] : $objTypeList[$obj_type],
@@ -374,7 +376,7 @@ class erpapi_shop_response_components_order_items extends erpapi_shop_response_c
                 'main_oid' => $gift_mids,
                 'biz_delivery_type' => ($logisObjInfo['biz_delivery_type'] ? $logisObjInfo['biz_delivery_type'] : 0), //择配建议
                 'object_bool_type' => $objectBoolType,
-                'addon'             => is_array($object['addon']) ? json_encode($object['addon']) : $object['addon'], //扩展信息
+                'addon'             => $object_addon, //扩展信息
                 'customization' => $object['customization'], //商品定制信息
                 'is_sales_material_setmapping' => $is_setmapping, // 是否SET商品映射
             );
@@ -408,6 +410,81 @@ class erpapi_shop_response_components_order_items extends erpapi_shop_response_c
                 $this->_platform->_newOrder['abnormal_msg'] = $this->_platform->_newOrder['custom_abnormal_msg'] .'；'. $abnormal_msg;
             }
         }
+    }
+
+    /**
+     * 格式化订单对象扩展信息。
+     *
+     * 微信视频号失败订单恢复时需要重建 item，提前备份原始平台商品和 SKU 信息，
+     * 避免恢复后发货回写缺少 sku_id。
+     *
+     * @param array $object 平台订单对象明细
+     * @return string
+     */
+    private function _formatObjectAddon($object)
+    {
+        $addon = $object['addon'];
+        if ($this->_platform->_newOrder['shop_type'] != 'wxshipin') {
+            return is_array($addon) ? json_encode($addon) : $addon;
+        }
+
+        // 微信视频号失败订单可能因销售物料不存在而无法生成 item 层。
+        // 先把原始平台 SKU 信息备份到 object addon，供失败订单恢复重建 item 时继承。
+        $platformItems = $this->_getWxshipinPlatformItems($object);
+        if (!$platformItems) {
+            return is_array($addon) ? json_encode($addon) : $addon;
+        }
+
+        if (is_array($addon)) {
+            $addonData = $addon;
+        } else {
+            $addonData = $addon ? json_decode($addon, true) : array();
+            if (!is_array($addonData)) {
+                $addonData = array();
+            }
+        }
+        $addonData['wxshipin_platform_items'] = $platformItems;
+
+        return json_encode($addonData, JSON_UNESCAPED_UNICODE);
+    }
+
+    private function _getWxshipinPlatformItems($object)
+    {
+        $items = array();
+        // formatItemsSdf 会把单 item 订单合并到 object 层，并移除 order_items。
+        // 因此这里同时兼容 object 层和原始 item 层的平台 SKU，避免失败订单恢复时丢失 sku_id。
+        $shopProductId = ($object['shop_product_id'] && $object['shop_product_id'] != '0') ? $object['shop_product_id'] : '';
+        foreach ((array)$object['order_items'] as $item) {
+            if (!$shopProductId && $item['shop_product_id'] && $item['shop_product_id'] != '0') {
+                $shopProductId = $item['shop_product_id'];
+            }
+
+            $items[] = array(
+                'bn'              => $item['bn'],
+                'shop_goods_id'   => $item['shop_goods_id'] ? $item['shop_goods_id'] : $object['shop_goods_id'],
+                'shop_product_id' => $item['shop_product_id'],
+                'oid'             => $object['oid'],
+            );
+        }
+        if (!$items && $shopProductId) {
+            $items[] = array(
+                'bn'              => $object['bn'],
+                'shop_goods_id'   => $object['shop_goods_id'],
+                'shop_product_id' => $shopProductId,
+                'oid'             => $object['oid'],
+            );
+        }
+
+        if (!$items && !$shopProductId) {
+            return array();
+        }
+
+        return array(
+            'shop_goods_id'   => $object['shop_goods_id'],
+            'shop_product_id' => $shopProductId,
+            'oid'             => $object['oid'],
+            'items'           => $items,
+        );
     }
 
     /**

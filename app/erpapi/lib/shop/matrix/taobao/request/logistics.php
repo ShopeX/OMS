@@ -22,10 +22,26 @@
 class erpapi_shop_matrix_taobao_request_logistics extends erpapi_shop_request_logistics {
 
     /**
-     * 更新ReturnLogistics
-     * @param mixed $reshipinfo reshipinfo
-     * @return mixed 返回值
+     * 回告淘宝加急发货订单在 OMS 当前节点下的物流状态。
+     *
+     * @param array $sdf
+     * @param bool $queue
+     * @return array
      */
+    public function order_report($sdf, $queue = false)
+    {
+        $args = func_get_args();
+        array_pop($args);
+        $_in_mq = $this->__caller->caller_into_mq('logistics_order_report', 'shop', $this->__channelObj->channel['shop_id'], $args, $queue);
+        if ($_in_mq) {
+            return $this->succ('成功放入队列');
+        }
+
+        $params = $this->buildUrgentOrderReportRequestParams($sdf);
+
+        $title = sprintf('淘宝加急发货状态回告[%s:%s]', $sdf['tid'], $sdf['orderStatus']);
+        return $this->__caller->call(SHOP_LOGISTICS_ORDER_REPORT, $params, array (), $title, 10, $sdf['tid']);
+    }
 
     public function updateReturnLogistics($reshipinfo) {
         $orderModel = app::get('ome')->model('orders');
@@ -54,11 +70,6 @@ class erpapi_shop_matrix_taobao_request_logistics extends erpapi_shop_request_lo
         return $rs;
     }
 
-    /**
-     * 获取CorpServiceCode
-     * @param mixed $sdf sdf
-     * @return mixed 返回结果
-     */
     public function getCorpServiceCode($sdf) {
         $params = array(
             'cp_code' => $sdf['cp_code']
@@ -68,11 +79,6 @@ class erpapi_shop_matrix_taobao_request_logistics extends erpapi_shop_request_lo
         return $result;
     }
 
-    /**
-     * timerule
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function timerule($sdf)
     {
         $params = [

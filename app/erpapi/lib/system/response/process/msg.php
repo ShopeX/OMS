@@ -17,23 +17,24 @@
 
 class erpapi_system_response_process_msg
 {
-    /**
-     * notify
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
+    const SESSION_EXPIRE_WARNING_DAYS = 7;
+
     public function notify($sdf)
     {
         if (!$sdf['node_id']) {
-            array('rsp' => 'fail', 'msg' => '节点不能为空');
+            return array('rsp' => 'fail', 'msg' => '节点不能为空');
         }
         
         $shopMdl = app::get('ome')->model('shop');
         
         $shop = $shopMdl->dump(array('node_id' => $sdf['node_id']), 'shop_id,addon,name');
-        
+
         if (!$shop) {
-            array('rsp' => 'fail', 'msg' => '店铺未绑定');
+            return array('rsp' => 'fail', 'msg' => '店铺未绑定');
+        }
+
+        if (isset($sdf['content']['access_token_available'])) {
+            return $this->processAccessTokenNotify($shopMdl, $shop, $sdf);
         }
         
         $rpcNotifyMdl = app::get('base')->model('rpcnotify');
@@ -52,5 +53,48 @@ class erpapi_system_response_process_msg
         ]);
 
         return array('rsp' => 'succ', 'msg' => '消息已接收');
+    }
+
+    protected function processAccessTokenNotify($shopMdl, $shop, $sdf)
+    {
+        $tokenAvailable = (string) $sdf['content']['access_token_available'];
+        if ($tokenAvailable === '-1') {
+            $warnMsg = '【' . $shop['name'] . '】 access_token 已失效，请及时处理，'.(isset($sdf['content']['info']) && !empty($sdf['content']['info']) ?  $sdf['content']['info'] : '') ;
+            $this->sendSystemNotify($warnMsg);
+
+            return array('rsp' => 'succ', 'msg' => '消息已接收');
+        }
+
+        if ($tokenAvailable !== '1') {
+            return array('rsp' => 'succ', 'msg' => '消息已接收');
+        }
+
+        $expireTime = trim((string) $sdf['content']['access_token_expire_in']);
+        if (!$expireTime) {
+            return array('rsp' => 'fail', 'msg' => 'access_token_expire_in不能为空');
+        }
+
+        $expireTimestamp = strtotime($expireTime);
+        if (!$expireTimestamp) {
+            return array('rsp' => 'fail', 'msg' => 'access_token_expire_in格式错误');
+        }
+
+        $addon = is_array($shop['addon']) ? $shop['addon'] : array();
+        $addon['session_expire_time'] = $expireTimestamp;
+        $shopMdl->update(array('addon' => $addon), array('shop_id' => $shop['shop_id']));
+
+        if (($expireTimestamp - time()) < self::SESSION_EXPIRE_WARNING_DAYS * 86400) {
+            $warnMsg = '【' . $shop['name'] . '】 access_token 将于7天内过期，请及时处理，到期时间：'.$expireTime.(isset($sdf['content']['info']) && !empty($sdf['content']['info']) ?  $sdf['content']['info'] : '') ;
+            $this->sendSystemNotify($warnMsg);
+        }
+
+        return array('rsp' => 'succ', 'msg' => '消息已接收');
+    }
+
+    protected function sendSystemNotify($message)
+    {
+        kernel::single('monitor_event_notify')->addNotify('system_message', [
+            'errmsg' => $message,
+        ]);
     }
 }

@@ -356,6 +356,9 @@ class finance_verification
 
             }
         }
+        if(!empty($params['monthly_id'])) {
+            finance_monthly_report::updateMonthlyAmount(array('monthly_id'=>$params['monthly_id']));
+        }
         return $res;
 
     }

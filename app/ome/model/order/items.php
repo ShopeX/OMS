@@ -627,6 +627,37 @@ class ome_mdl_order_items extends dbeav_model
                     
                     $new_order_item[$i] = array_merge($new_order_item[$i], $order_item[$i]);
                 }
+
+                // 微信视频号发货回写依赖平台商品ID和SKU ID。批量替换商品时保留旧平台明细字段，
+                // 避免新商品的 shop_goods_id/shop_product_id 变为 0 导致回写失败。
+                if ($order['shop_type'] == 'wxshipin' && $obj_type != 'gift') {
+                    $old_order_items = array_values((array)$objectInfo['order_items']);
+                    $can_inherit_platform_fields = $objectInfo['shop_goods_id'] && $objectInfo['shop_goods_id'] != '0' && count($old_order_items) == count($new_order_item);
+
+                    // 先完整校验旧明细平台字段和数量结构，避免只继承一部分 item。
+                    if ($can_inherit_platform_fields) {
+                        foreach ($new_order_item as $i => $new_item) {
+                            $old_item = $old_order_items[$i];
+                        if (!$old_item['shop_goods_id'] || $old_item['shop_goods_id'] == '0'
+                                || !$old_item['shop_product_id'] || $old_item['shop_product_id'] == '0') {
+                                $can_inherit_platform_fields = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    // 所有 item 都校验通过后，再统一继承 object 和 item 的平台字段。
+                    if ($can_inherit_platform_fields) {
+                        $new_order_object['shop_goods_id'] = $objectInfo['shop_goods_id'];
+                        // 旧/新 item 数量一致时，按明细生成顺序继承平台商品ID和SKU ID。
+                        foreach ($new_order_item as $i => &$new_item) {
+                            $old_item = $old_order_items[$i];
+                            $new_item['shop_goods_id'] = $old_item['shop_goods_id'];
+                            $new_item['shop_product_id'] = $old_item['shop_product_id'];
+                        }
+                        unset($new_item);
+                    }
+                }
                 
                 //删除被替换的订单明细
                 $delete_order_items = array();
@@ -768,6 +799,10 @@ class ome_mdl_order_items extends dbeav_model
         //修改明细打标
         $boolExtendStatus = ome_order_bool_extendstatus::__GOODS_PRICE;
         app::get('ome')->model('order_extend')->updateBoolExtendStatus($order_id, $boolExtendStatus);
+
+        // 批量编辑物料替换打标
+        $labelErr = '';
+        kernel::single('ome_bill_label')->markBillLabel($order_id, '', 'SOMS_MATERIAL_REPLACE', 'order', $labelErr, 0);
         
         return true;
     }

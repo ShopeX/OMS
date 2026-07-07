@@ -16,19 +16,40 @@
  */
 /**
  * 订单催发货
- *
+ * 
  * @author wangbiao<wangbiao@shopex.cn>
  * @version 0.1
  */
 class erpapi_shop_response_process_delivergoods extends erpapi_shop_response_abstract
 {
-    /**
-     * urgent
-     * @param mixed $order order
-     * @return mixed 返回值
-     */
+    const URGENT_LABEL_CODE = 'SOMS_URGENT_SHIP';
+    const URGENT_SERVICE_TAG = '加急发货';
+    const URGENT_REPORT_TASK_NOTIFY = 'urgent_logistics_notify';
+    const URGENT_REPORT_TASK_DELIVERY = 'urgent_logistics_dly';
+    const URGENT_REPORT_TASK_CONSIGN = 'urgent_logistics_csg';
 
+    /**
+     * 根据 service_tags 分流普通催发货与淘宝加急发货处理。
+     *
+     * @param array $order
+     * @return array
+     */
     public function urgent($order)
+    {
+        if ($this->isUrgentShip($order)) {
+            return $this->processUrgentShip($order);
+        }
+
+        return $this->processLegacyRemindShip($order);
+    }
+
+    /**
+     * 兼容老的催发货逻辑，仅更新催发货标记和返回平台所需状态。
+     *
+     * @param array $order
+     * @return array
+     */
+    protected function processLegacyRemindShip($order)
     {
         //更新订单为"催发货"状态
         $orderMdl       = app::get('ome')->model('orders');
@@ -99,15 +120,178 @@ class erpapi_shop_response_process_delivergoods extends erpapi_shop_response_abs
     }
 
     /**
-     * promise
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
+     * 处理淘宝加急发货通知：订单/发货单打标、加速审单，并投递状态回告任务。
+     *
+     * @param array $order
+     * @return array
      */
-    public function promise($sdf) {
-        if($sdf['event_type'] == 'latest_delivery_time') {
-            $orderExtendObj = app::get('ome')->model('order_extend'); 
-            $extendinfo = [
-                'order_id' => $sdf['order']['order_id'], 
+    protected function processUrgentShip($order)
+    {
+        try {
+            if (!$this->isUrgentShip($order)) {
+                return $this->fail('PARAM_ERROR', 'service_tags非法', false, $order['order_bn']);
+            }
+
+            $labelLib      = kernel::single('ome_bill_label');
+            $deliveryMdl   = app::get('ome')->model('delivery');
+            $deliveryIds   = $deliveryMdl->getDeliverIdByOrderId($order['order_id']);
+            $alreadyMarked = $labelLib->existLabel($order['order_id'], self::URGENT_LABEL_CODE);
+
+            if (!$alreadyMarked) {
+                $err        = '';
+                $markResult = $labelLib->markBillLabel($order['order_id'], '', self::URGENT_LABEL_CODE, 'order', $err);
+                if (!$markResult) {
+                    return $this->fail('SYSTEM_ERROR', $err ?: '订单加急标签写入失败', true, $order['order_bn']);
+                }
+            }
+            if ($deliveryIds) {
+                foreach ((array)$deliveryIds as $deliveryId) {
+                    $err = '';
+                    $labelLib->markBillLabel($deliveryId, '', self::URGENT_LABEL_CODE, 'delivery', $err);
+                }
+            }
+
+            if (!$alreadyMarked) {
+                $memo = '淘宝加急发货: 平台加急发货通知';
+                if (!empty($order['notify_time'])) {
+                    $memo .= '，通知时间：' . $order['notify_time'];
+                }
+                app::get('ome')->model('operation_log')->write_log('order_modify@ome', $order['order_id'], $memo);
+            }
+
+            $this->accelerateTimingConfirm($order);
+
+            $urgentLib     = kernel::single('ome_order_urgent');
+            $statusPayload = $urgentLib->buildUrgentOrderStatus($order['order_id']);
+            if (empty($statusPayload['orderStatus'])) {
+                return $this->fail('SYSTEM_ERROR', '订单状态计算失败', true, $order['order_bn']);
+            }
+
+            $this->enqueueUrgentReport($order['order_id'], 'notify');
+
+            $responseParams = $urgentLib->buildUrgentNotifyResponseParams($order['order_id'], $order['order_bn']);
+            if (empty($responseParams['urgent_delivery_notify_response'])) {
+                $dtoJson = json_encode(
+                    $urgentLib->formatUrgentOrderReportDto($statusPayload, $order['order_bn']),
+                    JSON_UNESCAPED_UNICODE
+                );
+                if ($dtoJson !== false) {
+                    $responseParams = ['urgent_delivery_notify_response' => $dtoJson];
+                }
+            }
+
+            return [
+                'rsp'  => 'succ',
+                'msg'  => $alreadyMarked ? '淘宝加急发货: 幂等成功' : '淘宝加急发货: 打标成功',
+                'data' => $responseParams,
+            ];
+        } catch (Exception $e) {
+            return $this->fail('SYSTEM_ERROR', $e->getMessage(), true, $order['order_bn']);
+        }
+    }
+
+    /**
+     * 判断当前通知是否属于淘宝加急发货。
+     *
+     * @param array $order
+     * @return bool
+     */
+    protected function isUrgentShip($order)
+    {
+        if (!is_array($order['service_tags'])) {
+            $serviceTags = trim((string)$order['service_tags']);
+            return $serviceTags !== '' && $serviceTags === self::URGENT_SERVICE_TAG;
+        }
+
+        return in_array(self::URGENT_SERVICE_TAG, $order['service_tags'], true);
+    }
+
+    /**
+     * 统一构造加急发货处理失败响应。
+     *
+     * @param string $errorCode
+     * @param string $msg
+     * @param bool $retry
+     * @param string $tid
+     * @return array
+     */
+    protected function fail($errorCode, $msg, $retry = false, $tid = '')
+    {
+        return [
+            'rsp'        => 'fail',
+            'error_code' => $errorCode,
+            'msg'        => $msg,
+            'retry'      => $retry ? 'true' : 'false',
+            'data'       => ['tid' => $tid],
+        ];
+    }
+
+    /**
+     * 对满足自动审单条件的加急订单，直接将定时审单时间改写到当前调度时间。
+     *
+     * @param array $order
+     * @return void
+     */
+    protected function accelerateTimingConfirm($order)
+    {
+        $now = time()+30;
+        if ($order['pause'] !== 'false' || $order['abnormal'] !== 'false') {
+            return;
+        }
+        if (!in_array($order['process_status'], ['unconfirmed', 'confirmed', 'splitting'])) {
+            return;
+        }
+        if (!in_array($order['ship_status'], ['0', '2'])) {
+            return;
+        }
+        $isAuto = ($order['pay_status'] == '1' || $order['is_cod'] == 'true')
+            && $order['status'] == 'active'
+            && in_array($order['order_type'], kernel::single('ome_order_func')->get_normal_order_type());
+        if (!$isAuto) {
+            return;
+        }
+
+        app::get('ome')->model('orders')->update(['timing_confirm' => $now], ['order_id' => $order['order_id']]);
+        app::get('ome')->model('misc_task')->saveMiscTask([
+            'obj_id'    => $order['order_id'],
+            'obj_type'  => 'timing_confirm_order',
+            'exec_time' => $now,
+            'addon'     => json_encode(['urgent_delivery' => true]),
+        ]);
+        app::get('ome')->model('operation_log')->write_log('order_edit@ome', $order['order_id'], '淘宝加急发货: 提前定时审单时间至当前');
+    }
+
+    /**
+     * 根据场景补投加急发货状态回告任务。
+     *
+     * @param int $orderId
+     * @param string $scene
+     * @return bool
+     */
+    protected function enqueueUrgentReport($orderId, $scene)
+    {
+        if (!$orderId) {
+            return false;
+        }
+        $taskTypeMap = [
+            'notify'          => self::URGENT_REPORT_TASK_NOTIFY,
+            'delivery_status' => self::URGENT_REPORT_TASK_DELIVERY,
+            'consign_sync'    => self::URGENT_REPORT_TASK_CONSIGN,
+        ];
+        return app::get('ome')->model('misc_task')->saveMiscTask([
+            'obj_id'    => intval($orderId),
+            'obj_type'  => $taskTypeMap[$scene] ?: self::URGENT_REPORT_TASK_NOTIFY,
+            'exec_time' => time(),
+            'addon'     => json_encode(['scene' => $scene], JSON_UNESCAPED_UNICODE),
+        ]);
+    }
+
+    public function promise($sdf)
+    {
+        if ($sdf['event_type'] == 'latest_delivery_time') {
+            $orderExtendObj = app::get('ome')->model('order_extend');
+            $extendinfo     = [
+                'order_id'             => $sdf['order']['order_id'],
                 'latest_delivery_time' => kernel::single('ome_func')->date2time($sdf['pick_date'])
             ];
             $orderExtendObj->save($extendinfo);

@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class siso_receipt_sales_abstract
 {
     /**
@@ -54,6 +53,18 @@ class siso_receipt_sales_abstract
                    if($allow_commit){
                        continue; //部分拆分OR部分发货时,跳过生成销售单
                    }
+                }
+
+                // 事务内二次检查，防止并发重复生成销售单
+                $order_id = intval($sale['order_id']);
+                $salesObj->db->select(
+                    "SELECT order_id FROM sdb_ome_orders WHERE order_id={$order_id} FOR UPDATE"
+                );
+                $exists = $salesObj->db->select(
+                    "SELECT sale_id FROM sdb_ome_sales WHERE order_id={$order_id}"
+                );
+                if ($exists) {
+                    continue;
                 }
                 
                 if(!$this->check_required($sale,$msg)){

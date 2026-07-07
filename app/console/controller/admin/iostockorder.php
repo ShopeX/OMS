@@ -14,19 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class console_ctl_admin_iostockorder extends desktop_controller
 {
     public $name       = "出入库计划";
     public $workground = "console_purchasecenter";
 
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index() {}
     /**
-     * 
+     *
      * 其他入库列表
      */
     public function other_iostock()
@@ -50,10 +45,12 @@ class console_ctl_admin_iostockorder extends desktop_controller
                     'submit'      => 'index.php?app=console&ctl=admin_iostockorder&act=batch_sync&io=' . $io,
                     'confirm'     => '你确定要对勾选的单子发送至仓储吗？',
                     'target'      => 'refresh'),
-                array('label' => '批量审核',
-                    'submit'      => 'index.php?app=console&ctl=admin_iostockorder&act=batch_check&io=' . $io,
-                    'confirm'     => '你确定要对勾选的单子批量审核吗?',
-                    'target'      => 'refresh'),
+                array(
+                    'label'  => '批量审核',
+                    'href'   => 'javascript:void(0);',
+                    'submit' => 'index.php?app=console&ctl=admin_iostockorder&act=batch_check_dialog&io=' . $io,
+                    'target' => 'dialog::{width:600,height:280,title:\'批量审核\'}',
+                ),
                 array(
                     'label'  => sprintf('%s导入',$title),
                     'href'   => sprintf('%s&act=displayImportIso&io=%s', $this->url,$io),
@@ -96,10 +93,6 @@ class console_ctl_admin_iostockorder extends desktop_controller
         $this->finder('taoguaniostockorder_mdl_iso', $params);
     }
 
-    /**
-     * allocate_iostock
-     * @return mixed 返回值
-     */
     public function allocate_iostock()
     {
         $io               = $_GET['io'];
@@ -143,12 +136,6 @@ class console_ctl_admin_iostockorder extends desktop_controller
         $this->finder('taoguaniostockorder_mdl_iso', $params);
     }
 
-    /**
-     * iostock_add
-     * @param mixed $type type
-     * @param mixed $io io
-     * @return mixed 返回值
-     */
     public function iostock_add($type, $io)
     {
         if ($io) {
@@ -200,13 +187,6 @@ class console_ctl_admin_iostockorder extends desktop_controller
         }
     }
 
-    /**
-     * iostock_edit
-     * @param mixed $iso_id ID
-     * @param mixed $io io
-     * @param mixed $act act
-     * @return mixed 返回值
-     */
     public function iostock_edit($iso_id, $io, $act)
     {
         $order_label = $io ? '入库单' : '出库单';
@@ -254,11 +234,6 @@ class console_ctl_admin_iostockorder extends desktop_controller
         $this->singlepage("admin/iostock/instock_edit.html");
     }
 
-    /**
-     * 获取EditProducts
-     * @param mixed $iso_id ID
-     * @return mixed 返回结果
-     */
     public function getEditProducts($iso_id)
     {
         if ($iso_id == '') {
@@ -298,10 +273,6 @@ class console_ctl_admin_iostockorder extends desktop_controller
         echo json_encode($rows);
     }
 
-    /**
-     * do_edit_iostock
-     * @return mixed 返回值
-     */
     public function do_edit_iostock()
     {
 
@@ -448,10 +419,6 @@ class console_ctl_admin_iostockorder extends desktop_controller
         }
     }
 
-    /**
-     * do_save_iostockorder
-     * @return mixed 返回值
-     */
     public function do_save_iostockorder()
     {
         $libBranchProduct = kernel::single('ome_branch_product');
@@ -526,10 +493,6 @@ class console_ctl_admin_iostockorder extends desktop_controller
         }
     }
 
-    /**
-     * 获取ProductStore
-     * @return mixed 返回结果
-     */
     public function getProductStore()
     {
         $libBranchProduct = kernel::single('ome_branch_product');
@@ -673,11 +636,6 @@ class console_ctl_admin_iostockorder extends desktop_controller
     }
 
     #导出模板
-    /**
-     * exportTemplate
-     * @param mixed $p p
-     * @return mixed 返回值
-     */
     public function exportTemplate($p)
     {
         if ($p) {
@@ -698,7 +656,7 @@ class console_ctl_admin_iostockorder extends desktop_controller
 
     /**
      * 审核出入库单据
-     * 
+     *
      */
     public function check($iso_id, $io, $act)
     {
@@ -744,7 +702,7 @@ class console_ctl_admin_iostockorder extends desktop_controller
 
     /**
      * 保存出入库审核单据
-     * 
+     *
      */
     public function doCheck()
     {
@@ -942,10 +900,6 @@ class console_ctl_admin_iostockorder extends desktop_controller
     }
 
     //调拨入库 取消操作 生成入库单 打回原始仓库
-    /**
-     * cancelIostockin
-     * @return mixed 返回值
-     */
     public function cancelIostockin()
     {
         $iso_id                     = intval($_GET['iso_id']);
@@ -1012,10 +966,6 @@ class console_ctl_admin_iostockorder extends desktop_controller
     }
 
     //生成入库单 打回原始仓库
-    /**
-     * doCancelIostockin
-     * @return mixed 返回值
-     */
     public function doCancelIostockin()
     {
         $this->begin('');
@@ -1093,7 +1043,7 @@ class console_ctl_admin_iostockorder extends desktop_controller
 
     /**
      * 调拔入库列表
-     * 
+     *
      * @access  public
      * @author cyyr24@sina.cn
      */
@@ -1183,43 +1133,189 @@ class console_ctl_admin_iostockorder extends desktop_controller
     }
 
     /**
-     * batch_check
-     * @return mixed 返回值
+     * 批量审核（弹窗进度条）：打开 dialog_batch。
      */
-    public function batch_check()
+    public function batch_check_dialog()
     {
-        // $this->begin('');
-        // kernel::database()->exec('commit');
-        $isoObj  = app::get('taoguaniostockorder')->model('iso');
-        $ids     = $_POST['iso_id'];
-        $isoList = $isoObj->getList('iso_id', array('iso_id' => $ids, 'check_status' => '1', 'confirm' => 'N', 'iso_status' => '1'));
-
-        $io      = $_GET['io'];
-
-        if ($io == '1' || $io == '0') {// 等于1是入库单  等于0是出库单
-            foreach ($isoList as $iso) {
-                $iso_id   = $iso['iso_id'];
-                $iso_data = array('check_status' => '2');
-                $result   = $isoObj->update($iso_data, array('iso_id' => $iso_id));
-
-                if ($io == '1') {
-                    kernel::single('console_event_trigger_otherstockin')->create(array('iso_id' => $iso_id), false);
-                }else{
-                    kernel::single('console_event_trigger_otherstockout')->create(array('iso_id' => $iso_id), false);
-                }
-            }
+        if (isset($_POST['isSelectedAll']) && $_POST['isSelectedAll'] == '_ALL_') {
+            die(app::get('console')->_('暂不支持全选'));
         }
 
-        $this->splash('success', null, '命令已经被成功发送！');
+        $ids = isset($_POST['iso_id']) ? $_POST['iso_id'] : null;
+        if (!is_array($ids)) {
+            if ($ids !== null && $ids !== '') {
+                $ids = array($ids);
+            }
+        }
+        if (empty($ids) || !is_array($ids)) {
+            die(app::get('console')->_('请先选择要审核的单据'));
+        }
 
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        $ids = array_filter($ids);
+        if (count($ids) === 0) {
+            die(app::get('console')->_('请先选择要审核的单据'));
+        }
+
+        $io = isset($_GET['io']) ? $_GET['io'] : '';
+        if ($io !== '1' && $io !== '0') {
+            die('参数 io 无效');
+        }
+
+        $this->pagedata['GroupList']    = json_encode($ids);
+        $this->pagedata['request_url'] = 'index.php?app=console&ctl=admin_iostockorder&act=batch_check_step&io=' . $io;
+        $this->pagedata['maxNum']      = 1;
+        $this->pagedata['input_hidden'] = array();
+        parent::dialog_batch();
     }
 
     /**
-     * iostockConfirm
-     * @param mixed $iso_id ID
-     * @param mixed $io io
-     * @return mixed 返回值
+     * 批量审核分块执行（供 taskrunner 调用，返回 JSON + ok.）。
      */
+    public function batch_check_step()
+    {
+        $io = isset($_GET['io']) ? $_GET['io'] : '';
+        if ($io !== '1' && $io !== '0') {
+            echo 'Error: 参数 io 无效;';
+            exit;
+        }
+
+        $primary = isset($_POST['primary_id']) ? trim($_POST['primary_id']) : '';
+        if ($primary === '') {
+            echo 'Error: 缺少待处理数据;';
+            exit;
+        }
+
+        $chunkIds = array_values(array_unique(array_filter(array_map('intval', explode(',', $primary)))));
+        if (count($chunkIds) === 0) {
+            echo 'Error: 缺少待处理数据;';
+            exit;
+        }
+
+        $ret = $this->_batchCheckIsoIds($chunkIds, $io);
+        echo json_encode($ret), 'ok.';
+        exit;
+    }
+
+    /**
+     * 对给定 iso_id 列表执行审核（与单笔 doCheck 一致走 doCkeck），每单独立事务。
+     *
+     * @param array $ids
+     * @param string $io
+     * @return array itotal, isucc, ifail, err_msg（与 dialog_batch / allAudit 约定一致）
+     */
+    protected function _batchCheckIsoIds(array $ids, $io)
+    {
+        $isoObj = app::get('taoguaniostockorder')->model('iso');
+        $ids    = array_values(array_unique(array_map('intval', $ids)));
+        $ids    = array_filter($ids);
+
+        $ret = array(
+            'itotal'  => count($ids),
+            'isucc'   => 0,
+            'ifail'   => 0,
+            'err_msg' => array(),
+        );
+        if (count($ids) === 0) {
+            return $ret;
+        }
+
+        $isoList = $isoObj->getList('iso_id,iso_bn,type_id', array(
+            'iso_id'       => $ids,
+            'check_status' => '1',
+            'confirm'      => 'N',
+            'iso_status'   => '1',
+        ));
+
+        $rowById = array();
+        foreach ($isoList as $row) {
+            $rowById[intval($row['iso_id'])] = $row;
+        }
+
+        $skippedIds = array_diff($ids, array_keys($rowById));
+        $skippedBnById = array();
+        if (!empty($skippedIds)) {
+            $skippedRows = $isoObj->getList('iso_id,iso_bn', array('iso_id' => array_values($skippedIds)));
+            foreach ($skippedRows as $sr) {
+                $sid = intval($sr['iso_id']);
+                $skippedBnById[$sid] = !empty($sr['iso_bn']) ? $sr['iso_bn'] : (string) $sid;
+            }
+        }
+
+        $typeMap         = kernel::single('ome_iostock')->get_iostock_types();
+        $iostockorderLib = kernel::single('console_iostockorder');
+        $oplog           = app::get('ome')->model('operation_log');
+
+        foreach ($ids as $iso_id) {
+            if (!isset($rowById[$iso_id])) {
+                $bn = isset($skippedBnById[$iso_id]) ? $skippedBnById[$iso_id] : (string) $iso_id;
+                $ret['ifail']++;
+                $ret['err_msg'][] = 'ERROR:' . $bn . '：不符合批量审核条件（需待审核、未确认、进行中的单据）';
+                $oplog->write_log(
+                    'docheck_iostock@taoguaniostockorder',
+                    $iso_id,
+                    sprintf('审核单据：%s', $bn . '：不符合批量审核条件（需待审核、未确认、进行中的单据）')
+                );
+                continue;
+            }
+            $row    = $rowById[$iso_id];
+            $iso_bn = !empty($row['iso_bn']) ? $row['iso_bn'] : (string) $iso_id;
+
+            $db  = kernel::database();
+            $trx = $db->beginTransaction();
+            if ($trx === false) {
+                $ret['ifail']++;
+                $ret['err_msg'][] = 'ERROR:' . $iso_bn . '：无法开启数据库事务';
+                $typeInfo = isset($typeMap[$row['type_id']]['info']) ? $typeMap[$row['type_id']]['info'] : '单据';
+                $oplog->write_log(
+                    'docheck_iostock@taoguaniostockorder',
+                    $iso_id,
+                    sprintf('审核%s：%s', $typeInfo, '无法开启数据库事务')
+                );
+                continue;
+            }
+
+            $rs     = false;
+            $rsData = array('msg' => '');
+            try {
+                list($rs, $rsData) = $iostockorderLib->doCkeck($iso_id, $io);
+            } catch (Exception $e) {
+                $db->rollBack();
+                $ret['ifail']++;
+                $ret['err_msg'][] = 'ERROR:' . $iso_bn . '：' . $e->getMessage();
+                $typeInfo = isset($typeMap[$row['type_id']]['info']) ? $typeMap[$row['type_id']]['info'] : '单据';
+                $oplog->write_log(
+                    'docheck_iostock@taoguaniostockorder',
+                    $iso_id,
+                    sprintf('审核%s：%s', $typeInfo, $e->getMessage())
+                );
+                continue;
+            }
+
+            if ($rs) {
+                $db->commit($trx);
+                $ret['isucc']++;
+                $typeInfo = isset($typeMap[$row['type_id']]['info']) ? $typeMap[$row['type_id']]['info'] : '单据';
+                $log_msg  = sprintf('审核%s：成功', $typeInfo);
+                $oplog->write_log('docheck_iostock@taoguaniostockorder', $iso_id, $log_msg);
+                continue;
+            }
+
+            $db->rollBack();
+            $ret['ifail']++;
+            $msg = (isset($rsData['msg']) && $rsData['msg'] !== '') ? $rsData['msg'] : '审核失败';
+            $ret['err_msg'][] = 'ERROR:' . $iso_bn . '：' . $msg;
+            $typeInfo = isset($typeMap[$row['type_id']]['info']) ? $typeMap[$row['type_id']]['info'] : '单据';
+            $oplog->write_log(
+                'docheck_iostock@taoguaniostockorder',
+                $iso_id,
+                sprintf('审核%s：%s', $typeInfo, $msg)
+            );
+        }
+
+        return $ret;
+    }
+
     public function iostockConfirm($iso_id, $io)
     {
         $iso_itemsObj          = app::get('taoguaniostockorder')->model('iso_items');
@@ -1232,10 +1328,6 @@ class console_ctl_admin_iostockorder extends desktop_controller
         $this->singlepage('admin/iostock/iostock_confirm.html');
     }
 
-    /**
-     * doIostockconfirm
-     * @return mixed 返回值
-     */
     public function doIostockconfirm()
     {
         $this->begin("index.php?app=console&ctl=admin_iostockorder");
@@ -1318,12 +1410,6 @@ class console_ctl_admin_iostockorder extends desktop_controller
 
     }
 
-    /**
-     * 添加Same
-     * @param mixed $iso_id ID
-     * @param mixed $io io
-     * @return mixed 返回值
-     */
     public function addSame($iso_id,$io)
     {
         $this->begin('index.php?app=console&ctl=admin_iostockorder&act=other_iostock&io='.$io);
@@ -1374,10 +1460,6 @@ class console_ctl_admin_iostockorder extends desktop_controller
 
     }
 
-    /**
-     * doSame
-     * @return mixed 返回值
-     */
     public function doSame()
     {
         $libBranchProduct = kernel::single('ome_branch_product');

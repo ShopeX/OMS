@@ -33,7 +33,12 @@ class erpapi_system_response_msg extends erpapi_system_response_abstract
             return false;
         }
 
-        $content = json_decode($params['data'],true);
+        $content = is_array($params['data']) ? $params['data'] : json_decode($params['data'], true);
+        if (!is_array($content)) {
+            $this->__apilog['result']['msg'] = '消息内容格式错误';
+            return false;
+        }
+
         $content['node_id'] = $params['to_node_id'];
         $sdf = array(
             'node_id'    => $params['node_id'],

@@ -156,6 +156,10 @@ class erpapi_shop_response_process_aftersalev2 {
     }
 
     private function _getRefundRefer($sdf) {
+        $refundApply = $sdf['refund_apply'];
+        if($refundApply && $refundApply['reship_id']) {
+            return '1';
+        }
         //退款来源(normal:普通退款,aftersale:售后仅退款,不退货;)
         if($sdf['refund_refer'] == 'aftersale'){
             $refund_refer = '1';
@@ -412,6 +416,9 @@ class erpapi_shop_response_process_aftersalev2 {
         //退款未退货
         $this->_refundNoreturn($sdf,$refundApply);
         kernel::single('monitor_notice_refund_apply')->erpapi_refund($refundApply['apply_id']);
+        if ($orderInfo['pay_status'] == '5') {
+            kernel::single('ome_event_trigger_shop_order')->order_message_produce(array($orderInfo['order_id']),['cancel_order']);
+        }
 
         kernel::single('ome_refund_apply')->updateOrderObjectsPayStatusByItemIds($refundApply['apply_id']);
         // 增加service扩展点，允许外部service在退款成功后做自定义处理

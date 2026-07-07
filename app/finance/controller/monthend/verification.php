@@ -14,15 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class finance_ctl_monthend_verification extends desktop_controller{
 
 
-    /**
-     * index
-     * @param mixed $monthly_id ID
-     * @return mixed 返回值
-     */
     public function index($monthly_id){
 
         $base_filter = array();
@@ -45,10 +39,15 @@ class finance_ctl_monthend_verification extends desktop_controller{
             $_GET['view'] = 0;
         }
 
+        $finder_id = isset($_GET['finder_id']) ? $_GET['finder_id'] : '';
+        $finder_vid = isset($_GET['finder_vid']) ? $_GET['finder_vid'] : '';
+        $return_view = isset($_GET['return_view']) ? $_GET['return_view'] : 0;
+        $return_page = isset($_GET['return_page']) ? $_GET['return_page'] : 1;
+
         #增加销售应收单导出权限
 
         $actions = array (
-            '0' => array('label' => '返回', 'href' => 'index.php?app=finance&ctl=monthend&act=index&finder_id=' . $_GET['finder_id']),
+            '0' => array('label' => '返回', 'href' => 'index.php?app=finance&ctl=monthend&act=index&finder_id='.$finder_id.'&finder_vid='.$finder_vid.'&view='.$return_view.'&page='.$return_page),
             'export' => array (
                 'label'  => '导出',
                 'class'  => 'export',
@@ -62,6 +61,12 @@ class finance_ctl_monthend_verification extends desktop_controller{
                 'label'  => '规则核销',
                 'submit'   => $this->url.'&act=ruleVerification&p[]='.$monthly_id.'&view='.$_GET['view'],
                 'target' => 'dialog::{width:600,height:300,title:\'规则核销\'}'
+            );
+            $actions['batch_verification'] = array(
+                'label'  => '批量核销',
+                'href'   => 'javascript:void(0);',
+                'submit' => $this->url.'&act=batchVerificationDialog&p[]='.$monthly_id,
+                'target' => 'dialog::{width:760,height:400,title:\'批量核销\'}',
             );
             $actions['import'] = array(
                 'label'  => '导入差异类型',
@@ -91,22 +96,21 @@ class finance_ctl_monthend_verification extends desktop_controller{
 
 
     function _views(){
+        $finder_id = isset($_GET['finder_id']) ? $_GET['finder_id'] : '';
+        $finder_vid = isset($_GET['finder_vid']) ? $_GET['finder_vid'] : '';
+        $return_view = isset($_GET['return_view']) ? $_GET['return_view'] : 0;
+        $return_page = isset($_GET['return_page']) ? $_GET['return_page'] : 1;
+        $return_params = '&finder_id='.$finder_id.'&finder_vid='.$finder_vid.'&return_view='.$return_view.'&return_page='.$return_page;
         $sub_menu = array(
             // 0 => array('label'=>app::get('base')->_('全部'),'filter'=>array('monthly_id'=>$this->report['monthly_id']),'addon'=>'_FILTER_POINT_','optional'=>false,'href'=>'index.php?app=finance&ctl=monthend_verification&act=index&p[0]='.$this->report['monthly_id'].'&view=0'),
-            array('label'=>app::get('base')->_('未核销'),'filter'=>array('monthly_id'=>$this->report['monthly_id'],'verification_status'=>'1'),'addon'=>'_FILTER_POINT_','optional'=>false,'href'=>'index.php?app=finance&ctl=monthend_verification&act=index&p[0]='.$this->report['monthly_id'].'&view=0'),
+            array('label'=>app::get('base')->_('未核销'),'filter'=>array('monthly_id'=>$this->report['monthly_id'],'verification_status'=>'1'),'addon'=>'_FILTER_POINT_','optional'=>false,'href'=>'index.php?app=finance&ctl=monthend_verification&act=index&p[0]='.$this->report['monthly_id'].'&view=0'.$return_params),
             // array('label'=>app::get('base')->_('部分核销'),'filter'=>array('monthly_id'=>$this->report['monthly_id'],'status'=>1),'addon'=>'_FILTER_POINT_','optional'=>false,'href'=>'index.php?app=finance&ctl=monthend_verification&act=index&p[0]='.$this->report['monthly_id'].'&view=1'),
-            array('label'=>app::get('base')->_('已核销'),'filter'=>array('monthly_id'=>$this->report['monthly_id'],'verification_status'=>'2'),'addon'=>'_FILTER_POINT_','optional'=>false,'href'=>'index.php?app=finance&ctl=monthend_verification&act=index&p[0]='.$this->report['monthly_id'].'&view=1'),
-            array('label'=>app::get('base')->_('全部'),'filter'=>array('monthly_id'=>$this->report['monthly_id']),'addon'=>'_FILTER_POINT_','optional'=>false,'href'=>'index.php?app=finance&ctl=monthend_verification&act=index&p[0]='.$this->report['monthly_id'].'&view=2'),
+            array('label'=>app::get('base')->_('已核销'),'filter'=>array('monthly_id'=>$this->report['monthly_id'],'verification_status'=>'2'),'addon'=>'_FILTER_POINT_','optional'=>false,'href'=>'index.php?app=finance&ctl=monthend_verification&act=index&p[0]='.$this->report['monthly_id'].'&view=1'.$return_params),
+            array('label'=>app::get('base')->_('全部'),'filter'=>array('monthly_id'=>$this->report['monthly_id']),'addon'=>'_FILTER_POINT_','optional'=>false,'href'=>'index.php?app=finance&ctl=monthend_verification&act=index&p[0]='.$this->report['monthly_id'].'&view=2'.$return_params),
         );
         return $sub_menu;
     }
 
-    /**
-     * detailVerification
-     * @param mixed $monthly_id ID
-     * @param mixed $order_bn order_bn
-     * @return mixed 返回值
-     */
     public function detailVerification($monthly_id,$order_bn)
     {
         $mdlBillBase = app::get('financebase')->model('bill_base');
@@ -190,10 +194,6 @@ class finance_ctl_monthend_verification extends desktop_controller{
 
 
     // 检查核销
-    /**
-     * 检查Verificate
-     * @return mixed 返回验证结果
-     */
     public function checkVerificate(){
         $res = kernel::single('finance_verification')->checkVerificate($_POST);
         $res['data'] = base64_encode(json_encode($res));
@@ -202,10 +202,6 @@ class finance_ctl_monthend_verification extends desktop_controller{
     }
 
 
-    /**
-     * confirmVerification
-     * @return mixed 返回值
-     */
     public function confirmVerification(){
         $data = base64_decode($_POST['data']);
         $data = json_decode($data,1);
@@ -215,34 +211,18 @@ class finance_ctl_monthend_verification extends desktop_controller{
 
 
      //确认核销
-    /**
-     * doVerificate
-     * @return mixed 返回值
-     */
     public function doVerificate(){
         $this->begin('');
-        
-        // 保存差异类型
-        if($_POST['gap_type']) {
-            $mdlBill = app::get('finance')->model('bill');
-            $mdlBill->update(array('gap_type' => $_POST['gap_type']), array('order_bn' => $_POST['order_bn'], 'monthly_id' => $_POST['monthly_id']));
-            
-            $mdlAr = app::get('finance')->model('ar');
-            $mdlAr->update(array('gap_type' => $_POST['gap_type']), array('order_bn' => $_POST['order_bn'], 'monthly_id' => $_POST['monthly_id']));
-            
-            $mdlItem = app::get('finance')->model('monthly_report_items');
-            $mdlItem->update(array('gap_type' => $_POST['gap_type']), array('order_bn' => $_POST['order_bn'], 'monthly_id' => $_POST['monthly_id']));
+
+        if ($_POST['gap_type']) {
+            $this->_saveOrderGapType($_POST['monthly_id'], $_POST['order_bn'], $_POST['gap_type']);
         }
-        
+
         $res = kernel::single('finance_verification')->doManVerificate($_POST);
         $this->end(true, app::get('base')->_('核销成功'));
     }
 
     // 移除应收应退单
-    /**
-     * doRemove
-     * @return mixed 返回值
-     */
     public function doRemove()
     {
         $ret = array('res'=>'fail','msg'=>'移除失败');
@@ -265,12 +245,6 @@ class finance_ctl_monthend_verification extends desktop_controller{
         echo json_encode($ret,1);
     }
 
-    /**
-     * dialog_memo
-     * @param mixed $monthly_id ID
-     * @param mixed $order_bn order_bn
-     * @return mixed 返回值
-     */
     public function dialog_memo($monthly_id, $order_bn)
     {
         $this->pagedata['monthly_id'] = $monthly_id;
@@ -279,12 +253,6 @@ class finance_ctl_monthend_verification extends desktop_controller{
         $this->display('monthed/memo.html');
     }
 
-    /**
-     * 保存_memo
-     * @param mixed $monthly_id ID
-     * @param mixed $order_bn order_bn
-     * @return mixed 返回操作结果
-     */
     public function save_memo($monthly_id, $order_bn)
     {
         $this->begin();
@@ -312,12 +280,6 @@ class finance_ctl_monthend_verification extends desktop_controller{
         $this->end(true);
     }
 
-    /**
-     * dialog_gap_type
-     * @param mixed $monthly_id ID
-     * @param mixed $order_bn order_bn
-     * @return mixed 返回值
-     */
     public function dialog_gap_type($monthly_id, $order_bn)
     {
         $this->pagedata['monthly_id'] = $monthly_id;
@@ -336,12 +298,6 @@ class finance_ctl_monthend_verification extends desktop_controller{
         $this->display('monthed/gap_type.html');
     }
 
-    /**
-     * 保存_gap_type
-     * @param mixed $monthly_id ID
-     * @param mixed $order_bn order_bn
-     * @return mixed 返回操作结果
-     */
     public function save_gap_type($monthly_id, $order_bn)
     {
         $this->begin();
@@ -364,10 +320,211 @@ class finance_ctl_monthend_verification extends desktop_controller{
     }
 
     /**
-     * ruleVerification
-     * @param mixed $id ID
-     * @return mixed 返回值
+     * 批量核销弹窗（带进度条）
      */
+    public function batchVerificationDialog($monthly_id)
+    {
+        if (isset($_POST['isSelectedAll']) && $_POST['isSelectedAll'] == '_ALL_') {
+            die(app::get('finance')->_('暂不支持全选'));
+        }
+
+        $ids = isset($_POST['id']) ? $_POST['id'] : null;
+        if (!is_array($ids)) {
+            if ($ids !== null && $ids !== '') {
+                $ids = array($ids);
+            }
+        }
+        if (empty($ids) || !is_array($ids)) {
+            die(app::get('finance')->_('请先选择要核销的单据'));
+        }
+
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        $ids = array_filter($ids);
+        if (count($ids) === 0) {
+            die(app::get('finance')->_('请先选择要核销的单据'));
+        }
+
+        $mdlItem = app::get('finance')->model('monthly_report_items');
+        $list = $mdlItem->getList('id', array(
+            'id'                  => $ids,
+            'monthly_id'          => $monthly_id,
+            'verification_status' => '1',
+        ), 0, -1);
+        $GroupList = array_column($list, 'id');
+        if (empty($GroupList)) {
+            die(app::get('finance')->_('请先选择未核销的单据'));
+        }
+
+        $mr = app::get('finance')->model('monthly_report')->db_dump($monthly_id, 'shop_id');
+        if (empty($mr['shop_id'])) {
+            die(app::get('finance')->_('账期数据不存在'));
+        }
+
+        $oGap = app::get('financebase')->model('gap');
+        $this->pagedata['gap_list'] = $oGap->getList('gap_name', array('status' => '1'));
+        $this->pagedata['billName'] = '待核销单据';
+        $this->pagedata['request_url'] = $this->url.'&act=doBatchVerification&monthly_id='.$monthly_id.'&shop_id='.$mr['shop_id'];
+        $this->pagedata['maxProcessNum'] = 1;
+        $this->pagedata['close'] = false;
+        $this->pagedata['queueNum'] = 1;
+        $this->pagedata['custom_html'] = $this->fetch('monthed/batch_verification.html');
+        $this->pagedata['count'] = count($GroupList);
+        $this->pagedata['arrId'] = json_encode($GroupList);
+        $this->display('admin/request_add.html', 'ome');
+    }
+
+    /**
+     * 批量核销分步执行（request_add 进度条调用）
+     */
+    public function doBatchVerification()
+    {
+        $monthly_id = isset($_GET['monthly_id']) ? intval($_GET['monthly_id']) : 0;
+        $shop_id = isset($_GET['shop_id']) ? $_GET['shop_id'] : '';
+        if (!$monthly_id || $shop_id === '') {
+            $this->_batchVerificationResponse(array(
+                'total'            => 0,
+                'succ'             => 0,
+                'fail'             => 0,
+                'validation_error' => true,
+                'fail_msg'         => array(array('msg' => '参数无效')),
+            ));
+        }
+
+        $ajaxParams = isset($_POST['ajaxParams']) ? trim($_POST['ajaxParams']) : '';
+        $itemIds = $ajaxParams === ''
+            ? array()
+            : array_values(array_unique(array_filter(array_map('intval', explode(';', $ajaxParams)))));
+
+        $retArr = array(
+            'total'    => count($itemIds),
+            'succ'     => 0,
+            'fail'     => 0,
+            'fail_msg' => array(),
+        );
+
+        if (count($itemIds) === 0) {
+            $retArr['validation_error'] = true;
+            $retArr['fail_msg'][] = array('msg' => '缺少待处理数据');
+            $this->_batchVerificationResponse($retArr);
+        }
+
+        $gap_type = isset($_POST['gap_type']) ? trim($_POST['gap_type']) : '';
+
+        $is_verification = isset($_POST['is_verification']) ? intval($_POST['is_verification']) : 0;
+        $verification_memo = isset($_POST['verification_memo']) ? trim($_POST['verification_memo']) : '';
+        if ($is_verification == 1 && $gap_type === '') {
+            $retArr['validation_error'] = true;
+            $retArr['fail_msg'][] = array('msg' => '强制核销时差异类型不能为空');
+            $this->_batchVerificationResponse($retArr);
+        }
+        if ($is_verification == 1 && $verification_memo === '') {
+            $retArr['validation_error'] = true;
+            $retArr['fail_msg'][] = array('msg' => '填写强制核销备注');
+            $this->_batchVerificationResponse($retArr);
+        }
+
+        $mdlItem = app::get('finance')->model('monthly_report_items');
+        foreach ($itemIds as $itemId) {
+            $row = $mdlItem->db_dump(array('id' => $itemId), 'order_bn,monthly_id,verification_status');
+            if (empty($row)) {
+                $retArr['fail'] += 1;
+                $retArr['fail_msg'][] = array('msg' => '单据缺少');
+                continue;
+            }
+            if ($row['verification_status'] == '2') {
+                $retArr['fail'] += 1;
+                $retArr['fail_msg'][] = array('obj_bn' => $row['order_bn'], 'msg' => '已核销');
+                continue;
+            }
+
+            $ids = $this->_getCurrentVerificateIds($row['monthly_id'], $row['order_bn']);
+            $params = array(
+                'monthly_id'        => $row['monthly_id'],
+                'order_bn'          => $row['order_bn'],
+                'shop_id'           => $shop_id,
+                'bill_id'           => $ids['bill_id'],
+                'ar_id'             => $ids['ar_id'],
+                'gap_type'          => $gap_type,
+                'is_verification'   => $is_verification,
+                'verification_memo' => $verification_memo,
+            );
+
+            $this->_saveOrderGapType($row['monthly_id'], $row['order_bn'], $gap_type);
+
+            $res = kernel::single('finance_verification')->doManVerificate($params);
+            if ($res['status'] == 'success') {
+                $retArr['succ'] += 1;
+            } else {
+                $retArr['fail'] += 1;
+                $msg = !empty($res['msg']) ? $res['msg'] : '核销失败';
+                $retArr['fail_msg'][] = array('obj_bn' => $row['order_bn'], 'msg' => $msg);
+            }
+        }
+
+        finance_monthly_report::updateMonthlyAmount(array('monthly_id' => $monthly_id));
+
+        $this->_batchVerificationResponse($retArr);
+    }
+
+    /**
+     * 批量核销统一响应（request_add 约定：total/succ/fail/fail_msg）
+     */
+    protected function _batchVerificationResponse($retArr)
+    {
+        echo json_encode($retArr);
+        exit;
+    }
+
+    /**
+     * 获取本期待核销的实收实退、应收应退 id 列表
+     */
+    protected function _getCurrentVerificateIds($monthly_id, $order_bn)
+    {
+        $bill_ids = array();
+        $ar_ids = array();
+
+        $bill_data = kernel::single('finance_bill')->getListByOrderBn($order_bn);
+        foreach ($bill_data as $v) {
+            if ($monthly_id == $v['monthly_id'] && $v['status'] == 0 && $v['charge_status'] == 1) {
+                $bill_ids[] = $v['bill_id'];
+            }
+        }
+
+        $ar_data = kernel::single('finance_ar')->getListByOrderBn($order_bn);
+        foreach ($ar_data as $v) {
+            if ($monthly_id == $v['monthly_id'] && $v['status'] == 0 && $v['charge_status'] == 1) {
+                $ar_ids[] = $v['ar_id'];
+            }
+        }
+
+        return array('bill_id' => $bill_ids, 'ar_id' => $ar_ids);
+    }
+
+    /**
+     * 保存订单差异类型到 bill、ar、monthly_report_items
+     */
+    protected function _saveOrderGapType($monthly_id, $order_bn, $gap_type)
+    {
+        if (!$gap_type) {
+            return;
+        }
+
+        app::get('finance')->model('bill')->update(
+            array('gap_type' => $gap_type),
+            array('order_bn' => $order_bn, 'monthly_id' => $monthly_id)
+        );
+
+        app::get('finance')->model('ar')->update(
+            array('gap_type' => $gap_type),
+            array('order_bn' => $order_bn, 'monthly_id' => $monthly_id)
+        );
+
+        app::get('finance')->model('monthly_report_items')->update(
+            array('gap_type' => $gap_type),
+            array('order_bn' => $order_bn, 'monthly_id' => $monthly_id)
+        );
+    }
+
     public function ruleVerification($id) {
         $mr = app::get('finance')->model('monthly_report')->db_dump($id, 'shop_id');
         $filter = array(
@@ -384,10 +541,6 @@ class finance_ctl_monthend_verification extends desktop_controller{
         parent::dialog_batch();
     }
 
-    /**
-     * doRuleVerification
-     * @return mixed 返回值
-     */
     public function doRuleVerification() {
         $itemIds = explode(',',$_POST['primary_id']);
 
@@ -416,14 +569,14 @@ class finance_ctl_monthend_verification extends desktop_controller{
             }
         }
 
+        $firstRow = app::get('finance')->model('monthly_report_items')->db_dump(['id'=>$itemIds[0]], 'monthly_id');
+        if(!empty($firstRow['monthly_id'])) {
+            finance_monthly_report::updateMonthlyAmount(array('monthly_id'=>$firstRow['monthly_id']));
+        }
+
         echo json_encode($retArr),'ok.';exit;
     }
 
-    /**
-     * base_list
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function base_list($id){
         $row = app::get('finance')->model('monthly_report_items')->db_dump(['id'=>$id], 'order_bn');
         $params = array(
@@ -441,11 +594,6 @@ class finance_ctl_monthend_verification extends desktop_controller{
         $this->finder('financebase_mdl_base', $params);
     }
 
-    /**
-     * sale_list
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function sale_list($id){
         $row = app::get('finance')->model('monthly_report_items')->db_dump(['id'=>$id], 'order_bn');
         $orderObj = app::get('ome')->model('orders');

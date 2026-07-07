@@ -24,6 +24,7 @@
  */
 class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delivery
 {
+    const URGENT_LABEL_CODE = 'SOMS_URGENT_SHIP';
     private $_shop_type_mapping = array(
         'taobao'    => 'TB',
         'paipai'    => 'PP',
@@ -51,7 +52,7 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
         'xhs'       => 'XHS',
         'weimobv'   => 'WM',
         'weimobr'   => 'WM',
-        'xiaomi'    => 'XMYP', 
+        'xiaomi'    => 'XMYP',
         'dewu'      => 'DW',
         'wxshipin'  => 'WXSPHXD',
         'aikucun'   => 'AKC',
@@ -92,11 +93,11 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
         if(kernel::single('ome_security_router',$sdf['shop_type'])->is_encrypt($sdf,'delivery')) {
             $this->is_platform_encrypt = true;
         }
-        
+
         //oaid
         if(in_array($sdf['shop_type'], array('taobao','360buy', 'jd', 'wxshipin')) && $sdf['encrypt_source_data']['oaid']) {
             $sdf['oaid'] = $sdf['encrypt_source_data']['oaid'];
-            
+
             // consignee
             foreach ($sdf['consignee'] as $dk => $dv) {
                 if(is_string($dv) && $index = strpos($dv , '>>')) {
@@ -108,7 +109,7 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
         // alibaba解密用origin_caid_field，可参考ome_security_alibaba->get_encrypt_body
         if(in_array($sdf['shop_type'], array('alibaba')) && $sdf['encrypt_source_data']['origin_caid_field']) {
             $sdf['oaid'] = $sdf['encrypt_source_data']['origin_caid_field'];
-            
+
             // consignee
             foreach ($sdf['consignee'] as $dk => $dv) {
                 if(is_string($dv) && $index = strpos($dv , '>>')) {
@@ -116,7 +117,7 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
                 }
             }
         }
-        
+
         if( in_array($sdf['shop_type'], array('taobao')) ) {
             foreach ($sdf['consignee'] as $dk => $dv) {
                 if(is_string($dv) && $index = strpos($dv , '>>')) {
@@ -133,7 +134,7 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
 
         if (in_array($sdf['shop_type'], array('xhs')) && $sdf['extend_field']['openAddressId']) {
 
-            
+
             $sdf['oaid'] = $sdf['extend_field']['openAddressId'];
         }
         //  有些WMS还不支持oaid取号，所以也需要把密文推给他们
@@ -146,7 +147,7 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
     protected function _format_delivery_create_params($sdf)
     {
         $appkey = $this->__channelObj->wms['addon']['wms_appkey'];
-        
+
         $oaid = $sdf['oaid'];
         $params = parent::_format_delivery_create_params($sdf);
         $params['warehouse_code'] = $this->get_warehouse_code($this->__channelObj->wms['channel_id'],$sdf['branch_bn']);
@@ -164,7 +165,7 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
         $params['shipper_address'] = $shop['addr'];
         $params['shipper_zip'] = $shop['zip'];
         $params['order_flag']      = '';
-        
+
         //泉峰的单独处理
         if (base_shopnode::node_id('ome') == '1081190530') {
             //订单来源平台
@@ -176,23 +177,23 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
         } else {
             $order_source = $this->_shop_type_mapping[$sdf['shop_type']];
             $params['order_source'] = $order_source && $sdf['createway'] == 'matrix' ?  $order_source : 'OTHER';
-            
+
             // 补发订单，如果关联的原订单是平台订单，则使用平台标识
             if($sdf['order_type'] == 'bufa' && $sdf['relate_order_bn']){
                 // 获取关联的原订单信息
                 $relateOrderInfo = app::get('ome')->model('orders')->dump(array('order_bn'=>$sdf['relate_order_bn']), 'order_id,shop_type,createway');
                 if($relateOrderInfo && $relateOrderInfo['createway'] == 'matrix'){
                     $relate_order_source = $this->_shop_type_mapping[$relateOrderInfo['shop_type']];
-                    
+
                     // order_source
                     $params['order_source'] = $relate_order_source ?  $relate_order_source : $params['order_source'];
                 }
             }
-            
+
             //订单来源标识
             if (($sdf['shop_type'] == 'taobao' && $sdf['shop_id'] && $sdf['createway'] == 'matrix') || ($sdf['order_source'] == 'platformexchange' && $order_source)) {
                 //矩阵下发的淘宝订单 或 平台换货生成的新订单
-                $params['order_source'] = $order_source; 
+                $params['order_source'] = $order_source;
                 //判断是不是天猫
                 $shopInfo = $shopObj->dump(array('shop_id'=>$sdf['shop_id'],'tbbusiness_type'=>'B'));
                 if ($shopInfo) {
@@ -241,7 +242,7 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
             if($sdf['order_type'] == 'presale' && !in_array('PRESELL',$order_flag)){
 
                $order_flag[] = 'PRESELL';
-            } 
+            }
         }
         // 天猫物流升级
         if (kernel::single('ome_delivery_bool_type')->isCPUP($sdf['bool_type'])) {
@@ -289,19 +290,19 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
             $extend_props['jdService'] = 'JDWJ_DELIVERY_TO_DOOR';
             $order_flag[] = 'VISIT';
         }
-        
+
         //仓库自定义字段-活动号
         if(isset($sdf['activity_no'])){
             $extend_props['activity_no'] = $sdf['activity_no'];
         }
-        
+
         //抖音自选物流发货
         $labelCode = kernel::single('ome_bill_label')->getLabelFromOrder($sdf['delivery_id'], 'ome_delivery');
         $labelCode = array_column($labelCode, 'label_code');
         if (in_array(kernel::single('ome_bill_label')->isExpressMust(), (array)$labelCode)) {
             $order_flag[] = 'MODIFYTRANSPORT';
         }
-        
+
         // 国补订单(京东平台国补拍照信息：gov_photo_check)
         if(in_array($sdf['shop_type'], ['360buy', 'jd'])){
             $guoBuLabelInfo = [];
@@ -311,27 +312,33 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
             if($orderInfo){
                 $guoBuLabelInfo = kernel::single('ome_bill_label')->getBillLabelInfo($orderInfo['order_id'], 'order', 'SOMS_GB');
             }
-            
+
             // 国补订单拍照信息
             if($guoBuLabelInfo && $guoBuLabelInfo['label_value'] & 0x0400){
                 $extend_props['gov_photo_check'] = '国补拍照';
-                
+
                 // flag
                 $params['remark'] = '[国补拍照]'. $params['remark'];
             }
         }
-        
+
+        if ($this->isUrgentDelivery($sdf)) {
+            $extend_props['urgent_delivery'] = true;
+        }
+        //是否是国补订单进行标识推送wms
+        $extend_props['isGuobuOrder'] = $sdf['is_guobu_order'] ?: 'false';
+
         $params['extendProps'] = json_encode($extend_props);
         $params['order_flag'] = implode(',', $order_flag);
-        
+
         // 如果三级区不存在，直接使用二级市
         $params['receiver_state']   = $this->_formate_receiver_province($params['receiver_state'],$params['receiver_district']);
-        
+
         // oaid
         if($oaid) {
             // 是否密文标记
             $params['is_platform_encrypt'] = $this->is_platform_encrypt;
-            
+
             //[伊藤忠WMS]订单手工编辑收货人信息是明文时,不用传oaid
             if(in_array($appkey, array('31417025')) && $sdf['extend_status'] == 'consignee_modified' && !$this->is_platform_encrypt){
                 $params['receiver_oaid'] = '';
@@ -341,7 +348,7 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
             }else{
                 $params['receiver_oaid'] = $oaid;
             }
-            
+
             // tid
             if($sdf['extend_field']['oaidSourceCode']) {
                 $params['tid'] = $sdf['extend_field']['oaidSourceCode'];
@@ -397,16 +404,16 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
         $params = $this->_get_wms_cross_shop_waybill($params, $sdf);
 
         $params['seller_message'] = $sdf['memo'];
-        
+
         //@todo：美诺WMS最多允许传255个字符(一个汉字为3个字符)，超出部分需要截取，否则推送报错；
         if(strlen($params['seller_message']) > 255){
             $params['seller_message'] = kernel::single('ome_func')->substrStringSafe($params['seller_message'], 255);
         }
-        
+
         if(strlen($params['remark']) > 255){
             $params['remark'] = kernel::single('ome_func')->substrStringSafe($params['remark'], 255);
         }
-        
+
         $params['buyer_message'] = $sdf['custom_mark'];
 
         $receiver_name = $params['receiver_name'];
@@ -414,7 +421,7 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
 
         $receiver_address = $params['receiver_address'];
         if ($receiver_address) $params['receiver_address'] = $receiver_address;
-        
+
         //以product_id为键值组织货品明细(订单拆单后,回传奇门平台单号要唯一)
         $arrProductData    = array();
         if($sdf['order_objects'])
@@ -424,14 +431,14 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
                 foreach ($objVal['order_items'] as $itemVal)
                 {
                     $product_id    = $itemVal['product_id'];
-                    
+
                     //根据订单类型,使用关联订单号
                     if(in_array($objVal['order_type'], array('bufa'))){
                         $relate_order_bn = ($objVal['relate_order_bn'] ? $objVal['relate_order_bn'] : $objVal['order_bn']);
-                        
+
                         $arrProductData[$product_id]['order_bn'][$relate_order_bn] = $relate_order_bn;
 
-                   
+
                         $sdf['order_bn'] = $relate_order_bn;
 
                         // 补发单不推oaidOrderSourceCode
@@ -445,7 +452,7 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
                     }else {
                         $arrProductData[$product_id]['num']    = $itemVal['nums'];
                     }
-                    
+
                     $arrProductData[$product_id][$itemVal['item_id']]['oid'] = $itemVal['oid'] ? $itemVal['oid'] : uniqid();
                     $arrProductData[$product_id][$itemVal['item_id']]['shop_goods_id'] = $objVal['shop_goods_id'];
                 }
@@ -465,10 +472,10 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
             $detail_delivery_id = $tempItemVal['delivery_id'];
             $delivery_item_id = $tempItemVal['delivery_item_id'];
             $actually_amount = is_null($tempItemVal['actually_amount']) ? 0 : $tempItemVal['actually_amount'];
-            
+
             // items
             $detailItems[$detail_delivery_id][$delivery_item_id] = $tempItemVal;
-            
+
             // 按货号纬度累加：客户实付
             if(!isset($detailItemBns[$product_bn])){
                 $detailItemBns[$product_bn] = [
@@ -477,13 +484,13 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
                     'actually_amount' => 0,
                 ];
             }
-            
+
             $detailItemBns[$product_bn]['number'] += $tempItemVal['number'];
             $detailItemBns[$product_bn]['actually_amount'] += $actually_amount;
         }
-        
+
         $items = array('item'=>array()); $delivery_items = $sdf['delivery_items'];
-        
+
         if ($delivery_items){
             sort($delivery_items);
             foreach ($delivery_items as $k => $v)
@@ -491,33 +498,33 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
                 $product_bn = $v['bn'];
                 $qimen_delivery_id = $v['qimen_delivery_id'];
                 $delivery_item_id = $v['delivery_items_id'];
-                
+
                 // 客户实付(合并发货单，按货号纬度累加后的金额)
                 $actually_amount = $detailItemBns[$product_bn]['actually_amount'];
-                
+
                 // foreign_sku
                 $foreignsku = app::get('console')->model('foreign_sku')->dump(array('wms_id'=>$this->__channelObj->wms['channel_id'],'inner_sku'=>$v['bn']));
                 
                 //订单拆单后,回传奇门平台单号要唯一
                 $productInfo    = $arrProductData[$v['product_id']];
-                
+
                 //取明细order_item_id
                 //$items_detail = $shopObj->db->selectrow("SELECT order_item_id FROM sdb_ome_delivery_items_detail WHERE delivery_id=".$v['qimen_delivery_id']." AND delivery_item_id=".$v['delivery_items_id']);
                 $items_detail = $detailItems[$qimen_delivery_id][$delivery_item_id];
-                
+
                 //[兼容]合并发货单超过50个字符需要截取
                 if($appkey && in_array($appkey,array('31417025'))){
                     $trade_code    = $sdf['order_bn'];
                 }else{
                     $trade_code    = current($productInfo['order_bn']);
                 }
-            
+
                 $sub_trade_code = $productInfo[$items_detail['order_item_id']]['oid'];
                 if($productInfo && ($v['number'] != $productInfo['num']))
                 {
                     //$sub_trade_code    .= '_'. $v['qimen_delivery_id'];
                 }
-                
+
                 $_item = array(
                     'item_code'       => $foreignsku['oms_sku'] ? $foreignsku['oms_sku'] : $v['bn'],
                     'item_name'       => $v['product_name'],
@@ -535,7 +542,7 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
                     'ownerCode'       => $sdf['owner_code'],
                     'item_actually_amount' => $actually_amount, // 客户实付
                 );
-                
+
                 // 唯品会,判断是否有重点检查
                 if ($quality_check_itemcode && in_array($_item['item_code'], $quality_check_itemcode)) {
                     $_item['extendProps'] = ['quality_check_itemcode'=>true];
@@ -543,14 +550,14 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
                 $items['item'][] = $_item;
             }
         }
-        
+
         //合并订单发货时，format格式化明细
         //@todo：items明细中第一个订单号必须与receiver_address加密订单一致，否则第三方WMS无法解密;
         $orderBnList = explode('|', $sdf['order_bn']);
         if(count($orderBnList) > 1){
             $items = $this->_formatMergeItems($sdf, $items);
         }
-        
+
         //json
         $params['items'] = json_encode($items);
 
@@ -574,10 +581,34 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
             $params['orig_order_code'] = $delivery['delivery_bn'];
         }
         $params['pay_time'] = $sdf['pay_time'];
-        
+
         return $params;
     }
-    
+
+    /**
+     * 判断当前发货单或关联订单是否已打上加急发货标签，用于透传 WMS。
+     *
+     * @param array $sdf
+     * @return bool
+     */
+    protected function isUrgentDelivery($sdf)
+    {
+        $labelLib = kernel::single('ome_bill_label');
+        if (!empty($sdf['delivery_id']) && $labelLib->existLabel($sdf['delivery_id'], self::URGENT_LABEL_CODE, 'delivery')) {
+            return true;
+        }
+        if (!empty($sdf['order_id']) && $labelLib->existLabel($sdf['order_id'], self::URGENT_LABEL_CODE)) {
+            return true;
+        }
+        if (!empty($sdf['order_bn'])) {
+            $order = app::get('ome')->model('orders')->dump(['order_bn' => $sdf['order_bn']], 'order_id');
+            if (!empty($order['order_id']) && $labelLib->existLabel($order['order_id'], self::URGENT_LABEL_CODE)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     protected function _getNextObjType()
     {
         return '';
@@ -632,7 +663,7 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
         }
         return $ret;
     }
-    
+
     /**
      * 合并订单发货时，format格式化明细
      * @todo：items明细中第一个订单号必须与receiver_address加密订单一致，否则第三方WMS无法解密;
@@ -644,7 +675,7 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
     public function _formatMergeItems($sdf, $items)
     {
         $first_order_bn = current(explode('|', $sdf['order_bn']));
-        
+
         $tempList = array();
         $firstList = array();
         foreach ($items['item'] as $itemKey => $itemVal)
@@ -656,9 +687,9 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
                 $tempList[] = $itemVal;
             }
         }
-        
+
         $items['item'] = array_merge($firstList, $tempList);
-        
+
         return $items;
     }
 
@@ -672,7 +703,7 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
     {
         return WMS_PRESALES_PACKAGE_CONSIGN;
     }
-    
+
     /**
      * 预售付尾款通知wms参数
      *
@@ -688,7 +719,7 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
             'remark' => '', //备注
             //'ownerCode' => $sdf['ownerCode'], //货主编码(此字段是矩阵取customerId字段的值)
         );
-        
+
         return $params;
     }
 

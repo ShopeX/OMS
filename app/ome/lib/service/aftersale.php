@@ -106,7 +106,7 @@ class ome_service_aftersale{
         
         if ($returninfo['source'] == 'matrix' && in_array($returninfo['shop_type'],array('bbc','ecos.b2c','ecos.b2b2c.stdsrc','360buy','meituan4medicine'))){
             $returninfo['memo'] = $memo;
-        }elseif($returninfo['source'] == 'matrix' && in_array($returninfo['shop_type'], array('luban'))){
+        }elseif($returninfo['source'] == 'matrix' && in_array($returninfo['shop_type'], array('luban','jd'))){
             //使用售后申请单上的内容
             $returninfo['memo'] = $memo;
         }
@@ -379,7 +379,7 @@ class ome_service_aftersale{
      */
     public function returngoods_confirm($return_id){
         $returnModel = app::get('ome')->model('return_product');
-        $returninfo = $returnModel->db_dump(array('return_id'=>$return_id,'source'=>'matrix'),'return_bn,return_id,shop_id,kinds');
+        $returninfo = $returnModel->db_dump(array('return_id'=>$return_id,'source'=>'matrix'),'return_bn,return_id,shop_id,kinds,platform_order_bn,order_id');
         if($returninfo){
             $rs = kernel::single('erpapi_router_request')->set('shop', $returninfo['shop_id'])->aftersale_returnGoodsSign($returninfo);
             $rs = kernel::single('erpapi_router_request')->set('shop', $returninfo['shop_id'])->aftersale_returnGoodsConfirm($returninfo);

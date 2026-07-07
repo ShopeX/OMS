@@ -1,19 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 /**
  * 订单组结构
@@ -1077,7 +1062,7 @@ class omeauto_auto_group_item
             }
             //发货单通知单推送仓库
             $wmsStart = microtime(true);
-            ome_delivery_notice::create($newdly_id);
+            
             $wmsTime = microtime(true) - $wmsStart;
             
             // 记录WMS通知性能数据
@@ -1087,6 +1072,7 @@ class omeauto_auto_group_item
             if ($waybillCode) {
                 $deliveryObj->db->exec("UPDATE sdb_ome_delivery SET logi_no='" . $waybillCode . "' WHERE delivery_id=" . $newdly_id);
             }
+            ome_delivery_notice::create($newdly_id);
         } else {
             //发货单通知单推送仓库
             foreach ($ids as $newdly_id) {
@@ -1104,7 +1090,7 @@ class omeauto_auto_group_item
                     ));
                 }
                 $wmsStart = microtime(true);
-                ome_delivery_notice::create($newdly_id);
+                
                 $wmsTime = microtime(true) - $wmsStart;
                 
                 // 记录WMS通知性能数据
@@ -1114,6 +1100,7 @@ class omeauto_auto_group_item
                 if ($waybillCode) {
                     $deliveryObj->db->exec("UPDATE sdb_ome_delivery SET logi_no='" . $waybillCode . "' WHERE delivery_id=" . $newdly_id);
                 }
+                ome_delivery_notice::create($newdly_id);
             }
         }
         // todo maxiaochen 得物品牌直发 请求接单接口，如果检测到有取消的发货单，则先调用发货仓修改接口

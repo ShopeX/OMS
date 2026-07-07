@@ -60,6 +60,7 @@ class erpapi_logistics_matrix_pdd_request_electron extends erpapi_logistics_requ
             'detail'   => $sdf['shop']['address_detail'],
             'district' => $sdf['shop']['area'],
             'province' => $sdf['shop']['province'],
+            'street'   => $sdf['shop']['street'],
             'mobile' => $sdf['shop']['mobile'],
             'name'   => $sdf['shop']['default_sender'],
             'phone'  => $sdf['shop']['tel'],
@@ -119,8 +120,8 @@ class erpapi_logistics_matrix_pdd_request_electron extends erpapi_logistics_requ
                     'name'  => $this->charFilter($pVal['item_name'])
                 );
             }
-            $TradeOrderInfoDto[] = array(
-                'object_id'          => $delivery['delivery_bn'],
+            $tmp = array(
+                'object_id'           => $delivery['delivery_bn'],
                 'order_platform' => $delivery['order_channels_type'] ? $delivery['order_channels_type'] : 'OTHER',
                 'tid_list'    => empty($delivery['order_bn'])
                     ? array($delivery['delivery_bn'])
@@ -145,6 +146,13 @@ class erpapi_logistics_matrix_pdd_request_electron extends erpapi_logistics_requ
                 'order_bns'    => implode(',', $delivery['order_bns']),
 
             );
+
+            // 四级地区(街道)
+            if ($delivery['ship_town']) {
+                $tmp['recipient']['street'] = $delivery['ship_town'];
+            }
+
+            $TradeOrderInfoDto[] = $tmp;
         }
 
         $params = array(
