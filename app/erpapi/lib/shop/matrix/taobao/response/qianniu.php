@@ -50,6 +50,11 @@ class erpapi_shop_matrix_taobao_response_qianniu extends erpapi_shop_response_qi
                 // 加密字段处理
                 $hashCode = kernel::single('ome_security_hash')->get_code();
                 foreach ($this->_qnordersdf['modifiedAddress'] as $key => $value) {
+                    // postCode 是邮编，不属于 OMS 隐私索引字段。
+                    if ($key == 'postCode') {
+                        continue;
+                    }
+
                     if(strpos($value, '*') !== false) {
                         $this->_qnordersdf['modifiedAddress'][$key] .= '>>' . $this->_qnordersdf['oaid'] . $hashCode;
                     }

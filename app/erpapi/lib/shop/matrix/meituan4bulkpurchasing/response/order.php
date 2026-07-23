@@ -38,6 +38,11 @@ class erpapi_shop_matrix_meituan4bulkpurchasing_response_order extends erpapi_sh
         $hashCode = kernel::single('ome_security_hash')->get_code();
         if ($this->_ordersdf['extend_field']['oaid']) {
             foreach ($this->_ordersdf['consignee'] as $key => $value) {
+                // 邮编和邮箱不是 OMS 隐私索引字段，不能拼接 oaid@hash。
+                if (in_array($key, ['email', 'zip', 'ship_zip'])) {
+                    continue;
+                }
+
                 if(strpos($value, '*') !== false) {
                     $this->_ordersdf['consignee'][$key] .= '>>' . $this->_ordersdf['extend_field']['oaid'] . $hashCode;
                 }
