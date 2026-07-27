@@ -1686,6 +1686,12 @@ class ome_ctl_admin_return_rchange extends desktop_controller
             }
         }
         
+        // 切换换货仓库时，页面会一次提交全部已选销售物料并直接读取JSON，
+        // 复用新增销售物料的库存计算逻辑，确保普通、组合、福袋和多选一口径一致。
+        if($_GET['response_type'] == 'json'){
+            echo json_encode($rows);exit;
+        }
+
         echo "window.autocompleter_json=".json_encode($rows);exit;
     }
     //获取展示销售物料信息

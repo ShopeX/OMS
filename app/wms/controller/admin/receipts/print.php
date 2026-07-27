@@ -16,7 +16,6 @@
  */
 
 class wms_ctl_admin_receipts_print extends desktop_controller {
-
     var $workground = "wms_delivery";
 
     var $dlyCorp_tab = 'show';
@@ -102,10 +101,15 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
             'filter' => $tmp_filter,
             'optional' => false
         );
+        $sub_menu[$c++] = array(
+            'label' => app::get('base')->_('加急发货'),
+            'filter' => array_merge($tmp_filter, array('delivery_label_code' => 'SOMS_URGENT_SHIP')),
+            'optional' => false
+        );
 
         #第三方发货时，显示已发货、未发货
         if($_GET['ctl'] == 'admin_receipts_outer') {
-            $c = 3;#物流公司view在未发货之后
+            $c = $c + 2;
             $outer_filter = $tmp_filter;
             #让已发货、未发货显示在全部之后
             $outer = $this->shipStatus();
@@ -160,16 +164,16 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
     function index()
     {
         $dlyCorpMdl = app::get('ome')->model('dly_corp');
-        
+
         if($_GET['status']=='' || $_GET['status']==5){
             $this->dlyCorp_tab = 'hidden';
         }
-        
+
         //同城配送&&商家配送&&官方物流提货
         $is_instatnt = false;
         $is_seller = false;
         $is_pickup = false;
-        
+
         $logi_id = intval($_GET['logi_id']);
         if($logi_id){
             $dlyCorpInfo = $dlyCorpMdl->dump(array('corp_id'=>$logi_id), '*');
@@ -181,7 +185,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
                 $is_pickup = true;
             }
         }
-        
+
         //操作员ID号
         $op_id  = $this->user->get_id();
         $sku = kernel::single('base_component_request')->get_get('sku');
@@ -218,11 +222,11 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
         if($_GET['status'] == '' || $_GET['status'] == 6) {
             $filter['type'] = kernel::single('wms_delivery_cfg')->getNormalCheckConsign();
         }
-        
+
         //分析status的filter条件
         $tmp_filter = $this->analyseStatus($_GET['status']);
         $filter = array_merge($filter, $tmp_filter);
-        
+
         //获取操作员管辖仓库
         if($_GET['btype']==2){
             //导出的时候走这里取第三方仓
@@ -411,7 +415,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
                 'submit' => 'index.php?app=wms&ctl=admin_receipts_print&act=batchLogistics' . $attach,
                 'target' => 'dialog::{title:\'批量填写同城配物流信息\',width:500,height:300}',
             );
-            
+
             unset($params['actions']['orderbycreatetime']);
         }elseif($is_seller){
             //商家配送
@@ -420,7 +424,17 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
                 'submit' => 'index.php?app=wms&ctl=admin_receipts_print&act=batchDeliveryman' . $attach,
                 'target' => 'dialog::{title:\'批量填写商家配送信息\',width:500,height:300}',
             );
-            
+
+            unset($params['actions']['orderbycreatetime']);
+        }elseif($is_pickup){
+            //官方物流提货
+           /* $params['actions']['stock'] = array(
+                'label' => '官方物流提货',
+
+                'submit' => 'index.php?app=wms&ctl=admin_receipts_print&act=toPrintStock' . $attach,
+                'target' => "_blank",
+            );*/
+
             unset($params['actions']['orderbycreatetime']);
         }elseif($is_pickup){
             //官方物流提货
@@ -440,13 +454,13 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
                 'target' => 'dialog::{title:\'批量更换物流公司\',width:680,height:500}',
             );
         }
-        
+
         if ($_GET['status'] == '5'){
             $params['actions']['batchsync'] = array('label' => '发货状态回写至OMS',
                 'submit' => 'index.php?app=wms&ctl=admin_receipts_print&act=batch_sync',
                 'confirm' => '你确定要对勾选的发货单状态回写吗？',
                 'target' => 'refresh');
-            
+
             //同城配送
             $params['actions']['batchlporderid'] = array(
                 'label' => '同城配操作',
@@ -1541,7 +1555,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
 
         $deliveryObj = app::get('wms')->model('delivery');
         $branchObj = app::get('ome')->model('branch');
-        
+
         //delivery
         $errorDlyBns = array();
         $deliverys = $deliveryObj->getList('delivery_id, branch_id, delivery_bn,delivery_model', array('delivery_id' => $ids));
@@ -1549,19 +1563,19 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
         foreach ($deliverys as $delivery) {
             $branchDatas[$delivery['branch_id']]['delivery'][$delivery['delivery_id']] = $delivery['delivery_bn'];
             $branchDatas[$delivery['branch_id']]['count']++;
-            
+
             //check
             if(in_array($delivery['delivery_model'], array('seller','instatnt'))){
                 $errorDlyBns[] = $delivery['delivery_bn'];
             }
         }
-        
+
         //check
         if($errorDlyBns){
             $error_msg = "同城配、商家配送类型的发货单，不能更换普通物流公司(发货单号：". implode(',', $errorDlyBns) .")";
             die($error_msg);
         }
-        
+
         //branch
         foreach ($branchDatas as $key => $branchData) {
             $branchDatas[$key]['branch'] = $branchObj->dump($key, 'branch_id,name');
@@ -1842,12 +1856,12 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
             exit;
         }
 
-       
+
 
         $PrintStockLib = kernel::single('wms_delivery_print_stock');
         $format_data = $PrintStockLib->format($print_data, $sku,$_err);
         $this->pagedata = $format_data;
-        
+
         $this->pagedata['errBns'] = $print_data['errBns'];
         $this->pagedata['err'] = $_err;
         $this->pagedata['allItems'] = $print_data['deliverys'];
@@ -2048,7 +2062,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
                 $this->end(false, '商家配送物流模式，请使用【批量填写商家配送信息】方式!');
             }
         }
-        
+
         //check
         if ($delivery['logi_id'] != $_POST['dly']['logi_id']) {
 
@@ -2165,7 +2179,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
         if ($result) {
             if ($result === 1) {
 
-                # [拆单]修改发货单详情加入发货单号_物流运单号
+                // [拆单]修改发货单详情加入发货单号_物流运单号 ExBOY
                 $log_msg       = '修改发货单详情';
                 $log_msg       .= (empty($delivery['delivery_bn']) ? '' : '，发货单号：'.$delivery['delivery_bn']);
                 $log_msg       .= (empty($delivery['delivery_bn']) ? '' : '，物流单号：'.$_POST['dly']['logi_no']);
@@ -2558,7 +2572,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
         @ini_set('memory_limit','1024M');
 
         $_err = 'false';
-        
+
         /* 单品、多品标识 */
         $sku = kernel::single('base_component_request')->get_get('sku');
         $sku = $sku ? $sku : '';
@@ -2607,7 +2621,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
         foreach($print_data['deliverys'] as $val)
         {
             $temp_delivery_id = $val['delivery_id'];
-            
+
             empty($logiId) && $logiId = $val['logi_id'];
             empty($shopType) && $shopType = $val['shop_type'];
             $orderSource = current($val['orders']);
@@ -2625,20 +2639,20 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
                     $expressDelivery[$val['delivery_id']][$dk] = $dv;
                 }
             }
-            
+
             $delieryBns[$temp_delivery_id] = $val['delivery_bn'];
         }
 
         $corp = app::get('ome')->model('dly_corp')->dump($logiId);
-        
+
         //同城配
         if(in_array($corp['corp_model'], array('instatnt', 'seller'))){
             $billList = $dlyBillObj->getList('*', array('delivery_id'=>array_keys($delieryBns)));
-            
+
             foreach ($billList as $billKey => $billVal)
             {
                 $temp_delivery_id = $billVal['delivery_id'];
-                
+
                 if(empty($billVal['logi_no'])){
                     $error_msg = '同城配发货单号：'. $delieryBns[$temp_delivery_id] .',请先填写物流信息 或者 配送员信息';
                     $this->message($error_msg);
@@ -2646,7 +2660,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
                 }
             }
         }
-        
+
         app::get('ome')->model('dly_corp_channel')->getChannel($corp, $expressDelivery);
         if(!$corp['channel_id'] && $corp['tmpl_type'] == 'electron') {
             $this->message('对应多个电子面单来源，无法打印');
@@ -2655,7 +2669,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
         if(!isset($_GET['isdown']) && $corp['tmpl_type'] == 'electron') {//处理电子面单
             $channelInfo = $channelObj->db_dump(array('channel_id'=>$corp['channel_id']),'channel_type,logistics_code');
             $expressTmpl = app::get("logisticsmanager")->model('express_template')->dump($corp['prt_tmpl_id'],'template_type,control_type');
-            
+
             //通过快递鸟连接顺丰获取顺丰子母件；电子面单来源为快递鸟电子面单，物流公司为顺丰，控件类型为lodop
             if ($channelInfo['channel_type'] == 'hqepay' && $channelInfo['logistics_code'] == 'SF' && $expressTmpl['control_type'] == 'lodop') {
                 $existTB = $existPDD = $existDY = false;
@@ -3077,7 +3091,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
         $dlyCorpObj = app::get('ome')->model('dly_corp');
         $data = $dlyObj->dump($id, '*');
         $dlyCorp = $dlyCorpObj->dump($data['logi_id'], 'prt_tmpl_id,type,tmpl_type,channel_id,shop_id');
-        
+
         //获取电子面单渠道
         $type = 'normal';
         $return = array('type' => 'normal');
@@ -3304,7 +3318,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
         $dlyCorpObj = app::get('ome')->model('dly_corp');
         $data = $deliveryObj->dump($id, '*');
         $dlyCorp = $dlyCorpObj->dump($data['logi_id'], 'prt_tmpl_id,type,tmpl_type,channel_id,shop_id');
-        
+
         //获取电子面单渠道
         $type = 'normal';
         $channel = array('type' => 'normal');
@@ -3331,7 +3345,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
     function batch_sync()
     {
         // $this->begin('');
-        
+
         $ids = $_POST['delivery_id'];
         $db = kernel::database();
         $billObj = app::get('wms')->model('delivery_bill');
@@ -3339,22 +3353,22 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
             foreach ($ids as  $deliveryid) {
                 $sql = "SELECT w.delivery_cost_actual,w.branch_id,w.delivery_id as wms_delivery_id,w.delivery_time,o.delivery_bn,o.delivery_id,o.status,w.outer_delivery_bn,w.weight FROM sdb_wms_delivery as w left join sdb_ome_delivery as o on w.outer_delivery_bn=o.delivery_bn WHERE w.status='3' AND o.process='false' AND w.delivery_id=".$deliveryid;
                 $deliverys = $db->select($sql);
-                
+
                 //check
                 if(empty($deliverys)){
                     continue;
                 }
-                
+
                 //list
                 foreach ($deliverys as $delivery){
                     $dly_id = $delivery['wms_delivery_id'];
-                    
+
                     //ome发货单发货失败
                     //@todo：货品冻结释放失败,需要重新计算冻结预占记录
                     if(in_array($delivery['status'], array('progress', 'ready'))){
                         $this->_delivery_reset_freeze($delivery['delivery_id']);
                     }
-                    
+
                     //wms_id
                     $wms_id = kernel::single('ome_branch')->getWmsIdById($delivery['branch_id']);
 
@@ -3383,7 +3397,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
         }
         $this->splash('success', null, '命令已经被成功发送！！');
     }
-    
+
     /**
      * 批量填写同城配物流信息
      */
@@ -3395,111 +3409,111 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
         if (empty($ids)) {
             die('没有选择任何可操作的发货单。');
         }
-        
+
         if(empty($logi_id)){
             die('没有物流公司logi_id。');
         }
-        
+
         $deliveryObj = app::get('wms')->model('delivery');
         $branchObj = app::get('ome')->model('branch');
         $dlyCorpMdl = app::get('ome')->model('dly_corp');
-        
+
         //物流公司信息
         $dlyCorpInfo = $dlyCorpMdl->dump(array('corp_id'=>$logi_id), '*');
         if(empty($dlyCorpInfo)){
             die('物流公司不存在。');
         }
-        
+
         if($dlyCorpInfo['corp_model'] != 'instatnt'){
             die('物流公司：'. $dlyCorpInfo['name'] .' 不是同城配类型。');
         }
-        
+
         //同城配物流公司列表
         $dlyCrop = $dlyCorpMdl->getList('corp_id,name,type,is_cod,weight', array('corp_model'=>'instatnt', 'disabled'=>'false'), 0, -1, 'weight DESC');
-        
+
         //发货单列表
         $deliverys = $deliveryObj->getList('delivery_id,branch_id,delivery_bn', array('delivery_id'=>$ids));
-        
+
         $this->pagedata['delivery_ids'] = join(',', $ids);
         $this->pagedata['dlyCorp'] = $dlyCrop;
         $this->pagedata['orderCnt'] = count($ids);
-        
+
         $this->display('admin/delivery/batch_logistics.html');
     }
-    
+
     /**
      * 批量填写同城配物流信息
      */
     public function doLogistics()
     {
         $this->begin();
-        
+
         $deliveryObj = app::get('wms')->model('delivery');
         $dlyCorpMdl = app::get('ome')->model('dly_corp');
         $dlyLogObj = app::get('wms')->model('delivery_log');
         $deliveryBillObj = app::get('wms')->model('delivery_bill');
         $operationMdl = app::get('ome')->model('operation_log');
-        
+
         $branchLib = kernel::single('ome_branch');
         $evnDlyLib = kernel::single('wms_event_trigger_delivery');
-        
+
         $delivery_ids = $_POST['delivery_ids'];
         if(empty($delivery_ids)){
             $this->end(false, '没有发货单ID,请检查!');
         }
-        
+
         $delivery_ids = explode(',', $delivery_ids);
         $delivery_ids = array_filter($delivery_ids);
         $corp_id = intval($_POST['corp_id']);
         $logi_no = trim($_POST['logi_no']);
         $delivery_mobile = trim($_POST['delivery_mobile']);
-        
+
         //check
         if(empty($delivery_ids)){
             $this->end(false, '没有可操作的发货单ID,请检查!');
         }
-        
+
         if(empty($corp_id)){
             $this->end(false, '没有选择物流公司,请检查!');
         }
-        
+
         if(empty($logi_no)){
             $this->end(false, '请填写物流单号!');
         }
-        
+
         if(empty($delivery_mobile)){
             $this->end(false, '请填写收货人手机号!');
         }
-        
+
         //验证收货人手机号
         $temData = explode('-', $delivery_mobile);
-        
+
         if(strlen($temData[0]) != 11){
             $this->end(false, '收货人手机号不正确!');
         }
-        
+
         $is_mobile = kernel::single('ome_func')->isMobile($temData[0]);
         if(!$is_mobile){
             $this->end(false, '收货人手机号不正确，请正确填写后再提交！');
         }
-        
+
         if($temData[1] && strlen($temData[1]) != 4){
             $this->end(false, '收货人手机号：虚拟号部分必须为4位数字!');
         }
-        
+
         //物流公司信息
         $dlyCorpInfo = $dlyCorpMdl->dump(array('corp_id'=>$corp_id), '*');
         if(empty($dlyCorpInfo)){
             $this->end(false, '物流公司不存在,请检查!');
         }
-        
+
         //更新
         foreach ($delivery_ids as $key => $delivery_id)
         {
             //deliveryInfo
             $deliveryInfo = $deliveryObj->dump(array('delivery_id'=>$delivery_id), '*');
             $weight = ($deliveryInfo['weight'] ? $deliveryInfo['weight'] : 0);
-            
+
             //sdf
             $sdf = array(
                 'logi_id' => $dlyCorpInfo['corp_id'],
@@ -3507,10 +3521,10 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
                 'logi_no' => $logi_no,
                 'deliveryman_mobile' => $delivery_mobile, //收货人手机号(使用此字段保存收货人虚拟手机号)
             );
-            
+
             //update
             $deliveryObj->update($sdf, array('delivery_id'=>$delivery_id));
-            
+
             //dlyLog
             $dlyLog = array();
             $dlyLog['delivery_id'] = $delivery_id;
@@ -3518,17 +3532,17 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
             $dlyLog['logi_no'] = $logi_no;
             $dlyLog['logi_name'] = $dlyCorpInfo['name'];
             $dlyLog['create_time'] = time();
-            
+
             if (!$dlyLogObj->dump(array('delivery_id'=>$dlyLog['delivery_id'], 'logi_no'=>$dlyLog['logi_no']))) {
                 $dlyLogObj->save($dlyLog);
             }
-            
+
             //delivery_bill
             $dlyBillSdf = array(
                 'logi_no'=>$logi_no,
             );
             $deliveryBillObj->update($dlyBillSdf, array('delivery_id'=>$delivery_id));
-            
+
             //信息变更更新到oms
             $wms_id = $branchLib->getWmsIdById($deliveryInfo['branch_id']);
             $data = array(
@@ -3543,14 +3557,14 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
                 'action' => 'updateDetail',
             );
             $res = $evnDlyLib->doUpdate($wms_id, $data, true);
-            
+
             //logs
             $operationMdl->write_log('delivery_logi@wms', $delivery_id, '修改同城配物流信息('. $dlyCorpInfo['name'] .'：'. $logi_no .')');
         }
-        
+
         $this->end(true, '更换同城配物流信息成功!');
     }
-    
+
     /**
      * 批量填写配送员信息
      */
@@ -3562,105 +3576,105 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
         if (empty($ids)) {
             die('没有选择任何可操作的发货单。');
         }
-        
+
         if(empty($logi_id)){
             die('没有物流公司logi_id。');
         }
-        
+
         $deliveryObj = app::get('wms')->model('delivery');
         $branchObj = app::get('ome')->model('branch');
         $dlyCorpMdl = app::get('ome')->model('dly_corp');
-        
+
         //物流公司信息
         $dlyCorpInfo = $dlyCorpMdl->dump(array('corp_id'=>$logi_id), '*');
         if(empty($dlyCorpInfo)){
             die('物流公司不存在。');
         }
-        
+
         if($dlyCorpInfo['corp_model'] != 'seller'){
             die('物流公司：'. $dlyCorpInfo['name'] .' 不是商家配送类型。');
         }
-        
+
         //同城配物流公司列表
         $dlyCrop = $dlyCorpMdl->getList('corp_id,name,type,is_cod,weight', array('corp_model'=>'seller', 'disabled'=>'false'), 0, -1, 'weight DESC');
-        
+
         //发货单列表
         $deliverys = $deliveryObj->getList('delivery_id,branch_id,delivery_bn', array('delivery_id'=>$ids));
-        
+
         $this->pagedata['delivery_ids'] = join(',', $ids);
         $this->pagedata['dlyCorp'] = $dlyCrop;
         $this->pagedata['orderCnt'] = count($ids);
-        
+
         $this->display('admin/delivery/batch_deliveryman.html');
     }
-    
+
     /**
      * 批量填写配送员信息
      */
     public function doDeliveryman()
     {
         $this->begin();
-        
+
         $deliveryObj = app::get('wms')->model('delivery');
         $dlyCorpMdl = app::get('ome')->model('dly_corp');
         $dlyLogObj = app::get('wms')->model('delivery_log');
         $deliveryBillObj = app::get('wms')->model('delivery_bill');
         $operationMdl = app::get('ome')->model('operation_log');
-        
+
         $branchLib = kernel::single('ome_branch');
         $evnDlyLib = kernel::single('wms_event_trigger_delivery');
-        
+
         $delivery_ids = $_POST['delivery_ids'];
         if(empty($delivery_ids)){
             $this->end(false, '没有发货单ID,请检查!');
         }
-        
+
         $delivery_ids = explode(',', $delivery_ids);
         $delivery_ids = array_filter($delivery_ids);
         $deliveryman = trim($_POST['deliveryman']);
         $deliveryman_mobile = trim($_POST['deliveryman_mobile']);
-        
+
         //check
         if(empty($delivery_ids)){
             $this->end(false, '没有可操作的发货单ID,请检查!');
         }
-        
+
         if(empty($deliveryman)){
             $this->end(false, '请填写配送员姓名,请检查!');
         }
-        
+
         if(empty($deliveryman_mobile)){
             $this->end(false, '请填写配送员手机号,请检查!');
         }
-        
+
         //验证手机号
         $isMobile = kernel::single('ome_func')->isMobile($deliveryman_mobile);
         if(!$isMobile){
             $this->end(false, '手机号验证不通过,请检查!');
         }
-        
+
         //更新
         foreach ($delivery_ids as $key => $delivery_id)
         {
             //deliveryInfo
             $deliveryInfo = $deliveryObj->dump(array('delivery_id'=>$delivery_id), '*');
             $weight = ($deliveryInfo['weight'] ? $deliveryInfo['weight'] : 0);
-            
+
             //sdf
             $sdf = array(
                 'deliveryman' => $deliveryman,
                 'deliveryman_mobile' => $deliveryman_mobile,
             );
-            
+
             //update
             $deliveryObj->update($sdf, array('delivery_id'=>$delivery_id));
-            
+
             //delivery_bill
             $dlyBillSdf = array(
                 'logi_no' => $deliveryInfo['outer_delivery_bn'], //使用发货单号当物流单号,手机号会重复
             );
             $deliveryBillObj->update($dlyBillSdf, array('delivery_id'=>$delivery_id));
-            
+
             //信息变更更新到oms
             $wms_id = $branchLib->getWmsIdById($deliveryInfo['branch_id']);
             $data = array(
@@ -3675,14 +3689,14 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
                 'action' => 'updateDetail',
             );
             $res = $evnDlyLib->doUpdate($wms_id, $data, true);
-            
+
             //logs
             $operationMdl->write_log('delivery_logi@wms', $delivery_id, '修改配送员信息('. $deliveryman .'：'. $deliveryman_mobile .')');
         }
-        
+
         $this->end(true, '更换配送员信息成功!');
     }
-    
+
     /**
      * 发货单查询核销订单ID
      */
@@ -3693,15 +3707,15 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
         if (empty($ids)) {
             die('没有选择任何可操作的发货单。');
         }
-        
+
         if (count($ids) > 1) {
             die('每次只支持一个发货单进行操作。');
         }
-        
+
         $deliveryObj = app::get('wms')->model('delivery');
         $branchObj = app::get('ome')->model('branch');
         $dlyCorpMdl = app::get('ome')->model('dly_corp');
-        
+
         //发货单信息
         $deliveryInfo = $deliveryObj->dump(array('delivery_id'=>$ids), '*');
 
@@ -3709,83 +3723,83 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
         if($deliveryInfo['delivery_model'] != 'seller'){
             die('发货单号：'. $deliveryInfo['delivery_bn'] .' 不是商家配送类型。');
         }
-        
+
         if(!in_array($deliveryInfo['writeoff_status'], array(0,3))){
             die('发货单号：'. $deliveryInfo['delivery_bn'] .' 核销状态是：'. $deliveryInfo['writeoff_status'] .' 不支持查询。');
         }
-        
+
         $ids = array($deliveryInfo['delivery_id']);
-        
+
         $this->pagedata['delivery_ids'] = join(',', $ids);
         $this->pagedata['orderCnt'] = count($ids);
-        
+
         $this->display('admin/delivery/batch_lp_order_id.html');
     }
-    
+
     /**
      * 发货单查询核销订单ID
      */
     public function doLpOrderId()
     {
         $this->begin();
-        
+
         $deliveryObj = app::get('wms')->model('delivery');
         $dlyCorpMdl = app::get('ome')->model('dly_corp');
         $operationMdl = app::get('ome')->model('operation_log');
-        
+
         $delivery_ids = $_POST['delivery_ids'];
         if(empty($delivery_ids)){
             $this->end(false, '没有发货单ID,请检查!');
         }
-        
+
         $delivery_ids = explode(',', $delivery_ids);
         $delivery_ids = array_filter($delivery_ids);
-        
+
         $receive_code = trim($_POST['receive_code']);
-        
+
         //check
         if(empty($delivery_ids)){
             $this->end(false, '没有可操作的发货单ID,请检查!');
         }
-        
+
         if(empty($receive_code)){
             $this->end(false, '请填写收货码,请检查!');
         }
-        
+
         //发货单信息
         $deliveryInfo = $deliveryObj->dump(array('delivery_id'=>$delivery_ids), '*');
-        
+
         //check
         if($deliveryInfo['delivery_model'] != 'seller'){
             $error_msg = '发货单号：'. $deliveryInfo['delivery_bn'] .' 不是商家配送类型;';
             $this->end(false, $error_msg.'请检查!');
         }
-        
+
         if(!in_array($deliveryInfo['writeoff_status'], array(0,3))){
             $error_msg = '发货单号：'. $deliveryInfo['delivery_bn'] .' 核销状态是：'. $deliveryInfo['writeoff_status'] .' 不支持查询。';
             $this->end(false, $error_msg);
         }
-        
+
         $shop_id = $deliveryInfo['shop_id'];
-        
+
         //关联订单
         $omeDeliveryObj = app::get('ome')->model('delivery');
         $orderObj = app::get('ome')->model('orders');
-        
+
         $orderInfo = array();
         $omeDeliveryInfo = $omeDeliveryObj->dump(array('delivery_bn'=>$deliveryInfo['outer_delivery_bn']), '*', array('delivery_order' => array('*')));
         foreach ($omeDeliveryInfo['delivery_order'] as $dlyKey => $dlyVal)
         {
             $orderInfo = $orderObj->dump($dlyVal['order_id'], 'order_bn,order_id');
-            
+
             continue;
         }
-        
+
         if(empty($orderInfo)){
             $error_msg = '发货单号：'. $deliveryInfo['delivery_bn'] .' 没有获取到对应的订单;';
             $this->end(false, $error_msg.'请检查!');
         }
-        
+
         //sdf
         $params = array(
             'order_bn' => $orderInfo['order_bn'],
@@ -3793,17 +3807,17 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
             'wms_delivery_bn' => $deliveryInfo['delivery_bn'],
             'receive_code' => $receive_code,
         );
-        
+
         //请求接口
         $result = kernel::single('erpapi_router_request')->set('shop', $shop_id)->delivery_seller_lporderid($params);
         if($result['rsp'] != 'succ'){
             $error_msg = $result['error_msg'];
             $this->end(false, $error_msg);
         }
-        
+
         $this->end(true, '发货单查询核销订单ID成功!');
     }
-    
+
     /**
      * 发货单进行核销
      */
@@ -3814,109 +3828,109 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
         if (empty($ids)) {
             die('没有选择任何可操作的发货单。');
         }
-        
+
         if (count($ids) > 1) {
             die('每次只支持一个发货单进行操作。');
         }
-        
+
         $deliveryObj = app::get('wms')->model('delivery');
         $branchObj = app::get('ome')->model('branch');
         $dlyCorpMdl = app::get('ome')->model('dly_corp');
-        
+
         //发货单信息
         $deliveryInfo = $deliveryObj->dump(array('delivery_id'=>$ids), '*');
-        
+
         //check
         if($deliveryInfo['delivery_model'] != 'seller'){
             die('发货单号：'. $deliveryInfo['delivery_bn'] .' 不是商家配送类型。');
         }
-        
+
         if(!in_array($deliveryInfo['writeoff_status'], array(2, 4))){
             die('发货单号：'. $deliveryInfo['delivery_bn'] .' 核销状态是：'. $deliveryInfo['writeoff_status'] .' 不支持核销,请先查询核销订单ID。');
         }
-        
+
         if(empty($deliveryInfo['lp_order_id'])){
             die('发货单号：'. $deliveryInfo['delivery_bn'] .' 核销订单Id不能为空。');
         }
-        
+
         $ids = array($deliveryInfo['delivery_id']);
-        
+
         $this->pagedata['delivery_ids'] = join(',', $ids);
         $this->pagedata['orderCnt'] = count($ids);
         $this->pagedata['deliveryInfo'] = $deliveryInfo;
-        
+
         $this->display('admin/delivery/batch_write_off.html');
     }
-    
+
     /**
      * 发货单进行核销
      */
     public function doWriteoff()
     {
         $this->begin();
-        
+
         $deliveryObj = app::get('wms')->model('delivery');
         $dlyCorpMdl = app::get('ome')->model('dly_corp');
         $operationMdl = app::get('ome')->model('operation_log');
-        
+
         $delivery_ids = $_POST['delivery_ids'];
         if(empty($delivery_ids)){
             $this->end(false, '没有发货单ID,请检查!');
         }
-        
+
         $delivery_ids = explode(',', $delivery_ids);
         $delivery_ids = array_filter($delivery_ids);
-        
+
         $receive_code = trim($_POST['receive_code']);
-        
+
         //check
         if(empty($delivery_ids)){
             $this->end(false, '没有可操作的发货单ID,请检查!');
         }
-        
+
         if(empty($receive_code)){
             $this->end(false, '请填写收货码,请检查!');
         }
-        
+
         //发货单信息
         $deliveryInfo = $deliveryObj->dump(array('delivery_id'=>$delivery_ids), '*');
-        
+
         //check
         if($deliveryInfo['delivery_model'] != 'seller'){
             $error_msg = '发货单号：'. $deliveryInfo['delivery_bn'] .' 不是商家配送类型;';
             $this->end(false, $error_msg.'请检查!');
         }
-        
+
         if(!in_array($deliveryInfo['writeoff_status'], array(2, 4))){
             $error_msg = '发货单号：'. $deliveryInfo['delivery_bn'] .' 核销状态是：'. $deliveryInfo['writeoff_status'] .' 不支持核销,请先查询核销订单ID。';
             $this->end(false, $error_msg);
         }
-        
+
         if(empty($deliveryInfo['lp_order_id'])){
             $error_msg = '发货单号：'. $deliveryInfo['delivery_bn'] .' 核销订单Id不能为空。';
             $this->end(false, $error_msg);
         }
-        
+
         $shop_id = $deliveryInfo['shop_id'];
-        
+
         //关联订单
         $omeDeliveryObj = app::get('ome')->model('delivery');
         $orderObj = app::get('ome')->model('orders');
-        
+
         $orderInfo = array();
         $omeDeliveryInfo = $omeDeliveryObj->dump(array('delivery_bn'=>$deliveryInfo['outer_delivery_bn']), '*', array('delivery_order' => array('*')));
         foreach ($omeDeliveryInfo['delivery_order'] as $dlyKey => $dlyVal)
         {
             $orderInfo = $orderObj->dump($dlyVal['order_id'], 'order_bn,order_id');
-            
+
             continue;
         }
-        
+
         if(empty($orderInfo)){
             $error_msg = '发货单号：'. $deliveryInfo['delivery_bn'] .' 没有获取到对应的订单;';
             $this->end(false, $error_msg.'请检查!');
         }
-        
+
         //sdf
         $params = array(
             'order_bn' => $orderInfo['order_bn'],
@@ -3926,164 +3940,164 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
             'receive_code' => $receive_code,
             'lp_order_id' => $deliveryInfo['lp_order_id'],
         );
-        
+
         //请求接口
         $result = kernel::single('erpapi_router_request')->set('shop', $shop_id)->delivery_seller_writeoff($params);
         if($result['rsp'] != 'succ'){
             $error_msg = $result['error_msg'];
             $this->end(false, $error_msg);
         }
-        
+
         $this->end(true, '发货单确认核销成功!');
     }
-    
+
     /**
      * 同城配更换物流信息
      */
     public function batch_logiresend()
     {
         $corpMdl = app::get('ome')->model('dly_corp');
-        
+
         //如果是全选的情况下，该功能代码还未兼容
         $ids = $_POST['delivery_id'];
         if (empty($ids)) {
             die('没有选择任何可操作的发货单。');
         }
-        
+
         if (count($ids) > 1) {
             die('每次只支持一个发货单进行操作。');
         }
-        
+
         $deliveryObj = app::get('wms')->model('delivery');
         $branchObj = app::get('ome')->model('branch');
         $dlyCorpMdl = app::get('ome')->model('dly_corp');
-        
+
         //发货单信息
         $deliveryInfo = $deliveryObj->dump(array('delivery_id'=>$ids), '*');
-        
+
         //check
         if($deliveryInfo['delivery_model'] != 'instatnt'){
             die('发货单号：'. $deliveryInfo['delivery_bn'] .' 不是同城配送类型。');
         }
-        
+
         if(!in_array($deliveryInfo['status'], array(3))){
             die('发货单号：'. $deliveryInfo['delivery_bn'] .' 不是已发货状态。');
         }
-        
+
         //同城配送物流公司列表
         $corpList = $corpMdl->getList('*', array('corp_model'=>'instatnt'));
         $this->pagedata['corpList'] = $corpList;
         $this->pagedata['deliveryInfo'] = $deliveryInfo;
-        
+
         $ids = array($deliveryInfo['delivery_id']);
-        
+
         $this->pagedata['delivery_ids'] = join(',', $ids);
         $this->pagedata['orderCnt'] = count($ids);
-        
+
         $this->display('admin/delivery/batch_logi_resend.html');
     }
-    
+
     /**
      * 同城配更换物流信息
      */
     public function doLogiResend()
     {
         $this->begin();
-        
+
         $deliveryObj = app::get('wms')->model('delivery');
         $deliveryBillObj = app::get('wms')->model('delivery_bill');
         $dlyCorpMdl = app::get('ome')->model('dly_corp');
         $operationMdl = app::get('ome')->model('operation_log');
-        
+
         $omeDeliveryObj = app::get('ome')->model('delivery');
         $orderObj = app::get('ome')->model('orders');
-        
+
         $branchLib = kernel::single('ome_branch');
         $evnDlyLib = kernel::single('wms_event_trigger_delivery');
-        
+
         $delivery_ids = $_POST['delivery_ids'];
         if(empty($delivery_ids)){
             $this->end(false, '没有发货单ID,请检查!');
         }
-        
+
         $delivery_ids = explode(',', $delivery_ids);
         $delivery_ids = array_filter($delivery_ids);
-        
+
         $logi_id = $_POST['logi_id'];
         $logi_no = $_POST['logi_no'];
-        
+
         //check
         if(empty($delivery_ids)){
             $this->end(false, '没有可操作的发货单ID,请检查!');
         }
-        
+
         if(empty($logi_id)){
             $this->end(false, '请选择物流公司,请检查!');
         }
-        
+
         //发货单信息
         $deliveryInfo = $deliveryObj->dump(array('delivery_id'=>$delivery_ids), '*');
         $delivery_id = $deliveryInfo['delivery_id'];
-        
+
         //check
         if($deliveryInfo['delivery_model'] != 'instatnt'){
             $error_msg = '发货单号：'. $deliveryInfo['delivery_bn'] .' 不是同城配送类型;';
             $this->end(false, $error_msg.'请检查!');
         }
-        
+
         if(!in_array($deliveryInfo['status'], array(3))){
             $error_msg = '发货单号：'. $deliveryInfo['delivery_bn'] .' 不是已发货状态。';
             $this->end(false, $error_msg);
         }
-        
+
         //物流公司
         $corpInfo = $dlyCorpMdl->dump(array('corp_id'=>$logi_id), '*');
         if(empty($corpInfo)){
             $error_msg = '发货单号：'. $deliveryInfo['delivery_bn'] .' 物流公司不存在。';
             $this->end(false, $error_msg);
         }
-        
+
         if($corpInfo['tmpl_type'] != 'electron'){
             if(empty($logi_no)){
                 $error_msg = '发货单号：'. $deliveryInfo['delivery_bn'] .' 没有填写物流单号。';
                 $this->end(false, $error_msg);
             }
         }
-        
+
         $shop_id = $deliveryInfo['shop_id'];
-        
+
         //关联订单
         $orderInfo = array();
         $omeDeliveryInfo = $omeDeliveryObj->dump(array('delivery_bn'=>$deliveryInfo['outer_delivery_bn']), '*', array('delivery_order' => array('*')));
         foreach ($omeDeliveryInfo['delivery_order'] as $dlyKey => $dlyVal)
         {
             $orderInfo = $orderObj->dump($dlyVal['order_id'], 'order_bn,order_id');
-            
+
             continue;
         }
-        
+
         if(empty($orderInfo)){
             $error_msg = '发货单号：'. $deliveryInfo['delivery_bn'] .' 没有获取到对应的订单;';
             $this->end(false, $error_msg.'请检查!');
         }
-        
+
         $order_id = $orderInfo['order_id'];
         $ome_delivery_id = $omeDeliveryInfo['delivery_id'];
-        
+
         //拆单场景
         $sub_tids = '';
         $is_split = app::get('ome')->getConf('ome.order.split');
         if($is_split == '1'){
             $orderLib = kernel::single('ome_order');
             $splitLib = kernel::single('ome_order_split');
-            
+
             $is_split_order = $orderLib->is_split_order($order_id);
             if($is_split_order){
                 $oidList = $splitLib->getDeliveryOids($ome_delivery_id);
                 $sub_tids = implode(',', $oidList);
-            } 
+            }
         }
-        
+
         //sdf
         $params = array(
             'order_bn' => $orderInfo['order_bn'],
@@ -4093,30 +4107,30 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
             'logi_no' => $logi_no,
             'sub_tids' => $sub_tids, //[拆单]子订单列表
         );
-        
+
         //请求接口
         $result = kernel::single('erpapi_router_request')->set('shop', $shop_id)->delivery_logistics_resend($params);
         if($result['rsp'] != 'succ'){
             $error_msg = $result['error_msg'];
             $this->end(false, $error_msg);
         }
-        
+
         //更新物流信息
         $sdf = array(
             'logi_id' => $corpInfo['corp_id'],
             'logi_name' => $corpInfo['name'],
             'logi_no' => $logi_no,
         );
-        
+
         //update
         $deliveryObj->update($sdf, array('delivery_id'=>$delivery_id));
-        
+
         //delivery_bill
         $dlyBillSdf = array(
             'logi_no' => $logi_no,
         );
         $deliveryBillObj->update($dlyBillSdf, array('delivery_id'=>$delivery_id));
-        
+
         //信息变更更新到oms
         $wms_id = $branchLib->getWmsIdById($deliveryInfo['branch_id']);
         $data = array(
@@ -4128,13 +4142,13 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
             'action' => 'updateDetail',
         );
         $res = $evnDlyLib->doUpdate($wms_id, $data, true);
-        
+
         //logs
         $operationMdl->write_log('delivery_logi@wms', $delivery_id, '同城配更换物流信息('. $corpInfo['name'] .'：'. $logi_no .')');
-        
+
         $this->end(true, '同城配更换物流信息成功!');
     }
-    
+
     /**
      * 重算ome发货单明细上商品的冻结库存流水
      * @return void
@@ -4142,35 +4156,35 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
     public function _delivery_reset_freeze($delivery_id)
     {
         $dlyItemObj = app::get('ome')->model('delivery_items');
-        
+
         $syncProductLib = kernel::single('ome_sync_product');
         $stockFreeeList = kernel::single('console_stock_freeze');
-        
+
         //check
         if(empty($delivery_id)){
             return false;
         }
-        
+
         //发货单明细
         $itemList = $dlyItemObj->getList('item_id,product_id', array('delivery_id'=>$delivery_id));
         if(empty($itemList)){
             return false;
         }
-        
+
         foreach ($itemList as $itemKey => $itemVal)
         {
             $product_id = $itemVal['product_id'];
-            
+
             //重置商品的冻结库存
             $syncProductLib->reset_freeze($product_id);
-            
+
             //重置预占流水记录
             $stockFreeeList->reset_stock_freeze($product_id);
         }
-        
+
         return true;
     }
-    
+
     /**
      * 获取震坤行送货单 PDF
      * @author db

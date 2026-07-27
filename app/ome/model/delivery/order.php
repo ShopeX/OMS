@@ -16,16 +16,6 @@
  */
 
 class ome_mdl_delivery_order extends dbeav_model{
-
-    public function save(&$data, $mustUpdate = null)
-    {
-        $result = parent::save($data, $mustUpdate);
-        if ($result && !empty($data['delivery_id'])) {
-            app::get('ome')->model('delivery')->inheritUrgentLabelFromOrders($data['delivery_id']);
-        }
-        return $result;
-    }
-
     function insertParentOrderByItems($parent_id, $items){
         if (!is_array($items)) return false;
         
@@ -44,12 +34,6 @@ class ome_mdl_delivery_order extends dbeav_model{
         return false;
     }
     #根据物流单号，获取会员备注与订单备注
-    /**
-     * 获取MarkInfo
-     * @param mixed $dly_id ID
-     * @param mixed $_column _column
-     * @return mixed 返回结果
-     */
     public function getMarkInfo($dly_id,$_column=null){
 
         if(!empty($_column)){

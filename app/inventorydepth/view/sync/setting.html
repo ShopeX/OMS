@@ -35,6 +35,14 @@
                     &nbsp;&nbsp;<span style="color:red;">* 选择增量库存的时候，会对比上一次库存进行加减。（增量仅支持<{$mode_support_name}>）</span>
                  </td>
             </tr>
+            <tr>
+                <th>库存回写触发依据</th>
+                <td>
+                    <input type="radio" name="set[stock.sync.trigger_basis]" value="actual_stock" <{if $setData.stock_sync_trigger_basis != 'store'}> checked<{/if}>>可售库存
+                    <input type="radio" name="set[stock.sync.trigger_basis]" value="store" <{if $setData.stock_sync_trigger_basis == 'store'}> checked<{/if}>>回写库存
+                    &nbsp;&nbsp;<span style="color:red;">* 可售库存为系统计算出的可售数量；回写库存为上一次成功同步给平台的库存数量。选择后将以对应库存发生变化才会触发回写。</span>
+                 </td>
+            </tr>
         </tbody>
     </table>
     </div>

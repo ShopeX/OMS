@@ -123,6 +123,29 @@ class erpapi_shop_response_plugins_order_orderlabels extends erpapi_shop_respons
             }
         }
 
+        // 拼多多消费者付费送货上门使用独立标签，不能复用 SOMS_SHSM。
+        // 服务费随标签保存在 extend_info，供订单和发货单展示同一份消费者付费金额。
+        if ($platform->_ordersdf['shop_type'] == 'pinduoduo'
+            && isset($platform->_ordersdf['charge_home_delivery_door'])) {
+            $serviceInfo = $platform->_ordersdf['charge_home_delivery_door'];
+            if ($serviceInfo['active']) {
+                $labels[] = [
+                    'label_code' => 'SOMS_ZFSHSM',
+                    'extend_info' => json_encode([
+                        'service_name'               => $serviceInfo['service_name'],
+                        'service_fee'                => $serviceInfo['service_fee'],
+                        'service_white_delivery_cps' => $serviceInfo['white_delivery_cps'],
+                    ], JSON_UNESCAPED_UNICODE),
+                ];
+            } else {
+                // 创建订单时 postCreate 会忽略删除动作；更新订单时用于清理已取消的服务标签。
+                $labels[] = [
+                    'label_code'   => 'SOMS_ZFSHSM',
+                    'label_action' => 'del',
+                ];
+            }
+        }
+
         // 集运信息打标签
         if ($platform->_ordersdf['extend_field']['consolidate_info']) {
             $consolidate_type   = $platform->_ordersdf['extend_field']['consolidate_info']['consolidate_type'];

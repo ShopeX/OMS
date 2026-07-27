@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class ome_ctl_admin_goods_editor extends desktop_controller{
     //var $workground = 'goods_manager';
     var $simpleGoodsId = 1;
@@ -141,7 +140,10 @@ class ome_ctl_admin_goods_editor extends desktop_controller{
             );
         }
         if( $goods['spec'] ){
-            $goods['spec'] = unserialize($goods['spec']);
+            $goods['spec'] = $this->_parse_serialized_array($goods['spec'], null);
+            if( !is_array($goods['spec']) ){
+                $goods['spec'] = null;
+            }
         }else{
             $goods['spec'] = null;
         }
@@ -532,8 +534,19 @@ class ome_ctl_admin_goods_editor extends desktop_controller{
         $this->pagedata['goods_spec'] = $spec;
     }
 
+    private function _parse_serialized_array($data, $default = array()){
+        if( is_array($data) ){
+            return $data;
+        }
+        if( !is_string($data) || $data === '' ){
+            return $default;
+        }
+        $parsed = @unserialize($data, array('allowed_classes' => false));
+        return is_array($parsed) ? $parsed : $default;
+    }
+
     function set_spec($typeId=0){
-        $_POST['spec'] = unserialize($_POST['spec']);
+        $_POST['spec'] = $this->_parse_serialized_array(isset($_POST['spec']) ? $_POST['spec'] : '');
         if( $_POST['spec'] ){
             $this->_set_spec($_POST['spec']);
         }else{
@@ -674,7 +687,7 @@ class ome_ctl_admin_goods_editor extends desktop_controller{
         $oType = app::get('ome')->model('goods_type');
         $oBrand = app::get('ome')->model('brand');
         $goodslog = $logObj->dump($log_id,'memo');
-        $memo = unserialize($goodslog['memo']);
+        $memo = $this->_parse_serialized_array($goodslog['memo']);
         $cat = $oCat->dump($memo['category']['cat_id'],'cat_name');
         $memo['cat_name'] = $cat['cat_name'];
         $type = $oType->dump($memo['type']['type_id'],'name');

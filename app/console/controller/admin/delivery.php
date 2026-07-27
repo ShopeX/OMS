@@ -15,8 +15,6 @@
  * limitations under the License.
  */
 class console_ctl_admin_delivery extends desktop_controller {
-    const URGENT_LABEL_CODE = 'SOMS_URGENT_SHIP';
-
     var $name = "发货单列表";
     var $workground = "console_center";
     
@@ -164,7 +162,7 @@ class console_ctl_admin_delivery extends desktop_controller {
                 'label'=>app::get('base')->_('加急发货'),
                 'filter'=>array(
                     'status' => array('ready','progress','succ'),
-                    'order_label_code' => self::URGENT_LABEL_CODE,
+                    'order_label_code' => 'SOMS_URGENT_SHIP',
                 ),
                 'optional'=>false
             ),
@@ -537,6 +535,39 @@ class console_ctl_admin_delivery extends desktop_controller {
     }
 
     /**
+     * 过滤批量提交的发货单ID
+     *
+     * delivery_id来自后台批量操作的POST参数，后续会拼接到SQL的IN条件中。
+     * 这里只保留正整数ID并去重，避免恶意参数未经处理进入SQL造成注入风险。
+     *
+     * @param mixed $deliveryIds
+     * @return array
+     */
+    private function _filterDeliveryIds($deliveryIds)
+    {
+        $deliveryIds = (array) $deliveryIds;
+        $result = array();
+
+        foreach ($deliveryIds as $deliveryId) {
+            if (!is_scalar($deliveryId)) {
+                continue;
+            }
+
+            $deliveryId = trim($deliveryId);
+            if (!preg_match('/^\d+$/', $deliveryId)) {
+                continue;
+            }
+
+            $deliveryId = intval($deliveryId);
+            if ($deliveryId > 0) {
+                $result[$deliveryId] = $deliveryId;
+            }
+        }
+
+        return array_values($result);
+    }
+
+    /**
      * 强制撤销第三方仓储发货单
      *
      * return
@@ -548,7 +579,7 @@ class console_ctl_admin_delivery extends desktop_controller {
         $operLogObj = app::get('ome')->model('operation_log');
         
         $limit = 500;
-        $deliveryIds = $_POST['delivery_id'];
+        $deliveryIds = $this->_filterDeliveryIds($_POST['delivery_id']);
         
         //check
         if($_POST['isSelectedAll'] == '_ALL_'){

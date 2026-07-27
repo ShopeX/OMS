@@ -756,6 +756,7 @@ $ES('.hidden_money').addEvent('click',function(){
 
 
 var store_change = [];
+var change_store_request = null;
 
 <{if $not_edit}>
     var tpl_change = '<tr  key="{product_id}" id="product_{product_id}">';
@@ -1286,9 +1287,126 @@ function rchange_bn_number(obj, sm_id)
     });
 }
 
-//当切换了换货仓库 保证所有销售物料可重新选择
+// 切换换货仓库后，一次提交当前全部销售物料重新计算库存。
+// 只更新销售物料和基础物料库存，保留用户已填写的申请数量、售价等未保存数据。
+function refresh_change_store(){
+    if(!$('changebranch') || !store_change.length){
+        return;
+    }
+
+    var changebranch = $('changebranch').get('value');
+    if(!changebranch){
+        return;
+    }
+
+    var product_ids = [];
+    var post_data = [];
+    store_change.each(function(item){
+        // PageData不会自动同步输入框值，刷新前先保存用户尚未提交的数量和售价。
+        var product_row = $('product_'+item.product_id);
+        if(product_row){
+            var num_input = product_row.getElement('input[key=num]');
+            var price_input = product_row.getElement('input[key=price]');
+            if(num_input){
+                item.num = num_input.get('value');
+            }
+            if(price_input){
+                item.price = price_input.get('value');
+            }
+        }
+        if(item.items){
+            item.items.each(function(basic_item){
+                basic_item.change_num = parseInt(item.num) * parseInt(basic_item.number);
+            });
+        }
+
+        product_ids.push(item.product_id);
+        post_data.push('product_id[]='+encodeURIComponent(item.product_id));
+
+        var sale_store = $('sale_store_'+item.bn);
+        var sale_store_input = $('product_sale_store_'+item.bn);
+        if(sale_store){
+            sale_store.set('html', '加载中...');
+        }
+        if(sale_store_input){
+            sale_store_input.set('value', '');
+        }
+    });
+
+    if(!product_ids.length){
+        return;
+    }
+
+    if(change_store_request){
+        change_store_request.cancel();
+    }
+
+    var request_branch = changebranch;
+    var order_id = $('order_id').get('value');
+    change_store_request = new Request.JSON({
+        url:'index.php?app=ome&ctl=admin_return_rchange&act=getProducts&type=change&source=<{$source}>&response_type=json&changebranch_id='+request_branch+'&order_id='+order_id,
+        method:'post',
+        data:post_data.join('&'),
+        onSuccess:function(response){
+            // 快速连续切仓时，旧仓请求即使返回也不能覆盖当前仓库库存。
+            if(!$('changebranch') || $('changebranch').get('value') != request_branch){
+                return;
+            }
+
+            response = response || [];
+            response.each(function(new_item){
+                store_change.each(function(old_item){
+                    if(old_item.product_id != new_item.product_id){
+                        return;
+                    }
+
+                    old_item.sale_store = new_item.sale_store;
+                    if(old_item.items && new_item.items){
+                        old_item.items.each(function(old_basic_item){
+                            new_item.items.each(function(new_basic_item){
+                                if(old_basic_item.bm_id == new_basic_item.bm_id){
+                                    old_basic_item.store = new_basic_item.store;
+                                }
+                            });
+                        });
+                    }
+                });
+            });
+
+            createProduct(store_change);
+            change_store_request = null;
+        },
+        onFailure:function(){
+            if($('changebranch') && $('changebranch').get('value') == request_branch){
+                store_change.each(function(item){
+                    var sale_store = $('sale_store_'+item.bn);
+                    if(sale_store){
+                        sale_store.set('html', '--');
+                    }
+                });
+                MessageBox.error('切换仓库后刷新库存失败，请重新选择仓库重试');
+            }
+            change_store_request = null;
+        },
+        onError:function(){
+            if($('changebranch') && $('changebranch').get('value') == request_branch){
+                store_change.each(function(item){
+                    var sale_store = $('sale_store_'+item.bn);
+                    if(sale_store){
+                        sale_store.set('html', '--');
+                    }
+                });
+                MessageBox.error('库存数据解析失败，请重新选择仓库重试');
+            }
+            change_store_request = null;
+        }
+    }).send();
+}
+
+// 当切换了换货仓库，清空销售物料选择过滤并刷新已选物料库存。
 function clean_change_filter(){
     $ES('input[name=total_change_filter]').set("value","");
+    refresh_change_store();
 }
 
 if($('selectLogisticsName'))

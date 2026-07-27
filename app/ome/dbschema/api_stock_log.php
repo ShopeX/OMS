@@ -225,7 +225,7 @@ $db['api_stock_log']=array (
     ),
     'store' =>
     array (
-      'label' => '库存数',
+      'label' => '回写库存',
       'type' => 'number',
       'width' => 80,
       'editable' => false,
@@ -238,7 +238,7 @@ $db['api_stock_log']=array (
     ),
     'actual_stock' =>
     array (
-      'label' => '可售库存数',
+      'label' => '可售库存',
       'type' => 'number',
       'width' => 80,
       'editable' => false,

@@ -264,6 +264,11 @@ class erpapi_shop_matrix_luban_response_aftersalev2 extends erpapi_shop_response
         if($params['refund_type']=='return' && empty($params['return_type'])){
             $sdf['return_type'] = $params['refund_type'];
         }
+
+        //平台优惠退回金额（平台下发单位为分，转为元）
+        if (isset($params['platform_discount_return_amount']) && $params['platform_discount_return_amount'] !== '') {
+            $sdf['platform_discount_return_amount'] = sprintf('%.2f', $params['platform_discount_return_amount'] / 100);
+        }
         
         return $sdf;
     }

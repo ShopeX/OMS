@@ -24,7 +24,6 @@
  */
 class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delivery
 {
-    const URGENT_LABEL_CODE = 'SOMS_URGENT_SHIP';
     private $_shop_type_mapping = array(
         'taobao'    => 'TB',
         'paipai'    => 'PP',
@@ -594,15 +593,15 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
     protected function isUrgentDelivery($sdf)
     {
         $labelLib = kernel::single('ome_bill_label');
-        if (!empty($sdf['delivery_id']) && $labelLib->existLabel($sdf['delivery_id'], self::URGENT_LABEL_CODE, 'delivery')) {
+        if (!empty($sdf['delivery_id']) && $labelLib->existLabel($sdf['delivery_id'], 'SOMS_URGENT_SHIP', 'ome_delivery')) {
             return true;
         }
-        if (!empty($sdf['order_id']) && $labelLib->existLabel($sdf['order_id'], self::URGENT_LABEL_CODE)) {
+        if (!empty($sdf['order_id']) && $labelLib->existLabel($sdf['order_id'], 'SOMS_URGENT_SHIP')) {
             return true;
         }
         if (!empty($sdf['order_bn'])) {
             $order = app::get('ome')->model('orders')->dump(['order_bn' => $sdf['order_bn']], 'order_id');
-            if (!empty($order['order_id']) && $labelLib->existLabel($order['order_id'], self::URGENT_LABEL_CODE)) {
+            if (!empty($order['order_id']) && $labelLib->existLabel($order['order_id'], 'SOMS_URGENT_SHIP')) {
                 return true;
             }
         }

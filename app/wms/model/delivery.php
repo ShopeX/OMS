@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 class wms_mdl_delivery extends dbeav_model{
-    const URGENT_LABEL_CODE = 'SOMS_URGENT_SHIP';
     public $filter_use_like = true;
     var $has_many = array(
         'delivery_items' => 'delivery_items',
@@ -206,7 +205,7 @@ class wms_mdl_delivery extends dbeav_model{
             $where .= ' AND EXISTS (
                 SELECT 1 FROM sdb_ome_bill_label bl
                 WHERE bl.bill_id = '.$tPre.'delivery_id
-                AND bl.bill_type = "delivery"
+                AND bl.bill_type = "wms_delivery"
                 AND bl.label_code = "'.addslashes($filter['delivery_label_code']).'"
             )';
             unset($filter['delivery_label_code']);
@@ -216,15 +215,15 @@ class wms_mdl_delivery extends dbeav_model{
                 $where .= ' AND EXISTS (
                     SELECT 1 FROM sdb_ome_bill_label bl
                     WHERE bl.bill_id = '.$tPre.'delivery_id
-                    AND bl.bill_type = "delivery"
-                    AND bl.label_code = "'.self::URGENT_LABEL_CODE.'"
+                    AND bl.bill_type = "wms_delivery"
+                    AND bl.label_code = "SOMS_URGENT_SHIP"
                 )';
             } else {
                 $where .= ' AND NOT EXISTS (
                     SELECT 1 FROM sdb_ome_bill_label bl
                     WHERE bl.bill_id = '.$tPre.'delivery_id
-                    AND bl.bill_type = "delivery"
-                    AND bl.label_code = "'.self::URGENT_LABEL_CODE.'"
+                    AND bl.bill_type = "wms_delivery"
+                    AND bl.label_code = "SOMS_URGENT_SHIP"
                 )';
             }
             unset($filter['urgent_delivery']);
@@ -1503,7 +1502,7 @@ class wms_mdl_delivery extends dbeav_model{
         if (!$deliveryIds) {
             return array();
         }
-        $labelRows = app::get('ome')->model('bill_label')->getBIllLabelList($deliveryIds, 'delivery');
+        $labelRows = app::get('ome')->model('bill_label')->getBIllLabelList($deliveryIds, 'wms_delivery');
         $result = array();
         foreach ((array)$labelRows as $label) {
             $result[$label['bill_id']] .= sprintf(

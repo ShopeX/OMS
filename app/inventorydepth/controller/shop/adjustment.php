@@ -365,6 +365,27 @@ class inventorydepth_ctl_shop_adjustment extends desktop_controller {
         // 获取商品条码
         // $barcode = kernel::single('material_codebase')->getBarcodeBySmbn($sku['shop_product_bn'], $sku['shop_id'], 1);
 
+        // 唯品会单个商品发布库存，需要走队列的方式
+        //@todo：唯品会按照区域仓的方式，进行回写库存;
+        if(in_array($sku['shop_type'], ['vop'])){
+            $res = [];
+            
+            // shop_id
+            $shop_id = $sku['shop_id'];
+            $shopIds = [$shop_id];
+            
+            // 获取销售物料
+            $field = 'sm_id,sales_material_name,sales_material_bn,sales_material_type,shop_id,class_id';
+            $filter = array('sales_material_bn'=>$sku['shop_product_bn']);
+            $products = app::get('material')->model('sales_material')->getList($field, $filter, 0, -1);
+            
+            // request
+            kernel::single('inventorydepth_logic_stock')->do_sync_products_stock($products, $shopIds);
+            
+            $this->end(true,$this->app->_('单个商品发布中'), null, $res);
+        }
+        
+        // stock
         $memo = array('last_modified'=>time());
         $stocks[$sku['id']] = array(
             'bn' => $sku['shop_product_bn'],
@@ -526,6 +547,9 @@ class inventorydepth_ctl_shop_adjustment extends desktop_controller {
         for ($i=$total; $i>=0 ; $i--) {
             $params['offset'] = $i*$limit;
 
+            
+            
+            
             # 插入队列
             kernel::single('inventorydepth_queue')->insert_stock_update_queue($title,$params);
         }

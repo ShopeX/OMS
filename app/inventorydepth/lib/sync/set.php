@@ -43,6 +43,25 @@ class inventorydepth_sync_set {
         return implode(',', $this->mode_support);
     }
 
+    /**
+     * 获取库存回写触发依据。
+     *
+     * 历史版本固定使用可售库存判断是否需要回写。为保证未初始化配置的站点
+     * 升级后行为不变，仅当配置明确选择 store 时才改用回写库存比较。
+     *
+     * @return string actual_stock：可售库存；store：回写库存
+     */
+    public function getStockTriggerBasis()
+    {
+        $triggerBasis = app::get('inventorydepth')->getConf('stock.sync.trigger_basis');
+
+        if ($triggerBasis === 'store') {
+            return 'store';
+        }
+
+        return 'actual_stock';
+    }
+
     // 是否开启并支持增量库存回写
     public function isModeSupportInc($shop_type = '')
     {

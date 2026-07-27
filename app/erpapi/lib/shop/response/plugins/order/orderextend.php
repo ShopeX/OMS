@@ -107,6 +107,13 @@ class erpapi_shop_response_plugins_order_orderextend extends erpapi_shop_respons
         if($platform->_ordersdf['biz_delivery_code']){
             $extend['biz_delivery_code'] = $platform->_ordersdf['biz_delivery_code'];
         }
+
+        // 控制字段只在插件保存阶段使用，不写入 order_extend 表。
+        // 由保存阶段结合旧白名单计算有效交集，防止直接覆盖其他物流服务的限制。
+        if ($platform->_ordersdf['shop_type'] == 'pinduoduo'
+            && isset($platform->_ordersdf['charge_home_delivery_door'])) {
+            $extend['_charge_home_delivery_door'] = $platform->_ordersdf['charge_home_delivery_door'];
+        }
         //保价订单SKU商品
         if ($platform->_ordersdf['extend_field']['special_refund_type_info'] && is_array($platform->_ordersdf['extend_field']['special_refund_type_info'])) {
             foreach ($platform->_ordersdf['extend_field']['special_refund_type_info'] as $skuOid => $skuVal)
@@ -226,6 +233,8 @@ class erpapi_shop_response_plugins_order_orderextend extends erpapi_shop_respons
     public function postCreate($order_id,$extendinfo)
     {
         $orderExtendObj = app::get('ome')->model('order_extend'); 
+
+        $extendinfo = $this->_prepareChargeHomeDeliveryDoorExtend($order_id, $extendinfo);
         
         if ($extendinfo['contents']) {      
           // 判断contents是否有值
@@ -266,6 +275,8 @@ class erpapi_shop_response_plugins_order_orderextend extends erpapi_shop_respons
   public function postUpdate($order_id,$extendinfo)
   {
     $orderExtendObj = app::get('ome')->model('order_extend');
+
+    $extendinfo = $this->_prepareChargeHomeDeliveryDoorExtend($order_id, $extendinfo);
     
     if ($extendinfo['contents']) {      
       // 判断contents是否有值
@@ -287,6 +298,66 @@ class erpapi_shop_response_plugins_order_orderextend extends erpapi_shop_respons
       $orderExtendObj->save($extendinfo);
     }  
   }
+
+    /**
+     * 合并拼多多消费者付费送货上门物流白名单
+     *
+     * white_delivery_cps 可能已经承载其他平台物流服务限制。首次命中服务时取交集，
+     * 并在 OMS 专用扩展节点保存合并前白名单；服务取消时再恢复，避免直接清空或覆盖
+     * 其他业务写入的承运商限制。
+     *
+     * @param int $order_id
+     * @param array $extendinfo
+     * @return array
+     */
+    private function _prepareChargeHomeDeliveryDoorExtend($order_id, $extendinfo)
+    {
+        if (!array_key_exists('_charge_home_delivery_door', $extendinfo)) {
+            return $extendinfo;
+        }
+
+        $serviceInfo = $extendinfo['_charge_home_delivery_door'];
+        unset($extendinfo['_charge_home_delivery_door']);
+
+        $orderExtendObj = app::get('ome')->model('order_extend');
+        $oldExtend = $orderExtendObj->db_dump(['order_id' => $order_id], 'white_delivery_cps,extend_field');
+        $oldExtendField = $oldExtend['extend_field'] ? json_decode($oldExtend['extend_field'], true) : [];
+        $newExtendField = $extendinfo['extend_field'] ? json_decode($extendinfo['extend_field'], true) : [];
+        $oldServiceInfo = $oldExtendField['charge_home_delivery_door_oms'] ?? [];
+
+        if ($serviceInfo['active']) {
+            if (array_key_exists('white_delivery_cps', $extendinfo)) {
+                $originalWhiteDeliveryCps = json_decode($extendinfo['white_delivery_cps'], true);
+            } elseif (array_key_exists('original_white_delivery_cps', $oldServiceInfo)) {
+                $originalWhiteDeliveryCps = $oldServiceInfo['original_white_delivery_cps'];
+            } else {
+                $originalWhiteDeliveryCps = $oldExtend['white_delivery_cps'] ? json_decode($oldExtend['white_delivery_cps'], true) : [];
+            }
+
+            $originalWhiteDeliveryCps = array_values(array_unique(array_filter((array)$originalWhiteDeliveryCps)));
+            $serviceWhiteDeliveryCps = array_values(array_unique((array)$serviceInfo['white_delivery_cps']));
+            $effectiveWhiteDeliveryCps = $originalWhiteDeliveryCps
+                ? array_values(array_intersect($originalWhiteDeliveryCps, $serviceWhiteDeliveryCps))
+                : $serviceWhiteDeliveryCps;
+
+            $serviceInfo['original_white_delivery_cps'] = $originalWhiteDeliveryCps;
+            $serviceInfo['effective_white_delivery_cps'] = $effectiveWhiteDeliveryCps;
+            $newExtendField['charge_home_delivery_door_oms'] = $serviceInfo;
+            $extendinfo['white_delivery_cps'] = json_encode($effectiveWhiteDeliveryCps);
+            $extendinfo['extend_field'] = json_encode($newExtendField, JSON_UNESCAPED_UNICODE);
+        } elseif ($oldServiceInfo) {
+            // 当前白名单仍是本功能上次写入的值时才恢复，避免覆盖期间由其他业务更新的白名单。
+            $currentWhiteDeliveryCps = $oldExtend['white_delivery_cps'] ? json_decode($oldExtend['white_delivery_cps'], true) : [];
+            $effectiveWhiteDeliveryCps = (array)$oldServiceInfo['effective_white_delivery_cps'];
+            if ($currentWhiteDeliveryCps == $effectiveWhiteDeliveryCps) {
+                $extendinfo['white_delivery_cps'] = json_encode((array)$oldServiceInfo['original_white_delivery_cps']);
+            }
+            unset($newExtendField['charge_home_delivery_door_oms']);
+            $extendinfo['extend_field'] = json_encode($newExtendField, JSON_UNESCAPED_UNICODE);
+        }
+
+        return $extendinfo;
+    }
     
     /**
      * 翱象数据格式化

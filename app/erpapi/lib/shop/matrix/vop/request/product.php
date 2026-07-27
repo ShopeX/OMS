@@ -39,7 +39,7 @@ class erpapi_shop_matrix_vop_request_product extends erpapi_shop_request_product
         $bns = array();
         foreach ($stocks as $key => $val)
         {
-            $product_bn = trim($val['barcode']); // 用条码barcode去匹配
+            $barcode = trim($val['barcode']); // 用条码barcode去匹配
             
             //指定常态合作编码：cooperation_no回写库存
             if($cooperation_no){
@@ -47,21 +47,24 @@ class erpapi_shop_matrix_vop_request_product extends erpapi_shop_request_product
             }
             
             //sku_id
-            $val['sku_id'] = $product_bn;
+            $val['sku_id'] = $barcode;
             
-            $bns[$product_bn] = $val;
+            $bns[$barcode] = $val;
         }
         
         //按店铺+货号查询
-        $tempList = $skuObj->getList('shop_iid,shop_product_bn', array('shop_id' => $shop_id, 'shop_product_bn' => array_keys($bns)));
+        $tempList = $skuObj->getList('id,shop_iid,shop_product_bn,shop_sku_id', array('shop_id'=>$shop_id, 'shop_sku_id'=>array_keys($bns)));
         if (empty($tempList)) {
             return false;
         }
         
         $itemStocks = [];
-        foreach ($tempList as $k => $v) {
-            if ($bns[$v['shop_product_bn']]) {
-                $itemStocks[] = $bns[$v['shop_product_bn']];
+        foreach ($tempList as $k => $v)
+        {
+            $barcode = $v['shop_sku_id'];
+            
+            if ($bns[$barcode]) {
+                $itemStocks[] = $bns[$barcode];
             }
         }
         unset($tempList, $stocks);

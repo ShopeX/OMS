@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class ome_mdl_orders extends dbeav_model{
 
     //是否有导出配置
@@ -2749,6 +2748,26 @@ class ome_mdl_orders extends dbeav_model{
      }
 
      /**
+     * 订单取消后结束待复审流程
+     *
+     * 复审收口属于订单取消后的附加处理，异常不能反向阻断订单取消、库存释放
+     * 以及其他取消扩展，因此统一捕获异常并记录系统日志。
+     *
+     * @param int $order_id 订单ID
+     * @return bool
+     */
+     private function _finish_order_retrial_by_cancel($order_id)
+     {
+         try {
+             return app::get('ome')->model('order_retrial')->finish_by_order_cancel($order_id);
+         } catch (Exception $e) {
+             kernel::log('订单取消后退出复审失败，order_id='.intval($order_id).'，error='.$e->getMessage());
+         }
+
+         return false;
+     }
+
+     /**
      * 取消订单
      * @access public
      * @param Number $order_id 订单ID
@@ -2795,6 +2814,8 @@ class ome_mdl_orders extends dbeav_model{
                     //logs
                     $memo = '订单已经是取消状态!';
                     $operLogMdl->write_log('order_modify@ome', $order_id, $memo);
+
+                    $this->_finish_order_retrial_by_cancel($order_id);
                     
                     return $rs;
                 }else{
@@ -2823,6 +2844,9 @@ class ome_mdl_orders extends dbeav_model{
                 
                 //logs
                 $operLogMdl->write_log('order_modify@ome',$order_id,$memo);
+
+                //订单取消主流程完成后，自动结束仍处于待处理状态的复审流程。
+                $this->_finish_order_retrial_by_cancel($order_id);
 
                 // 订单取消成功，触发订单取消事件
                 $instance = kernel::service('ome.service.order.cancel.after');

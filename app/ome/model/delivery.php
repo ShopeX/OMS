@@ -2,7 +2,6 @@
 
 class ome_mdl_delivery extends dbeav_model
 {
-    const URGENT_LABEL_CODE = 'SOMS_URGENT_SHIP';
     //public $filter_use_like = true;
     public $has_many = array(
         'delivery_items' => 'delivery_items',
@@ -217,7 +216,7 @@ class ome_mdl_delivery extends dbeav_model
             $where .= ' AND EXISTS (
                 SELECT 1 FROM sdb_ome_bill_label bl
                 WHERE bl.bill_id = '.$tPre.'delivery_id
-                AND bl.bill_type = "delivery"
+                AND bl.bill_type = "ome_delivery"
                 AND bl.label_code = "'.addslashes($filter['delivery_label_code']).'"
             )';
             unset($filter['delivery_label_code']);
@@ -227,15 +226,15 @@ class ome_mdl_delivery extends dbeav_model
                 $where .= ' AND EXISTS (
                     SELECT 1 FROM sdb_ome_bill_label bl
                     WHERE bl.bill_id = '.$tPre.'delivery_id
-                    AND bl.bill_type = "delivery"
-                    AND bl.label_code = "'.self::URGENT_LABEL_CODE.'"
+                    AND bl.bill_type = "ome_delivery"
+                    AND bl.label_code = "SOMS_URGENT_SHIP"
                 )';
             } else {
                 $where .= ' AND NOT EXISTS (
                     SELECT 1 FROM sdb_ome_bill_label bl
                     WHERE bl.bill_id = '.$tPre.'delivery_id
-                    AND bl.bill_type = "delivery"
-                    AND bl.label_code = "'.self::URGENT_LABEL_CODE.'"
+                    AND bl.bill_type = "ome_delivery"
+                    AND bl.label_code = "SOMS_URGENT_SHIP"
                 )';
             }
             unset($filter['urgent_delivery']);
@@ -2132,6 +2131,22 @@ class ome_mdl_delivery extends dbeav_model
         }
         $order = $oOrder->dump($order_id);
 
+        // 所有审单入口最终都会进入发货单创建。这里作为事务内兜底，防止旧版单笔审单
+        // 或其他生成发货单入口绕过上层的拼多多消费者付费送货上门物流校验。
+        if (!$is_diff_order) {
+            $homeDeliveryCorp = $delivery['logi_id'] ? $oDly_corp->dump($delivery['logi_id']) : [];
+            $homeDeliveryError = '';
+            if (!kernel::single('ome_order_platform_pinduoduo_chargehomedelivery')->validate(
+                $order,
+                $delivery['branch_id'],
+                $homeDeliveryCorp,
+                $homeDeliveryError
+            )) {
+                $this->db->rollBack();
+                return array('rsp' => 'fail', 'msg' => $homeDeliveryError);
+            }
+        }
+
         if (kernel::single('ome_order_bool_type')->isJITX($order['order_bool_type'])) {
             kernel::single('purchase_branch_freeze')->deleteFromOrder($order['order_bn'], $order['shop_id']);
         }
@@ -3688,7 +3703,6 @@ class ome_mdl_delivery extends dbeav_model
 
         if ($data['delivery_id'] > 0) {
             $this->updateOrderLogi($data['delivery_id'], $data);
-            $this->inheritUrgentLabelFromOrders($data['delivery_id']);
         }
 
         return $result;
@@ -3710,8 +3724,8 @@ class ome_mdl_delivery extends dbeav_model
         $prefix = "CASE WHEN EXISTS (
             SELECT 1 FROM sdb_ome_bill_label bl
             WHERE bl.bill_id = ".$this->table_name(true).".delivery_id
-            AND bl.bill_type = 'delivery'
-            AND bl.label_code = '".self::URGENT_LABEL_CODE."'
+            AND bl.bill_type = 'ome_delivery'
+            AND bl.label_code = 'SOMS_URGENT_SHIP'
         ) THEN 0 ELSE 1 END ASC";
         return $prefix . ($orderSql ? ',' . $orderSql : '');
     }
@@ -3745,34 +3759,6 @@ class ome_mdl_delivery extends dbeav_model
         }
         $globalConf = app::get('ome')->getConf('ome.urgent_delivery.prioritize_wave');
         return $globalConf === null || $globalConf === '' || $globalConf === 'on';
-    }
-
-    /**
-     * 在发货单保存后，把关联订单上的加急标签补写到发货单标签表。
-     *
-     * @param int $deliveryId
-     * @return bool
-     */
-    public function inheritUrgentLabelFromOrders($deliveryId)
-    {
-        if (!$deliveryId) {
-            return false;
-        }
-        $labelLib = kernel::single('ome_bill_label');
-        if ($labelLib->existLabel($deliveryId, self::URGENT_LABEL_CODE, 'delivery')) {
-            return true;
-        }
-        $orderRows = app::get('ome')->model('delivery_order')->getList('order_id', ['delivery_id' => $deliveryId]);
-        if (!$orderRows) {
-            return false;
-        }
-        foreach ($orderRows as $row) {
-            if ($labelLib->existLabel($row['order_id'], self::URGENT_LABEL_CODE)) {
-                $err = '';
-                return $labelLib->markBillLabel($deliveryId, '', self::URGENT_LABEL_CODE, 'delivery', $err);
-            }
-        }
-        return false;
     }
 
     /**
@@ -4654,7 +4640,7 @@ class ome_mdl_delivery extends dbeav_model
         if (!$deliveryIds) {
             return array();
         }
-        $labelRows = app::get('ome')->model('bill_label')->getBIllLabelList($deliveryIds, 'delivery');
+        $labelRows = app::get('ome')->model('bill_label')->getBIllLabelList($deliveryIds, 'ome_delivery');
         $result = array();
         foreach ((array)$labelRows as $label) {
             $result[$label['bill_id']] .= sprintf(

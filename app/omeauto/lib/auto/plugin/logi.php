@@ -78,6 +78,25 @@ class omeauto_auto_plugin_logi extends omeauto_auto_plugin_abstract implements o
             return;
         }
         foreach($orders as $val) {
+            // 强制指定、店铺绑定等路径不能静默替换物流，只在最终校验不合规时挂起。
+            $homeDeliveryError = '';
+            $homeDeliveryLib = kernel::single('ome_order_platform_pinduoduo_chargehomedelivery');
+            if (!$homeDeliveryLib->validate(
+                $val,
+                $group->getBranchId(),
+                $corp,
+                $homeDeliveryError
+            )) {
+                $group->setDlyCorp([]);
+                $group->setOrderStatus('*', $this->getMsgFlag());
+                $group->setStatus(
+                    omeauto_auto_group_item::__OPT_HOLD,
+                    $this->_getPlugName(),
+                    $val['order_bn'].' '.$homeDeliveryError
+                );
+                return;
+            }
+
             if($val['shop_type'] == '360buy') {
                 if(kernel::single('ome_bill_label_shsm')->isTinyPieces($val['order_id']) && $corp['channel_id']) {
                     $extendObj = app::get('logisticsmanager')->model('channel_extend');

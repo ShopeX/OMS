@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * 单据标签管理Lib类
  *
@@ -50,6 +49,7 @@ class ome_bill_label
         // 系统内部的请用SOMS_为开头
         'SOMS_WFP'          => ['label_name' => '晚发赔', 'label_color' => 'Green'],
         'SOMS_SHSM'         => ['label_name' => '送货上门', 'label_color' => 'Chocolate', 'label_thumb'=>'送'],
+        'SOMS_ZFSHSM'       => ['label_name' => '自费送货上门', 'label_color' => 'Chocolate', 'label_thumb'=>'自费送', 'label_to_delivery' => true, 'extend_info_to_delivery' => true],
         'SOMS_IMEI'         => ['label_name' => '发货必传IMEI码', 'label_color' => 'Gold', 'label_to_delivery' => true],
         'SOMS_SERIALNUMBER' => ['label_name' => '发货必传SN码', 'label_color' => 'Gold', 'label_to_delivery' => true],
         'SOMS_EXPRESS_MUST' => ['label_name' => '自选快递', 'label_color' => 'CornflowerBlue'],
@@ -312,10 +312,10 @@ class ome_bill_label
             'label_desc'  => $labelInfo['label_desc'],
         );
         $billLabelMdl = app::get('ome')->model('bill_label');
-        $isCheck      = $billLabelMdl->db_dump(['bill_type' => $bill_type, 'bill_id' => $bill_id, 'label_id' => $labelInfo['label_id']], 'id,label_value');
+        $isCheck      = $billLabelMdl->db_dump(['bill_type' => $bill_type, 'bill_id' => $bill_id, 'label_id' => $labelInfo['label_id']], 'id,label_value,extend_info');
         if (!$isCheck) {
             $billLabelMdl->insert($saveData);
-        } elseif ($isCheck['label_value'] != $label_value) {
+        } elseif ($isCheck['label_value'] != $label_value || (string)$isCheck['extend_info'] !== (string)$extend_info) {
             $billLabelMdl->update($saveData, ['id' => $isCheck['id']]);
         }
 
@@ -346,9 +346,21 @@ class ome_bill_label
         $labelMdl = app::get('omeauto')->model('order_labels');
         $res      = $labelMdl->db_dump($filter);
         if ($res) {
+            /***
             $labelInfo['label_id'] = $res['label_id'];
             unset($labelInfo['create_time']);
             $labelMdl->update($labelInfo, $filter);
+            ***/
+            
+            // unset
+            unset($labelInfo['create_time']);
+            
+            // 按主键更新，且不把 label_id 放入 SET，避免同 label_code 多行时 UPDATE 主键冲突
+            // Duplicate entry 'N' for key 'PRIMARY'
+            $labelMdl->update($labelInfo, ['label_id' => $res['label_id']]);
+            
+            // label_id
+            $labelInfo['label_id'] = $res['label_id'];
         } else {
             $labelMdl->insert($labelInfo);
         }
@@ -523,7 +535,12 @@ class ome_bill_label
         $labelOrder = $this->getLabelFromOrder($orderId, 'order');
         foreach ($labelOrder as $k => $label) {
             if($this->orderLabelsPreset[$label['label_code']]['label_to_delivery']) {
-                $this->markBillLabel($deliveryId, '', $label['label_code'], $bill_type, $err, $label['label_value'], $extend_info);
+                $labelExtendInfo = $extend_info;
+                if ($this->orderLabelsPreset[$label['label_code']]['extend_info_to_delivery']) {
+                    $orderLabelInfo = $this->getBillLabelInfo($orderId, 'order', $label['label_code']);
+                    $labelExtendInfo = $orderLabelInfo['extend_info'] ?? '';
+                }
+                $this->markBillLabel($deliveryId, '', $label['label_code'], $bill_type, $err, $label['label_value'], $labelExtendInfo);
             }
         }
     }

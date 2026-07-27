@@ -22,12 +22,6 @@
  */
 class erpapi_shop_response_process_delivergoods extends erpapi_shop_response_abstract
 {
-    const URGENT_LABEL_CODE = 'SOMS_URGENT_SHIP';
-    const URGENT_SERVICE_TAG = '加急发货';
-    const URGENT_REPORT_TASK_NOTIFY = 'urgent_logistics_notify';
-    const URGENT_REPORT_TASK_DELIVERY = 'urgent_logistics_dly';
-    const URGENT_REPORT_TASK_CONSIGN = 'urgent_logistics_csg';
-
     /**
      * 根据 service_tags 分流普通催发货与淘宝加急发货处理。
      *
@@ -135,19 +129,18 @@ class erpapi_shop_response_process_delivergoods extends erpapi_shop_response_abs
             $labelLib      = kernel::single('ome_bill_label');
             $deliveryMdl   = app::get('ome')->model('delivery');
             $deliveryIds   = $deliveryMdl->getDeliverIdByOrderId($order['order_id']);
-            $alreadyMarked = $labelLib->existLabel($order['order_id'], self::URGENT_LABEL_CODE);
+            $alreadyMarked = $labelLib->existLabel($order['order_id'], 'SOMS_URGENT_SHIP');
 
             if (!$alreadyMarked) {
                 $err        = '';
-                $markResult = $labelLib->markBillLabel($order['order_id'], '', self::URGENT_LABEL_CODE, 'order', $err);
+                $markResult = $labelLib->markBillLabel($order['order_id'], '', 'SOMS_URGENT_SHIP', 'order', $err);
                 if (!$markResult) {
                     return $this->fail('SYSTEM_ERROR', $err ?: '订单加急标签写入失败', true, $order['order_bn']);
                 }
             }
             if ($deliveryIds) {
                 foreach ((array)$deliveryIds as $deliveryId) {
-                    $err = '';
-                    $labelLib->markBillLabel($deliveryId, '', self::URGENT_LABEL_CODE, 'delivery', $err);
+                    $labelLib->orderToDeliveryLabel($order['order_id'], $deliveryId, 'ome_delivery');
                 }
             }
 
@@ -200,10 +193,10 @@ class erpapi_shop_response_process_delivergoods extends erpapi_shop_response_abs
     {
         if (!is_array($order['service_tags'])) {
             $serviceTags = trim((string)$order['service_tags']);
-            return $serviceTags !== '' && $serviceTags === self::URGENT_SERVICE_TAG;
+            return $serviceTags !== '' && $serviceTags === '加急发货';
         }
 
-        return in_array(self::URGENT_SERVICE_TAG, $order['service_tags'], true);
+        return in_array('加急发货', $order['service_tags'], true);
     }
 
     /**
@@ -274,13 +267,13 @@ class erpapi_shop_response_process_delivergoods extends erpapi_shop_response_abs
             return false;
         }
         $taskTypeMap = [
-            'notify'          => self::URGENT_REPORT_TASK_NOTIFY,
-            'delivery_status' => self::URGENT_REPORT_TASK_DELIVERY,
-            'consign_sync'    => self::URGENT_REPORT_TASK_CONSIGN,
+            'notify'          => 'urgent_logistics_notify',
+            'delivery_status' => 'urgent_logistics_dly',
+            'consign_sync'    => 'urgent_logistics_csg',
         ];
         return app::get('ome')->model('misc_task')->saveMiscTask([
             'obj_id'    => intval($orderId),
-            'obj_type'  => $taskTypeMap[$scene] ?: self::URGENT_REPORT_TASK_NOTIFY,
+            'obj_type'  => $taskTypeMap[$scene] ?: 'urgent_logistics_notify',
             'exec_time' => time(),
             'addon'     => json_encode(['scene' => $scene], JSON_UNESCAPED_UNICODE),
         ]);

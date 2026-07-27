@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 class ome_ctl_admin_delivery extends desktop_controller{
-    const URGENT_LABEL_CODE = 'SOMS_URGENT_SHIP';
     var $name = "发货单";
     var $workground = "console_center";
 
@@ -30,7 +29,7 @@ class ome_ctl_admin_delivery extends desktop_controller{
         );
         $sub_menu = array(
             0 => array('label' => app::get('base')->_('全部'), 'filter' => $baseFilter, 'optional' => false),
-            1 => array('label' => app::get('base')->_('加急发货'), 'filter' => array_merge($baseFilter, array('delivery_label_code' => self::URGENT_LABEL_CODE)), 'optional' => false),
+            1 => array('label' => app::get('base')->_('加急发货'), 'filter' => array_merge($baseFilter, array('delivery_label_code' => 'SOMS_URGENT_SHIP')), 'optional' => false),
         );
         foreach ($sub_menu as $k => $v) {
             $sub_menu[$k]['filter'] = $v['filter'];

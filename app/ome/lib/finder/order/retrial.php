@@ -14,8 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
+/**
+ +----------------------------------------------------------
+ * 复审订单列表
+ +----------------------------------------------------------
+ * 
+ * Time: 2014-04-22 $
+ * [Ecos!] (C)2003-2014 Shopex Inc.
+ +----------------------------------------------------------
+ */
 class ome_finder_order_retrial
 {
 	/*------------------------------------------------------ */
@@ -29,7 +36,11 @@ class ome_finder_order_retrial
     	$str   = '<a href="index.php?app=ome&ctl=admin_order_retrial&act=normal&id='.$row['id'].'&p[0]='.$row['id'].'&finder_id='.$_GET['_finder']['finder_id'].'" 
         target="_blank">复审</a>';
     	
-        if($row['status'] == '1' || $row['status'] == '2' || $row['status'] == '3')
+        if($row['status'] == '4')
+        {
+            $str    = '已取消';
+        }
+        elseif($row['status'] == '1' || $row['status'] == '2' || $row['status'] == '3')
         {
             $str    = '已审核';
         }

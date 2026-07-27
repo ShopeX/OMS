@@ -358,6 +358,13 @@ $db['refund_apply'] = array(
         
           'in_list'    => true,
       ),
+        'platform_discount_return_amount' => array(
+            'type'    => 'money',
+            'default' => '0',
+            'label'   => '平台优惠退回金额',
+            'comment' => '平台优惠退回金额（元）',
+            'editable' => false,
+        ),
         'order_source' => array (
             'type'            => 'varchar(50)',
             'label'           => '来源渠道',

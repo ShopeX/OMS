@@ -312,7 +312,7 @@ class erpapi_shop_matrix_360buy_response_order extends erpapi_shop_response_orde
                             }
                         }
                     }
-                    if($value['type'] == 110) {
+                    /* if($value['type'] == 110) {
                         $balanceAmount = 0;
                         // 定义控制变量：初始值为不加
                         $shouldAddAmount = false;
@@ -339,7 +339,7 @@ class erpapi_shop_matrix_360buy_response_order extends erpapi_shop_response_orde
                                 "paymethod" => '余额'
                             ];
                         }
-                    }
+                    } */
 
                     // bearer = 5 国补立减,也需要算在订单总额里
                     //@todo：官方文档：https://open.jd.com/v2/#/doc/scene?listId=2168

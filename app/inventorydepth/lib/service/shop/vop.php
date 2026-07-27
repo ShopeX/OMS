@@ -20,7 +20,6 @@
  */
 class inventorydepth_service_shop_vop extends inventorydepth_service_shop_common
 {
-
     //定义每页拉取数据(平台限制每页最多200条)
     public $customLimit = 50;
 
@@ -86,29 +85,36 @@ class inventorydepth_service_shop_vop extends inventorydepth_service_shop_common
                     'approve_status' => $v['selling_status'] == '1' ? 'onsale' : 'instock', //上下架
                 ];
             }
+            
+            // 获取sku信息
             $spuList[$v['sn']]['skus'][$v['barcode']] = [
                 'sku_id'   => $v['barcode'],
-                'outer_id' => $v['oms_sm_bn']?$v['oms_sm_bn']:$v['sn'], //sku货号
+                'outer_id' => $v['barcode'], //sku货号（使用平台barcode条形码，作为：销售物料编码）
                 'sku_wid'  => $v['barcode'],
                 'title'    => $v['product_name'], //货品名称
             ];
         }
 
         foreach ($spuList as $spuBn => $spuInfo) {
-
+            
+            $iid = $spuBn;
+            
             $skuList = [];
             foreach ($spuInfo['skus'] as $key => $val) {
                 $skuList['sku'][] = $val;
             }
+            
+            // data
             $data[] = array(
                 'outer_id'       => $spuBn, //spu商品编号
-                'iid'            => $spuBn,
+                'iid'            => $iid,
                 'title'          => $spuInfo['title'],
                 'approve_status' => $spuInfo['approve_status'],
                 'simple'         => 'false',
                 'skus'           => $skuList,
             );
         }
+        
         //销毁
         unset($result, $skuList);
 
@@ -144,14 +150,20 @@ class inventorydepth_service_shop_vop extends inventorydepth_service_shop_common
 
         return false;
     }
-
-    // 根据barcode获取普通商品的sm_bn
+    
+    /**
+     * 根据barcode获取普通商品的sm_bn
+     *
+     * @param $barcodeList
+     * @return array
+     */
     public function barcodeToSmbn($barcodeList)
     {
         $codeList = $bmIds = $smIds = $smList = [];
         $basicMaterialBarcode = kernel::single('material_basic_material_barcode');
         $bmIds = $basicMaterialBarcode->getBmidListByFilter(['code|in'=>$barcodeList], $codeList);
 
+        // 获取销售物料ID
         if ($bmIds) {
             $smIds = app::get('material')->model('sales_basic_material')->getList("bm_id,sm_id",array("bm_id|in"=>$bmIds), 0, -1);
         }
@@ -188,6 +200,7 @@ class inventorydepth_service_shop_vop extends inventorydepth_service_shop_common
                 }
             }
         }
+        
         return $barcodeVsSmbn;
     }
 }

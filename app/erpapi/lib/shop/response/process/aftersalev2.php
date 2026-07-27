@@ -77,6 +77,9 @@ class erpapi_shop_response_process_aftersalev2 {
                     if($sdf['refund_version_change']) {
                         $upData['memo']  = $sdf['reason'];
                         $upData['money'] = $sdf['refund_fee'];
+                        if (isset($sdf['platform_discount_return_amount'])) {
+                            $upData['platform_discount_return_amount'] = $sdf['platform_discount_return_amount'];
+                        }
                     } 
                     $memo = '更新成功,状态：' . $sdf['status'];
                     break;
@@ -212,6 +215,7 @@ class erpapi_shop_response_process_aftersalev2 {
             'tag_type'        => ($sdf['tag_type'] ? $sdf['tag_type'] : '0'), //退款类型
             'jsrefund_flag'   => ($sdf['jsrefund_flag'] ? $sdf['jsrefund_flag'] : '0'), //极速退款标识
             'cs_status'       => $sdf['cs_status'],
+            'platform_discount_return_amount' => isset($sdf['platform_discount_return_amount']) ? $sdf['platform_discount_return_amount'] : 0,
         );
 
         // 经销店铺的单据，delivery_mode冗余到退款单申请表

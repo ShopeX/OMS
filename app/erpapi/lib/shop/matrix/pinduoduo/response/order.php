@@ -40,6 +40,14 @@ class erpapi_shop_matrix_pinduoduo_response_order extends erpapi_shop_response_o
     {
         parent::_analysis();
 
+        // 矩阵回调原始数据不保证携带 shop_type；付费送货上门插件需据此限定拼多多订单，
+        // 直接使用已通过路由校验的店铺配置，避免依赖可选的预处理服务补齐该字段。
+        $this->_ordersdf['shop_type'] = $this->__channelObj->channel['shop_type'];
+
+        // 消费者付费送货上门依赖平台服务费明细。先统一格式化服务信息，
+        // 后续订单标签和物流白名单插件只读取标准结构，避免各处重复兼容矩阵嵌套数据。
+        $this->_formatChargeHomeDeliveryDoor();
+
         if($this->_ordersdf['consignee']['area_city'] == '县') {
             $this->_ordersdf['consignee']['area_city'] = $this->_ordersdf['consignee']['area_state'];
         }
@@ -184,12 +192,111 @@ class erpapi_shop_matrix_pinduoduo_response_order extends erpapi_shop_response_o
             $plugins[] = 'confirmreceipt';
         }
         
-         if($this->_ordersdf['is_delivery']=='Y'){
+        // 本服务的标签和白名单需要在服务取消时主动清理，不能完全依赖 is_delivery。
+        // 风险单等场景会先变为 N；若历史已打标，仍需运行插件恢复其他业务白名单。
+        if ($this->_ordersdf['is_delivery'] == 'Y' || $this->_needSyncChargeHomeDeliveryDoor()) {
+            $plugins[] = 'orderextend';
             $plugins[] = 'orderlabels';
-            
         }
 
         return $plugins;
+    }
+
+    /**
+     * 判断不可配送订单是否仍需同步或清理消费者付费送货上门服务
+     */
+    private function _needSyncChargeHomeDeliveryDoor()
+    {
+        if (!empty($this->_ordersdf['charge_home_delivery_door']['active'])) {
+            return true;
+        }
+
+        $orderId = $this->_tgOrder['order_id'] ?? 0;
+        if (!$orderId) {
+            return false;
+        }
+
+        $oldExtend = app::get('ome')->model('order_extend')->db_dump(
+            ['order_id' => $orderId],
+            'extend_field'
+        );
+        $oldExtendField = $oldExtend['extend_field']
+            ? json_decode($oldExtend['extend_field'], true)
+            : [];
+        if (!empty($oldExtendField['charge_home_delivery_door_oms'])) {
+            return true;
+        }
+
+        // 兼容历史执行中扩展信息保存失败、但标签已经写入的半完成状态。
+        $labelInfo = kernel::single('ome_bill_label')->getBillLabelInfo(
+            $orderId,
+            'order',
+            'SOMS_ZFSHSM'
+        );
+        return !empty($labelInfo);
+    }
+
+    /**
+     * 格式化拼多多消费者付费送货上门服务信息
+     *
+     * 矩阵的 service_fee_detail 可能是数组、嵌套数组或 JSON 字符串。
+     * 这里只识别 charge_home_delivery_door，并将有效服务费汇总成 OMS 标准结构，
+     * 供订单标签打标、费用保存和审单物流白名单处理共同使用。
+     */
+    private function _formatChargeHomeDeliveryDoor()
+    {
+        $serviceFee = 0;
+        $serviceDetail = $this->_ordersdf['extend_field']['service_fee_detail'] ?? [];
+        $this->_collectChargeHomeDeliveryDoorFee($serviceDetail, $serviceFee);
+
+        $serviceFee = round($serviceFee, 2);
+        $serviceInfo = [
+            'active'             => $serviceFee > 0,
+            'service_name'       => 'charge_home_delivery_door',
+            'service_fee'        => number_format($serviceFee, 2, '.', ''),
+            'white_delivery_cps' => ['ZTO', 'YTO', 'STO', 'jitu', 'YUNDA'],
+        ];
+        $this->_ordersdf['charge_home_delivery_door'] = $serviceInfo;
+
+        if ($serviceInfo['active']) {
+            $this->_ordersdf['extend_field']['charge_home_delivery_door_oms'] = $serviceInfo;
+        } else {
+            unset($this->_ordersdf['extend_field']['charge_home_delivery_door_oms']);
+        }
+    }
+
+    /**
+     * 递归汇总消费者付费送货上门服务费
+     *
+     * @param mixed $serviceDetail
+     * @param float $serviceFee
+     */
+    private function _collectChargeHomeDeliveryDoorFee($serviceDetail, &$serviceFee)
+    {
+        if (is_string($serviceDetail)) {
+            $decoded = json_decode($serviceDetail, true);
+            if (!is_array($decoded)) {
+                return;
+            }
+            $serviceDetail = $decoded;
+        }
+
+        if (!is_array($serviceDetail)) {
+            return;
+        }
+
+        if (isset($serviceDetail['service_name'])) {
+            if ($serviceDetail['service_name'] == 'charge_home_delivery_door'
+                && is_numeric($serviceDetail['service_fee'])
+                && $serviceDetail['service_fee'] > 0) {
+                $serviceFee += (float)$serviceDetail['service_fee'];
+            }
+            return;
+        }
+
+        foreach ($serviceDetail as $detail) {
+            $this->_collectChargeHomeDeliveryDoorFee($detail, $serviceFee);
+        }
     }
 
     protected function get_update_components()

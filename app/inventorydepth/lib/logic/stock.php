@@ -1016,11 +1016,28 @@ class inventorydepth_logic_stock extends inventorydepth_logic_abstract
             // 判断是否为唯品会省仓，如果是省仓，找到省仓对应关系
 
             // $shop = [shop_id,shop_bn,node_type,business_type]
-
+            
+            // bn
+            $bnList = array_column($stocks, 'bn');
+            
+            // 查询销售物料类型
+            $salesMaterialObj = app::get('material')->model('sales_material');
+            $smList = $salesMaterialObj->getList('sm_id,sales_material_bn,sales_material_type', array('sales_material_bn'=>$bnList));
+            $smList = array_column($smList, null, 'sales_material_bn');
+            
             // 获取商品条码
             $materialCodeLib = kernel::single('material_codebase');
-            foreach ($stocks as $_k => $_v) {
-                $barcode = $materialCodeLib->getBarcodeBySmbn($_v['bn'], $shop['shop_id']);
+            foreach ($stocks as $_k => $_v)
+            {
+                $temp_bn = $_v['bn'];
+                
+                // 销售物料类型是：组合，barcode条形码直接使用：销售物料编码
+                if(isset($smList[$temp_bn]) && $smList[$temp_bn]['sales_material_type'] == '2'){
+                    $barcode = $temp_bn;
+                }else{
+                    $barcode = $materialCodeLib->getBarcodeBySmbn($_v['bn'], $shop['shop_id']);
+                }
+                
                 $stocks[$_k]['barcode']= $barcode; // 回传匹配店铺资源的商品用barcode去匹配
             }
 
@@ -1082,6 +1099,8 @@ class inventorydepth_logic_stock extends inventorydepth_logic_abstract
     public function eliminateSameNumber($stocks, $shop, $sales_bn_list) {
         $stockApi = [];
         $stockApiModel = app::get('ome')->model('api_stock_log');
+        $triggerBasis = kernel::single('inventorydepth_sync_set')->getStockTriggerBasis();
+        $currentStockField = ($triggerBasis == 'store') ? 'quantity' : 'actual_stock';
         foreach ($stockApiModel->getList('shop_id,product_bn,store,actual_stock,msg,last_modified,status,shop_sku_id',array('product_bn'=>$sales_bn_list, 'shop_id'=>$shop['shop_id'])) as $value) {
             // $index = $value['shop_id'] . "-" .$value['product_bn'] . "-" . $value['shop_sku_id'];
             $index = $value['shop_id'] . "-" .$value['product_bn'];
@@ -1093,8 +1112,11 @@ class inventorydepth_logic_stock extends inventorydepth_logic_abstract
                 continue;
             }
             $stockapi_code = $shop['shop_id'] . "-" . $st['bn'];
-            if(isset($stockApi[$stockapi_code]['actual_stock'])
-                && $stockApi[$stockapi_code]['actual_stock'] == $st['actual_stock']
+            // 默认沿用历史逻辑比较可售库存；选择“回写库存”时，使用本次规则计算结果
+            // quantity 对比 api_stock_log.store。其余成功状态、常量规则和强制回写条件保持不变。
+            if(isset($stockApi[$stockapi_code][$triggerBasis])
+                && isset($st[$currentStockField])
+                && $stockApi[$stockapi_code][$triggerBasis] == $st[$currentStockField]
                 && $stockApi[$stockapi_code]['status'] == 'success'
                 && (
                     #如果规则为常量,则没有规则说明，需发起请求

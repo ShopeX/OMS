@@ -14,14 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class sales_aftersale_type_refund
 {
-    /**
-     * generate_aftersale
-     * @param mixed $refund_id ID
-     * @return mixed 返回值
-     */
     public function generate_aftersale($refund_id = null)
     {
         if (empty($refund_id)) {
@@ -128,7 +122,7 @@ class sales_aftersale_type_refund
         $saleInfo = app::get('ome')->model('sales')->db_dump(['order_id' => $apply_detail[0]['order_id']], 'sale_id,ship_time');
         $data['ship_time'] = $saleInfo['ship_time'];
         $sale_id = $saleInfo['sale_id'];
-        $saleItems = app::get('ome')->model('sales_items')->getList('product_id,nums,platform_amount,settlement_amount,platform_pay_amount,actually_amount', ['sale_id'=>$sale_id]);
+        $saleItems = app::get('ome')->model('sales_items')->getList('product_id,nums,platform_pay_amount,actually_amount', ['sale_id'=>$sale_id]);
     
         $orderItems = $Oorder_items->getList('product_id,bn,item_id,obj_id,shop_goods_id,shop_product_id', array('order_id' => $apply_detail[0]['order_id']));
         $orderItems = array_column($orderItems,null,'product_id');
@@ -137,8 +131,6 @@ class sales_aftersale_type_refund
         $productSendnum = [];
         foreach($saleItems as $v) {
             $productSendnum[$v['product_id']] += $v['nums'];
-            $productSaleAmount[$v['product_id']]['platform_amount'] += $v['platform_amount'];
-            $productSaleAmount[$v['product_id']]['settlement_amount'] += $v['settlement_amount'];
             $productSaleAmount[$v['product_id']]['actually_amount'] += $v['actually_amount'];
             $productSaleAmount[$v['product_id']]['platform_pay_amount'] += $v['platform_pay_amount'];
         }
@@ -152,22 +144,20 @@ class sales_aftersale_type_refund
         foreach ($product_data as $k => $v)
         {
             $product_id = $v['product_id'];
+            $saleprice = bcmul((float)$v['price'], (float)$v['num'], 2);
             
             //关联的销售物料
             $returnItemInfo = $returnItems['products'][$product_id];
             $orderItemInfo    = $orderItems[$product_id];
+            $platform_amount = 0;
+            $settlement_amount = $saleprice;
             if($productSendnum[$product_id]) {
-                $platform_amount = sprintf("%.2f", $productSaleAmount[$product_id]['platform_amount'] * $v['num'] / $productSendnum[$product_id]);
-                $settlement_amount = sprintf("%.2f", $productSaleAmount[$product_id]['settlement_amount'] * $v['num'] / $productSendnum[$product_id]);
                 $platform_pay_amount = sprintf("%.2f", $productSaleAmount[$product_id]['platform_pay_amount'] * $v['num'] / $productSendnum[$product_id]);
                 $actually_amount = sprintf("%.2f", $productSaleAmount[$product_id]['actually_amount'] * $v['num'] / $productSendnum[$product_id]);
             } else {
-                $platform_amount = 0;
-                $settlement_amount = 0;
                 $platform_pay_amount = 0;
                 $actually_amount = 0;
             }
-            $data['platform_amount'] += $platform_amount;
             $data['settlement_amount'] += $settlement_amount;
             $data['platform_pay_amount'] += $platform_pay_amount;
             $data['actually_amount'] += $actually_amount;
@@ -178,10 +168,10 @@ class sales_aftersale_type_refund
                 'product_id'    => $v['product_id'],
                 'num'           => $v['num'],
                 'price'         => $v['price'],
-                'saleprice'     => bcmul((float)$v['price'], (float)$v['num'], 2),
+                'saleprice'     => $saleprice,
                 'return_type'   => 'refunded',
-                'money'         => bcmul((float)$v['price'], (float)$v['num'], 2),
-                'refunded'      => bcmul((float)$v['price'], (float)$v['num'], 2),
+                'money'         => $saleprice,
+                'refunded'      => $saleprice,
                 'create_time'   => time(),
                 'last_modified' => time(),
                 'item_type' => $returnItemInfo['item_type'], //物料类型
@@ -192,6 +182,22 @@ class sales_aftersale_type_refund
                 'platform_pay_amount' => $platform_pay_amount,
                 'actually_amount' => $actually_amount
             );
+        }
+
+        //累加平台优惠退回金额到结算金额
+        $platform_discount_return_amount = $apply_detail[0]['platform_discount_return_amount'] ? $apply_detail[0]['platform_discount_return_amount'] : 0;
+        if (bccomp($platform_discount_return_amount, 0, 2) > 0 && !empty($aftersale_items)) {
+            $aftersale_items = kernel::single('ome_order')->calculate_part_porth($aftersale_items, array(
+                'part_total'  => $platform_discount_return_amount,
+                'part_field'  => 'discount_return_share',
+                'porth_field' => 'saleprice',
+            ));
+            foreach ($aftersale_items as $k => $item) {
+                $share = isset($item['discount_return_share']) ? $item['discount_return_share'] : 0;
+                $aftersale_items[$k]['settlement_amount'] = bcadd($item['settlement_amount'], $share, 2);
+                unset($aftersale_items[$k]['discount_return_share']);
+                $data['settlement_amount'] = bcadd($data['settlement_amount'], $share, 2);
+            }
         }
         
         $data['aftersale_items'] = $aftersale_items;

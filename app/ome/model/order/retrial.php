@@ -37,6 +37,85 @@ class ome_mdl_order_retrial extends dbeav_model
 
         return $rows;
     }
+    /**
+     * 规范化高级筛选中的单值或多行文本值
+     *
+     * 历史订单的物料筛选使用多行文本框，Finder会将多个值以换行符提交。
+     * 这里统一兼容字符串和数组，去除空值并去重，供店铺和物料筛选复用。
+     *
+     * @param mixed $value
+     * @return array
+     */
+    private function _normalize_filter_values($value)
+    {
+        if(is_string($value))
+        {
+            $value = preg_split('/\r\n|\r|\n/', $value);
+        }
+
+        $result = array();
+        foreach((array) $value as $item)
+        {
+            if(!is_scalar($item))
+            {
+                continue;
+            }
+
+            $item = trim((string) $item);
+            if($item !== '')
+            {
+                $result[$item] = $item;
+            }
+        }
+
+        return array_values($result);
+    }
+
+    /**
+     * 生成日期时间高级筛选条件
+     *
+     * 参数结构与Finder现有time控件保持一致，支持等于、大于、小于和时间范围。
+     *
+     * @param array  $filter
+     * @param string $field
+     * @param string $column
+     * @return string
+     */
+    private function _build_time_filter($filter, $field, $column)
+    {
+        $search_key = '_'.$field.'_search';
+        $search = isset($filter[$search_key]) ? $filter[$search_key] : '';
+        if($search == 'between' && !empty($filter[$field.'_from']) && !empty($filter[$field.'_to']))
+        {
+            $from_hour = isset($filter['_DTIME_']['H'][$field.'_from']) ? intval($filter['_DTIME_']['H'][$field.'_from']) : 0;
+            $from_minute = isset($filter['_DTIME_']['M'][$field.'_from']) ? intval($filter['_DTIME_']['M'][$field.'_from']) : 0;
+            $to_hour = isset($filter['_DTIME_']['H'][$field.'_to']) ? intval($filter['_DTIME_']['H'][$field.'_to']) : 0;
+            $to_minute = isset($filter['_DTIME_']['M'][$field.'_to']) ? intval($filter['_DTIME_']['M'][$field.'_to']) : 0;
+            $from = strtotime($filter[$field.'_from'].' '.$from_hour.':'.$from_minute.':00');
+            $to = strtotime($filter[$field.'_to'].' '.$to_hour.':'.$to_minute.':00');
+
+            return "(".$column.">='".$from."' AND ".$column."<='".$to."')";
+        }
+
+        if(empty($filter[$field]))
+        {
+            return '';
+        }
+
+        $hour = isset($filter['_DTIME_']['H'][$field]) ? intval($filter['_DTIME_']['H'][$field]) : 0;
+        $minute = isset($filter['_DTIME_']['M'][$field]) ? intval($filter['_DTIME_']['M'][$field]) : 0;
+        $time = strtotime($filter[$field].' '.$hour.':'.$minute.':00');
+        if($search == 'than')
+        {
+            return $column.">'".$time."'";
+        }
+        elseif($search == 'lthan')
+        {
+            return $column."<'".$time."'";
+        }
+
+        return $column."='".$time."'";
+    }
     /*------------------------------------------------------ */
     //-- 过滤条件[自定义]
     /*------------------------------------------------------ */
@@ -54,6 +133,138 @@ class ome_mdl_order_retrial extends dbeav_model
         if(!empty($filter['order_bn']))
         {
             $where[]     = "a.order_bn = '".$filter['order_bn']."'";
+        }
+        //控制器传入不可修改的组织权限范围，必须独立于用户选择的组织筛选条件。
+        //两个条件同时存在时会自然取交集，恶意提交权限外的org_id也无法越权。
+        if(!empty($filter['permission_org_id']))
+        {
+            $org_ids = array();
+            foreach((array) $filter['permission_org_id'] as $org_id)
+            {
+                $org_id = intval($org_id);
+                if($org_id > 0)
+                {
+                    $org_ids[$org_id] = $org_id;
+                }
+            }
+
+            $where[] = $org_ids ? "b.org_id IN (".implode(',', $org_ids).")" : '1=0';
+        }
+        //运营组织高级筛选，选项由Finder按当前账号权限裁剪。
+        if(!empty($filter['org_id']))
+        {
+            $org_ids = array();
+            foreach((array) $filter['org_id'] as $org_id)
+            {
+                $org_id = intval($org_id);
+                if($org_id > 0)
+                {
+                    $org_ids[$org_id] = $org_id;
+                }
+            }
+
+            $where[] = $org_ids ? "b.org_id IN (".implode(',', $org_ids).")" : '1=0';
+        }
+        //来源店铺沿用历史订单的可搜索多选控件。
+        if(!empty($filter['shop_id']))
+        {
+            $shop_ids = $this->_normalize_filter_values($filter['shop_id']);
+            $quoted_shop_ids = array();
+            foreach($shop_ids as $shop_id)
+            {
+                $quoted_shop_ids[] = $this->db->quote($shop_id);
+            }
+            $where[] = $quoted_shop_ids ? "b.shop_id IN (".implode(',', $quoted_shop_ids).")" : '1=0';
+        }
+        //基础物料和销售物料使用EXISTS过滤，避免直接JOIN明细导致复审列表重复。
+        if(!empty($filter['product_bn']))
+        {
+            $product_bns = $this->_normalize_filter_values($filter['product_bn']);
+            $quoted_product_bns = array();
+            foreach($product_bns as $product_bn)
+            {
+                $quoted_product_bns[] = $this->db->quote($product_bn);
+            }
+            $where[] = $quoted_product_bns
+                ? "EXISTS (SELECT 1 FROM ". DB_PREFIX ."ome_order_items AS oi WHERE oi.order_id=a.order_id AND oi.`delete`='false' AND oi.bn IN (".implode(',', $quoted_product_bns)."))"
+                : '1=0';
+        }
+        if(!empty($filter['sales_material_bn']))
+        {
+            $sales_material_bns = $this->_normalize_filter_values($filter['sales_material_bn']);
+            $quoted_sales_material_bns = array();
+            foreach($sales_material_bns as $sales_material_bn)
+            {
+                $quoted_sales_material_bns[] = $this->db->quote($sales_material_bn);
+            }
+            $where[] = $quoted_sales_material_bns
+                ? "EXISTS (SELECT 1 FROM ". DB_PREFIX ."ome_order_objects AS oo WHERE oo.order_id=a.order_id AND oo.`delete`='false' AND oo.bn IN (".implode(',', $quoted_sales_material_bns)."))"
+                : '1=0';
+        }
+        if(!empty($filter['sales_material_name']))
+        {
+            $sales_material_names = $this->_normalize_filter_values($filter['sales_material_name']);
+            $quoted_sales_material_names = array();
+            foreach($sales_material_names as $sales_material_name)
+            {
+                $quoted_sales_material_names[] = $this->db->quote($sales_material_name);
+            }
+            $where[] = $quoted_sales_material_names
+                ? "EXISTS (SELECT 1 FROM ". DB_PREFIX ."ome_order_objects AS oo WHERE oo.order_id=a.order_id AND oo.`delete`='false' AND oo.name IN (".implode(',', $quoted_sales_material_names)."))"
+                : '1=0';
+        }
+        $createtime_where = $this->_build_time_filter($filter, 'createtime', 'b.createtime');
+        if($createtime_where)
+        {
+            $where[] = $createtime_where;
+        }
+        if(isset($filter['pay_status']) && $filter['pay_status'] !== '')
+        {
+            $pay_status = array();
+            foreach((array) $filter['pay_status'] as $status)
+            {
+                $status = intval($status);
+                if($status >= 0 && $status <= 8)
+                {
+                    $pay_status[$status] = $status;
+                }
+            }
+            $where[] = $pay_status ? "b.pay_status IN (".implode(',', $pay_status).")" : '1=0';
+        }
+        if(isset($filter['ship_status']) && $filter['ship_status'] !== '')
+        {
+            $ship_status = array();
+            foreach((array) $filter['ship_status'] as $status)
+            {
+                $status = intval($status);
+                if($status >= 0 && $status <= 4)
+                {
+                    $ship_status[$status] = $status;
+                }
+            }
+            $where[] = $ship_status ? "b.ship_status IN (".implode(',', $ship_status).")" : '1=0';
+        }
+        if(!empty($filter['process_status']))
+        {
+            $allowed_process_status = array(
+                'unconfirmed' => true,
+                'confirmed' => true,
+                'splitting' => true,
+                'splited' => true,
+                'cancel' => true,
+                'remain_cancel' => true,
+                'is_retrial' => true,
+                'is_declare' => true,
+            );
+            $process_status = array();
+            foreach($this->_normalize_filter_values($filter['process_status']) as $status)
+            {
+                if(isset($allowed_process_status[$status]))
+                {
+                    $process_status[] = $this->db->quote($status);
+                }
+            }
+            $where[] = $process_status ? "b.process_status IN (".implode(',', $process_status).")" : '1=0';
         }
         if(!empty($filter['status']) || $filter['status'] == '0')
         {
@@ -1486,6 +1697,80 @@ class ome_mdl_order_retrial extends dbeav_model
         $basicMStockFreezeLib->unfreezeBatch($branchBatchList, __CLASS__.'::'.__FUNCTION__, $err);
         $oFreeze->delete(array('retrial_id'=>$retrial_id));//清空库存记录
         
+        return true;
+    }
+    /**
+     * 订单取消后自动结束待复审流程
+     *
+     * 全额退款、平台取消和后台人工取消最终都会进入订单统一取消流程。
+     * 订单取消成功后，待复审记录不能继续保留为可操作状态，否则订单仍会出现在
+     * 待复审列表中。这里只维护复审终态、异常状态和复审库存跟踪记录；订单取消
+     * 主流程已经按当前订单明细释放实际冻结库存，因此不能再调用复审通过或回滚
+     * 的库存处理方法，避免重复释放库存。
+     *
+     * @param int $order_id 订单ID
+     * @return bool
+     */
+    public function finish_by_order_cancel($order_id)
+    {
+        $order_id = intval($order_id);
+        if($order_id <= 0)
+        {
+            return false;
+        }
+
+        // 只有订单已经成功取消时才结束复审，避免取消失败时提前关闭复审流程。
+        $order = $this->db->selectrow("SELECT order_id FROM ". DB_PREFIX ."ome_orders WHERE order_id='".$order_id."' AND (process_status='cancel' OR status='dead')");
+        if(empty($order))
+        {
+            return false;
+        }
+
+        $retrial_list = $this->db->select("SELECT id, remarks FROM ". DB_PREFIX ."ome_order_retrial WHERE order_id='".$order_id."' AND status='0'");
+        if(empty($retrial_list))
+        {
+            return true;
+        }
+
+        $lastdate = time();
+        $system_remarks = '订单已取消，系统自动退出复审流程。';
+        $retrial_ids = array();
+        foreach($retrial_list as $retrial)
+        {
+            $retrial_id = intval($retrial['id']);
+            $remarks = trim((string) $retrial['remarks']);
+            if(strpos($remarks, $system_remarks) === false)
+            {
+                $remarks = $remarks ? $remarks.' '.$system_remarks : $system_remarks;
+            }
+
+            $sql = "UPDATE ". DB_PREFIX ."ome_order_retrial SET status='4', remarks=".$this->db->quote($remarks).", lastdate='".$lastdate."' WHERE id='".$retrial_id."' AND status='0'";
+            $this->db->exec($sql);
+            if($this->db->affect_row() > 0)
+            {
+                $retrial_ids[] = $retrial_id;
+            }
+        }
+
+        // 并发情况下记录可能已被人工复审处理，不再重复执行取消收口。
+        if(empty($retrial_ids))
+        {
+            return true;
+        }
+
+        // 订单已经是取消终态，同时清除复审产生的异常、暂停标记。
+        $this->db->exec("UPDATE ". DB_PREFIX ."ome_orders SET abnormal='false', pause='false' WHERE order_id='".$order_id."' AND (process_status='cancel' OR status='dead')");
+        $this->update_abnormal($order_id);
+
+        // 这里只删除复审库存计算记录，不再调整实际库存冻结，避免与订单取消重复释放。
+        if($retrial_ids)
+        {
+            $this->db->exec("DELETE FROM ". DB_PREFIX ."ome_order_retrial_store_freeze WHERE retrial_id IN (".implode(',', $retrial_ids).")");
+        }
+
+        $oOperation_log = app::get('ome')->model('operation_log');
+        $oOperation_log->write_log('order_retrial@ome', $order_id, $system_remarks);
+
         return true;
     }
     /**

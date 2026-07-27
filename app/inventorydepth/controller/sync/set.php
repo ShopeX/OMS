@@ -47,6 +47,7 @@ class inventorydepth_ctl_sync_set extends desktop_controller {
         $setData                                = array();
         $setData['stock_sync_set']         = app::get('inventorydepth')->getConf('stock.sync.set');
         $setData['stock_sync_mode']        = app::get('inventorydepth')->getConf('stock.sync.mode');
+        $setData['stock_sync_trigger_basis'] = kernel::single('inventorydepth_sync_set')->getStockTriggerBasis();
         
         $this->pagedata['setData'] = $setData;
         $this->pagedata['support_name'] = kernel::single('inventorydepth_sync_set')->getSupportName();

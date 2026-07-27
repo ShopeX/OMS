@@ -16,19 +16,17 @@
  */
 /**
  * 订单催发货(店小蜜)
- *
+ * 
  * @author wangbiao<wangbiao@shopex.cn>
  * @version 0.1
  */
 class erpapi_shop_response_delivergoods extends erpapi_shop_response_abstract
 {
-    const URGENT_SERVICE_TAG = '加急发货';
     const URGENT_ORDER_FIELDS = 'order_id, order_bn, process_status, status, ship_status, order_bool_type, shop_id, shop_type, source, createway, sync, sync_fail_type, abnormal, pause, timing_confirm, pay_status, is_cod, order_type, logi_no,last_modified';
 
     /**
      * 接收参数
      */
-
     public $_sdf = array();
     
     /**
@@ -40,7 +38,7 @@ class erpapi_shop_response_delivergoods extends erpapi_shop_response_abstract
     public function urgent($params){
         $tid = $params['tid'];
         $serviceTags = $this->normalizeServiceTags($params['service_tags']);
-        $isUrgentShip = in_array(self::URGENT_SERVICE_TAG, $serviceTags, true);
+        $isUrgentShip = in_array('加急发货', $serviceTags, true);
 
         $this->__apilog['title']          = sprintf('%s[%s]', $isUrgentShip ? '淘宝加急发货' : '催发货', $tid);
         $this->__apilog['original_bn']    = $tid;
@@ -249,7 +247,7 @@ class erpapi_shop_response_delivergoods extends erpapi_shop_response_abstract
     
     /**
      * 格式化参数
-     * 
+     *
      * @param array $params
      * @return array:
      */

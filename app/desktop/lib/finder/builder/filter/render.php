@@ -18,7 +18,14 @@
 
 class desktop_finder_builder_filter_render
 {
-    function __contruct($finder_aliasname){
+    /**
+     * 保存当前Finder别名，供高级筛选扩展区分同一模型下的不同业务页面。
+     *
+     * 部分调用场景不会传入别名，因此参数必须保持可选，兼容原有无参实例化。
+     *
+     * @param string|null $finder_aliasname
+     */
+    function __construct($finder_aliasname=null){
         $this->finder_aliasname = $finder_aliasname;
     }
     function main($object_name,$app,$filter=null,$controller=null,$cusrender=null){
@@ -138,4 +145,3 @@ class desktop_finder_builder_filter_render
         $render->display('finder/finder_filter.html');
     }
 }
-

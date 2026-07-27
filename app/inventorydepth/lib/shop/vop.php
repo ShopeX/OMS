@@ -240,8 +240,11 @@ class inventorydepth_shop_vop
             }else{
                 $skuStocks[$barcode]['leaving_stock'] += $val['leaving_stock']; //剩余库存
                 $skuStocks[$barcode]['current_hold'] += $val['current_hold']; //库存占用
-                $skuStocks[$barcode]['circuit_break_value'] += $val['circuit_break_value']; //熔断值
+                //$skuStocks[$barcode]['circuit_break_value'] += $val['circuit_break_value']; //熔断值
                 $skuStocks[$barcode]['unpaid_hold'] += $val['unpaid_hold']; //未支付占用数
+                
+                // 熔断值（现在多个条形码时，不进行累加熔断值）
+                $skuStocks[$barcode]['circuit_break_value'] = $val['circuit_break_value']; //熔断值
             }
         }
         

@@ -14,22 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class logisticsmanager_waybill_douyin
 {
-     /**
-      * 打印组件三个接口
-      * 获取打印数据 /logistics/waybillApply
-      * 获取标准模板 /logistics/templateList
-      * 获取自定义模板 /logistics/customTemplateList
-      * @return array [description]
-      */
+    /**
+     * 打印组件三个接口
+     * 获取打印数据 /logistics/waybillApply
+     * 获取标准模板 /logistics/templateList
+     * 获取自定义模板 /logistics/customTemplateList
+     * @return array [description]
+     */
      public function template_cfg() {
         $arr = array(
             'template_name' => '抖音',
             'shop_name' => '抖音',
             'print_url' => 'https://logistics.douyinec.com/davinci/CloudPrintClient',
-            'template_url' => 'https://cloudprint.douyinec.com/login',
+            'template_url' => 'https://cloudprint.douyinec.com/?param1=CgYIASAHKAESTgpMI2MYBqPNBgyE%2FiGN2D8SFv6YL%2BnGgX%2BgkMVpzFY%2FXKIyqYpdJv4161%2BRJw%2BI%2FipYYPDDwi83BRzqrZYxg3PmKXyGIOR20DRRi%2BJatBoA&param2=CgYIASAHKAESLgosG5aEgKc%2B8xwujPWKNjwnV1glTC0a36jI493ehdRA6iw%2BmlatQUKcD9cqyvoaAA%3D%3D',
             'shop_type' => 'luban',
             'control_type' => 'douyin',
             'request_again' => true
@@ -92,11 +91,6 @@ class logisticsmanager_waybill_douyin
         return $logistics;
     }
 
-    /**
-     * service_code
-     * @param mixed $param param
-     * @return mixed 返回值
-     */
     public function service_code($param)
     {
         $cpCode  = $param['logistics'];

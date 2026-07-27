@@ -15,13 +15,12 @@
  * limitations under the License.
  */
 
+
 /*
  * 单据打印
  */
 
 class ome_ctl_admin_receipts_print extends desktop_controller {
-    const URGENT_LABEL_CODE = 'SOMS_URGENT_SHIP';
-
     var $name = "发货中心";
     var $workground = "delivery_center";
     var $dlyCorp_tab = 'show';
@@ -100,7 +99,7 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
         );
         $sub_menu[$c++] = array(
             'label' => app::get('base')->_('加急发货'),
-            'filter' => array_merge($tmp_filter, array('delivery_label_code' => self::URGENT_LABEL_CODE)),
+            'filter' => array_merge($tmp_filter, array('delivery_label_code' => 'SOMS_URGENT_SHIP')),
             'optional' => false
         );
         #第三方发货时，显示已发货、未发货

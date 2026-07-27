@@ -14,8 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
+/**
+ +----------------------------------------------------------
+ * 订单复审&财审
+ +----------------------------------------------------------
+ * 
+ * Time: 2014-04-30 $
+ * [Ecos!] (C)2003-2014 Shopex Inc.
+ +----------------------------------------------------------
+ */
 class ome_ctl_admin_order_retrial extends desktop_controller
 {
     var $order_type     = 'index';
@@ -25,13 +32,14 @@ class ome_ctl_admin_order_retrial extends desktop_controller
     /*------------------------------------------------------ */
     function index()
     {
+        $op_id = kernel::single('desktop_user')->get_id();
         $this->title    = '商品变化订单';
         $base_filter['retrial_type']   = 'normal';
         
         //check shop permission
         $organization_permissions = kernel::single('desktop_user')->get_organization_permission();
         if($organization_permissions){
-            $base_filter['org_id'] = $organization_permissions;
+            $base_filter['permission_org_id'] = $organization_permissions;
         }
 
         $params         = 
@@ -44,6 +52,7 @@ class ome_ctl_admin_order_retrial extends desktop_controller
                     'allow_detail_popup'=>true,
                     'use_buildin_recycle'=>false,
                     'use_view_tab'=>true,
+                    'finder_aliasname' => 'order_retrial_normal'.$op_id,
                     'base_filter' => $base_filter,
                 );
 
@@ -62,7 +71,7 @@ class ome_ctl_admin_order_retrial extends desktop_controller
         //check shop permission
         $organization_permissions = kernel::single('desktop_user')->get_organization_permission();
         if($organization_permissions){
-            $base_filter['org_id'] = $organization_permissions;
+            $base_filter['permission_org_id'] = $organization_permissions;
         }
 
         $params         = 
@@ -85,18 +94,19 @@ class ome_ctl_admin_order_retrial extends desktop_controller
     /*------------------------------------------------------ */
     function success()
     {
+        $op_id = kernel::single('desktop_user')->get_id();
         $this->title        = '已复审订单';
         $this->order_type   = 'success';
         
         if(empty($_GET['view']))
         {
-            $base_filter['status']   = array('1', '2', '3');
+            $base_filter['status']   = array('1', '2', '3', '4');
         }
         
         //check shop permission
         $organization_permissions = kernel::single('desktop_user')->get_organization_permission();
         if($organization_permissions){
-            $base_filter['org_id'] = $organization_permissions;
+            $base_filter['permission_org_id'] = $organization_permissions;
         }
 
         $this->finder('ome_mdl_order_retrial',
@@ -109,6 +119,7 @@ class ome_ctl_admin_order_retrial extends desktop_controller
                     'allow_detail_popup'=>true,
                     'use_buildin_recycle'=>false,
                     'use_view_tab'=>true,
+                    'finder_aliasname' => 'order_retrial_success'.$op_id,
                     'base_filter' => $base_filter,
                 ));
     }
@@ -143,7 +154,7 @@ class ome_ctl_admin_order_retrial extends desktop_controller
         foreach($sub_menu as $k => $v)
         {
             if($organization_permissions){
-                $v['filter']['org_id'] = $organization_permissions;
+                $v['filter']['permission_org_id'] = $organization_permissions;
             }
 
             $sub_menu[$k]['filter'] = $v['filter']?$v['filter']:null;
@@ -176,9 +187,10 @@ class ome_ctl_admin_order_retrial extends desktop_controller
     function _views_success()
     {
         $sub_menu = array(
-            0 => array('label'=>app::get('base')->_('全部'), 'filter'=>array('status'=>array('1', '2')), 'optional'=>false),
+            0 => array('label'=>app::get('base')->_('全部'), 'filter'=>array('status'=>array('1', '2', '3', '4')), 'optional'=>false),
             1 => array('label'=>app::get('base')->_('复审通过'), 'filter'=>array('status'=>'1'), 'optional'=>false),
             2 => array('label'=>app::get('base')->_('复审未通过'), 'filter'=>array('status'=>array('2', '3')), 'optional'=>false),
+            3 => array('label'=>app::get('base')->_('订单已取消'), 'filter'=>array('status'=>'4'), 'optional'=>false),
         );
         return $sub_menu;
     }

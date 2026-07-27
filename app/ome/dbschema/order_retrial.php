@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 $db['order_retrial']=array (
   'columns' => 
     array (
@@ -78,6 +77,7 @@ $db['order_retrial']=array (
             1=>'复审通过',
             2=>'复审未通过',
             3=>'恢复原订单',
+            4=>'订单已取消',
           ),
           'default' => '0',
           'required' => true,

@@ -14,10 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class ome_ctl_admin_order extends desktop_controller{
-    const URGENT_LABEL_CODE = 'SOMS_URGENT_SHIP';
-
     var $name = "订单中心";
     var $workground = "order_center";
     var $order_type = 'all';
@@ -119,7 +116,7 @@ class ome_ctl_admin_order extends desktop_controller{
             7 => array('label'=>app::get('base')->_('已发货'),'filter'=>array('ship_status' =>'1','status' => 'active'),'optional'=>false),
             8 => array('label'=>app::get('base')->_('取消'),'filter'=>array('process_status' => 'cancel'),'optional'=>false),
             9 => array('label'=>app::get('base')->_('暂停'),'filter'=>array('pause' => 'true'),'optional'=>false),
-            10 => array('label'=>app::get('base')->_('加急发货'),'filter'=>array('order_label_code' => self::URGENT_LABEL_CODE),'optional'=>false),
+            10 => array('label'=>app::get('base')->_('加急发货'),'filter'=>array('order_label_code' => 'SOMS_URGENT_SHIP'),'optional'=>false),
         );
         $i=0;
         foreach($sub_menu as $k=>$v){
@@ -2700,6 +2697,18 @@ class ome_ctl_admin_order extends desktop_controller{
                         $orderListTmp[$orderId]['oldOrder'] = $oldOrder;
                         $orderListTmp[$orderId]['orderExt'] = $orderExt;
 
+                        // 拼多多消费者付费送货上门订单限制五家承运商；
+                        // 自有仓还必须使用对应承运商的拼多多电子面单。
+                        $homeDeliveryError = '';
+                        if (!kernel::single('ome_order_platform_pinduoduo_chargehomedelivery')->validate(
+                            $oldOrder,
+                            $temp_branch,
+                            $corpInfo,
+                            $homeDeliveryError
+                        )) {
+                            $this->end(false, $homeDeliveryError);
+                        }
+
                         if ($oldOrder['shop_type'] == 'dewu' && kernel::single('ome_order_bool_type')->isDWBrand($oldOrder['order_bool_type'])) {
                             // 由于没有实际单据测试，所以审单的时候拦截，暂不支持多仓
                             if ($orderExt['extend_field']['performance_type'] == '3'){
@@ -3184,6 +3193,30 @@ class ome_ctl_admin_order extends desktop_controller{
                     }
                 }
             }
+
+            // 兼容旧版单笔拆单入口：底层 addDelivery 仍会兜底校验，
+            // 此处提前返回明确错误，避免旧代码忽略 addDelivery 失败结果后仍提示操作完成。
+            $homeDeliveryOrder = $oOrder->dump($_POST['order_id'], 'order_id,order_bn,shop_type');
+            foreach ((array)$new_delivery as $homeDelivery) {
+                $homeDeliveryBranch = $this->app->model('branch')->db_dump(
+                    ['branch_id' => $homeDelivery['branch_id'], 'check_permission' => false],
+                    'branch_id,wms_id'
+                );
+                $homeDeliveryCorp = $this->app->model('dly_corp')->db_dump(
+                    ['corp_id' => $homeDelivery['logi_id']],
+                    'corp_id,name,type,tmpl_type,channel_id'
+                );
+                $homeDeliveryError = '';
+                if (!kernel::single('ome_order_platform_pinduoduo_chargehomedelivery')->validate(
+                    $homeDeliveryOrder,
+                    $homeDeliveryBranch,
+                    $homeDeliveryCorp,
+                    $homeDeliveryError
+                )) {
+                    $this->end(false, $homeDeliveryError);
+                }
+            }
+
             //订单拆分，产生发货单
             $oOrder->mkDelivery($_POST['order_id'],$new_delivery);
             $item_list = $oOrder->getItemBranchStore($_POST['order_id']);
@@ -6254,7 +6287,7 @@ class ome_ctl_admin_order extends desktop_controller{
         }
 
         //统计批量支付订单数量
-        $this->pagedata['order_ids'] = serialize($order_info['order_id']);
+        $this->pagedata['order_ids'] = json_encode($order_info['order_id']);
         $this->display('admin/order/batch_update_declare.html');
     }
 
@@ -6268,7 +6301,14 @@ class ome_ctl_admin_order extends desktop_controller{
         $order_ids       = array();
         if(!empty($_POST['order_ids']))
         {
-            $order_ids    = unserialize($_POST['order_ids']);
+            if (is_array($_POST['order_ids'])) {
+                $order_ids = $_POST['order_ids'];
+            } elseif (is_string($_POST['order_ids'])) {
+                $order_ids = json_decode($_POST['order_ids'], true);
+                if (!is_array($order_ids)) {
+                    $order_ids = array();
+                }
+            }
         }
         if(empty($order_ids))
         {

@@ -229,6 +229,20 @@ class ome_batch_order{
                 $isMkDly = false; continue;
             }
 
+            // 与单笔和自动审单共用同一套拼多多消费者付费送货上门物流校验。
+            // corp_id=auto 时在自动物流插件选出实际物流后再次校验。
+            $homeDeliveryError = '';
+            if (!kernel::single('ome_order_platform_pinduoduo_chargehomedelivery')->validate(
+                $order,
+                $branch,
+                $corp,
+                $homeDeliveryError
+            )) {
+                $retArr['err_msg'][] = '['.$order['order_bn'].']'.$homeDeliveryError;
+                $is_combine || $retArr['ifail']++;
+                $isMkDly = false; continue;
+            }
+
             // 如果是得物品牌直发，判断是否合规
             if ($order['shop_type'] == 'dewu' && kernel::single('ome_order_bool_type')->isDWBrand($order['order_bool_type'])) {
 

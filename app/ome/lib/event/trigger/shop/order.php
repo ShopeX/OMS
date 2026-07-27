@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * 订单请求
  *
@@ -25,8 +24,6 @@
  */
 class ome_event_trigger_shop_order
 {
-    const URGENT_LABEL_CODE = 'SOMS_URGENT_SHIP';
-
     /**
      * 淘宝全链路
      *
@@ -123,15 +120,12 @@ class ome_event_trigger_shop_order
             if (!in_array($order['shop_type'], ['taobao', 'tmall'])) {
                 continue;
             }
-            if (!$labelLib->existLabel($order['order_id'], self::URGENT_LABEL_CODE)) {
+            if (!$labelLib->existLabel($order['order_id'], 'SOMS_URGENT_SHIP')) {
                 continue;
             }
 
             $statusPayload = $urgentLib->buildUrgentOrderStatus($order['order_id']);
             if (empty($statusPayload['orderStatus'])) {
-                continue;
-            }
-            if (in_array($statusPayload['orderStatus'], ['SHIPPED', 'CANCELLED']) && $this->isUrgentTerminalReported($order['order_id'], $statusPayload['orderStatus'])) {
                 continue;
             }
 
@@ -152,21 +146,6 @@ class ome_event_trigger_shop_order
                 app::get('ome')->model('operation_log')->write_log('order_modify@ome', $order['order_id'], '淘宝加急发货状态回告终态：' . $statusPayload['orderStatus']);
             }
         }
-    }
-
-    /**
-     * 通过操作日志判断终态回告是否已经成功落库，避免重复回告。
-     *
-     * @param int $orderId
-     * @param string $status
-     * @return bool
-     */
-    protected function isUrgentTerminalReported($orderId, $status)
-    {
-        $pattern = '淘宝加急发货状态回告终态：' . $status;
-        $sql     = "SELECT log_id FROM sdb_ome_operation_log WHERE obj_id=" . intval($orderId) . " AND obj_type='order_modify@ome' AND memo LIKE '%" . addslashes($pattern) . "%' LIMIT 1";
-        $rows    = kernel::database()->select($sql);
-        return !empty($rows);
     }
 
     public function received($orderId) {
