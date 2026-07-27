@@ -1,19 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 class taoguaninventory_mdl_inventory extends dbeav_model{
     var $export_name = '盘点表';
@@ -557,11 +542,6 @@ class taoguaninventory_mdl_inventory extends dbeav_model{
         echo implode("\n",$output);
     }
 
-    /**
-     * exportName
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function exportName(&$data){
         $post = $_POST;
         $branch = app::get('ome')->model('branch')->dump($post['branch_id']);
@@ -797,6 +777,14 @@ class taoguaninventory_mdl_inventory extends dbeav_model{
     }
 
     function getProductPos($product_id,$branch_id=0){
+        if (is_array($product_id)) {
+            $product_id = reset($product_id);
+        }
+        $product_id = intval($product_id);
+        if (!$product_id) {
+            return array();
+        }
+
         $sql = 'select bp.store_position as pos_name, bp.pos_id, create_time
             from
                 sdb_ome_branch_product_pos as bpp
@@ -822,9 +810,9 @@ class taoguaninventory_mdl_inventory extends dbeav_model{
     }
 
     /**
-     * 彻底删除盘点
-     * 
-     */
+    *彻底删除盘点
+    *
+    */
     function batch_delete($data){
         $db = kernel::database();
        if($data){
@@ -855,7 +843,13 @@ class taoguaninventory_mdl_inventory extends dbeav_model{
         
         #查询条形码对应的bm_id
         $bm_ids    = $basicMaterialBarcode->getBmidListByBarcode($barcode);
-        
+        if (is_array($bm_ids)) {
+            $bm_ids = reset($bm_ids);
+        }
+        if (empty($bm_ids)) {
+            return false;
+        }
+
         $basicMateriaItem    = $basicMaterialLib->getBasicMaterialDetail($bm_ids);
         if ($basicMateriaItem)
         {
@@ -916,8 +910,8 @@ class taoguaninventory_mdl_inventory extends dbeav_model{
     }
 
     /**
-     * search 有两个值key 时是按键返回值 value时按值返回键
-     */
+    * search 有两个值key 时是按键返回值 value时按值返回键
+    */
     function get_inventory_type($inventory_type,$search){
         $type = array (
                 '1' => '自定义',
@@ -934,13 +928,6 @@ class taoguaninventory_mdl_inventory extends dbeav_model{
             return $result;
         }
     }
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter, $tableAlias=null, $baseWhere=null) {
         
         
