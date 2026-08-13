@@ -225,7 +225,7 @@ class erpapi_hchsafe_matrix_taobao_request_hchsafe extends erpapi_hchsafe_reques
         $uname = $objDesktopUser->get_login_name();
         $mobile = $objDesktopUser->get_mobile();
         if(empty($mobile)) {
-            return $this->error('缺少手机号,请联系超管添加手机号');
+            return $this->error('缺少手机号,请联系主账号添加手机号');
         }
         $objSession = kernel::single('base_session');
         $sessionId = $objSession->sess_id();

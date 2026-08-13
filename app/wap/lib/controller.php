@@ -101,7 +101,7 @@ class wap_controller extends base_controller{
                 }
             }else{
                 $this->pagedata['link_url'] = $_GOTO;
-                $this->pagedata['error_msg'] = '超管不能登录门店系统！';
+                $this->pagedata['error_msg'] = '主账号不能登录门店系统！';
                 echo $this->fetch('auth_error.html');
                 exit;
             }
