@@ -1,1 +1,0 @@
-import{l as t,aA as r,aE as a,p as o,m as s}from"./vue-tssh-6K7.js";const _=t({__name:"index",setup(n){const e=r();return a().replace({path:"/"+e.params.path,query:e.query}),(p,c)=>(s(),o("div"))}});export{_ as default};
