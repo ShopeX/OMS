@@ -1,0 +1,45 @@
+<div style="margin-left:5px;" align="left">
+<{if $o2o_order.is_omnichannel}>
+    <span style="color:red;"><{$o2o_order.store_recommend_msg}></span><span style="color:red;" id="recommend_branch">&nbsp;</span>
+<{else}>
+    根据您的设置规则，<{if $recommend_branch}><span style="color:red;" id="recommend_branch">推荐用仓库："<{$recommend_branch.name}>"发货</span><{else}><span style="color:red;" id="recommend_branch">没有推荐发货仓库，请手动确认</span><{/if}>
+<{/if}><{if $order_sort_type == 'cnauto'}><span style="color:green">菜鸟流转订单</span><{/if}>
+</div>
+<div id="present">
+    <table class="nosplit gridlist clear" width="100%" cellspacing="0" cellpadding="0" border="0" >
+      <thead>
+        <tr>
+          <th style="width:3%;">&nbsp;</th>
+          <th>物料标签</th>
+          <th nowrap="nowrap">物料编码</th>
+          <th>物料名称</th>
+          <th nowrap="nowrap">销售物料编码</th>
+          <th>销售物料名称</th>
+          <th style="width:6%;">规格</th>
+          <th style="width:8%;">价格</th>
+          <{if $cnService}>
+          <th style="width:7%;">天猫直送仓库</th>
+          <{/if}>
+          <th style="width:6%;">购买数量</th>
+          <{if $split_model}>
+          <th style="width:6%;">已拆分数量</th>
+          <th style="width:6%;">待发货数量</th>
+          <{/if}>
+          <{foreach from=$branch_list item=branch}>
+          <th style="width:7%;" data-storeid="<{$branch.branch_id}>" <{if $branch.branch_id == $selected_branch_id}>class="selected"<{/if}>><a href="javascript:void(0);" class="select_branch" title="<{t}>联系人：<{/t}><{$branch.uname}>&#13;<{t}>电话：<{/t}><{$branch.phone}>&#13;<{t}>手机：<{/t}><{$branch.mobile}>"><{$branch.name}></a></th>
+          <{/foreach}>
+          <{if $has_store_branch == 'true'}>
+          <th style="width:10%;" id="storeBranchHeader" data-storeid="<{$default_store_branch_id}>" <{if $default_store_branch_id == $selected_branch_id}>class="selected"<{/if}>>
+            <div id="store_branch_selector" style="cursor: pointer; padding: 4px 8px; color: #3367AC; text-align: center; font-size: 12px; width: 110px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-sizing: border-box; height: 24px; line-height: 16px; transition: text-decoration 0.2s ease;">
+              <span id="selected_store_name">可选择O2O门店</span>
+              <span id="more_stores_hint" style="display: none; color: #666; font-size: 11px;"> | 更多》》</span>
+              <i class="fa fa-chevron-down" style="margin-left: 5px; font-size: 10px;"></i>
+            </div>
+          </th>
+          <{/if}>
+        </tr>
+      </thead>
+      <tbody id="dataNode">
+      </tbody>
+    </table>
+</div>

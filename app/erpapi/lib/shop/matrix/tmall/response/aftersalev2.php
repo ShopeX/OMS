@@ -18,6 +18,7 @@
  * @author ykm 2016/6/3
  * @describe 天猫售后数据转换
  */
+
 class erpapi_shop_matrix_tmall_response_aftersalev2 extends erpapi_shop_response_aftersalev2 {
 
     protected $item_convert_field = [
@@ -232,10 +233,34 @@ class erpapi_shop_matrix_tmall_response_aftersalev2 extends erpapi_shop_response
             }
         }
         
+        // 配置是否开启：淘宝商责退（商责免费退）
+        if($this->__channelObj->channel['config']['shangze_free_return'] === 'yes'){
+            // 商责免费退（平台承担退货运费）识别
+            $shangze = kernel::single('ome_order_platform_taobao_aftersale')->identifyShangzeFreeReturn($params);
+            if (!empty($shangze['matched'])) {
+                $sdf['tag_type'] = ome_order_platform_taobao_aftersale::TAG_TYPE_SHANGZE;
+                $sdf['is_shangze_free_return'] = 'true';
+                $sdf['shangze_addon'] = $shangze['addon'];
+                $sdf['shangze_platform_refunded'] = !empty($shangze['platform_refunded']);
+                
+                // refund_fee 为 0 时，回退取 attribute.apply_init_refund_fee（已转：元，平台给的是：分）
+                if (bccomp((string)$sdf['refund_fee'], '0', 2) <= 0) {
+                    if(!empty($shangze['apply_init_refund_fee']) && bccomp((string)$shangze['apply_init_refund_fee'], '0', 2) > 0){
+                        $sdf['refund_fee'] = sprintf('%.2f', $shangze['apply_init_refund_fee']);
+                    }
+                }
+            }
+        }
+        
         return array_merge($sdf, $tmallSdf);
     }
 
     protected function _getAddType($sdf) {
+        // 商责退运费：禁止生成退换货单/拦截退货单，强制走退款
+        if (!empty($sdf['is_shangze_free_return']) && $sdf['is_shangze_free_return'] === 'true') {
+            return 'refund';
+        }
+        
         if ($sdf['refund_type'] == 'return') {
             if (in_array($sdf['order']['ship_status'],array('0'))) {
                 #退款单
@@ -432,7 +457,6 @@ class erpapi_shop_matrix_tmall_response_aftersalev2 extends erpapi_shop_response
     *
     *
     */
-
     protected function _tranChange($sdf){
         $oid = $sdf['oid'];
         $tid = $sdf['tid'];
@@ -490,12 +514,6 @@ class erpapi_shop_matrix_tmall_response_aftersalev2 extends erpapi_shop_response
 
     }
 
-    /**
-     * formatArchiveitemlist
-     * @param mixed $sdf sdf
-     * @param mixed $convert convert
-     * @return mixed 返回值
-     */
     public function formatArchiveitemlist($sdf, $convert){
 
         $refund_item_list = $sdf['refund_item_list']['return_item'];
@@ -520,7 +538,7 @@ class erpapi_shop_matrix_tmall_response_aftersalev2 extends erpapi_shop_response
     /**
      * 客服拒绝退货后,平台介入或顾客上传凭证后,重新恢复退货;
      * 场景：顾客申请退货，商家在天猫后台拒绝退货退款;顾客上传退货凭证后,平台自动同意退货申请,恢复原退货单；
-     * 
+     *
      * @param $sdf
      * @return void
      */
@@ -691,7 +709,7 @@ class erpapi_shop_matrix_tmall_response_aftersalev2 extends erpapi_shop_response
     
     /**
      * 退货数据转换
-     * 
+     *
      * @param $sdf
      * @return false|void
      */
@@ -751,7 +769,7 @@ class erpapi_shop_matrix_tmall_response_aftersalev2 extends erpapi_shop_response
     
     /**
      * [天猫定制订单]申请售后退货
-     * 
+     *
      * @param $sdf
      * @param $convert
      * @return array

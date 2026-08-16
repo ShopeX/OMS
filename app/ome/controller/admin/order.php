@@ -2120,9 +2120,24 @@ class ome_ctl_admin_order extends desktop_controller{
             $orderItemList = $orderItemMdl->getList('*', array('order_id'=>$order['order_id']));
 
             //是否存在福袋基础物料
+            $normalItems = [];
+            $repeatBns = [];
+            $is_repeat_product = false;
             $is_luckybag_flag = false;
+            $pkgItemDeletes = [];
             foreach ($orderItemList as $itemKey => $itemVal)
             {
+                $item_type = $itemVal['item_type'];
+                $product_id = $itemVal['product_id'];
+                $quantity = (isset($itemVal['nums']) ? $itemVal['nums'] : $itemVal['quantity']);
+                $obj_id = $itemVal['obj_id'];
+                $item_delete = $itemVal['delete'];
+                
+                // 汇总订单明细删除状态
+                if($item_type == 'pkg'){
+                    $pkgItemDeletes[$obj_id][$item_delete] = $product_id;
+                }
+                
                 //check
                 if($itemVal['delete'] == 'true'){
                     continue;
@@ -2132,8 +2147,47 @@ class ome_ctl_admin_order extends desktop_controller{
                 if($itemVal['item_type'] == 'lkb'){
                     $is_luckybag_flag = true;
                 }
+                
+                // 相同基础物料编码：普通商品 or 赠品
+                if(in_array($item_type, ['product', 'gift']) && $quantity > $itemVal['split_num']){
+                    $normalItems[$product_id][$item_type] = $itemVal['bn'];
+                    
+                    // check count
+                    if(count($normalItems[$product_id]) > 1){
+                        $is_repeat_product = true;
+                        
+                        $repeatBns[] = array_shift($normalItems[$product_id]);
+                    }
+                }
             }
-
+            
+            // 检查订单item明细：PKG关联的基础物料编码有部分删除的情况；
+            $is_pkg_delete = false;
+            if($pkgItemDeletes){
+                foreach ($pkgItemDeletes as $itemKey => $itemVal)
+                {
+                    if(count($itemVal) > 1){
+                        $is_pkg_delete = true;
+                    }
+                }
+            }
+            
+            // 有多个重复的销售物料编码，不允许拆分订单
+            if($is_repeat_product){
+                if($repeatBns){
+                    $this->pagedata['repeat_product']  = implode(',', $repeatBns);
+                }
+                
+                $this->pagedata['split_model']  = 0;
+                $this->singlepage("admin/order/confirm.html");
+                exit;
+            }elseif($is_pkg_delete){
+                // 订单PKG销售物料中删除了部分基础物料明细
+                $this->pagedata['split_model']  = 0;
+                $this->singlepage("admin/order/confirm.html");
+                exit;
+            }
+            
             //货到付款禁止拆单
             if($order['shipping']['is_cod'] == 'true' || ($order['shop_type'] == 'taobao' && $order['order_source'] == 'maochao') || $is_luckybag_flag){
                 $this->pagedata['split_model']  = 0;
@@ -2493,7 +2547,8 @@ class ome_ctl_admin_order extends desktop_controller{
             $consignee = $_POST['consignee'];
             $logiId = $_POST['logi_id'];
             $consignee['memo'] = $_POST['delivery_remark'];
-
+            $page_confirm_type = trim($_POST['page_confirm_type']);
+            
             //拆单配置
             $orderSplitLib    = kernel::single('ome_order_split');
             $split_seting     = $orderSplitLib->get_delivery_seting();
@@ -2502,8 +2557,7 @@ class ome_ctl_admin_order extends desktop_controller{
             $splitting_product = $_POST['left_nums'];
 
             //[拆单]多个重复捆绑商品不支持拆单
-            if($_POST['is_repeat_product'] == 'true')
-            {
+            if($_POST['is_repeat_product'] == 'true'){
                 $split_seting    = '';
                 $splitting_product = '';
             }
@@ -2558,9 +2612,16 @@ class ome_ctl_admin_order extends desktop_controller{
                 //记录地址发生变更的扩展
                 $this->app->model('order_extend')->update($extend_data, ['order_id' => $orders]);
             }
-
-
-
+            
+            //同城配送&&商家配送
+            $is_instatnt = false;
+            $is_seller = false;
+            if($corpInfo['corp_model'] == 'instatnt'){
+                $is_instatnt = true; //同城配送
+            }elseif($corpInfo['corp_model'] == 'seller'){
+                $is_seller = true; //商家配送
+            }
+            
             //[拆单]多个重复的货品需要检查库存
             $error_msg = '';
             if($split_seting && $splitting_product){
@@ -2645,13 +2706,12 @@ class ome_ctl_admin_order extends desktop_controller{
                     }
                 }
             }
-
+            
             //[拆单]开始拆单后,必须有拆分的货品sku和数量
-            if (empty($splitting_product) && $split_seting)
-            {
+            if (empty($splitting_product) && $split_seting && $page_confirm_type != 'normal'){
                 $this->end(false,'没有可审核的商品或者可用库存不足');
             }
-
+            
             $combineObj = kernel::single('omeauto_auto_combine');
             switch ($act) {
                 case 1:
@@ -4473,7 +4533,7 @@ class ome_ctl_admin_order extends desktop_controller{
                 }
             }
 
-            // [大家电订单]商品被修改、收货人地址被修改，订单需要重新预约时间
+            // [预约订单]商品被修改、收货人地址被修改，订单需要重新预约时间
             if($is_address_change){
                 kernel::single('ome_order_reservation')->againReservation($order_id, 'address_change');
             }elseif($is_goods_modify){
@@ -4863,6 +4923,16 @@ class ome_ctl_admin_order extends desktop_controller{
         $this->pagedata['title'] = '新建订单';
         $this->pagedata['shopData'] = $shopData;
         $this->pagedata['creatime'] = date("Y-m-d",time());
+        $this->pagedata['source_order_bn'] = trim($_GET['order_bn']);
+        $this->pagedata['source_order_type'] = trim($_GET['order_type']);
+        $this->pagedata['source_bufa_reason'] = trim($_GET['bufa_reason']);
+        
+        // 来源地址
+        $this->pagedata['source_app'] = trim($_GET['source_app']);
+        $this->pagedata['source_ctl'] = trim($_GET['source_ctl']);
+        $this->pagedata['source_act'] = trim($_GET['source_act']);
+        $this->pagedata['order_center_view'] = trim($_GET['order_center_view']);
+        
         $this->page("admin/order/add_normal_order.html");
     }
 
@@ -5220,8 +5290,8 @@ class ome_ctl_admin_order extends desktop_controller{
             $luckyBagLib = kernel::single('ome_order_luckybag');
             $luckyBagLib->saveLuckyBagUseLogs($iorder);
         }
-
-        //[SAP创建]调用service进行SAP创建
+        
+        // OMS创建订单之后，调用service处理相关业务
         foreach(kernel::servicelist('ome.service.order.create.after') as $object)
         {
             if(method_exists($object, 'after_create')){
@@ -5437,7 +5507,13 @@ class ome_ctl_admin_order extends desktop_controller{
             if($orderRow['process_status'] == 'splitting' || $orderRow['ship_status'] == '2'){
                 $orderRow["omnichannel"] = '2';
             }
-
+            
+            //[同城配]淘宝默认支持
+            if(in_array($orderRow['shop_type'], array('taobao', 'tmall'))){
+                $is_seller = true;
+                $is_instatnt = true;
+            }
+            
             //[小时达]小时达订单允许查询
             $billLabelObj = kernel::single('ome_bill_label');
             $xiaoshiInfo = $billLabelObj->isXiaoshiDa($orderRow['order_id']);
@@ -5514,7 +5590,7 @@ class ome_ctl_admin_order extends desktop_controller{
             $isAoxiang = $orderTypeLib->isAoxiang($orderRow['order_bool_type']);
         }
 
-        //翱象建议的物流公司
+        //建议物流 / 黑名单物流（订单 extend.black_delivery_cps，含翱象与拼多多买家拒用）
         $biz_delivery_codes = array();
         $black_delivery_cps = array();
         if($isAoxiang){
@@ -5531,8 +5607,11 @@ class ome_ctl_admin_order extends desktop_controller{
             if($aoxLogiList['black_delivery_cps']){
                 $black_delivery_cps = $aoxLogiList['black_delivery_cps'];
             }
+        }elseif(in_array($orderRow['shop_type'], array('pinduoduo')) && $order_id){
+            // 读取订单快递黑名单 type 列表
+            $black_delivery_cps = kernel::single('ome_order_platform_pinduoduo_expressmemos')->loadBlackTypes($order_id);
         }
-
+        
         //获取店铺信息
         $shopObj = app::get("ome")->model('shop');
         $shopInfo = $shopObj->dump(array('shop_id' => $shop_id), 'shop_type,addon');
@@ -5601,7 +5680,7 @@ class ome_ctl_admin_order extends desktop_controller{
             }
             */
 
-            //建议文字描述
+            //建议文字描述（翱象推荐）
             if(in_array($v['type'], $biz_delivery_codes)){
                 $v['name'] = $v['name'] . '（推荐）';
             }elseif(in_array($v['type'], $black_delivery_cps)){
@@ -5623,6 +5702,11 @@ class ome_ctl_admin_order extends desktop_controller{
             if($OfflineCorps){
                 $corpList = array_merge($OfflineCorps, $corpList);
             }
+        }
+
+        // 订单快递黑名单硬过滤；过滤后剩余 ≤1 则不过滤
+        if($black_delivery_cps){
+            $corpList = kernel::single('ome_order_platform_pinduoduo_expressmemos')->filterCorps($corpList, $black_delivery_cps);
         }
 
         if($waybill_number){
@@ -7158,12 +7242,23 @@ class ome_ctl_admin_order extends desktop_controller{
 
 
         if($ret['order_info'] && $ret['order_info']['order_objects'] && is_array($ret['order_info']['order_objects'])){
-            $productsModel = $this->app->model('products');
-            $product_id_arr = array();
             foreach($ret['order_info']['order_objects'] as $o => $obj){
+                
+                // 过滤掉已删除的
+                if($obj['delete'] == 'true'){
+                    unset($ret['order_info']['order_objects'][$o]);
+                    continue;
+                }
+                
                 foreach($obj['order_items'] as $i => $item){
+                    
+                    // 过滤掉已删除的
+                    if($item['delete'] == 'true'){
+                        unset($ret['order_info']['order_objects'][$o]['order_items'][$i]);
+                        continue;
+                    }
+                    
                     $ret['order_info']['order_objects'][$o]['order_items'][$i]['sm_id'] = $item['product_id'];
-                    $product_id_arr[] = array('product_id' => $item['product_id']);
                 }
             }
 

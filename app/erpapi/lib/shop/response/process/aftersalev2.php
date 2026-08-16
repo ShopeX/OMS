@@ -21,12 +21,6 @@
  */
 class erpapi_shop_response_process_aftersalev2 {
 
-    /**
-     * 添加
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
-
     public function add($sdf) {
        
         switch($sdf['response_bill_type']) {
@@ -250,8 +244,14 @@ class erpapi_shop_response_process_aftersalev2 {
         
         // OMS已发货的售前仅退款，发货拦截
         if ($sdf['refund_refer'] != 'aftersale' && $sdf['order']['ship_status'] == '1') {
-            ome_delivery_notice::cancelYJDF($data['order_id'], $bmIds);
+            if($this->_isShangzeFreeReturn($sdf)){
+                // 商责退运费禁止拦截
+            }else{
+                // 拦截发货单
+                ome_delivery_notice::cancelYJDF($data['order_id'], $bmIds);
+            }
         }
+        
         if ($sdf['order_source']) {
             $data['order_source'] = $sdf['order_source'];
         }
@@ -440,7 +440,8 @@ class erpapi_shop_response_process_aftersalev2 {
     /**
      * 单独只创建退款申请单、退款单,不编辑订单明细、也不更新订单金额
      * @todo：平台订单全额退款、已取消，同分同秒推送过来，OMS只更新订单为全额退款或取消订单，未创建退款单;
-     * 
+     * 商责免费退统一走本方法：postFIL 非空自动完成；为空只建申请单；均不改订单金额
+     *
      * @param $sdf
      * @return string[]
      */
@@ -451,9 +452,16 @@ class erpapi_shop_response_process_aftersalev2 {
             return $this->_hadRefund($sdf);
         }
         
+        $modelRefundApply = app::get('ome')->model('refund_apply');
+        $operateLogMdl = app::get('ome')->model('operation_log');
+        
+        // 是否商责免费退（退运费）单据
+        $isShangzeFreeReturn = $this->_isShangzeFreeReturn($sdf);
+        $platformRefunded = $isShangzeFreeReturn && !empty($sdf['shangze_platform_refunded']);
+        
         $refund_bn = $sdf['refund_bn'];
         $shop_id = $sdf['shop_id'];
-        $msg = '仅创建退款单、退款申请单';
+        $msg = $isShangzeFreeReturn ? '商责退运费处理' : '仅创建退款单、退款申请单';
         
         //reship
         $reshipInfo = app::get('ome')->model('reship')->db_dump(['reship_bn'=>$refund_bn, 'shop_id'=>$shop_id]);
@@ -469,11 +477,16 @@ class erpapi_shop_response_process_aftersalev2 {
         
         //先创建退款申请单
         if(empty($refundApply)) {
-            $modelRefundApply = app::get('ome')->model('refund_apply');
-            #避免退款单和退款申请单并发，退款申请单写入后事务未提交，这里单据查不到
+            //避免退款单和退款申请单并发，退款申请单写入后事务未提交，这里单据查不到
             $trans = kernel::database()->beginTransaction();
             //data
             $applyData = $this->_refundApplySdfToData($sdf);
+            
+            // 商责免费退（退运费）单据
+            if ($isShangzeFreeReturn) {
+                $applyData['tag_type'] = ome_order_platform_taobao_aftersale::TAG_TYPE_SHANGZE;
+                $applyData['addon'] = serialize($this->_buildRefundApplyAddon($sdf));
+            }
             
             //insert
             $insertRes = $modelRefundApply->insert($applyData);
@@ -482,6 +495,37 @@ class erpapi_shop_response_process_aftersalev2 {
             }
             kernel::database()->commit($trans);
             $refundApply = $sdf['refund_apply'] = $applyData;
+            
+            // 商责免费退（退运费）单据
+            if ($isShangzeFreeReturn) {
+                $operateLogMdl->write_log(
+                    'refund_apply@ome',
+                    $refundApply['apply_id'],
+                    $platformRefunded ? '商责退运费创建并自动完成（不更新订单金额）' : '商责退运费创建申请单（平台未退完，不更新订单金额）'
+                );
+            }
+        } elseif ($isShangzeFreeReturn) {
+            // 已存在申请单：补写 tag_type / addon
+            $modelRefundApply->update([
+                'tag_type' => ome_order_platform_taobao_aftersale::TAG_TYPE_SHANGZE,
+                'addon' => serialize($this->_buildRefundApplyAddon($sdf)),
+                'outer_lastmodify' => $sdf['modified'],
+                'cs_status' => $sdf['cs_status'],
+                'money' => $sdf['refund_fee'],
+                'memo' => $sdf['reason'],
+            ], ['apply_id' => $refundApply['apply_id']]);
+        }
+
+        // 商责未退完：只建/更新申请单，不创建 refunds、不完成、不改订单
+        if ($isShangzeFreeReturn && !$platformRefunded) {
+            if (!empty($sdf['table_additional']) && !empty($refundApply['apply_id'])) {
+                $this->_dealTableAdditional($sdf['table_additional'], [
+                    'apply_id' => $refundApply['apply_id'],
+                    'refund_apply_bn' => $refundApply['refund_apply_bn'],
+                ]);
+            }
+            $msg .= "&nbsp;&nbsp;退款申请单[{$refundApply['refund_apply_bn']}]已保存（等待平台退款完成）";
+            return array('rsp'=>'succ', 'msg'=>$msg);
         }
         
         //创建退款单
@@ -498,10 +542,19 @@ class erpapi_shop_response_process_aftersalev2 {
                 'apply_id' => $refundApply['apply_id'],
             );
             $updateData = array('status' => '4','refunded' => $sdf['refund_fee'], 'cs_status' => $sdf['cs_status']);
-            app::get('ome')->model('refund_apply')->update($updateData, $filter);
+            
+            // 商责免费退（退运费）单据
+            if ($isShangzeFreeReturn) {
+                $updateData['tag_type'] = ome_order_platform_taobao_aftersale::TAG_TYPE_SHANGZE;
+                $updateData['addon'] = serialize($this->_buildRefundApplyAddon($sdf));
+            }
+            
+            // update
+            $modelRefundApply->update($updateData, $filter);
             
             //logs
-            app::get('ome')->model('operation_log')->write_log('refund_apply@ome', $refundApply['apply_id'], '仅创建退款单成功');
+            $logMemo = $isShangzeFreeReturn ? '商责退运费自动完成（不更新订单金额）' : '仅创建退款单成功';
+            $operateLogMdl->write_log('refund_apply@ome', $refundApply['apply_id'], $logMemo);
             
             $msg .= "&nbsp;&nbsp;更新退款申请单[{$refundApply['refund_apply_bn']}]为已退款状态";
         }
@@ -517,7 +570,8 @@ class erpapi_shop_response_process_aftersalev2 {
         }
         
         //自动编辑订单：主要更新[已经拆分]状态订单object层明细为已退款状态,并且打异常标识;
-        if(in_array($sdf['order']['process_status'], ['splitting', 'splited'])){
+        // 商责退运费：不编辑订单
+        if(!$isShangzeFreeReturn && in_array($sdf['order']['process_status'], ['splitting', 'splited'])){
             $error_msg = '';
             $is_abnormal = false;
             $isResultEdit = $this->_autoEditorder($sdf, $error_msg, $is_abnormal);
@@ -525,8 +579,9 @@ class erpapi_shop_response_process_aftersalev2 {
                 $msg .= '&nbsp;&nbsp;'. $error_msg;
             }
         }
-        //售后仅退款转售前退款做发货单拦截
-        if($sdf['refund_to_returnProduct'] && $refundApply['apply_id']) {
+        
+        //售后仅退款转售前退款做发货单拦截（商责退运费禁止拦截）
+        if(!$isShangzeFreeReturn && $sdf['refund_to_returnProduct'] && $refundApply['apply_id']) {
             $label_code = 'SOMS_MREFUND';
             $err = '';
             if($sdf['order']['sync'] != 'succ') {
@@ -535,7 +590,11 @@ class erpapi_shop_response_process_aftersalev2 {
             kernel::single('ome_order_refund')->lanjieDelivery($refundApply['apply_id']);
         }
         kernel::single('monitor_notice_refund_apply')->erpapi_refund($refundApply['apply_id']);
-        kernel::single('ome_refund_apply')->updateOrderObjectsPayStatusByItemIds($refundApply['apply_id']);
+        
+        if (!$isShangzeFreeReturn) {
+            kernel::single('ome_refund_apply')->updateOrderObjectsPayStatusByItemIds($refundApply['apply_id']);
+        }
+        
         // 增加service扩展点，允许外部service在退款成功后做自定义处理
         $services = kernel::servicelist('ome.service.refund.apply.accept.refund.after');
         if ($services) {
@@ -1663,11 +1722,6 @@ class erpapi_shop_response_process_aftersalev2 {
     }
 
     #清空本地状态和已生成单据
-    /**
-     * cleanReturnStatus
-     * @param mixed $reship reship
-     * @return mixed 返回值
-     */
     public function cleanReturnStatus($reship){
         $return_id = (int) $reship['return_id'];
         $reship_id = (int) $reship['reship_id'];
@@ -1795,7 +1849,7 @@ class erpapi_shop_response_process_aftersalev2 {
     
     /**
      * 平台推送的已退款单,需要编辑订单删除退款的商品
-     * 
+     *
      * @param $sdf 平台推送的退款数据
      * @param $error_msg 错误信息
      * @param $is_abnormal 是否为异常(订单已生成发货单,平台已退款但撤消发货单失败,导致删除订单退款商品失败)
@@ -2202,7 +2256,7 @@ class erpapi_shop_response_process_aftersalev2 {
     
     /**
      * 订单中售前退款完成,编辑订单删除退款商品后,重新调用赠品规则
-     * 
+     *
      * @param $order_id
      * @return void
      */
@@ -2328,7 +2382,7 @@ class erpapi_shop_response_process_aftersalev2 {
     
     /**
      * 订单退款商品无法删除,如有CRM赠品则打标记
-     * 
+     *
      * @param $order_id
      * @return void
      */
@@ -2494,12 +2548,6 @@ class erpapi_shop_response_process_aftersalev2 {
         return true;
     }
 
-    /**
-     * 保存ChangeItems
-     * @param mixed $sdf sdf
-     * @param mixed $returnId ID
-     * @return mixed 返回操作结果
-     */
     public function saveChangeItems($sdf, $returnId) {
         $shop_id = $sdf['shop_id'];
         $branch_id = $sdf['branch_id'];
@@ -2632,7 +2680,36 @@ class erpapi_shop_response_process_aftersalev2 {
         }
         return [true, '运费扣除完成'];
     }
-
-
-
+    
+    /**
+     * 组装退款申请单 addon（含商责免费退扩展字段）
+     *
+     * @param array $sdf
+     * @return array
+     */
+    private function _buildRefundApplyAddon($sdf)
+    {
+        $addon = ['refund_bn' => $sdf['refund_bn']];
+        
+        if (!empty($sdf['shangze_addon']) && is_array($sdf['shangze_addon'])) {
+            $addon = array_merge($addon, $sdf['shangze_addon']);
+        }
+        
+        if (!empty($sdf['is_shangze_free_return'])) {
+            $addon['is_shangze_free_return'] = $sdf['is_shangze_free_return'];
+        }
+        
+        return $addon;
+    }
+    
+    /**
+     * 是否商责免费退（退运费）单据
+     *
+     * @param array $sdf
+     * @return bool
+     */
+    private function _isShangzeFreeReturn($sdf)
+    {
+        return kernel::single('ome_order_platform_taobao_aftersale')->isShangzeFreeReturnSdf($sdf);
+    }
 }

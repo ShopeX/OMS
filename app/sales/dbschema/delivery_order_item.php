@@ -393,7 +393,8 @@ $db['delivery_order_item'] = array(
         ),
         'idx_up_time'           => array(
             'columns' => array(
-                0 => 'up_time'
+                0 => 'up_time',
+                1 => 'delivery_id',
             )
         ),
         'idx_delivery_time'     => array(
@@ -404,6 +405,13 @@ $db['delivery_order_item'] = array(
         'idx_oid'     => array(
             'columns' => array(
                 0 => 'oid'
+            )
+        ),
+        'idx_bn_orgid_deliverytime' => array(
+            'columns' => array(
+                0 => 'bn',
+                1 => 'org_id',
+                2 => 'delivery_time',
             )
         ),
     ),

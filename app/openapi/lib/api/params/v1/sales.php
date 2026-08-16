@@ -14,17 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class openapi_api_params_v1_sales extends openapi_api_params_abstract implements openapi_api_params_interface
 {
 
-    /**
-     * 检查Params
-     * @param mixed $method method
-     * @param mixed $params 参数
-     * @param mixed $sub_msg sub_msg
-     * @return mixed 返回验证结果
-     */
     public function checkParams($method, $params, &$sub_msg)
     {
         if (parent::checkParams($method, $params, $sub_msg)) {
@@ -34,11 +26,6 @@ class openapi_api_params_v1_sales extends openapi_api_params_abstract implements
         }
     }
 
-    /**
-     * 获取AppParams
-     * @param mixed $method method
-     * @return mixed 返回结果
-     */
     public function getAppParams($method)
     {
 
@@ -61,8 +48,10 @@ class openapi_api_params_v1_sales extends openapi_api_params_abstract implements
                 'shop_bn'    => array('type' => 'string', 'name' => '店铺编码', 'desc' => '多个店铺编码之间，用#分隔'),
             ),
             'getDeliveryList' => array(
-                'start_time'  => array('type' => 'date', 'required' => 'true', 'name' => '发货时间开始', 'desc' => '(销售单创建时间),例如2012-12-08 18:50:30'),
-                'end_time'    => array('type' => 'date', 'required' => 'true', 'name' => '发货时间结束', 'desc' => '(销售单创建时间),例如2012-12-08 18:50:30'),
+                'start_time'  => array('type' => 'date', 'required' => 'false', 'name' => '发货时间开始', 'desc' => '(发货时间),例如2012-12-08 18:50:30'),
+                'end_time'    => array('type' => 'date', 'required' => 'false', 'name' => '发货时间结束', 'desc' => '(发货时间),例如2012-12-08 18:50:30'),
+                'modified_start' => array('type' => 'date', 'required' => 'false', 'name' => '修改时间开始', 'desc' => '(发货销售明细更新时间),例如2012-12-08 18:50:30，时间跨度不超过24小时'),
+                'modified_end'   => array('type' => 'date', 'required' => 'false', 'name' => '修改时间结束', 'desc' => '(发货销售明细更新时间),例如2012-12-08 18:50:30，时间跨度不超过24小时'),
                 'page_no'     => array('type' => 'number', 'required' => 'false', 'name' => '页码', 'desc' => '默认1,第一页'),
                 'page_size'   => array('type' => 'number', 'required' => 'false', 'name' => '每页数量', 'desc' => '最大1000'),
                 'shop_bn'     => array('type' => 'string', 'name' => '店铺编码', 'desc' => ''),
@@ -81,11 +70,6 @@ class openapi_api_params_v1_sales extends openapi_api_params_abstract implements
         return $params[$method];
     }
 
-    /**
-     * description
-     * @param mixed $method method
-     * @return mixed 返回值
-     */
     public function description($method)
     {
         $desccription = array(

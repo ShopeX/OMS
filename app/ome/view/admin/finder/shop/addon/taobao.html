@@ -22,7 +22,11 @@
     <tr>
       <th>自动下载支付宝流水：</th>
       <td><{input type="radio" name="config[download_settle_bill]" value=$shop.config.download_settle_bill|default:"no" options=array("yes"=>"是","no"=>"否") separator="&nbsp;"}></td>
-  </tr>
+    </tr>
+    <tr>
+        <th>淘宝商责退（商责免费退）：</th>
+        <td><{input type="radio" name="config[shangze_free_return]" value=$shop.config.shangze_free_return|default:"no" options=array("yes"=>"开启","no"=>"关闭") separator="&nbsp;"}></td>
+    </tr>
 </table>
 <{if $shop.business_type == "maochao"}>
 <table>

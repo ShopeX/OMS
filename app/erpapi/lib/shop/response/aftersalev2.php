@@ -292,6 +292,23 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
             $sdf['response_bill_type'] = 'refund_apply';
         }
         
+        // 商责免费退：统一走 refundonly（不改订单金额），由 _dealRefundOnly 按 postFIL 分支处理
+        if (!empty($sdf['is_shangze_free_return']) && $sdf['is_shangze_free_return'] === 'true') {
+            // 设置为：refundonly，只创建退款申请单、退款单,不编辑订单明细、也不更新订单金额
+            $sdf['response_bill_type'] = 'refundonly';
+            
+            // status
+            if (!empty($sdf['shangze_platform_refunded'])) {
+                $sdf['status'] = '4';
+                $this->__apilog['title'] = '店铺(' . $this->__channelObj->channel['name'] . ')商责退运费自动完成，单号：' . $sdf['refund_bn'];
+            } else {
+                $this->__apilog['title'] = '店铺(' . $this->__channelObj->channel['name'] . ')商责退运费申请，单号：' . $sdf['refund_bn'];
+                if ($sdf['status'] == '0' || empty($sdf['refund_apply'])) {
+                    $sdf['table_additional'] = $this->_refundApplyAdditional($sdf);
+                }
+            }
+        }
+        
         return $sdf;
     }
     

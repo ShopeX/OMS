@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  *
  * @author chenping<chenping@shopex.cn>
@@ -23,7 +22,6 @@
  */
 class erpapi_shop_response_plugins_order_orderlabels extends erpapi_shop_response_plugins_order_abstract
 {
-
     public function convert(erpapi_shop_response_abstract $platform)
     {
         $labels = [];
@@ -50,16 +48,19 @@ class erpapi_shop_response_plugins_order_orderlabels extends erpapi_shop_respons
                             ];
                             break;
                         case 'high_quality_express':
+                            // 优质快递
                             $labels[] = [
                                 'label_code' => 'SOMS_HIGH_EXPRESS',
                             ];
                         case 'paid_shunfeng_express':
+                            // 加价快递
                             $labels[] = [
                                 'label_code' => 'SOMS_PAID_EXPRESS',
                                 'label_value' => 0x0001,
                             ];
                             break;
                         case 'paid_shunfeng_express_tk':
+                            // 加价快递
                             $labels[] = [
                                 'label_code' => 'SOMS_PAID_EXPRESS',
                                 'label_value' => 0x0002,
@@ -204,18 +205,26 @@ class erpapi_shop_response_plugins_order_orderlabels extends erpapi_shop_respons
                 'label_value' => $quality_check_type,
             ];
         }
+        
         //自选快递订单履约发货
         if (is_array($platform->_ordersdf['extend_field']['order_tag']) && isset($platform->_ordersdf['extend_field']['order_tag']['shop_optional_express_info'])) {
             foreach ($platform->_ordersdf['extend_field']['order_tag']['shop_optional_express_info']['ExpressCompanys'] as $val) {
                 if(isset($val['ExpressCompanyCode']) && $val['ExpressCompanyCode']){
                     $labels[] = [
-                        'label_code' => kernel::single('ome_bill_label')->isExpressMust(),//自选快递
+                        'label_code' => kernel::single('ome_bill_label')->isExpressMust(), //自选快递：SOMS_EXPRESS_MUST
                     ];
                     break;
                 }
             }
         }
-
+        
+        // 黑名单快递
+        if(isset($platform->_ordersdf['buyer_black_delivery_cps']) && $platform->_ordersdf['buyer_black_delivery_cps']){
+            $labels[] = [
+                'label_code' => 'SOMS_EXPRESS_BLACKLIST',
+            ];
+        }
+        
         // 订单达人
         if (is_array($platform->_ordersdf['extend_field']) && $platform->_ordersdf['extend_field']['is_host']) {
             $labels[] = [
@@ -229,19 +238,17 @@ class erpapi_shop_response_plugins_order_orderlabels extends erpapi_shop_respons
                 'label_code'    =>  'SOMS_LOTTERY',
             ];
         }
-
-
+        
         if($platform->_ordersdf['extend_field']['sendpayMap'] && $platform->_ordersdf['tran_jdzd_flag']){
-
             foreach($platform->_ordersdf['extend_field']['sendpayMap'] as $spVal){
                 if(is_string($spVal)) {
                     $spVal = json_decode($spVal, 1);
                 }
+                
                 if(is_array($spVal) && $spVal['987'] == '2') {
                     $labels[] = [
                         'label_code' => 'SOMS_JDZD',
                     ];
-
                 }
             }
         }
@@ -320,6 +327,27 @@ class erpapi_shop_response_plugins_order_orderlabels extends erpapi_shop_respons
                     ];
                 }
             }
+
+            // 拼多多直邮活动标签：1 打标，明确下发 0 时清除历史标签。
+            if ($platform->_ordersdf['shop_type'] === 'pinduoduo'){
+                foreach($order_tag_list as $tag){
+                    if ($tag['name'] !== 'direct_mail_activity') {
+                        continue;
+                    }
+
+                    if (in_array($tag['value'], [1, '1'], true)) {
+                        $labels[] = [
+                            'label_code' => 'SOMS_DIRECT_MAIL',
+                        ];
+                    } elseif (in_array($tag['value'], [0, '0'], true)) {
+                        $labels[] = [
+                            'label_code'   => 'SOMS_DIRECT_MAIL',
+                            'label_action' => 'del',
+                        ];
+                    }
+                    break;
+                }
+            }
         }
         
         if(isset($platform->_ordersdf['extend_field']['gift_order_status']) && in_array($platform->_ordersdf['extend_field']['gift_order_status'],['0','1','2']) ) {
@@ -333,18 +361,12 @@ class erpapi_shop_response_plugins_order_orderlabels extends erpapi_shop_respons
                 'order_sns'=>  json_encode($order_sns, JSON_UNESCAPED_UNICODE),   
 
             ];
-            if($gift_order_status==1){//related_order_list
-                
-                
+            if($gift_order_status==1){
                 $labels[] = [
                     'label_code'    =>  'SOMS_GIFT_ORDER_STATUS',
-                  
                     'extend_info'   =>  json_encode($gift_extdnd, JSON_UNESCAPED_UNICODE),
                 ];
-                
             }
-
-
         }
 
         if($platform->_ordersdf['extend_field']['related_order_list']){
@@ -426,12 +448,8 @@ class erpapi_shop_response_plugins_order_orderlabels extends erpapi_shop_respons
                     ];
                 }
             }
-            
-
-            
         }
-
-
+        
         //风控
         if(isset($platform->_ordersdf['is_risklabels']) && $platform->_ordersdf['is_risklabels']){
             $risklabels = $platform->_ordersdf['is_risklabels'];
@@ -599,6 +617,5 @@ class erpapi_shop_response_plugins_order_orderlabels extends erpapi_shop_respons
                 
             }
         }
-
     }
 }

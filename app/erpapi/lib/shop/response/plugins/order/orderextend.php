@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+ 
 /**
 *
 * @author chenping<chenping@shopex.cn>
@@ -25,8 +25,7 @@ class erpapi_shop_response_plugins_order_orderextend extends erpapi_shop_respons
     public function convert(erpapi_shop_response_abstract $platform)
     {
         $extend = array();
-
-
+        
         if ($platform->_ordersdf['sellermemberid']) {
             $extend['sellermemberid'] = $platform->_ordersdf['sellermemberid'];
         }
@@ -114,6 +113,12 @@ class erpapi_shop_response_plugins_order_orderextend extends erpapi_shop_respons
             && isset($platform->_ordersdf['charge_home_delivery_door'])) {
             $extend['_charge_home_delivery_door'] = $platform->_ordersdf['charge_home_delivery_door'];
         }
+        
+        // 拼多多买家拒用快递：保存阶段与已有 black_delivery_cps 做并集，避免覆盖翱象等来源。
+        if (!empty($platform->_ordersdf['buyer_black_delivery_cps']) && is_array($platform->_ordersdf['buyer_black_delivery_cps'])) {
+            $extend['_buyer_black_delivery_cps'] = array_values(array_unique(array_filter($platform->_ordersdf['buyer_black_delivery_cps'])));
+        }
+        
         //保价订单SKU商品
         if ($platform->_ordersdf['extend_field']['special_refund_type_info'] && is_array($platform->_ordersdf['extend_field']['special_refund_type_info'])) {
             foreach ($platform->_ordersdf['extend_field']['special_refund_type_info'] as $skuOid => $skuVal)
@@ -232,10 +237,14 @@ class erpapi_shop_response_plugins_order_orderextend extends erpapi_shop_respons
      **/
     public function postCreate($order_id,$extendinfo)
     {
-        $orderExtendObj = app::get('ome')->model('order_extend'); 
-
+        $orderExtendObj = app::get('ome')->model('order_extend');
+        
         $extendinfo = $this->_prepareChargeHomeDeliveryDoorExtend($order_id, $extendinfo);
         
+        // 合并买家拒用快递黑名单到 black_delivery_cps
+        $extendinfo = $this->_prepareBuyerBlackDeliveryCpsExtend($order_id, $extendinfo);
+        
+        // contents
         if ($extendinfo['contents']) {      
           // 判断contents是否有值
           $row = $orderExtendObj->getList('contents',array('order_id'=>$order_id));
@@ -263,7 +272,6 @@ class erpapi_shop_response_plugins_order_orderextend extends erpapi_shop_respons
             $error_msg = '';
             $labelResult = $labelLib->labelPriceProtectOrder($order_id, $extendinfo['price_protect'], $error_msg);
         }
-        
     }
 
   /**
@@ -278,6 +286,10 @@ class erpapi_shop_response_plugins_order_orderextend extends erpapi_shop_respons
 
     $extendinfo = $this->_prepareChargeHomeDeliveryDoorExtend($order_id, $extendinfo);
     
+    // 合并买家拒用快递黑名单到 black_delivery_cps
+    $extendinfo = $this->_prepareBuyerBlackDeliveryCpsExtend($order_id, $extendinfo);
+    
+    // contents
     if ($extendinfo['contents']) {      
       // 判断contents是否有值
       $row = $orderExtendObj->getList('contents',array('order_id'=>$order_id));
@@ -298,6 +310,68 @@ class erpapi_shop_response_plugins_order_orderextend extends erpapi_shop_respons
       $orderExtendObj->save($extendinfo);
     }  
   }
+
+    /**
+     * 合并买家拒用快递黑名单到 black_delivery_cps
+     *
+     * @param int $order_id
+     * @param array $extendinfo
+     * @return array
+     */
+    private function _prepareBuyerBlackDeliveryCpsExtend($order_id, $extendinfo)
+    {
+        if (!array_key_exists('_buyer_black_delivery_cps', $extendinfo)) {
+            return $extendinfo;
+        }
+        
+        $buyerBlackTypes = (array)$extendinfo['_buyer_black_delivery_cps'];
+        unset($extendinfo['_buyer_black_delivery_cps']);
+        
+        // check
+        if (!$buyerBlackTypes) {
+            return $extendinfo;
+        }
+        
+        $orderExtendObj = app::get('ome')->model('order_extend');
+        $oldExtend = $orderExtendObj->db_dump(['order_id' => $order_id], 'black_delivery_cps');
+
+        $merged = [];
+        if (!empty($oldExtend['black_delivery_cps'])) {
+            $fromDb = json_decode($oldExtend['black_delivery_cps'], true);
+            
+            foreach ((array)$fromDb as $type) {
+                if ($type === '' || $type === null) {
+                    continue;
+                }
+                
+                $merged[(string)$type] = (string)$type;
+            }
+        }
+        
+        if (!empty($extendinfo['black_delivery_cps'])) {
+            $fromSdf = is_string($extendinfo['black_delivery_cps']) ? json_decode($extendinfo['black_delivery_cps'], true) : $extendinfo['black_delivery_cps'];
+            
+            foreach ((array)$fromSdf as $type) {
+                if ($type === '' || $type === null) {
+                    continue;
+                }
+                $merged[(string)$type] = (string)$type;
+            }
+        }
+
+        foreach ($buyerBlackTypes as $type) {
+            if ($type === '' || $type === null) {
+                continue;
+            }
+            
+            $merged[(string)$type] = (string)$type;
+        }
+        
+        // 快递黑名单
+        $extendinfo['black_delivery_cps'] = $merged ? json_encode($merged) : '';
+        
+        return $extendinfo;
+    }
 
     /**
      * 合并拼多多消费者付费送货上门物流白名单

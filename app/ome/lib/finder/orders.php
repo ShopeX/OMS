@@ -1807,10 +1807,33 @@ EOF;
     public $column_latest_delivery_time_width = '120';
     public function column_latest_delivery_time($row, $list) {
         $extend = $this->__getOrderExtend($list);
-        $time = $extend[$row['order_id']]['latest_delivery_time'];
-        if($row[$this->col_prefix . 'order_bool_type'] & ome_order_bool_type::__SHI_CODE) {
-            return $time ? '<span style="color:green">' . date('Y-m-d H:i', $time) . '</span> ' : '';
+        $time = (isset($extend[$row['order_id']]['latest_delivery_time']) ? $extend[$row['order_id']]['latest_delivery_time'] : 0);
+        if(!$time) {
+            return '';
         }
+        
+        $diff = $time - time();
+        if ($diff > 0) {
+            $days = floor($diff / 86400);
+            $hours = floor(($diff % 86400) / 3600);
+            $mins = floor(($diff % 3600) / 60);
+            $secs = $diff % 60;
+            $remain = ($days > 0 ? $days . '天' : '')
+                . $hours . '小时' . $mins . '分钟' . $secs . '秒';
+            $tip = '剩余：' . $remain . ' 将发货超时';
+        } else {
+            if($row['pay_status'] == '1' && $row['ship_status'] == '0'){
+                $tip = '当前时间已超过最晚发货时间！';
+            }else{
+                $tip = '';
+            }
+        }
+        
+        $html = '<span style="color:green" title="' . htmlspecialchars($tip) . '">' . date('Y-m-d H:i', $time) . '</span>';
+        if($row[$this->col_prefix . 'order_bool_type'] & ome_order_bool_type::__SHI_CODE) {
+            return $html . ' ';
+        }
+        
         $img = '';
         if(kernel::single('ome_order_bool_type')->isCnService($row[$this->col_prefix . 'order_bool_type'])) {
             if($extend[$row['order_id']]['cn_service'] == 'dang') {
@@ -1826,7 +1849,7 @@ EOF;
             }
         }
         
-        return $time ? '<span style="color:green">' . date('Y-m-d H:i', $time) . '</span>  '  : '';
+        return $html . '  ';
     }
     
     public $column_promised_collect_time = '承诺最晚揽收时间';

@@ -87,7 +87,7 @@ $db['refund_apply'] = array(
             'in_list'         => true,
             'default_in_list' => true,
             'label'           => '申请退款金额',
-            'width'           => '70',
+            'width'           => 120,
         ),
         'refunded'         => array(
             'type'            => 'money',
@@ -95,7 +95,7 @@ $db['refund_apply'] = array(
             'in_list'         => true,
             'default_in_list' => true,
             'label'           => '已退款金额',
-            'width'           => '70',
+            'width'           => 120,
         ),
         'payment'          => array(
             'type'          => 'table:payment_cfg@ome',
@@ -113,6 +113,7 @@ $db['refund_apply'] = array(
             'in_list'         => true,
             'default_in_list' => true,
             'label'           => '退款原因',
+            'width'           => 400,
         ),
         'create_time'      => array(
             'type'            => 'time',
@@ -172,7 +173,7 @@ $db['refund_apply'] = array(
         'shop_id'          => array(
             'type'          => 'table:shop@ome',
             'label'         => '来源店铺',
-            'width'         => 75,
+            'width'         => 130,
             'editable'      => false,
             'in_list'       => true,
             'filtertype'    => 'normal',
@@ -229,7 +230,7 @@ $db['refund_apply'] = array(
             'default'=>'',
             'editable' => false,
             'label' => '客服介入状态',
-            'width' =>65,
+            'width' => 130,
             'in_list' => true,
             'default_in_list' => true,
         ),
@@ -255,7 +256,7 @@ $db['refund_apply'] = array(
         'shop_type'        => array(
             'type'          => 'varchar(50)',
             'label'         => '店铺类型',
-            'width'         => 75,
+            'width'         => 100,
             'editable'      => false,
             'in_list'       => true,
             'filtertype'    => 'normal',
@@ -286,7 +287,7 @@ $db['refund_apply'] = array(
             'type'            => 'table:operation_organization@ome',
             'label'           => '运营组织',
             'editable'        => false,
-            'width'           => 60,
+            'width'           => 120,
             'filtertype'      => 'normal',
             'filterdefault'   => true,
             'in_list'         => true,
@@ -328,7 +329,6 @@ $db['refund_apply'] = array(
             'in_list'       => true,
             'default'  => '',
         ),
-
         'tag_type' => array(
             'type' => array(
                 '0' => '常规退款',
@@ -339,6 +339,7 @@ $db['refund_apply'] = array(
                 '6' => '售后仅退款',
                 '7' => '发货前退款',
                 '8' => '强制退款',
+                '9' => '商责退运费',
             ),
             'default' => '0',
             'editable' => false,
@@ -351,11 +352,9 @@ $db['refund_apply'] = array(
         'cost_freight'       => array(
           'type'       => 'money',
           'default'    => '0',
-       
           'label'      => '运费',
           'width'      => 70,
           'editable'   => false,
-        
           'in_list'    => true,
       ),
         'platform_discount_return_amount' => array(
@@ -412,14 +411,12 @@ $db['refund_apply'] = array(
                 0 => 'reship_id',
             ),
         ),
-        
         'ind_status_disabled' => array(
             'columns' => array(
                 'status','disabled','delivery_mode'
             ),
         ),
         'idx_return_id' => array('columns' => array('return_id')),
-
         'idx_abnormal_status' => array('columns' => array('abnormal_status')),
         'idx_oid' => array('columns' => array('oid')),
         'idx_bn' => array('columns' => array('bn(255)')),

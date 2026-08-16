@@ -1145,7 +1145,12 @@ class ome_ctl_admin_refund_apply extends desktop_controller
             }
 
             $shop_detail = $shop_obj->dump($order_detail['shop_id'], 'node_id,node_type');
-
+            
+            // 商责退运费
+            if(in_array($a_apply['tag_type'], ['9'])){
+                $this->splash('error', $url, '退款申请单号：' . $a_apply['refund_apply_bn'] . ' 为：商责退运费，不能批量退款!');
+            }
+            
             // 如果申请金额大于已付金额, 则退出
             $money = $a_apply['money'] - $a_apply['bcmoney'];
             if (round($money, 3) > round($order_detail['payed'], 3)) {
@@ -1337,11 +1342,17 @@ class ome_ctl_admin_refund_apply extends desktop_controller
             'fail_msg' => array()
         );
         $model = app::get('ome')->model('refund_apply');
-        $rows = $model->getList('apply_id,refund_apply_bn,bool_type,reship_id', array('apply_id'=>$ids));
+        $rows = $model->getList('apply_id,refund_apply_bn,bool_type,reship_id,tag_type', array('apply_id'=>$ids));
         foreach ($rows as $row) { 
             if($row['bool_type'] & ome_refund_bool_type::__ONLY_REFUND) {
                 continue;
             }
+            
+            // 商责退运费
+            if(in_array($row['tag_type'], ['9'])){
+                continue;
+            }
+            
             if($row['reship_id'] > 0) {
                 $retArr['fail']++;
                 $retArr['fail_msg'][] = ['obj_bn'=>$row['refund_apply_bn'],'msg'=>'有退货单，不能仅退款！'];
@@ -1423,6 +1434,11 @@ class ome_ctl_admin_refund_apply extends desktop_controller
         
         if (!$refundApply) {
             $this->splash('error', $url, '退款申请不存在');
+        }
+
+        // 商责退运费：不能生成退换货单、拦截退货单
+        if (kernel::single('ome_order_platform_taobao_aftersale')->isShangzeByTagType($refundApply['tag_type'])) {
+            $this->splash('error', $url, '商责退运费单据不允许生成退货单');
         }
         
         // 调用qzRefundToLJRK方法

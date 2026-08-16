@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
  *
@@ -35,13 +34,6 @@ abstract class erpapi_shop_request_abstract
     protected $__resultObj;
     protected $__caller;
 
-    /**
-     * 初始化
-     * @param erpapi_channel_abstract $channel channel
-     * @param erpapi_config $config 配置
-     * @param erpapi_result $result result
-     * @return mixed 返回值
-     */
     final public function init(erpapi_channel_abstract $channel, erpapi_config $config, erpapi_result $result)
     {
         $this->__channelObj = $channel;

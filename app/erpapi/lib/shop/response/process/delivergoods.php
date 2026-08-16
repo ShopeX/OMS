@@ -282,14 +282,28 @@ class erpapi_shop_response_process_delivergoods extends erpapi_shop_response_abs
     public function promise($sdf)
     {
         if ($sdf['event_type'] == 'latest_delivery_time') {
+            // check
+            if (empty($sdf['pick_date'])) {
+                return ['rsp' => 'fail', 'msg' => '缺少最晚发货时间'];
+            }
+            
+            $latestDeliveryTime = kernel::single('ome_func')->date2time($sdf['pick_date']);
+            
+            // date2time 空值会原样返回 ''，整型字段不能写入空字符串
+            if ($latestDeliveryTime === '' || $latestDeliveryTime === false || $latestDeliveryTime === null) {
+                return ['rsp' => 'fail', 'msg' => '最晚发货时间格式错误'];
+            }
+            
             $orderExtendObj = app::get('ome')->model('order_extend');
             $extendinfo     = [
                 'order_id'             => $sdf['order']['order_id'],
-                'latest_delivery_time' => kernel::single('ome_func')->date2time($sdf['pick_date'])
+                'latest_delivery_time' => intval($latestDeliveryTime),
             ];
             $orderExtendObj->save($extendinfo);
+            
             return ['rsp'=>'succ', 'msg'=>'最晚发货时间更新成功'];
         }
+        
         return ['rsp'=>'fail', 'msg'=>'缺少类型'];
     }
 }

@@ -18,13 +18,6 @@
 class openapi_api_function_v1_sales extends openapi_api_function_abstract implements openapi_api_function_interface
 {
 
-    /**
-     * 获取List
-     * @param mixed $params 参数
-     * @param mixed $code code
-     * @param mixed $sub_msg sub_msg
-     * @return mixed 返回结果
-     */
     public function getList($params, &$code, &$sub_msg)
     {
         set_time_limit(0);
@@ -161,25 +154,11 @@ class openapi_api_function_v1_sales extends openapi_api_function_abstract implem
         return $original_sales_data;
     }
 
-    /**
-     * 添加
-     * @param mixed $params 参数
-     * @param mixed $code code
-     * @param mixed $sub_msg sub_msg
-     * @return mixed 返回值
-     */
     public function add($params, &$code, &$sub_msg)
     {
         //==
     }
 
-    /**
-     * 获取SalesAmount
-     * @param mixed $params 参数
-     * @param mixed $code code
-     * @param mixed $sub_msg sub_msg
-     * @return mixed 返回结果
-     */
     public function getSalesAmount($params, &$code, &$sub_msg)
     {
         $start_time = strtotime($params['start_time']);
@@ -212,20 +191,53 @@ class openapi_api_function_v1_sales extends openapi_api_function_abstract implem
      * @author CP
      * @version 4.3.9 2021-08-14T10:39:02+08:00
      **/
-    public function getDeliveryList($params, &$code, $sub_msg)
+    public function getDeliveryList($params, &$code, &$sub_msg)
     {
         set_time_limit(0);
         ini_set('memory_limit', '512M');
-        $deliveryStartTime = strtotime($params['start_time']);
-        $deliveryEndTime   = strtotime($params['end_time']);
+        $deliveryStartTime = strtotime($params['start_time'] ?? '');
+        $deliveryEndTime   = strtotime($params['end_time'] ?? '');
+        $modifiedStartTime = strtotime($params['modified_start'] ?? '');
+        $modifiedEndTime   = strtotime($params['modified_end'] ?? '');
 
         $pageNo   = intval($params['page_no']) > 0 ? intval($params['page_no']) : 1;
         $pageSize = (intval($params['page_size']) > 1000 || intval($params['page_size']) <= 0) ? 100 : intval($params['page_size']);
 
-        $filter = [
-            'delivery_time|bthan' => $deliveryStartTime,
-            'delivery_time|lthan' => $deliveryEndTime,
-        ];
+        if (($deliveryStartTime && !$deliveryEndTime) || (!$deliveryStartTime && $deliveryEndTime)) {
+            $sub_msg = '发货开始时间和结束时间必须同时传入';
+            return false;
+        }
+        if (($modifiedStartTime && !$modifiedEndTime) || (!$modifiedStartTime && $modifiedEndTime)) {
+            $sub_msg = '修改开始时间和结束时间必须同时传入';
+            return false;
+        }
+        if ($modifiedStartTime && $modifiedEndTime && $modifiedStartTime >= $modifiedEndTime) {
+            $sub_msg = '修改开始时间必须早于结束时间';
+            return false;
+        }
+        if ($modifiedStartTime && $modifiedEndTime && ($modifiedEndTime - $modifiedStartTime) > 86400) {
+            $sub_msg = '修改时间跨度不能超过24小时';
+            return false;
+        }
+        if (!$deliveryStartTime && !$modifiedStartTime) {
+            $sub_msg = '发货时间范围和修改时间范围至少传入一组';
+            return false;
+        }
+
+        $filter = [];
+        if ($deliveryStartTime && $deliveryEndTime) {
+            $filter['delivery_time|bthan'] = $deliveryStartTime;
+            $filter['delivery_time|lthan'] = $deliveryEndTime;
+        }
+        if ($modifiedStartTime && $modifiedEndTime) {
+            // 发货销售主单没有更新时间。通过明细 up_time 反查主单，既支持历史单据重拉，
+            // 又不需要篡改 delivery_time 这一业务事实字段。
+            $filter['filter_sql'] = 'delivery_id IN ('
+                . 'SELECT DISTINCT delivery_id FROM sdb_sales_delivery_order_item '
+                . 'WHERE up_time >= "' . date('Y-m-d H:i:s', $modifiedStartTime) . '" '
+                . 'AND up_time < "' . date('Y-m-d H:i:s', $modifiedEndTime) . '"'
+                . ')';
+        }
 
         if ($params['delivery_bn']) {
             $filter['delivery_bn'] = $params['delivery_bn'];

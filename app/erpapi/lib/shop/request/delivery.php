@@ -17,8 +17,8 @@
 /**
  * 发货单处理
  *
- * @category
- * @package
+ * @category 
+ * @package 
  * @author chenping<chenping@shopex.cn>
  * @version $Id: Z
  */
@@ -34,7 +34,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
 
     /**
      * 发货确认
-     * 
+     *
      * @return void
      * @author
      * @param array $sdf = array(
@@ -107,8 +107,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
      *                          ),
      *                  ),
      *              )
-     * */
-
+     **/
     public function confirm($sdf,$queue=false)
     {
         $orderModel = app::get('ome')->model('orders');
@@ -479,6 +478,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                         // 如果没有 shop_id，使用订单的 shop_type
                         $shop_type_code = $firstOrder['shop_type'] ? $firstOrder['shop_type'] : '';
                     }
+
                     
                     // 将 shop_type 转换为中文
                     if ($shop_type_code) {
@@ -488,6 +488,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                         }
                     }
                 }
+
                 
                 kernel::single('monitor_event_notify')->addNotify('order_delivery_platform_sync_error', [
                     'logi_no' => $logi_no,
@@ -535,10 +536,10 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
 
     /**
      * 家装服务商
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function jzpartner_query($sdf)
     {
         $title = sprintf('家装服务商查询[%s]',$sdf['orderinfo']['order_bn']);
@@ -576,10 +577,10 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
 
     /**
      * 获取发货接口(默认线下发货)
-     * 
+     *
      * @return string
      * @author 
-     * */
+     **/
     protected function get_delivery_apiname($sdf)
     {
         return SHOP_LOGISTICS_OFFLINE_SEND;
@@ -587,26 +588,26 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
 
     /**
      * 添加发货单
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function add($sdf){}
 
     /**
      * 更新发货单流水状态
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function process_update($sdf){}
 
     /**
      * 更新物流公司
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function logistics_update($sdf){}
     
     /**
@@ -681,7 +682,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
     
     /**
      * 发货单签收核销
-     * 
+     *
      * @param array $params
      * @return array
      */
@@ -737,7 +738,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
     
     /**
      * 物流轨迹查询
-     * 
+     *
      * @param array $params
      * @return array
      */
@@ -806,7 +807,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
     
     /**
      * 修改物流公司信息
-     * 
+     *
      * @param array $params
      * @return array
      */
@@ -843,7 +844,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
     
     /**
      * [翱象系统]同步仓库作业信息
-     * 
+     *
      * @param array $sdf
      * @return array
      */
@@ -880,7 +881,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
     
     /**
      * [翱象系统]仓库接单--格式化请求数据
-     * 
+     *
      * @param array $sdf
      * @return array
      */
@@ -962,7 +963,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
     
     /**
      * [翱象系统]确认出库--格式化请求数据
-     * 
+     *
      * @param array $sdf
      * @return array
      */
@@ -1049,24 +1050,13 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
         
         return $params;
     }
-    
-    /**
-     * 获取PrintDelivery
-     * @param mixed $sdf sdf
-     * @return mixed 返回结果
-     */
     public function getPrintDelivery($sdf){}
 
-    /**
-     * operationInWarehouse
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function operationInWarehouse($sdf){}
     
     /**
      * 获取订单发货oid子订单列表
-     * 
+     *
      * @param $sdf
      * @return array
      */
@@ -1097,7 +1087,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
     
     /**
      * 按发货子订单明细
-     * 
+     *
      * @param $sdf
      * @param $shop_type 店铺类型(taobao、tmall)
      * @return array
@@ -1191,7 +1181,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
     
     /**
      * 按多包裹发货
-     * 
+     *
      * @param $sdf
      * @param $shop_type 店铺类型(taobao、tmall)
      * @return array
@@ -1295,7 +1285,6 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                 
                 //已经打包的数量
                 $sdf['delivery_items'][$itemKey]['pack_nums'] += $package_num;
-                
                 //data（含 order_obj_id 供 is_part_consign 场景2 使用）
                 $packageList[$logi_no][$oid] = array(
                     'oid' => $oid,
@@ -1348,7 +1337,6 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                     'sub_tid' => $oid, //子订单id
                     'num' => $package_num, //发货数量
                 );
-                
                 //子订单发货情况（is_part_consign=true 仅在这两种部分发货场景出现，见下方注释）
                 $is_part_consign = false;
                 if($oidList[$oid]['sendnum'] < $oidList[$oid]['nums']){
@@ -1366,7 +1354,6 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                     'sub_tid' => $oid, //子订单id
                     'is_part_consign' => $is_part_consign, //子订单是否部分发货,true:部分发货,false:全部发货;
                 );
-                
                 if(in_array($shop_type, array('tmall', 'taobao'))){
                     //去除数量字段
                     unset($packages[$logi_no]['goods'][$oid]['num']);

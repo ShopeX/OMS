@@ -138,10 +138,26 @@ class ome_finder_refund_apply{
         $render->pagedata['status_display'] = ome_refund_func::refund_apply_status();
         $render->pagedata['orderinfo'] = $orderinfo;
         $render->pagedata['finder_id'] = $_GET['finder_id'];
+
+        // 商责退运费：详情页展示 addon 平台扩展字段
+        $refunddata = $render->pagedata['refunddata'];
+        $render->pagedata['is_shangze_free_return'] = false;
+        $render->pagedata['shangze_addon'] = [];
+        if (kernel::single('ome_order_platform_taobao_aftersale')->isShangzeByTagType(
+            isset($refunddata['tag_type']) ? $refunddata['tag_type'] : ''
+        )) {
+            $addon = isset($refunddata['addon']) ? $refunddata['addon'] : '';
+            if (is_string($addon) && $addon !== '') {
+                $addon = unserialize($addon);
+            }
+            $render->pagedata['is_shangze_free_return'] = true;
+            $render->pagedata['shangze_addon'] = is_array($addon) ? $addon : [];
+        }
+        
         return $render->fetch('admin/refund/refundapp_detail.html');
     }
     
-    var $addon_cols = 'archive,source,order_id,abnormal_status,bool_type,reship_id,return_id,source_status,status,refund_refer,shop_type,negotiate_sync_status';
+    var $addon_cols = 'archive,source,order_id,abnormal_status,bool_type,reship_id,return_id,source_status,status,refund_refer,shop_type,negotiate_sync_status,tag_type';
     
     /**
      * 备注
@@ -339,6 +355,12 @@ class ome_finder_refund_apply{
         $apply_id = $row['apply_id'];
         $status = $row[$this->col_prefix.'status'];
         $refund_refer = isset($row[$this->col_prefix.'refund_refer']) ? $row[$this->col_prefix.'refund_refer'] : '0';
+        $tag_type = isset($row[$this->col_prefix.'tag_type']) ? $row[$this->col_prefix.'tag_type'] : $row['tag_type'];
+        
+        // 商责退运费：列表不允许有任何操作按钮
+        if (kernel::single('ome_order_platform_taobao_aftersale')->isShangzeByTagType($tag_type)) {
+            return '';
+        }
         
         // 条件：售后退款(refund_refer=1)且退款完成(status=4)
         if ($status == '4' && $refund_refer == '1' && empty($row[$this->col_prefix.'reship_id'])) {

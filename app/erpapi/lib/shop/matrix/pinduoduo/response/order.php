@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+ 
 /**
  * @author ykm 2016/12/15
  * @describe 订单处理
@@ -179,7 +179,42 @@ class erpapi_shop_matrix_pinduoduo_response_order extends erpapi_shop_response_o
         if ($this->_ordersdf['platform_discount']) {
             $this->_ordersdf['platform_cost_amount'] = $this->_ordersdf['platform_discount'];
         }
+        
+        // 通过平台cn_info.express_memos：获取买家拒用的快递 → buyer_black_delivery_cps
+        $this->_parseBuyerRejectExpressMemos();
+    }
 
+    /**
+     * 解析平台推送的买家拒用快递备注
+     *
+     * scene=1 且 tag 非空时，按关键字映射 dly_corp.type，写入 SDF 供 orderextend 合并进 black_delivery_cps。
+     */
+    private function _parseBuyerRejectExpressMemos()
+    {
+        // check
+        if(!isset($this->_ordersdf['cn_info']) || empty($this->_ordersdf['cn_info'])){
+            return false;
+        }
+        
+        // 从 cn_info 解析买家拒用快递编码与命中 tag
+        $parsed = kernel::single('ome_order_platform_pinduoduo_expressmemos')->parseFromCnInfo($this->_ordersdf['cn_info'] ?? null);
+        if (empty($parsed['types'])) {
+            return false;
+        }
+        
+        // [黑名单]物流公司编码
+        $this->_ordersdf['buyer_black_delivery_cps'] = $parsed['types'];
+        
+        if (!isset($this->_ordersdf['extend_field']) || !is_array($this->_ordersdf['extend_field'])) {
+            $this->_ordersdf['extend_field'] = [];
+        }
+        
+        $this->_ordersdf['extend_field']['pdd_express_memos'] = [
+            'tags'  => $parsed['tags'],
+            'types' => $parsed['types'],
+        ];
+        
+        return true;
     }
 
     protected function get_update_plugins()
@@ -192,14 +227,50 @@ class erpapi_shop_matrix_pinduoduo_response_order extends erpapi_shop_response_o
             $plugins[] = 'confirmreceipt';
         }
         
+        // flag
+        $is_loading_plugins_extend = false;
+        
+        // 买家拒用快递黑名单同样需要在不可发货场景落库，供后续审单过滤。
+        if(!empty($this->_ordersdf['buyer_black_delivery_cps'])){
+            $is_loading_plugins_extend = true;
+        }
+        
         // 本服务的标签和白名单需要在服务取消时主动清理，不能完全依赖 is_delivery。
         // 风险单等场景会先变为 N；若历史已打标，仍需运行插件恢复其他业务白名单。
-        if ($this->_ordersdf['is_delivery'] == 'Y' || $this->_needSyncChargeHomeDeliveryDoor()) {
+        if ($this->_ordersdf['is_delivery'] == 'Y' || $this->_needSyncChargeHomeDeliveryDoor() || $is_loading_plugins_extend) {
             $plugins[] = 'orderextend';
             $plugins[] = 'orderlabels';
         }
 
+        // 直邮活动标签需要响应平台的 1/0 更新，不能依赖订单是否可发货。
+        if ($this->_hasDirectMailActivityTag()) {
+            $plugins[] = 'orderlabels';
+        }
+
         return $plugins;
+    }
+
+    /**
+     * 判断平台是否明确下发直邮活动标签
+     */
+    private function _hasDirectMailActivityTag()
+    {
+        $orderTagList = isset($this->_ordersdf['extend_field']['order_tag_list'])
+            ? $this->_ordersdf['extend_field']['order_tag_list']
+            : [];
+        if (!is_array($orderTagList)) {
+            return false;
+        }
+
+        foreach ($orderTagList as $tag) {
+            if (is_array($tag)
+                && isset($tag['name'])
+                && $tag['name'] === 'direct_mail_activity') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

@@ -559,8 +559,9 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
 
         //json
         $params['items'] = json_encode($items);
-
-
+        
+        // 出库单类型（矩阵字段名：orderType）
+        //@todo: qimen平台类型（JYCK= 一般交易出库单，HHCK= 换货出库，BFCK= 补发出库 PTCK=普通出库单，DBCK=调拨出库，QTCK=其他出库）
         if ($sdf['relate_order_bn'] && $sdf['createway'] == 'after') {
             $params['order_type'] = 'HHCK';
 
@@ -578,7 +579,11 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
             $params['wms_order_code'] = $delivery_extend['original_delivery_bn'];
 
             $params['orig_order_code'] = $delivery['delivery_bn'];
+        }elseif($sdf['order_type'] == 'bufa'){
+            // 补发出库
+            $params['order_type'] = 'BFCK';
         }
+        
         $params['pay_time'] = $sdf['pay_time'];
 
         return $params;

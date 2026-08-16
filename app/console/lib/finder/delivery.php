@@ -684,6 +684,81 @@ EOF;
 
         return count($orderBn) > 1 ? '<span title="' . implode(',', $orderBn) . '">' . implode(',', $orderBn) . '</span>' : implode(',', $orderBn);
     }
+    
+    var $column_pay_status = '付款状态';
+    var $column_pay_status_width = 120;
+    function column_pay_status($row, $list)
+    {
+        $orders = $this->_getOrder($row['delivery_id'], $list);
+        
+        // format
+        $pay_status_str = '';
+        if($orders){
+            $payStatus = array(
+                0 => '未支付',
+                1 => '已支付',
+                2 => '处理中',
+                3 => '部分付款',
+                4 => '部分退款',
+                5 => '全额退款',
+                6 => '退款申请中',
+                7 => '退款中',
+                8 => '支付中',
+            );
+            
+            $payStatuVals = [];
+            foreach($orders as $val)
+            {
+                $pay_status = $val['pay_status'];
+                if(empty($pay_status) && $pay_status !== '0'){
+                    continue;
+                }
+                
+                $payStatuVals[] = $payStatus[$pay_status];
+            }
+            
+            $pay_status_str = implode('、', $payStatuVals);
+        }
+        
+        return $pay_status_str;
+    }
+    
+    var $column_process_status = '确认状态';
+    var $column_process_status_width = 120;
+    function column_process_status($row, $list)
+    {
+        $orders = $this->_getOrder($row['delivery_id'], $list);
+        
+        // format
+        $process_status_str = '';
+        if($orders){
+            $processStatus = array(
+                'unconfirmed'   => '未确认',
+                'confirmed'     => '已确认',
+                'splitting'     => '部分拆分',
+                'splited'       => '已拆分完',
+                'cancel'        => '取消',
+                'remain_cancel' => '余单撤销',
+                'is_retrial'    => '复审订单',
+                'is_declare'    => '跨境申报订单',
+            );
+            
+            $processStatuVals = [];
+            foreach($orders as $val)
+            {
+                $process_status = $val['process_status'];
+                if(empty($process_status)){
+                    continue;
+                }
+                
+                $processStatuVals[] = $processStatus[$process_status];
+            }
+            
+            $process_status_str = implode('、', $processStatuVals);
+        }
+        
+        return $process_status_str;
+    }
 
     /**
      * 列表行加背景色
@@ -785,8 +860,9 @@ EOF;
         }
 
         $deliveryList = [];
-
-        $rows = app::get('ome')->model('delivery_order')->getOrderInfo('custom_mark, mark_text, delivery_id, sdb_ome_orders.order_id, sdb_ome_orders.order_bn, sdb_ome_orders.bufa_reason, sdb_ome_orders.relate_order_bn', implode(',', array_unique(array_column($list, 'delivery_id'))));
+        
+        $fields = 'custom_mark, mark_text, delivery_id, sdb_ome_orders.order_id, sdb_ome_orders.order_bn, sdb_ome_orders.bufa_reason, sdb_ome_orders.relate_order_bn, sdb_ome_orders.pay_status, sdb_ome_orders.process_status';
+        $rows = app::get('ome')->model('delivery_order')->getOrderInfo($fields, implode(',', array_unique(array_column($list, 'delivery_id'))));
 
         foreach ($rows as $value) {
             $deliveryList[$value['delivery_id']][$value['order_id']] = $value;

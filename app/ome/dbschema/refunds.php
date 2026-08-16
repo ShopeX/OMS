@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 $db['refunds'] = array(
     'columns' => array(
         'refund_id'     => array(
@@ -43,8 +42,6 @@ $db['refunds'] = array(
             'label'    => '订单号',
             'width'    => 200,
             'editable' => false,
-//      'in_list' => true,
-            //      'default_in_list' => true,
         ),
         'account'       => array(
             'type'            => 'varchar(50)',
@@ -260,7 +257,6 @@ $db['refunds'] = array(
             ),
             'prefix'  => 'unique',
         ),
-        
         'ind_t_sent'         => array(
             'columns' => array(
                 0 => 't_sent',

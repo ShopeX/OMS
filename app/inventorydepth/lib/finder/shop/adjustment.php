@@ -14,11 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-/**
- * @author chenping<chenping@shopex.cn>
- */
-
 class inventorydepth_finder_shop_adjustment {
     var $addon_cols = 'shop_id,request,simple,shop_iid,shop_bn,release_stock,mapping,bind,shop_type,bidding_type';
     

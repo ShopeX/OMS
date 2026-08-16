@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class ome_ctl_admin_return_fail extends desktop_controller {
 
     var $name = "同步失败售后申请";
@@ -28,7 +27,10 @@ class ome_ctl_admin_return_fail extends desktop_controller {
         if($organization_permissions){
             $base_filter['org_id'] = $organization_permissions;
         }
-
+        
+        // action
+        $actions = [];
+        
         $params = array(
             'title'=>'同步失败售后申请',
             'use_buildin_new_dialog' => false,
@@ -38,7 +40,7 @@ class ome_ctl_admin_return_fail extends desktop_controller {
             'use_buildin_import'=>false,
             'use_buildin_filter'=>true,
             'base_filter'=>$base_filter,
-            'actions' => $action,
+            'actions' => $actions,
             'finder_cols'=>'return_bn,return_id,order_id,title,content,add_time,shop_id,member_id,memo,money',
         );
         $this->finder ( 'ome_mdl_return_fail' , $params );

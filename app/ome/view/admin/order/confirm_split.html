@@ -1,19 +1,3 @@
-<!--
-  Copyright 2012-2026 ShopeX (https://www.shopex.cn)
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
--->
-
 <{capture name='headbar'}>
 <{css app="ome" src="ome.css"}>
 <table cellspacing="0" cellpadding="0" style="border-width:0 0 1px;" class="table-action">
@@ -126,6 +110,7 @@
     <input type="hidden" name="logi_no" value="<{$order.logi_no}>">
     <input type="hidden" name="waybill_number" id="waybill_number" value=""/>
     <input type="hidden" name="do_action" id="do_action" value=""/>
+    <input type="hidden" name="page_confirm_type" id="page_confirm_type" value="split" />
     <input type="text" style="display:none" />
     
     <!-- 订单确认提醒区域 -->
@@ -169,7 +154,7 @@
         <!-- 购物清单信息 BEGIN-->
         <h3 style="border-bottom:none;">购物清单信息&nbsp;<a href="index.php?app=ome&ctl=admin_order_product&act=stock&p[0]=<{$order_id}>&finder_id=<{$env.get.finder_id}>" target="_blank" title="详细查看仓库情况..."><b>+</b>查看商品清单</a></h3>
         <div class="finder-detail" id="buy_order_item_list">
-            <{include file="admin/order/confirm/product_confirm.html"}>
+            <{include file="admin/order/confirm/product_confirm_split.html"}>
         </div>
         <!-- 购物清单信息 END-->
         
@@ -685,6 +670,8 @@
             value    = el.get('max_left_nums');
             alert('最多发'+el.get('max_left_nums')+'件');
         }
+        value = parseInt(value);
+        el.value = value;
         obj_bn = el.get('obj_bn');item_bn = el.get('item_bn');
 
         if (obj_bn && item_bn) {
@@ -695,6 +682,50 @@
             if (orderObjects[obj_bn]['obj_type'] == 'pkg' || orderObjects[obj_bn]['obj_type'] == 'giftpackage' || orderObjects[obj_bn]['obj_type'] == 'lkb') {
                 for (var item_bn in orderObjects[obj_bn]['order_items']){
                     orderObjects[obj_bn]['order_items'][item_bn]['left_nums'] = parseInt(orderObjects[obj_bn]['order_items'][item_bn]['quantity'])/parseInt(orderObjects[obj_bn]['quantity']) * value;
+                }
+            }
+        }
+
+        // 待发货数量为 0 时取消勾选，大于 0 时勾选
+        var chk = el.getParent('TR').getElement('input.split_item_chk');
+        if (chk && !chk.disabled) {
+            chk.checked = (value > 0);
+        }
+
+        deliveryItemData();
+    }
+
+    function toggle_split_item(el)
+    {
+        var obj_bn  = el.get('obj_bn');
+        var item_bn = el.get('item_bn');
+        var checked = el.checked;
+        var dlvInput = null;
+        var value = 0;
+
+        if (obj_bn && item_bn && orderObjects[obj_bn] && orderObjects[obj_bn]['order_items'][item_bn]) {
+            var item_id = orderObjects[obj_bn]['order_items'][item_bn]['item_id'];
+            dlvInput = document.getElementById('dlv_'+obj_bn+'_'+item_id);
+        } else if (obj_bn) {
+            dlvInput = document.getElementById('dlv_'+obj_bn);
+        }
+
+        if (dlvInput) {
+            var max_left_nums = parseInt(dlvInput.getAttribute('max_left_nums')) || 0;
+            value = checked ? max_left_nums : 0;
+            dlvInput.value = value;
+        }
+
+        if (obj_bn && item_bn) {
+           orderObjects[obj_bn]['order_items'][item_bn]['left_nums'] = value;
+        } else if (obj_bn) {
+            orderObjects[obj_bn]['left_nums'] = value;
+
+            if(orderObjects[obj_bn]['obj_type'] == 'pkg' || orderObjects[obj_bn]['obj_type'] == 'giftpackage' || orderObjects[obj_bn]['obj_type'] == 'lkb')
+            {
+                for (var sub_item_bn in orderObjects[obj_bn]['order_items'])
+                {
+                    orderObjects[obj_bn]['order_items'][sub_item_bn]['left_nums'] = parseInt(orderObjects[obj_bn]['order_items'][sub_item_bn]['quantity'])/parseInt(orderObjects[obj_bn]['quantity']) * value;
                 }
             }
         }
@@ -738,6 +769,15 @@
                 
                 if (orderObjects[obj_bn]['delete'] == 'false') {
                     html += '<tr data-g_pid="" data-g_shop_pid=""  data-item_id="">';
+
+                    // 拆单明细行首列复选框
+                    html += '<td class="split_chk_td">';
+                    if(parseInt(orderObjects[obj_bn]['left_nums']) <= 0) {
+                        html += '<input type="checkbox" class="split_item_chk" obj_bn="'+obj_bn+'" disabled />';
+                    } else {
+                        html += '<input type="checkbox" class="split_item_chk" obj_bn="'+obj_bn+'" checked="checked" onclick="toggle_split_item(this)" />';
+                    }
+                    html += '</td>';
                     
                     if(orderObjects[obj_bn]['obj_type'] == 'lkb'){
                         html += '<td class="addon" type-text="福袋商品">福袋商品</td>';
@@ -856,7 +896,8 @@
                     html += '</tr>';
                     for (item_bn in orderObjects[obj_bn]['order_items']) {
                         if (orderObjects[obj_bn]['order_items'][item_bn]['delete'] == 'false') {
-                            html += '<tr><td></td>';
+                            // 组合子行：首列复选框空位 + 物料标签空位
+                            html += '<tr><td></td><td></td>';
                             html += '<td class="number">' + orderObjects[obj_bn]['order_items'][item_bn]['bn'] + '</td>';
                             html += '<td class="goodsname">' + orderObjects[obj_bn]['order_items'][item_bn]['name'] + '</td>';
                             html += '<td class="goods_bn">' + orderObjects[obj_bn]['bn'] + '</td>';
@@ -879,7 +920,17 @@
                 for (item_bn in orderObjects[obj_bn]['order_items']) {
 
                     if (orderObjects[obj_bn]['order_items'][item_bn]['delete'] == 'false') {
-                        html += '<tr data-g_pid="'+orderObjects[obj_bn]['order_items'][item_bn]['product_id']+'" data-g_shop_pid="'+orderObjects[obj_bn]['order_items'][item_bn]['shop_product_id']+'"  data-item_id="'+orderObjects[obj_bn]['order_items'][item_bn]['item_id']+'"><td type-text="基础物料">基础物料</td>';
+                        html += '<tr data-g_pid="'+orderObjects[obj_bn]['order_items'][item_bn]['product_id']+'" data-g_shop_pid="'+orderObjects[obj_bn]['order_items'][item_bn]['shop_product_id']+'"  data-item_id="'+orderObjects[obj_bn]['order_items'][item_bn]['item_id']+'">';
+
+                        // 拆单明细行首列复选框
+                        html += '<td class="split_chk_td">';
+                        if(parseInt(orderObjects[obj_bn]['order_items'][item_bn]['left_nums']) <= 0) {
+                            html += '<input type="checkbox" class="split_item_chk" obj_bn="'+obj_bn+'" item_bn="'+item_bn+'" disabled />';
+                        } else {
+                            html += '<input type="checkbox" class="split_item_chk" obj_bn="'+obj_bn+'" item_bn="'+item_bn+'" checked="checked" onclick="toggle_split_item(this)" />';
+                        }
+                        html += '</td>';
+                        html += '<td type-text="基础物料">基础物料</td>';
                         
                         if(split_model == 1 && orderCount == 1)
                         {
@@ -1298,7 +1349,7 @@
                     {
                         document.getElementById('dlv_'+obj_bn).value = max_left_nums;
                     }
-                    var objFirstTrTd = document.getElementById('dlv_'+obj_bn).getParent('TR').getElements('TD')[0];
+                    var objFirstTrTd = document.getElementById('dlv_'+obj_bn).getParent('TR').getElements('TD')[1];
                     if(document.getElementById('dlv_'+obj_bn).value > obj_branch_store) {
                         objFirstTrTd.setHTML('[<span style="color:red">缺货</span>]'+objFirstTrTd.getAttribute('type-text'));
                     } else {
@@ -1371,7 +1422,7 @@
                             {
                                 document.getElementById(div_obj_bn_id).value = max_left_nums;
                             }
-                            var objFirstTrTd = document.getElementById(div_obj_bn_id).getParent('TR').getElements('TD')[0];
+                            var objFirstTrTd = document.getElementById(div_obj_bn_id).getParent('TR').getElements('TD')[1];
                             if(document.getElementById(div_obj_bn_id).value > branch_store) {
                                 objFirstTrTd.setHTML('[<span style="color:red">缺货</span>]'+objFirstTrTd.getAttribute('type-text'));
                             } else {

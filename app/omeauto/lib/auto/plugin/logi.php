@@ -213,6 +213,17 @@ class omeauto_auto_plugin_logi extends omeauto_auto_plugin_abstract implements o
             //order_ids
             $orderIds = array_column($orders, 'order_id');
             
+            // 第一条订单信息
+            $first_order_info = current($orders);
+            
+            // 订单快递黑名单（翱象 / 拼多多买家拒用等）并入自动匹配过滤集
+            if(isset($first_order_info['shop_type']) && in_array($first_order_info['shop_type'], ['pinduoduo'])){
+                $orderBlackTypes = kernel::single('ome_order_platform_pinduoduo_expressmemos')->loadBlackTypesByOrderIds($orderIds);
+                if ($orderBlackTypes) {
+                    self::$_blackLogistics = array_values(array_unique(array_merge(self::$_blackLogistics, $orderBlackTypes)));
+                }
+            }
+            
             //list
             foreach($orders as $val){
                 $isAoxiang = false;
@@ -527,8 +538,64 @@ class omeauto_auto_plugin_logi extends omeauto_auto_plugin_abstract implements o
                         $group->setStatus(omeauto_auto_group_item::__OPT_HOLD, $this->_getPlugName(), '备注匹配物流公司不到');
                     }
                 }
+                
+                // [拼多多]候选集级黑名单兜底：过滤后剩余 ≤1 则不过滤
+                if(in_array($shopData['shop_type'], ['pinduoduo'])){
+                    $this->reselectCorpAvoidingBlacklist($group, $branchId);
+                }
             }
         }
+    }
+
+    /**
+     * 按订单黑名单在仓库候选物流上重选（过滤后 ≤1 保留原候选）
+     *
+     * @param omeauto_auto_group_item $group
+     * @param int $branchId
+     */
+    private function reselectCorpAvoidingBlacklist(&$group, $branchId)
+    {
+        if (empty(self::$_blackLogistics)) {
+            return false;
+        }
+        
+        $selected = $group->getDlyCorp();
+        if (empty($selected['corp_id'])) {
+            return false;
+        }
+        
+        $branchCorpIds = kernel::single('ome_branch_corp')->getCorpIdsByBranchId([$branchId]);
+        if ($branchCorpIds) {
+            $fields = 'corp_id,name,type,is_cod,weight,channel_id,shop_id,tmpl_type';
+            $filter = ['corp_id' => $branchCorpIds, 'disabled' => 'false'];
+            $candidates = app::get('ome')->model('dly_corp')->getList($fields, $filter, 0, -1, 'weight DESC');
+        } else {
+            $candidates = array_values(self::$corpList);
+        }
+        
+        if (!$candidates) {
+            return false;
+        }
+        
+        // 按黑名单过滤候选物流；过滤后剩余 ≤1 则保留原列表
+        $filtered = kernel::single('ome_order_platform_pinduoduo_expressmemos')->filterCorps($candidates, self::$_blackLogistics);
+        
+        $allowedIds = [];
+        foreach ($filtered as $corp) {
+            if (!empty($corp['corp_id'])) {
+                $allowedIds[$corp['corp_id']] = true;
+            }
+        }
+        
+        if (isset($allowedIds[$selected['corp_id']])) {
+            return false;
+        }
+        
+        if ($filtered) {
+            $group->setDlyCorp(reset($filtered));
+        }
+        
+        return true;
     }
 
      /**
