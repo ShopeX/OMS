@@ -163,3 +163,27 @@ wsl -d Ubuntu -e bash -c "curl -fsSL https://oss.shopex.cn/oms/install.sh | sudo
 **最后更新**：2026年9月  
 **版本**：8.15.5
 
+Task任务执行
+------------
+- 如何启动task任务
+  1. task任务采用swoole进程池管理模式，默认启动全部任务：
+     ```bash
+     php app/taskmgr/sw.php worker:start -d
+     ```
+  2. 资源有限时可按类型或任务名选择性启动（`--type` 与 `--task` 取并集；都不传则全量）：
+     ```bash
+     # 查看可用类型与任务名
+     php app/taskmgr/sw.php worker:list
+
+     # 按类型：task / timer / init / export / rpc / finance（别名 import=finance）
+     php app/taskmgr/sw.php worker:start -d --type=export
+     php app/taskmgr/sw.php worker:start -d --type=export,finance
+
+     # 按具体任务名
+     php app/taskmgr/sw.php worker:start -d --task=exportsplit,createfile
+     php app/taskmgr/sw.php worker:start -d --task=assign,import
+
+     # 类型 + 任务名（并集）
+     php app/taskmgr/sw.php worker:start -d --type=export --task=assign
+     ```
+  3. task任务是秒级队列任务，具体配置请参考``` app/taskmgr/lib/whitelist.php ```

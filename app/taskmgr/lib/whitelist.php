@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class taskmgr_whitelist
 {
     static private $whiteObj = [];
@@ -556,5 +555,233 @@ class taskmgr_whitelist
     public static function get_task_types()
     {
         return array('task', 'timer', 'init', 'export', 'rpc', 'finance');
+    }
+
+    /**
+     * --type 别名（仅作用于类型，不影响 --task 任务名）
+     */
+    public static function get_type_aliases()
+    {
+        return array(
+            'import' => 'finance',
+        );
+    }
+
+    /**
+     * 按类型合并消费侧任务（不含 init）
+     *
+     * @param array $types
+     * @return array
+     */
+    public static function get_task_list_by_types(array $types)
+    {
+        $map = array(
+            'task'    => 'task_list',
+            'timer'   => 'timer_list',
+            'export'  => 'export_list',
+            'rpc'     => 'rpc_list',
+            'finance' => 'finance_list',
+        );
+
+        $result = array();
+        foreach ($types as $type) {
+            if ($type === 'init') {
+                continue;
+            }
+            if (!isset($map[$type])) {
+                continue;
+            }
+            $method = $map[$type];
+            $result = array_merge($result, self::$method());
+        }
+
+        return $result;
+    }
+
+    /**
+     * 解析 --type 字符串为合法类型列表
+     *
+     * @param string|null $raw
+     * @return array
+     * @throws InvalidArgumentException
+     */
+    public static function parse_types($raw)
+    {
+        if ($raw === null || $raw === '') {
+            return array();
+        }
+
+        $aliases = self::get_type_aliases();
+        $allowed = self::get_task_types();
+        $types = array();
+
+        foreach (explode(',', $raw) as $item) {
+            $item = trim($item);
+            if ($item === '') {
+                continue;
+            }
+            if (isset($aliases[$item])) {
+                $item = $aliases[$item];
+            }
+            if (!in_array($item, $allowed, true)) {
+                throw new InvalidArgumentException(
+                    '非法任务类型: ' . $item . '，合法类型: ' . implode(',', $allowed)
+                    . '（别名: import=finance）'
+                );
+            }
+            $types[] = $item;
+        }
+
+        return array_values(array_unique($types));
+    }
+
+    /**
+     * 解析 --task 字符串为任务名列表
+     *
+     * @param string|null $raw
+     * @return array
+     */
+    public static function parse_task_names($raw)
+    {
+        if ($raw === null || $raw === '') {
+            return array();
+        }
+
+        $names = array();
+        foreach (explode(',', $raw) as $item) {
+            $item = trim($item);
+            if ($item === '') {
+                continue;
+            }
+            $names[] = $item;
+        }
+
+        return array_values(array_unique($names));
+    }
+
+    /**
+     * 为 timer 消费任务自动配对 init 投递项
+     *
+     * @param string $timerName
+     * @param array $allInits
+     * @return array name => conf
+     */
+    public static function match_init_for_timer($timerName, array $allInits)
+    {
+        $matched = array();
+        $domainKey = $timerName . 'domainqueue';
+        if (isset($allInits[$domainKey])) {
+            $matched[$domainKey] = $allInits[$domainKey];
+        }
+        // 部分 init 与 timer 同名（无 domainqueue 后缀）
+        if (isset($allInits[$timerName])) {
+            $matched[$timerName] = $allInits[$timerName];
+        }
+
+        return $matched;
+    }
+
+    /**
+     * 根据 --type / --task 解析最终要启动的消费进程与 init 投递进程
+     * 都不传时返回全量；两者都传时取并集。
+     *
+     * @param string|null $typeRaw
+     * @param string|null $taskRaw
+     * @return array{consumers:array,inits:array,types:array,tasks:array}
+     * @throws InvalidArgumentException
+     */
+    public static function resolve_worker_selection($typeRaw = null, $taskRaw = null)
+    {
+        $types = self::parse_types($typeRaw);
+        $taskNames = self::parse_task_names($taskRaw);
+
+        if (!$types && !$taskNames) {
+            $consumers = self::get_all_task_list();
+            $inits = self::init_list();
+
+            return array(
+                'consumers' => $consumers,
+                'inits'     => $inits,
+                'types'     => self::get_task_types(),
+                'tasks'     => array_keys(array_merge($consumers, $inits)),
+            );
+        }
+
+        $allConsumers = self::get_all_task_list();
+        $allInits = self::init_list();
+        $timerList = self::timer_list();
+
+        $consumers = array();
+        $inits = array();
+
+        if ($types) {
+            $consumers = array_merge($consumers, self::get_task_list_by_types($types));
+            // --type=timer 或 --type=init：启动全部 init 投递
+            if (in_array('timer', $types, true) || in_array('init', $types, true)) {
+                $inits = array_merge($inits, $allInits);
+            }
+        }
+
+        foreach ($taskNames as $name) {
+            if (isset($allConsumers[$name])) {
+                $consumers[$name] = $allConsumers[$name];
+                if (isset($timerList[$name])) {
+                    $inits = array_merge($inits, self::match_init_for_timer($name, $allInits));
+                }
+                continue;
+            }
+            if (isset($allInits[$name])) {
+                $inits[$name] = $allInits[$name];
+                continue;
+            }
+            throw new InvalidArgumentException(
+                '未知任务名: ' . $name . '，请执行 worker:list 查看可用任务'
+            );
+        }
+
+        return array(
+            'consumers' => $consumers,
+            'inits'     => $inits,
+            'types'     => $types,
+            'tasks'     => array_keys(array_merge($consumers, $inits)),
+        );
+    }
+
+    /**
+     * 任务目录：供 worker:list 输出
+     *
+     * @return array list of [type, name, label]
+     */
+    public static function get_tasks_catalog()
+    {
+        $groups = array(
+            'task'    => self::task_list(),
+            'timer'   => self::timer_list(),
+            'init'    => self::init_list(),
+            'export'  => self::export_list(),
+            'rpc'     => self::rpc_list(),
+            'finance' => self::finance_list(),
+        );
+
+        $catalog = array();
+        foreach ($groups as $type => $tasks) {
+            foreach ($tasks as $name => $conf) {
+                $label = '';
+                if (!empty($conf['name'])) {
+                    $label = $conf['name'];
+                } elseif (!empty($conf['method'])) {
+                    $label = $conf['method'];
+                } elseif (!empty($conf['rule'])) {
+                    $label = $conf['rule'];
+                }
+                $catalog[] = array(
+                    'type'  => $type,
+                    'name'  => $name,
+                    'label' => $label,
+                );
+            }
+        }
+
+        return $catalog;
     }
 }

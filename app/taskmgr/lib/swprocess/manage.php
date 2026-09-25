@@ -40,9 +40,11 @@ class taskmgr_swprocess_manage
 
     /**
      * 运行
+     *
+     * @param array|null $selection resolve_worker_selection 的返回值；null 表示全量
      * @throws \Exception
      */
-    public function run()
+    public function run($selection = null)
     {
         //写入pid
         if ($this->getPid()) {
@@ -50,12 +52,36 @@ class taskmgr_swprocess_manage
             exit();
         }
 
+        if ($selection === null) {
+            $selection = taskmgr_whitelist::resolve_worker_selection();
+        }
+
+        $consumers = isset($selection['consumers']) ? $selection['consumers'] : array();
+        $inits = isset($selection['inits']) ? $selection['inits'] : array();
+
+        if (!$consumers && !$inits) {
+            taskmgr_log::error('没有可启动的任务，请检查 --type / --task 参数', [], 'system');
+            exit();
+        }
+
+        taskmgr_log::info(
+            sprintf(
+                '启动任务选择 types=[%s] tasks=[%s] consumers=%d inits=%d',
+                implode(',', isset($selection['types']) ? $selection['types'] : array()),
+                implode(',', isset($selection['tasks']) ? $selection['tasks'] : array()),
+                count($consumers),
+                count($inits)
+            ),
+            [],
+            'system'
+        );
+
         file_put_contents(self::$pid_file, getmypid());
 
         $pm = new Manager();
 
         // 消费任务
-        foreach (taskmgr_whitelist::get_all_task_list() as $taskName => $taskConf) {
+        foreach ($consumers as $taskName => $taskConf) {
             $workerNum = $taskConf['threadNum'] ?: 1;
 
             $pm->addBatch($workerNum, function (Pool $pool, int $workerId)use($taskName, $taskConf) {
@@ -75,7 +101,7 @@ class taskmgr_swprocess_manage
         }
 
         // 订阅任务
-        foreach (taskmgr_whitelist::init_list() as $taskName => $taskConf) {
+        foreach ($inits as $taskName => $taskConf) {
             // 检查规则
             if (!taskmgr_swtask_parsecrontab::check($taskConf['rule'])) {
                 taskmgr_log::error(sprintf('[%s]CRONTAB规则定义错误', $taskName), [], 'system');
