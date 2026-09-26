@@ -1,25 +1,11 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/**
  * 销售物料控制层
  *
  * @author kamisama.xia@gmail.com
  * @version 0.1
  */
+
 class material_ctl_admin_material_sales extends desktop_controller
 {
 
@@ -30,7 +16,6 @@ class material_ctl_admin_material_sales extends desktop_controller
      * 获取价格计算方式配置
      * @return string 价格计算方式：'cost' 或 'retail_price'
      */
-
     private function _getPriceRateConfig()
     {
         return kernel::single('material_sales_setting')->getConfig('price_rate', 'retail_price');
@@ -42,7 +27,7 @@ class material_ctl_admin_material_sales extends desktop_controller
 
     /**
      * 销售物料列表分栏菜单
-     * 
+     *
      * @param Null
      * @return Array
      */
@@ -77,7 +62,7 @@ class material_ctl_admin_material_sales extends desktop_controller
 
     /**
      * 销售物料列表项方法
-     * 
+     *
      * @param Post
      * @return String
      */
@@ -226,7 +211,7 @@ class material_ctl_admin_material_sales extends desktop_controller
 
     /**
      * 销售物料新增的展示页面方法
-     * 
+     *
      * @param void
      * @return void
      */
@@ -396,7 +381,7 @@ class material_ctl_admin_material_sales extends desktop_controller
 
     /**
      * 基础物料新增提交方法
-     * 
+     *
      * @param Post
      * @return Boolean
      */
@@ -834,7 +819,7 @@ EOF;
     }
     /**
      * 销售物料编辑的展示页面方法
-     * 
+     *
      * @param Int $bm_id
      * @return Boolean
      */
@@ -935,12 +920,12 @@ EOF;
 
         $this->pagedata['material_info'] = $salesMaterialInfo;
         $this->pagedata['readonly']      = $readonly;
-        $this->page('admin/material/sales/edit.html');
+        $this->singlepage('admin/material/sales/edit.html');
     }
 
     /**
      * 销售物料编辑提交方法
-     * 
+     *
      * @param Int $sm_id
      * @return Boolean
      */
@@ -1314,7 +1299,7 @@ EOF;
 
     /**
      * 销售物料列表弹窗数据获取方法
-     * 
+     *
      * @param Void
      * @return String
      */
@@ -1350,7 +1335,7 @@ EOF;
 
     /**
      * 销售物料列表弹窗选中物料信息查询方法
-     * 
+     *
      * @param Int $bm_id
      * @return String
      */
@@ -1413,7 +1398,7 @@ EOF;
 
     /**
      * 销售物料批量导入的模板
-     * 
+     *
      * @param Null
      * @return String
      */
@@ -1495,10 +1480,6 @@ EOF;
     }
 
     //删除销售物料
-    /**
-     * 删除_material
-     * @return mixed 返回值
-     */
     public function delete_material(){
         $this->begin('index.php?app=material&ctl=admin_material_sales&act=index');
         $mdl_ome_order_objects = app::get('ome')->model('order_objects');
@@ -1540,7 +1521,7 @@ EOF;
     
     /**
      * 弹窗选择福袋后，返回格式化的数据
-     * 
+     *
      * @return void
      */
     public function getEditFukubukuro($sm_id)
@@ -1594,11 +1575,6 @@ EOF;
     }
     
     //批量停售
-    /**
-     * batchInvisible
-     * @param mixed $view view
-     * @return mixed 返回值
-     */
     public function batchInvisible($view)
     {
         $this->begin('');
@@ -1664,11 +1640,6 @@ EOF;
     }
     
     //批量在售
-    /**
-     * batchVisible
-     * @param mixed $view view
-     * @return mixed 返回值
-     */
     public function batchVisible($view)
     {
         $this->begin('');

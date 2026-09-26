@@ -1,19 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 class sales_aftersale_type_refund
 {
     public function generate_aftersale($refund_id = null)
@@ -36,6 +21,9 @@ class sales_aftersale_type_refund
 
         //如果memo有退换货单号 说明是这个退款单是从退换货产生 故走退换货生成售后单流程
         $is_archive = kernel::single('archive_order')->is_archive($apply_detail[0]['source']);
+        if (!$is_archive && (string)$apply_detail[0]['archive'] === '1') {
+            $is_archive = true;
+        }
         if ($is_archive) {
             $archive_ordObj = kernel::single('archive_interface_orders');
             $orderData      = $archive_ordObj->getOrders($apply_detail[0]['order_id'], 'member_id,order_bn,ship_mobile');
@@ -119,18 +107,51 @@ class sales_aftersale_type_refund
         //获取退货关联的订单明细
         $aftersaleLib = kernel::single('sales_aftersale');
         $returnItems = $aftersaleLib->getReturnOrderItems($apply_detail[0]['order_id'], $is_archive);
-        $saleInfo = app::get('ome')->model('sales')->db_dump(['order_id' => $apply_detail[0]['order_id']], 'sale_id,ship_time');
-        $data['ship_time'] = $saleInfo['ship_time'];
-        $sale_id = $saleInfo['sale_id'];
-        $saleItems = app::get('ome')->model('sales_items')->getList('product_id,nums,platform_pay_amount,actually_amount', ['sale_id'=>$sale_id]);
-    
-        $orderItems = $Oorder_items->getList('product_id,bn,item_id,obj_id,shop_goods_id,shop_product_id', array('order_id' => $apply_detail[0]['order_id']));
-        $orderItems = array_column($orderItems,null,'product_id');
-        
-        $productSaleAmount = [];
-        $productSendnum = [];
-        foreach($saleItems as $v) {
+
+        $productSaleAmount = array();
+        $productSendnum = array();
+        $order_id = intval($apply_detail[0]['order_id']);
+        if ($is_archive) {
+            // 归档退款实付取值说明：
+            // 老系统销售单明细无客户实付等字段，历史迁移进 archive_sales_items 后 actually_amount 多为空；
+            // 迁移时另行组装/补齐了发货销售单（sdb_archive_sales_delivery_order_item）并写入实付，
+            // 故归档场景改从发货销售明细取金额，再按 product_id 汇总后分摊（兼容拆单发货）。
+            $saleInfo = app::get('archive')->model('sales')->db_dump(
+                array('order_id' => $order_id),
+                'sale_id,ship_time'
+            );
+            $data['ship_time'] = $saleInfo['ship_time'];
+            $saleItems = app::get('archive')->model('sales_delivery_order_item')->getList(
+                'product_id,nums,platform_amount,settlement_amount,platform_pay_amount,actually_amount',
+                array('order_id' => $order_id)
+            );
+            $orderItems = app::get('archive')->model('order_items')->getList(
+                'product_id,bn,item_id,obj_id,shop_goods_id,shop_product_id',
+                array('order_id' => $order_id)
+            );
+        } else {
+            // 普通：原逻辑，销售单明细
+            $saleInfo = app::get('ome')->model('sales')->db_dump(
+                array('order_id' => $order_id),
+                'sale_id,ship_time'
+            );
+            $data['ship_time'] = $saleInfo['ship_time'];
+            $sale_id = $saleInfo['sale_id'];
+            $saleItems = app::get('ome')->model('sales_items')->getList(
+                'product_id,nums,platform_amount,settlement_amount,platform_pay_amount,actually_amount',
+                array('sale_id' => $sale_id)
+            );
+            $orderItems = $Oorder_items->getList(
+                'product_id,bn,item_id,obj_id,shop_goods_id,shop_product_id',
+                array('order_id' => $order_id)
+            );
+        }
+        $orderItems = array_column($orderItems, null, 'product_id');
+
+        foreach ($saleItems as $v) {
             $productSendnum[$v['product_id']] += $v['nums'];
+            $productSaleAmount[$v['product_id']]['platform_amount'] += $v['platform_amount'];
+            $productSaleAmount[$v['product_id']]['settlement_amount'] += $v['settlement_amount'];
             $productSaleAmount[$v['product_id']]['actually_amount'] += $v['actually_amount'];
             $productSaleAmount[$v['product_id']]['platform_pay_amount'] += $v['platform_pay_amount'];
         }
@@ -149,15 +170,18 @@ class sales_aftersale_type_refund
             //关联的销售物料
             $returnItemInfo = $returnItems['products'][$product_id];
             $orderItemInfo    = $orderItems[$product_id];
-            $platform_amount = 0;
-            $settlement_amount = $saleprice;
             if($productSendnum[$product_id]) {
+                $platform_amount = sprintf("%.2f", $productSaleAmount[$product_id]['platform_amount'] * $v['num'] / $productSendnum[$product_id]);
+                $settlement_amount = sprintf("%.2f", $productSaleAmount[$product_id]['settlement_amount'] * $v['num'] / $productSendnum[$product_id]);
                 $platform_pay_amount = sprintf("%.2f", $productSaleAmount[$product_id]['platform_pay_amount'] * $v['num'] / $productSendnum[$product_id]);
                 $actually_amount = sprintf("%.2f", $productSaleAmount[$product_id]['actually_amount'] * $v['num'] / $productSendnum[$product_id]);
             } else {
+                $platform_amount = 0;
+                $settlement_amount = 0;
                 $platform_pay_amount = 0;
                 $actually_amount = 0;
             }
+            $data['platform_amount'] += $platform_amount;
             $data['settlement_amount'] += $settlement_amount;
             $data['platform_pay_amount'] += $platform_pay_amount;
             $data['actually_amount'] += $actually_amount;
@@ -183,7 +207,7 @@ class sales_aftersale_type_refund
                 'actually_amount' => $actually_amount
             );
         }
-
+        
         //累加平台优惠退回金额到结算金额
         $platform_discount_return_amount = $apply_detail[0]['platform_discount_return_amount'] ? $apply_detail[0]['platform_discount_return_amount'] : 0;
         if (bccomp($platform_discount_return_amount, 0, 2) > 0 && !empty($aftersale_items)) {

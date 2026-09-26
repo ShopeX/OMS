@@ -1,19 +1,3 @@
-<!--
-  Copyright 2012-2026 ShopeX (https://www.shopex.cn)
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
--->
-
 <{capture name="header"}>
 <{css app='omeauto' src="style.css"}>
 <{/capture}>
@@ -27,6 +11,9 @@
     #content_li li {width:90px; overflow: hidden; float: left; margin-bottom: 10px; font-size: 12px; line-height: 20px;}
     .current-set {color: red; font-weight: 700;  cursor: pointer;}
     .current-disabled , .current-disabled span {color: #DDDDDD; font-weight: 700;  cursor:auto;}
+    #content_tbl .remark-filter-row {margin-top: 10px;}
+    #content_tbl .remark-filter-row label {display: inline-block; width: 90px; vertical-align: top; line-height: 24px;}
+    #content_tbl .remark-filter-row textarea {width: 360px !important; height: 48px;}
 </style>
 <form action="index.php?app=omeauto&ctl=autoconfirm&act=do_add" method="post">
     <div class="tableform">
@@ -125,6 +112,14 @@
                                 <input type="checkbox" name="config[memo]" value='1' <{if $data.config.memo == '1'}>checked<{/if}>/>&nbsp;&nbsp;需检查客户留言
                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                                        <input type="checkbox" name="config[mark]" value='1' <{if $data.config.mark == '1'}>checked<{/if}>/>&nbsp;&nbsp;需检查客服备注
+                                <div class="remark-filter-row" id="memo_filter_box">
+                                    <label>指定客户留言：</label>
+                                    <{input type="textarea" name="config[member_remark]" placeholder="支持多个| 以英文竖线符分隔" value=$data.config.member_remark size="50"}>
+                                </div>
+                                <div class="remark-filter-row" id="mark_filter_box">
+                                    <label>指定客服备注：</label>
+                                    <{input type="textarea" name="config[order_remark]" placeholder="支持多个| 以英文竖线符分隔" value=$data.config.order_remark size="50"}>
+                                </div>
                             </div>
                         </td>
                     </tr>
@@ -308,6 +303,34 @@
         if ($E('#content_tbl input[name="config[corpChoice]"]:checked').value==1) {
             $E('#content_tbl #special_corp').hide();
         }
+
+        function syncRemarkFilterFields() {
+            var memoChecked = !!$E('#content_tbl input[name="config[memo]"]:checked');
+            var markChecked = !!$E('#content_tbl input[name="config[mark]"]:checked');
+            var memoBox = $('memo_filter_box');
+            var markBox = $('mark_filter_box');
+            var memoTextarea = $E('textarea[name="config[member_remark]"]');
+            var markTextarea = $E('textarea[name="config[order_remark]"]');
+
+            if (memoChecked) {
+                memoBox.show();
+                memoTextarea.disabled = false;
+            } else {
+                memoBox.hide();
+                memoTextarea.disabled = true;
+            }
+
+            if (markChecked) {
+                markBox.show();
+                markTextarea.disabled = false;
+            } else {
+                markBox.hide();
+                markTextarea.disabled = true;
+            }
+        }
+
+        $$('#content_tbl input[name="config[memo]"], #content_tbl input[name="config[mark]"]').addEvent('click', syncRemarkFilterFields);
+        syncRemarkFilterFields();
 
         $('special_corp').addEvent('click', function(){
             new Dialog('index.php?app=omeauto&ctl=autoconfirm&act=showbranchcorp',{

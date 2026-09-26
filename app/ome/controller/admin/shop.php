@@ -763,6 +763,11 @@ class ome_ctl_admin_shop extends desktop_controller {
                 $svae_data[$key] = trim($value);
             }
         }
+        
+        // 是否常用店铺
+        if (!isset($svae_data['is_common_shop']) || $svae_data['is_common_shop'] !== 'true') {
+            $svae_data['is_common_shop'] = 'false';
+        }
 
         // 如果没有填写店铺编码，自动生成一个
         if (empty($svae_data['shop_bn']) && empty($svae_data['old_shop_bn'])) {
@@ -1274,6 +1279,8 @@ class ome_ctl_admin_shop extends desktop_controller {
             $oQueue->delete(array('queue_id' => $row['queue_id']));
         }
     }
+
+   
 
     /**
      * 更换sku签约

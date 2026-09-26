@@ -316,6 +316,7 @@ class base_rpc_caller
 
         }
 
+        kernel::log('Response: ' . $response);
         if ($this->callback_class && method_exists(kernel::single($this->callback_class), 'response_log')) {
             $response_log_func = 'response_log';
             $callback_params   = $this->callback_params ? array_merge($this->callback_params, array('rpc_key' => $rpc_id . '-' . $rpc_calltime)) : array('rpc_key' => $rpc_id . '-' . $rpc_calltime);
@@ -2747,6 +2748,7 @@ class erpapi_rpc_caller
             $responseHeader = is_array($core_http->responseHeader) ? json_encode($core_http->responseHeader) : $core_http->responseHeader;
         }
 
+        kernel::log('Response: ' . $response);
         if ($this->callback_class && method_exists(kernel::single($this->callback_class), 'response_log')) {
             $response_log_func = 'response_log';
             $callback_params   = $this->callback_params ? array_merge($this->callback_params, array('rpc_key' => $rpc_id . '-' . $rpc_calltime)) : array('rpc_key' => $rpc_id . '-' . $rpc_calltime);

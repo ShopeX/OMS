@@ -118,15 +118,15 @@
           <{if $is_consign}>
             <td class="width_100px">-</td>
           <{/if}>
-          <td class="width_100px"><strong><{if $show_original_price}><{$obj.price}><{else}>-<{/if}></strong></td>
-          <td class="width_100px"><strong><{if $show_sale_price}><{$obj.sale_price/$obj.quantity|cur}><{else}>-<{/if}></strong></td>
-          <td class="width_100px"><strong><{if $show_sale_price}><{$obj.pmt_price/$obj.quantity|cur}><{else}>-<{/if}></strong></td>
-          <td class="width_100px"><{if $show_sale_price}><{$obj.divide_order_fee|cur}><{else}>-<{/if}></td>
-          <td class="width_100px"><{if $show_sale_price}><{$obj.part_mjz_discount|cur}><{else}>-<{/if}></td>
+          <td class="width_100px"><strong><{$obj.price}></strong></td>
+          <td class="width_100px"><strong><{$obj.sale_price/$obj.quantity|cur}></strong></td>
+          <td class="width_100px"><strong><{$obj.pmt_price/$obj.quantity|cur}></strong></td>
+          <td class="width_100px"><{$obj.divide_order_fee|cur}></td>
+          <td class="width_100px"><{$obj.part_mjz_discount|cur}></td>
           <td class="width_100px"><{$obj.refund_money|cur}></td>
           <{if $order.settlement_amount > 0}>
-          <td class="width_100px"><{if $show_sale_price}><{$obj.actually_amount|cur}><{else}>-<{/if}></td>
-          <td class="width_100px"><{if $show_sale_price}><{$obj.settlement_amount|cur}><{else}>-<{/if}></td>
+          <td class="width_100px"><{$obj.actually_amount|cur}></td>
+          <td class="width_100px"><{$obj.settlement_amount|cur}></td>
           <{/if}>
           <td class="width_100px"><{$obj.pay_status_label|default:'-'}></td>
           <td class="width_100px"><strong><{$obj.quantity}></strong></td>

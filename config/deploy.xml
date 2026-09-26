@@ -1,5 +1,5 @@
 <deploy>
-    <ver>8.9.0.20260820</ver>
+    <ver>8.10.0.20260827</ver>
     <licence file="LICENSE" />
     <product_name>ONEX OMS</product_name>
     <product_id>taog</product_id>

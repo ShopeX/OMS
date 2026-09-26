@@ -179,7 +179,6 @@
         <class>ome_desktop_widgets_greenchannel</class>
         <class>ome_desktop_widgets_productinfo</class>
         <class>ome_desktop_widgets_consultandpatch</class>
-        <class>ome_desktop_widgets_platformnotify</class>
     </service>
     <service id="service.order">
         <class>ome_service_order</class>

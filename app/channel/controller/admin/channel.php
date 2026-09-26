@@ -72,6 +72,13 @@ class channel_ctl_admin_channel extends desktop_controller
             'base_filter'            => array('channel_type' => $channel_type),
         );
 
+        if ($channel_type != 'sms') {
+            $params['actions'][] = array(
+                'label'  => '查看绑定关系',
+                'href'   => $this->url . '&act=view_bindrelation&p[]=' . $channel_type,
+                'target' => '_blank',
+            );
+        }
         $this->finder('channel_mdl_channel', $params);
     }
 

@@ -1,19 +1,22 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
+ * ShopEx licence
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
  */
+
+/**
+ * mdl_user
+ *
+ * @uses modelFactory
+ * @package
+ * @version $Id: mdl.user.php 1985 2008-04-28 06:36:02Z flaboy $
+ * @copyright 2003-2007 ShopEx
+ * @author Likunpeng <leoleegood@zovatech.com>
+ * @license Commercial
+ */
+
 class desktop_mdl_users extends dbeav_model
 {
     //是否有导出配置
@@ -50,11 +53,6 @@ class desktop_mdl_users extends dbeav_model
         '*:邮箱*'        => 'email',
     );
 
-    /**
-     * pre_recycle
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function pre_recycle($data)
     {
         $obj_pam = app::get('pam')->model('account');
@@ -80,12 +78,6 @@ class desktop_mdl_users extends dbeav_model
         return $falg;
     }
 
-    /**
-     * pre_restore
-     * @param mixed $data 数据
-     * @param mixed $restore_type restore_type
-     * @return mixed 返回值
-     */
     public function pre_restore(&$data, $restore_type = 'add')
     {
         if (!($this->check_name($data['pam_account']['login_name']))) {
@@ -144,11 +136,6 @@ class desktop_mdl_users extends dbeav_model
     ###
 
     ##检查用户名
-    /**
-     * 检查_name
-     * @param mixed $login_name login_name
-     * @return mixed 返回验证结果
-     */
     public function check_name($login_name)
     {
         $pam          = app::get('pam')->model('account');
@@ -164,11 +151,6 @@ class desktop_mdl_users extends dbeav_model
 
     ###更新登陆信息
 
-    /**
-     * 更新_admin
-     * @param mixed $user_id ID
-     * @return mixed 返回值
-     */
     public function update_admin($user_id)
     {
 
@@ -180,12 +162,6 @@ class desktop_mdl_users extends dbeav_model
     }
 
     ##检查
-    /**
-     * 验证
-     * @param mixed $aData 数据
-     * @param mixed $msg msg
-     * @return mixed 返回验证结果
-     */
     public function validate($aData, &$msg)
     {
 
@@ -228,12 +204,6 @@ class desktop_mdl_users extends dbeav_model
     }
 
     //获取工作组细分
-    /**
-     * detail_per
-     * @param mixed $check_id ID
-     * @param mixed $user_id ID
-     * @return mixed 返回值
-     */
     public function detail_per($check_id, $user_id)
     {
         $roles       = $this->app->model('roles');
@@ -276,11 +246,6 @@ class desktop_mdl_users extends dbeav_model
     }
 
     //保存工作组细分
-    /**
-     * 保存_per
-     * @param mixed $aData 数据
-     * @return mixed 返回操作结果
-     */
     public function save_per($aData)
     {
         $workgrounds = $aData['role'];
@@ -316,12 +281,6 @@ class desktop_mdl_users extends dbeav_model
 
     }
     //获取工作组细分
-    /**
-     * detail_per_group
-     * @param mixed $check_id ID
-     * @param mixed $user_id ID
-     * @return mixed 返回值
-     */
     public function detail_per_group($check_id, $user_id)
     {
         $roles       = $this->app->model('roles');
@@ -372,7 +331,7 @@ class desktop_mdl_users extends dbeav_model
     }
 
     /**
-     * 
+     *
      * 彻底删除管理员的同时，清除相关的角色权限关联信息
      * @param int $userid
      */
@@ -398,13 +357,6 @@ HTML;
         return $col?$return:$col;
     }
 
-    /**
-     * modifier_name
-     * @param mixed $col col
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_name($col, $list, $row)
     {
         if ($this->is_export_data) {
@@ -424,13 +376,6 @@ HTML;
         return $col?$return:$col;
     }
 
-    /**
-     * modifier_user_id
-     * @param mixed $col col
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_user_id($col, $list, $row)
     {
         $rowAc = app::get('pam')->model('account')->db_dump(['account_id'=>$col], 'login_name');
@@ -448,10 +393,6 @@ HTML;
         return $col?$return:$col;
     }
 
-    /**
-     * 搜索Options
-     * @return mixed 返回值
-     */
     public function searchOptions()
     {
         $parentOptions = parent::searchOptions();
@@ -462,13 +403,6 @@ HTML;
         return $Options = array_merge($parentOptions, $childOptions);
     }
 
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter, $tableAlias = null, $baseWhere = null)
     {
         $where = array();
@@ -495,11 +429,6 @@ HTML;
         return $sWhere;
     }
 
-    /**
-     * 保存_operation_permission
-     * @param mixed $params 参数
-     * @return mixed 返回操作结果
-     */
     public function save_operation_permission($params)
     {
         if (!$params['user_id'] || !$params['org_id']) {
@@ -521,10 +450,6 @@ HTML;
 
     }
 
-    /**
-     * 获取TemplateColumn
-     * @return mixed 返回结果
-     */
     public function getTemplateColumn()
     {
         $title = array();
@@ -534,25 +459,11 @@ HTML;
         return $title;
     }
 
-    /**
-     * prepared_import_csv
-     * @return mixed 返回值
-     */
     public function prepared_import_csv()
     {
         $this->ioObj->cacheTime = time();
     }
 
-    /**
-     * prepared_import_csv_row
-     * @param mixed $row row
-     * @param mixed $title title
-     * @param mixed $tmpl tmpl
-     * @param mixed $mark mark
-     * @param mixed $newObjFlag newObjFlag
-     * @param mixed $msg msg
-     * @return mixed 返回值
-     */
     public function prepared_import_csv_row($row, &$title, &$tmpl, &$mark, &$newObjFlag, &$msg)
     {
         if (empty($row)) {
@@ -706,14 +617,6 @@ HTML;
         return true;
     }
 
-    /**
-     * prepared_import_csv_obj
-     * @param mixed $data 数据
-     * @param mixed $mark mark
-     * @param mixed $tmpl tmpl
-     * @param mixed $msg msg
-     * @return mixed 返回值
-     */
     public function prepared_import_csv_obj($data, $mark, $tmpl, &$msg = '')
     {
         // $shop = app::get('pam')->model('account')->db_dump(array('login_name' => $this->allLoginName), 'login_name');
@@ -726,10 +629,6 @@ HTML;
         return null;
     }
 
-    /**
-     * finish_import_csv
-     * @return mixed 返回值
-     */
     public function finish_import_csv()
     {
         $oQueue    = app::get('base')->model('queue');
@@ -746,13 +645,6 @@ HTML;
         $oQueue->flush();
     }
 
-    /**
-     * import_run
-     * @param mixed $cursor_id ID
-     * @param mixed $params 参数
-     * @param mixed $errormsg errormsg
-     * @return mixed 返回值
-     */
     public function import_run($cursor_id, $params, $errormsg)
     {
         $imData = $params['sdfdata'];
