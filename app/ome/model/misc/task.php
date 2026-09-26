@@ -68,13 +68,16 @@ class ome_mdl_misc_task extends dbeav_model
             'class'  => 'ome_event_trigger_shop_order',
             'method' => 'urgent_logistics_report',
         ),
+        'delivery_confirm_retry' => array(
+            'text'   => '发货状态回写重试',
+            'class'  => 'ome_event_trigger_shop_delivery',
+            'method' => 'delivery_confirm_retry',
+        ),
     );
+
+    /** delivery_lan_jie 失败最大重试次数 */
+    const LAN_JIE_MAX_RETRY = 5;
     
-    /**
-     * 保存MiscTask
-     * @param mixed $data 数据
-     * @return mixed 返回操作结果
-     */
     public function saveMiscTask($data)
     {
         if ($data['id']) {
@@ -94,10 +97,6 @@ class ome_mdl_misc_task extends dbeav_model
         return $id;
     }
 
-    /**
-     * 处理
-     * @return mixed 返回值
-     */
     public function process()
     {
         // 多进程跑
@@ -124,11 +123,18 @@ class ome_mdl_misc_task extends dbeav_model
         $arrMiscId = array();
         $arrMisc   = array();
         $taskList = array();
+        $lanJieTasks = array();
         foreach ($data as $val) {
-            $arrMiscId[$val['id']]       = $val['id'];
-            
             //任务类型
             $obj_type = $val['obj_type'];
+
+            // 拦截入库：成功后再删任务，失败保留并写 extend_info
+            if ($obj_type === 'delivery_lan_jie') {
+                $lanJieTasks[] = $val;
+                continue;
+            }
+            
+            $arrMiscId[$val['id']] = $val['id'];
             
             //按任务类型处理
             if(in_array($obj_type, array('timing_bufa_order'))){
@@ -138,8 +144,10 @@ class ome_mdl_misc_task extends dbeav_model
             }
         }
         
-        //delete
-        $this->delete(array('id' => $arrMiscId));
+        //delete（非拦截任务仍保持先删后执行）
+        if ($arrMiscId) {
+            $this->delete(array('id' => $arrMiscId));
+        }
         
         //misc
         if($arrMisc){
@@ -168,5 +176,80 @@ class ome_mdl_misc_task extends dbeav_model
                 $result = kernel::single($propertyInfo['class'])->{$propertyInfo['method']}($taskVal);
             }
         }
+
+        // 拦截入库任务：执行成功再删除
+        foreach ($lanJieTasks as $task) {
+            $this->_processDeliveryLanJieTask($task);
+        }
+    }
+
+    /**
+     * 处理发货单延时拦截任务
+     * - 成功 / 无需重试：删除任务
+     * - 可重试失败：写 extend_info，推迟 exec_time
+     * - 超过最大重试：写发货单操作日志后删除，避免队列堆积
+     */
+    protected function _processDeliveryLanJieTask($task)
+    {
+        $taskId = (int) $task['id'];
+        $dlyId = (int) $task['obj_id'];
+        $extend = array();
+        if (!empty($task['extend_info'])) {
+            $decoded = json_decode($task['extend_info'], true);
+            if (is_array($decoded)) {
+                $extend = $decoded;
+            }
+        }
+
+        $ok = false;
+        $needRetry = false;
+        $msg = '';
+        try {
+            $rs = kernel::single('console_reship')->orderRefundToLJRK($dlyId);
+            if (is_array($rs)) {
+                $ok = !empty($rs[0]);
+                $msg = isset($rs[1]['msg']) ? $rs[1]['msg'] : '';
+                $needRetry = !empty($rs[1]['retry']);
+            } else {
+                $ok = (bool) $rs;
+            }
+        } catch (Throwable $e) {
+            $ok = false;
+            $needRetry = true;
+            $msg = sprintf('%s in %s:%s', $e->getMessage(), $e->getFile(), $e->getLine());
+        }
+
+        if ($ok || !$needRetry) {
+            $this->delete(array('id' => $taskId));
+            return;
+        }
+
+        $retry = isset($extend['retry']) ? (int) $extend['retry'] + 1 : 1;
+        $extend['retry'] = $retry;
+        $extend['last_error'] = $msg;
+        $extend['last_error_time'] = time();
+        $extend['delivery_id'] = $dlyId;
+
+        $logMdl = app::get('ome')->model('operation_log');
+        if ($retry >= self::LAN_JIE_MAX_RETRY) {
+            try {
+                $logMdl->write_log(
+                    'delivery_back@ome',
+                    $dlyId,
+                    '延时自动拦截最终失败(已重试' . $retry . '次): ' . $msg
+                );
+            } catch (Throwable $e) {
+                // ignore
+            }
+            $this->delete(array('id' => $taskId));
+            return;
+        }
+
+        $delay = min(300 * $retry, 1800);
+        $this->update(array(
+            'extend_info' => json_encode($extend, JSON_UNESCAPED_UNICODE),
+            'exec_time' => time() + $delay,
+        ), array('id' => $taskId));
+        // 中间失败只记 extend_info；最终失败才写发货单操作日志
     }
 }

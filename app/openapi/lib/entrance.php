@@ -1,19 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 class openapi_entrance extends openapi_response{
 
@@ -72,7 +57,7 @@ class openapi_entrance extends openapi_response{
         $error_code = '';
         $errorData = array();
         if(!$this->validate($params, $error_code, $errorData)){
-            $sub_msg = json_encode($errorData);
+            $sub_msg = $error_code === 'e000002' ? '签名验证失败' : '';
             $this->send_error($error_code, self::$_sysParams['charset'], self::$_sysParams['type'], $sub_msg);
         }
         
@@ -115,6 +100,14 @@ class openapi_entrance extends openapi_response{
      * @param unknown_type $params
      */
     private function setParams(&$params){
+        // 如果content_type为application/json，则将body内容转换为json
+        if (stripos($_SERVER['CONTENT_TYPE'], 'application/json') !== false) {
+            // 需要判断php://input是否为空
+            if ($input = file_get_contents('php://input')) {
+                $input = json_decode($input, true);
+                $_POST = array_merge($_POST, $input?:[]);
+            }
+        }
         if(empty($params)){
            $params = array();
         }
@@ -139,11 +132,15 @@ class openapi_entrance extends openapi_response{
             'type' => $this->getFormatType($params['type']) ? $params['type'] : 'json',
         );
 
+        if (!empty($params['method'])) {
+            $methodAlias = $this->resolveMethodAlias($params);
+        }
+
         if(empty($params['method']) || empty($params['flag']) || empty($_POST['sign']) || empty($_POST['timestamp'])){
             return false;
         }
 
-        $args = explode('.',$params['method']);
+        $args = explode('.',$methodAlias);
         $method = array_pop($args);
         $class = array_pop($args);
 
@@ -163,6 +160,27 @@ class openapi_entrance extends openapi_response{
         self::$_sysParams['method'] = $method;
         return true;
     }
+
+    private function resolveMethodAlias($params){
+        $method = isset($params['method']) ? $params['method'] : '';
+        if (empty($method)) {
+            return '';
+        }
+
+        foreach(kernel::servicelist('openapi.conf') as $item){
+            if(!is_object($item)){
+                continue;
+            }
+            if(!method_exists($item, 'getMethodAlias')){
+                continue;
+            }
+            $aliasList = $item->getMethodAlias($params);
+            if(isset($aliasList[$method])){
+                return $aliasList[$method];
+            }
+        }
+        return $method;
+    }
     
     /**
      * 验证签名函数
@@ -175,10 +193,27 @@ class openapi_entrance extends openapi_response{
     private function validate($params, &$error_code=null, &$errorData=null){
         $sign = $_POST['sign']; //$params['sign'];
         unset($params['sign']);
-        
-        //sign
+
         $assemble_str = '';
-        $local_sign = $this->gen_sign($params, $assemble_str);
+        $local_sign = '';
+        foreach(kernel::servicelist('openapi.conf') as $item){
+            if(!is_object($item)){
+                continue;
+            }
+            if(!method_exists($item, 'verifySign')){
+                continue;
+            }
+
+            $local_sign = $item->verifySign($params, $assemble_str);
+            if($local_sign){
+                break;
+            }
+        }
+
+        //sign
+        if (!$local_sign) {
+            $local_sign = $this->gen_sign($params, $assemble_str);
+        }
         
         //check
         if($_POST['timestamp'] < self::$_nowTime-self::_TIME || $_POST['timestamp'] > self::$_nowTime+self::_TIME ){
@@ -225,27 +260,9 @@ class openapi_entrance extends openapi_response{
             return false;
         }
         
-        //拼接集合字符参数
-        $assemble_str = $this->assemble($params);
-        
-        return strtoupper(md5(strtoupper(md5($assemble_str)).$token));
-    }
+        //拼接集合字符参数（JSON 参数统一规范化，中文与 \uXXXX 等价）
+        $assemble_str = openapi_sign::assembleForSign($params);
 
-    /**
-     *
-     * 签名参数组合函数
-     * @param array $params
-     */
-    private function assemble($params)
-    {
-        if(!is_array($params))  return null;
-        ksort($params, SORT_STRING);
-        $sign = '';
-        foreach($params AS $key=>$val){
-            if(is_null($val))   continue;
-            if(is_bool($val))   $val = ($val) ? 1 : 0;
-            $sign .= $key . (is_array($val) ? $this->assemble($val) : $val);
-        }
-        return $sign;
+        return strtoupper(md5(strtoupper(md5($assemble_str)).$token));
     }
 }

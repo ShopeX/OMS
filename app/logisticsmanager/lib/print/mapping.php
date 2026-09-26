@@ -133,6 +133,7 @@ class logisticsmanager_print_mapping {
         'print_config' => array('waybill.print_config'),
         'cp_code' => array('corp.type'),
         'dewu_qrcode'                => array('waybill.dewu_qrcode'),
+        'wxshipin_product_info'      => array('deliveryItems.wxshipin_product_info'),
     );
     //自定义字段 需要优先截去的字段，请放置在更上面
     private $fieldMappingDefined = array(
@@ -189,6 +190,12 @@ class logisticsmanager_print_mapping {
     public function getFieldData($arrField, $oriRowData) {
         $arrRet = array();
         foreach($arrField as $val) {
+            if ($val == 'wxshipin_product_info') {
+                $arrRet[$val] = isset($oriRowData['deliveryItems.wxshipin_product_info'])
+                    ? $oriRowData['deliveryItems.wxshipin_product_info']
+                    : array();
+                continue;
+            }
             if($this->fieldMapping[$val]) {
                 $arrRet[$val] = $this->fieldMappingData($this->fieldMapping[$val], $oriRowData);
             } elseif ($this->fieldMappingExtend[$val]) {
@@ -209,6 +216,9 @@ class logisticsmanager_print_mapping {
         foreach($fieldArr as $val) {
             if(strpos($val, '.')) {
                 $arr = explode('.', $val);
+                if (!isset($ret[$arr[0]]) || !is_array($ret[$arr[0]])) {
+                    $ret[$arr[0]] = array();
+                }
                 if(!in_array($arr[1], $ret[$arr[0]])) {
                     $ret[$arr[0]][] = $arr[1];
                 }

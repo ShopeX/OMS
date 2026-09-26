@@ -1108,7 +1108,12 @@ class ome_ctl_admin_shop extends desktop_controller {
         }
         $shop['config'] = @unserialize($shop['config']);
         $shop['config'] = $shop['config'] ? $shop['config'] : array();
-        $shop['config'] = array_merge($shop['config'],$config);
+        $old_config = $shop['config'];
+        $shop['config'] = array_merge($shop['config'], $config);
+        // 表单 POST 在个别环境下可能未完整进入 $config，显式带上京东「自动下载商家账单明细」开关，避免保存后仍为「否」
+        if (isset($_POST['config']['auto_download_merchant_bill'])) {
+            $shop['config']['auto_download_merchant_bill'] = $_POST['config']['auto_download_merchant_bill'];
+        }
 
         $shop['config'] = serialize($shop['config']);
 
@@ -1116,6 +1121,11 @@ class ome_ctl_admin_shop extends desktop_controller {
         $shop['addon'] = array_merge($shop['addon'], (array)$_POST['addon']);
 
         $rs = $shopMdl->save($shop);
+
+        $enqueue_notice = '';
+        if ($rs) {
+            $enqueue_notice = $this->_enqueue360buyMerchantBillOnConfigSave($shop_id, $old_config, $shop['config']);
+        }
 
         $this->end($rs);
     }
@@ -1170,6 +1180,98 @@ class ome_ctl_admin_shop extends desktop_controller {
             $this->splash('success', '', '保存成功');
         } else {
             $this->splash('error', '', '保存失败');
+        }
+    }
+
+
+    /**
+     * 京东店铺「自动下载商家账单明细」：
+     * - 选「否」：清理本业务待执行队列（若上次为开）；若存在 biz_type=360buy_bills 的 ipay 渠道则删除。
+     * - 选「是」：仅当店铺已绑定（node_id 非空）且尚无该渠道记录时 insert（不写 update）。
+     *
+     * @param string $shop_id
+     * @param array  $old_config 保存前 config（已 unserialize）
+     * @param string $saved_config_ser 保存后的 serialize 串
+     * @return string 可选的成功提示补充说明
+     */
+    private function _enqueue360buyMerchantBillOnConfigSave($shop_id, $old_config, $saved_config_ser)
+    {
+        $new_config = @unserialize($saved_config_ser);
+        $new_config = is_array($new_config) ? $new_config : array();
+
+        $prev_merchant = isset($old_config['auto_download_merchant_bill']) ? $old_config['auto_download_merchant_bill'] : 'no';
+        $new_merchant  = isset($new_config['auto_download_merchant_bill']) ? $new_config['auto_download_merchant_bill'] : 'no';
+
+        $shopMdl = app::get('ome')->model('shop');
+        $shopRow = $shopMdl->dump($shop_id, 'shop_type,name,shop_id,node_id,node_type');
+        if (empty($shopRow['shop_type']) || $shopRow['shop_type'] !== '360buy') {
+            return '';
+        }
+
+        $channelMdl     = app::get('channel')->model('channel');
+        $filterMerchant = array(
+            'channel_bn'   => $shop_id,
+            'channel_type' => 'ipay',
+            'biz_type'     => '360buy_bills',
+        );
+
+        if ($new_merchant !== 'yes') {
+           
+            $chDel = $channelMdl->db_dump($filterMerchant);
+            if (is_array($chDel) && !empty($chDel['channel_id'])) {
+                $channelMdl->delete(array('channel_id' => $chDel['channel_id']));
+            }
+
+            return '';
+        }
+
+        if (empty($shopRow['node_id'])) {
+            return app::get('base')->_('开关已保存；店铺未绑定 node_id（未绑定矩阵），未写入商家账单明细渠道。');
+        }
+
+        $channel = $channelMdl->db_dump($filterMerchant);
+        if (!$channel) {
+            $chData = array(
+                'channel_bn'   => $shop_id,
+                'channel_name' => $shopRow['name'],
+                'channel_type' => 'ipay',
+                'node_id'      => $shopRow['node_id'],
+                'node_type'    => $shopRow['node_type'],
+                'biz_type'     => '360buy_bills',
+                'memo'         => '自动下载商家账单明细',
+            );
+            $channelMdl->insert($chData);
+        }
+
+        return '';
+    }
+
+    /**
+     * 关闭「自动下载商家账单明细」时：删除本店 biz_type=360buy_bills 的 billApiDownload 队列（未开始/进行中/失败）
+     *
+     * @param string $shop_id
+     */
+    private function _delete360buyMerchantBillQueues($shop_id)
+    {
+        $oQueue = app::get('financebase')->model('queue');
+        $list   = $oQueue->getList('queue_id,queue_data,status', array(
+            'shop_id'    => $shop_id,
+            'queue_mode' => 'billApiDownload',
+        ));
+        if (!$list) {
+            return;
+        }
+
+        $pending = array('ready', 'process', 'error');
+        foreach ($list as $row) {
+            if (!in_array($row['status'], $pending, true)) {
+                continue;
+            }
+            $qd = @unserialize($row['queue_data']);
+            if (!is_array($qd) || empty($qd['biz_type']) || $qd['biz_type'] !== '360buy_bills') {
+                continue;
+            }
+            $oQueue->delete(array('queue_id' => $row['queue_id']));
         }
     }
 

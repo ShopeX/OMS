@@ -194,6 +194,17 @@
                                 <td>
                                    <a href="<{$val.preview_url}>" target="_blank" style="color:#3367ac;margin:0px;padding:0px">预览</a>
 <!--                                   <a href="index.php?app=invoice&ctl=admin_order&act=regenResult&p[0]=<{$val.item_id}>&finder_id=<{$env.get.finder_id}>"  style="color:#3367ac;margin-left:5px;padding:0px">重新生成</a>-->
+                                    <{if $val.pdf_url}>
+                                    | <a href="<{$val.pdf_url}>" target="_blank" style="color:#3367ac;margin:0px;padding:0px">PDF下载</a>
+                                    <{/if}>
+
+                                    <{if $val.xml_url}>
+                                    | <a href="<{$val.xml_url}>" target="_blank" style="color:#3367ac;margin:0px;padding:0px">XML下载</a>
+                                    <{/if}>
+
+                                    <{if $val.ofd_url}>
+                                    | <a href="<{$val.ofd_url}>" target="_blank" style="color:#3367ac;margin:0px;padding:0px">OFD下载</a>
+                                    <{/if}>
                                 </td>
                             <{/if}>
                         </tr>
@@ -239,8 +250,9 @@
                   </table>
               </div>
           <{/if}>
+
                 <form method="POST" action="index.php?app=invoice&&ctl=admin_order&act=saveReturnLogi">
-                <div class="tableform">
+                <div class="tableform" style="display: none;">
                     <input type="hidden" name="id" value="<{$invoice_order.id}>">
                     <h4>回寄物流</h4>
                     <div class="division">

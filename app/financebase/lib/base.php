@@ -125,7 +125,7 @@ class financebase_base extends eccommon_analysis_abstract implements eccommon_an
 
                 // 'finder_aliasname'=>'base',
                 // 'object_method'=>array('count'=>'count_order_bill','getlist'=>'getlist_order_bill'),
-                'finder_cols'=>'column_edit,shop_id,trade_no,financial_no,out_trade_no,order_bn,trade_time,member,money,trade_type,remarks,bill_category',
+                'finder_cols'=>'column_edit,shop_id,trade_no,financial_no,out_trade_no,order_bn,trade_time,member,money,trade_type,column_goods_name,column_trade_desc,remarks,bill_category',
                 //'base_query_string'=>$base_query_string,
                 //'base_filter'=>array('time_from'=>$this->_params['time_from'],'time_to'=>$this->_params['time_to'],'shop_id'=>$this->_params['shop_id']),
                 'orderBy'=> 'id desc',

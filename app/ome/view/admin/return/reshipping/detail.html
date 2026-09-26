@@ -103,6 +103,20 @@
     <td></td>
   </tr>
   <{/if}>
+
+  <tr>
+    <th><{t}>商家备注：<{/t}></th>
+    <td colspan="7">
+      <{if !$reshipping.reissue_order_id}>
+      <textarea id="merchant_mark_input" rows="3" style="width:98%;"><{$reshipping.merchant_mark|default:''}></textarea>
+      <div style="margin-top:8px;">
+        <{button label="保存商家备注" class="btn-primary" id="btn-save-merchant-mark" type="button"}>
+      </div>
+      <{else}>
+      <{$reshipping.merchant_mark|default:'-'|escape}>
+      <{/if}>
+    </td>
+  </tr>
 </table>
 </div>
 
@@ -135,20 +149,28 @@
   <thead>
     <tr>
       <th><{t}>销售物料编码<{/t}></th>
-      <th><{t}>商品ID<{/t}></th>
       <th><{t}>子订单号<{/t}></th>
       <th><{t}>数量<{/t}></th>
-      <th><{t}>价格<{/t}></th>
+      <th><{t}>单价<{/t}></th>
+      <th><{t}>优惠小计<{/t}></th>
+      <th><{t}>销售小计<{/t}></th>
+      <th><{t}>零售小计<{/t}></th>
+      <th><{t}>分摊实付<{/t}></th>
+      <th><{t}>优惠分摊<{/t}></th>
     </tr>
   </thead>
   <tbody>
     <{foreach from=$items item=item}>
     <tr>
       <td><{$item.bn}></td>
-      <td><{$item.goods_id}></td>
-      <td><{$item.oid|default:'-'}></td>
+      <td><{$item.oid_display|default:'-'}></td>
       <td><{$item.nums}></td>
       <td><{$item.price|cur}></td>
+      <td><{$item.pmt_price|cur}></td>
+      <td><{$item.sale_price|cur}></td>
+      <td><{$item.amount|cur}></td>
+      <td><{$item.divide_order_fee|cur}></td>
+      <td><{$item.part_mjz_discount|cur}></td>
     </tr>
     <{/foreach}>
   </tbody>
@@ -162,21 +184,27 @@
 <table width="100%" border="0" cellspacing="0" cellpadding="0" class="gridlist">
   <thead>
     <tr>
-      <th><{t}>销售物料ID<{/t}></th>
       <th><{t}>销售物料编码<{/t}></th>
       <th><{t}>数量<{/t}></th>
-      <th><{t}>价格<{/t}></th>
-      <th><{t}>确认时间<{/t}></th>
+      <th><{t}>单价<{/t}></th>
+      <th><{t}>优惠小计<{/t}></th>
+      <th><{t}>销售小计<{/t}></th>
+      <th><{t}>零售小计<{/t}></th>
+      <th><{t}>分摊实付<{/t}></th>
+      <th><{t}>优惠分摊<{/t}></th>
     </tr>
   </thead>
   <tbody>
     <{foreach from=$items_detail item=detail}>
     <tr>
-      <td><{$detail.sm_id|default:'-'}></td>
       <td><{$detail.sales_material_bn|default:'-'}></td>
       <td><{$detail.nums}></td>
       <td><{$detail.price|cur}></td>
-      <td><{if $detail.at_time}><{$detail.at_time}><{else}>-<{/if}></td>
+      <td><{$detail.pmt_price|cur}></td>
+      <td><{$detail.sale_price|cur}></td>
+      <td><{$detail.amount|cur}></td>
+      <td><{$detail.divide_order_fee|cur}></td>
+      <td><{$detail.part_mjz_discount|cur}></td>
     </tr>
     <{/foreach}>
   </tbody>
@@ -188,7 +216,11 @@
 <div class="division">
 <h4><{t}>补寄留言<{/t}></h4>
 <div id="messages_list">
-  <div style="text-align:center;padding:20px;">加载中...</div>
+  <{if $reshipping.source == 'local'}>
+    <div style="text-align:center;padding:20px;color:#999;">本地补寄单不拉取平台留言</div>
+  <{else}>
+    <div style="text-align:center;padding:20px;">加载中...</div>
+  <{/if}>
 </div>
 </div>
 
@@ -196,72 +228,104 @@
 
 <script>
 (function() {
-    var pageNo = 1;
-    var pageSize = 20;
     var reshippingId = '<{$reshipping.reshipping_id}>';
+    var isLocalSource = '<{$reshipping.source}>' === 'local';
+
+    if (!isLocalSource) {
+        var pageNo = 1;
+        var pageSize = 20;
     
-    function loadMessages() {
-        var url = 'index.php?app=ome&ctl=admin_return_reshipping&act=getMessages&reshipping_id=' + reshippingId + '&page_no=' + pageNo + '&page_size=' + pageSize;
+        function loadMessages() {
+            var url = 'index.php?app=ome&ctl=admin_return_reshipping&act=getMessages&reshipping_id=' + reshippingId + '&page_no=' + pageNo + '&page_size=' + pageSize;
         
-        new Request({
-            url: url,
-            method: 'get',
-            onSuccess: function(response) {
-                try {
-                    var result = JSON.parse(response);
-                    if (result.rsp == 'succ') {
-                        renderMessages(result.data);
-                    } else {
-                        $('messages_list').set('html', '<div style="color:red;text-align:center;padding:20px;">' + (result.msg || '加载失败') + '</div>');
+            new Request({
+                url: url,
+                method: 'get',
+                onSuccess: function(response) {
+                    try {
+                        var result = JSON.parse(response);
+                        if (result.rsp == 'succ') {
+                            renderMessages(result.data);
+                        } else {
+                            $('messages_list').set('html', '<div style="color:red;text-align:center;padding:20px;">' + (result.msg || '加载失败') + '</div>');
+                        }
+                    } catch(e) {
+                        $('messages_list').set('html', '<div style="color:red;text-align:center;padding:20px;">数据解析失败</div>');
                     }
-                } catch(e) {
-                    $('messages_list').set('html', '<div style="color:red;text-align:center;padding:20px;">数据解析失败</div>');
+                },
+                onFailure: function() {
+                    $('messages_list').set('html', '<div style="color:red;text-align:center;padding:20px;">加载失败</div>');
                 }
-            },
-            onFailure: function() {
-                $('messages_list').set('html', '<div style="color:red;text-align:center;padding:20px;">加载失败</div>');
-            }
-        }).send();
-    }
-    
-    function renderMessages(messages) {
-        if (!messages || messages.length == 0) {
-            $('messages_list').set('html', '<div style="text-align:center;padding:20px;color:#999;">暂无留言</div>');
-            return;
+            }).send();
         }
-        
-        var html = '<table width="100%" border="0" cellspacing="0" cellpadding="0" class="gridlist">';
-        html += '<thead><tr><th>创建时间</th><th>创建角色</th><th>留言内容</th><th>图片</th></tr></thead>';
-        html += '<tbody>';
-        
-        messages.forEach(function(msg) {
-            html += '<tr>';
-            html += '<td>' + (msg.created || msg.create_time || '-') + '</td>';
-            html += '<td>' + (msg.operator_roles || msg.role || '-') + '</td>';
-            html += '<td>' + (msg.content || msg.message || '-') + '</td>';
-            html += '<td>';
-            if (msg.message_pics && msg.message_pics.length > 0) {
-                msg.message_pics.forEach(function(pic) {
-                    html += '<img src="' + pic + '" style="max-width:100px;max-height:100px;margin:5px;cursor:pointer;" onclick="window.open(this.src)" />';
-                });
-            } else {
-                html += '-';
+    
+        function renderMessages(messages) {
+            if (!messages || messages.length == 0) {
+                $('messages_list').set('html', '<div style="text-align:center;padding:20px;color:#999;">暂无留言</div>');
+                return;
             }
-            html += '</td>';
-            html += '</tr>';
-        });
         
-        html += '</tbody></table>';
-        $('messages_list').set('html', html);
+            var html = '<table width="100%" border="0" cellspacing="0" cellpadding="0" class="gridlist">';
+            html += '<thead><tr><th>创建时间</th><th>创建角色</th><th>留言内容</th><th>图片</th></tr></thead>';
+            html += '<tbody>';
+        
+            messages.forEach(function(msg) {
+                html += '<tr>';
+                html += '<td>' + (msg.created || msg.create_time || '-') + '</td>';
+                html += '<td>' + (msg.operator_roles || msg.role || '-') + '</td>';
+                html += '<td>' + (msg.content || msg.message || '-') + '</td>';
+                html += '<td>';
+                if (msg.message_pics && msg.message_pics.length > 0) {
+                    msg.message_pics.forEach(function(pic) {
+                        html += '<img src="' + pic + '" style="max-width:100px;max-height:100px;margin:5px;cursor:pointer;" onclick="window.open(this.src)" />';
+                    });
+                } else {
+                    html += '-';
+                }
+                html += '</td>';
+                html += '</tr>';
+            });
+        
+            html += '</tbody></table>';
+            $('messages_list').set('html', html);
+        }
+    
+        window.loadMessages = loadMessages;
+        window.renderMessages = renderMessages;
+    
+        if ($('messages_list')) {
+            loadMessages();
+        }
     }
-    
-    // 将函数暴露到全局作用域，以便对话框关闭后调用
-    window.loadMessages = loadMessages;
-    window.renderMessages = renderMessages;
-    
-    // 页面加载时获取留言列表
-    if ($('messages_list')) {
-        loadMessages();
+
+    var saveMerchantMarkBtn = $('btn-save-merchant-mark');
+    if (saveMerchantMarkBtn) {
+        saveMerchantMarkBtn.addEvent('click', function() {
+            var markVal = $('merchant_mark_input') ? $('merchant_mark_input').value : '';
+            new Request({
+                url: 'index.php?app=ome&ctl=admin_return_reshipping&act=saveMerchantMark',
+                method: 'post',
+                data: {
+                    reshipping_id: reshippingId,
+                    merchant_mark: markVal
+                },
+                onSuccess: function(response) {
+                    try {
+                        var result = JSON.parse(response);
+                        if (result.rsp == 'succ') {
+                            MessageBox.success(result.msg || '保存成功');
+                        } else {
+                            MessageBox.error(result.msg || '保存失败');
+                        }
+                    } catch (e) {
+                        MessageBox.error('保存失败');
+                    }
+                },
+                onFailure: function() {
+                    MessageBox.error('保存失败');
+                }
+            }).send();
+        });
     }
 })();
 </script>

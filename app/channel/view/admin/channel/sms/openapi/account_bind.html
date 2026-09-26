@@ -1,0 +1,56 @@
+<div class="tableform">
+    <form action="index.php?app=channel&ctl=admin_channel&act=shopex_sms_bind" method="post" id="enterpriseBind">
+        <input type="hidden" name="channel_id" value="<{$channel_id}>" />
+        <input type="hidden" name="finder_id" value="<{$finder_id}>" />
+        <table border="0" cellspan="0" colspan="0" width="40%">
+            <tr>
+                <th></th>
+                <td></td>
+            </tr>
+            <tr>
+                <th><em class="c-red">*</em> Email:</th>
+                <td><{input type="text" name="bindemail" id="bindemail" value="{$regEmail}" }></td>
+            </tr>
+            <tr>
+                <th><em class="c-red">*</em> 密码:</th>
+                <td><{input type="password" name="bindpassword" id="bindpassword" }></td>
+            </tr>
+            <tr>
+                <th>&nbsp;</th>
+                <td><{button type="button" label="登录" id="bind"}>&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://account.shopex.cn/forget?" target="_blank">找回密码</a></td>
+            </tr>
+        </table>
+    </form>
+</div>
+<div style="margin-left:100px;">
+    提示：请使用开通系统时预留的邮箱登录，<br/>
+    如若遗忘可找回密码或<a href="https://account.shopex.cn/reg?" target="_blank">重新申请</a>。
+</div>
+
+<script type="text/javascript">
+    (function(){
+        var _bindform = $('enterpriseBind');
+        var bindbtn = $('bind');
+        _bindform.store('target', {
+            onComplete:function(){
+            },
+            onSuccess:function(response){
+                var hash_res_obj = JSON.decode(response);
+                if (hash_res_obj.success != undefined && hash_res_obj.success != ""){
+                    var finderId = '<{$finder_id}>';
+                    if(finderId && window.finderGroup && window.finderGroup[finderId]){
+                        window.finderGroup[finderId].refresh();
+                    }
+
+                    var dialog = bindbtn.getParent('.dialog');
+                    if(dialog && dialog.retrieve('instance')){
+                        dialog.retrieve('instance').close();
+                    }
+                }
+            }
+        });
+        bindbtn.addEvent('click', function(){
+            _bindform.fireEvent('submit',{stop:$empty});
+        })
+    })();
+</script>

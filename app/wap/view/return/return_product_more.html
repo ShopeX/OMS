@@ -47,17 +47,7 @@
 		<div class="text-wrapper_5 flex-row justify-between">
 			<span class="text_11">售后申请时间：</span>
 			<span class="text_12"><{$item.returns.add_time}></span>
-			
-		
-			
-			
 		</div>
-		<{if $item.return_logi_no}>
-		<div class="text-wrapper_5 flex-row justify-between">
-			<span class="text_11">退货运单号：</span>
-			<span class="text_12"><{$item.return_logi_no}></span>
-		</div>
-		<{/if}>
 		<div class="text-wrapper_5 flex-row pr">
 			<span class="text_11">收件人：</span>
 			<span class="text_26 sensitive-text" data-decryptAddress="false" data-orderid="<{$item.order_id}>" data-raw="<{$item.ship_name}>（<{$item.ship_mobile}>）"
@@ -73,6 +63,12 @@
 			<span class="text_26 sensitive-text flex-shrink-1" data-raw="<{$item.ship_addr}>" data-masked="<{$item.ship_addr}>"><{$item.ship_addr}></span> <span
 				class="text_27 copy-btn" data-copy="<{$item.ship_addr}>"></span>
 		</div>
+		<{if $item.return_logi_no}>
+		<div class="text-wrapper_5 flex-row justify-between">
+			<span class="text_11">退回物流单号：</span>
+			<span class="text_12"><{$item.return_logi_no}></span>
+		</div>
+		<{/if}>
 
 		
 		<div class="hr"></div>
@@ -80,10 +76,11 @@
 		<{foreach from=$item.return_product_items item=data_item}>
 			<div class="section_6 flex-row">
 				<img class="image_2" referrerpolicy="no-referrer"
-					 src="<{$data_item.goods_img_url|default:'/app/wap/statics/img/default_goods_img.png'}>" />
+					 src="<{if $data_item.goods_img_url}><{$data_item.goods_img_url}><{else}><{$env.app.res_url}>/img/goods_default.png?v=<{$smarty.now}><{/if}>" />
 				<div class="text-group_1 flex-col">
 					<span class="text_28"><{$data_item.name}></span>
 					<span class="text_29">商户货号：<{$data_item.bn}></span>
+					<{include file="common/item_display_lines.html" display_item=$data_item}>
 					<span class="text_30"><{$data_item.num}><{$data_item.unit}>；</span>
 					
 				</div>
@@ -104,7 +101,7 @@
 			<{foreach from=$item.change_items item=citem}>
 				<div class="section_6 flex-row">
 					<img class="image_2" referrerpolicy="no-referrer"
-						 src="<{$citem.goods_img_url|default:'/app/wap/statics/img/default_goods_img.png'}>" />
+						 src="<{if $citem.goods_img_url}><{$citem.goods_img_url}><{else}><{$env.app.res_url}>/img/goods_default.png?v=<{$smarty.now}><{/if}>" />
 					<div class="text-group_1 flex-col">
 						<div class="status-info"> <span class="text_28 flex-shrink-1"><{$citem.name}></span>
 						</div>

@@ -185,6 +185,8 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
         foreach ($itemList as $item) {
             $item['bn'] = $arrBn[(string)$item[$sdfField]] ? $arrBn[(string)$item[$sdfField]] : $item[$defaultField];
             $item['bn'] = (string) $item['bn'];
+            // 记录平台原始申请数量（return_item.num）用于后续透传：apply_num
+            $rawApplyNum = isset($item['num']) ? $item['num'] : null;
             if($item['nums'] && !$item['num']) {
                 $item['num'] = $item['nums'];
                 unset($item['nums']);
@@ -192,8 +194,14 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
             if($this->refund_item_all) {
                 $item['num'] = $arrQuantity[(string)$item[$sdfField]];
             }
+            // apply_num 保留平台原始 num（不受 refund_item_all / bn 汇总影响）
+            if ($rawApplyNum === null || $rawApplyNum === '') {
+                $rawApplyNum = isset($item['num']) ? $item['num'] : 0;
+            }
+            $item['apply_num'] = is_numeric($rawApplyNum) ? (float) $rawApplyNum : $rawApplyNum;
             if($arrItem[$item['bn']]) {
                 $arrItem[$item['bn']]['num'] += $item['num'];
+               
             } else {
                 $arrItem[$item['bn']] = $item;
             }
@@ -434,16 +442,51 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
                 $sdf['logistics_no'] = $delivery['logi_no'];
             }
         }
-        if($sdf['shop']['delivery_mode'] != 'jingxiao') {
-            //取默认退货仓
-            $return_auto_branch     = app::get('ome')->getConf('return.auto_branch');
-            if ($return_auto_branch){
-                $sdf['branch_id'] = $return_auto_branch;
-
-            }
-            $return_auto_shop_branch     = app::get('ome')->getConf('return.auto_shop_branch');
-            if($return_auto_shop_branch[$sdf['shop_id']]) {
-                $sdf['branch_id'] = $return_auto_shop_branch[$sdf['shop_id']];
+        if ($sdf['shop']['delivery_mode'] != 'jingxiao') {
+            if (app::get('o2o')->is_installed()) {
+                $returnBranchLib = kernel::single('o2o_return_branch');
+                if ($delivery) {
+                    $resolveFlagType = 0;
+                    if (!empty($sdf['reship']['flag_type'])) {
+                        $resolveFlagType = (int) $sdf['reship']['flag_type'];
+                    } elseif (!empty($sdf['refund_to_returnProduct'])) {
+                        $resolveFlagType = ome_reship_const::__LANJIE_RUKU;
+                    } elseif (!empty($sdf['flag_type'])) {
+                        $resolveFlagType = (int) $sdf['flag_type'];
+                    }
+                    $returnBranchCtx = $returnBranchLib->buildContext($delivery, array(
+                        'shop_id'     => $sdf['shop_id'],
+                        'order_id'    => $sdf['order']['order_id'],
+                        'return_type' => 'return',
+                        'flag_type'   => $resolveFlagType,
+                        'source'      => 'matrix',
+                    ));
+                    $resolved = $returnBranchLib->resolve($returnBranchCtx);
+                    if ($resolved['branch_id'] > 0) {
+                        $sdf['branch_id'] = $resolved['branch_id'];
+                    } elseif (in_array($resolved['rule_code'], array('P2', 'P5', 'default_warehouse'), true)) {
+                        // 常规客退应退大仓：解析失败时仍按店铺/全局默认仓兜底
+                        $defaultBranchId = $returnBranchLib->getDefaultReturnBranchId($sdf['shop_id']);
+                        if ($defaultBranchId > 0) {
+                            $sdf['branch_id'] = $defaultBranchId;
+                        }
+                    }
+                } else {
+                    // 无 succ 发货单：直接按店铺默认售后仓 > 全局默认售后仓
+                    $defaultBranchId = $returnBranchLib->getDefaultReturnBranchId($sdf['shop_id']);
+                    if ($defaultBranchId > 0) {
+                        $sdf['branch_id'] = $defaultBranchId;
+                    }
+                }
+            } else {
+                $defaultBranchId = (int) app::get('ome')->getConf('return.auto_branch');
+                $shopBranchMap   = app::get('ome')->getConf('return.auto_shop_branch');
+                if (!empty($shopBranchMap[$sdf['shop_id']])) {
+                    $defaultBranchId = (int) $shopBranchMap[$sdf['shop_id']];
+                }
+                if ($defaultBranchId > 0) {
+                    $sdf['branch_id'] = $defaultBranchId;
+                }
             }
         }
         if ($sdf['status'] == '1' || !$sdf['return_product']) {
@@ -481,7 +524,12 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
                 $items_ids[] = $var_ril["order_item_id"];
             }
             if(!empty($items_ids)){
-                $mdl_order_items = app::get('ome')->model('order_items');
+                $isArchive = ($sdf['order']['tran_type'] == 'archive' || $sdf['archive'] == '1' || $sdf['return_product']['archive'] == '1');
+                if ($isArchive) {
+                    $mdl_order_items = app::get('archive')->model('order_items');
+                } else {
+                    $mdl_order_items = app::get('ome')->model('order_items');
+                }
                 $rs_items = $mdl_order_items->getList("item_id,sendnum",array("item_id"=>$items_ids));
                 $rl_item_id_info = array();
                 foreach($rs_items as $var_item){
@@ -1069,8 +1117,6 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
             return array();
         }
         
-        $orderMdl = app::get('ome')->model('orders');
-        
         $orderLib = kernel::single('ome_order');
         
         //order
@@ -1080,8 +1126,19 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
         //申请退货金额
         $refund_fee = ($sdf['refund_fee'] ? $sdf['refund_fee'] : $sdf['return_product']['money']);
         
-        //订单详细信息
-        $orderInfo = $orderMdl->dump($order_id, '*', array('order_objects'=>array('*',array('order_items'=>array('*')))));
+        //订单详细信息（归档订单从 archive 组装 objects/items）
+        if ($sdf['order']['tran_type'] == 'archive') {
+            $orderInfo = $this->_getArchiveOrderInfoForPrice($order_id, $sdf);
+        } else {
+            $orderMdl = app::get('ome')->model('orders');
+            $orderInfo = $orderMdl->dump($order_id, '*', array('order_objects'=>array('*',array('order_items'=>array('*')))));
+        }
+        if (empty($orderInfo['order_objects'])) {
+            $orderInfo['order_objects'] = array();
+        }
+        if (empty($orderInfo['shop_type']) && $sdf['shop_type']) {
+            $orderInfo['shop_type'] = $sdf['shop_type'];
+        }
         
         //[兼容微信小程序]一次申请多个不同SKU进行退货,分摊申请退货的金额
         if(count($refundItems) > 1){
@@ -1326,6 +1383,42 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
         }
         
         return $reutrnItems;
+    }
+
+    /**
+     * 归档订单组装与 ome dump 兼容的 objects/items 结构，供退货金额分摊使用
+     *
+     * @param int $order_id
+     * @param array $sdf
+     * @return array
+     */
+    protected function _getArchiveOrderInfoForPrice($order_id, $sdf)
+    {
+        $orderInfo = is_array($sdf['order']) ? $sdf['order'] : array();
+        $orderInfo['order_id'] = $order_id;
+        if (empty($orderInfo['shop_type']) && $sdf['shop_type']) {
+            $orderInfo['shop_type'] = $sdf['shop_type'];
+        }
+
+        $objects = app::get('archive')->model('order_objects')->getList('*', array('order_id' => $order_id));
+        $items = app::get('archive')->model('order_items')->getList('*', array('order_id' => $order_id));
+
+        $itemsByObjId = array();
+        foreach ((array) $items as $item) {
+            if (!isset($item['quantity']) && isset($item['nums'])) {
+                $item['quantity'] = $item['nums'];
+            }
+            $itemsByObjId[$item['obj_id']][] = $item;
+        }
+
+        $orderObjects = array();
+        foreach ((array) $objects as $obj) {
+            $obj['order_items'] = isset($itemsByObjId[$obj['obj_id']]) ? $itemsByObjId[$obj['obj_id']] : array();
+            $orderObjects[$obj['obj_id']] = $obj;
+        }
+        $orderInfo['order_objects'] = $orderObjects;
+
+        return $orderInfo;
     }
     
     protected function _formatRefundFee($sdf) {

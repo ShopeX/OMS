@@ -127,7 +127,7 @@ class console_ctl_admin_vopsetting extends desktop_controller{
         $this->pagedata['branch_list'] = $branch_list;
 
         //[读取]自动审核配置
-        #每日审核时间点
+        // 每日审核时间点
         $sel_exec_hour    = array();
         if($row['exec_hour'])
         {

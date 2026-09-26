@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 $db['orders']=array (
 'columns' =>
  array (
@@ -429,6 +413,12 @@ $db['orders']=array (
       'default_in_list' => false,
       'width' => 60,
     ),
+      'refund_money'       => array(
+          'type'            => 'money',
+          'default'         => '0',
+          'label'           => '价保费用',
+          'editable'        => false,
+      ),
     'is_fail' =>
     array (
       'type' => 'bool',
@@ -491,6 +481,18 @@ $db['orders']=array (
       'width' => 75,
       'in_list' => true,
       'default_in_list' => false,
+    ),
+    'settlement_amount' =>
+    array (
+      'type' => 'money',
+      'default' => '0',
+      'label' => '结算金额',
+    ),
+    'actually_amount' =>
+    array (
+      'type' => 'money',
+      'default' => '0',
+      'label' => '客户实付',
     ),
   'api_version'       => array(
       'type'     => 'varchar(10)',

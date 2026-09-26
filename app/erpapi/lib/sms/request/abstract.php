@@ -120,7 +120,7 @@ abstract class erpapi_sms_request_abstract
             'batchno'   =>$batchno,
             'content'   =>$content,
             'sendtime'  =>time(),
-            'msg'       =>$msg,
+            'msg'       =>mb_substr($msg, 0, 100, 'UTF-8'),
             'status'    =>$status,
             'smslog_id' =>$smslog_id,
         );

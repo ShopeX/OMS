@@ -34,15 +34,21 @@ class dealer_ctl_admin_series_endorse_products extends desktop_controller
         // 根据权限，只展示当前账号有权限的商品
         $cosList = kernel::single('organization_cos')->getCosList('', ['shop']);
         if (!$cosList[0]) {
-            $base_filter['shop_id'] = 0;
+            // 无权限时用空数组，避免 finder_filter 中 implode 对标量报错
+            $base_filter['shop_id'] = [0];
         } elseif ($cosList[0] && $cosList[1] != '_ALL_') {
-            $base_filter['shop_id'] = 0;
+            $base_filter['shop_id'] = [0];
 
-            $cosCodeArr = array_column($cosList[1], 'cos_code');
-            $shopMdl    = app::get('ome')->model('shop');
-            $shopList   = $shopMdl->getList('shop_id', ['shop_bn|in'=>$cosCodeArr]);
-            if ($shopList) {
-                $base_filter['shop_id'] = array_column($shopList, 'shop_id');
+            $shopCosList = array_filter((array) $cosList[1], function ($item) {
+                return isset($item['cos_type']) && $item['cos_type'] == 'shop';
+            });
+            $cosCodeArr = array_column($shopCosList, 'cos_code');
+            if ($cosCodeArr) {
+                $shopMdl  = app::get('ome')->model('shop');
+                $shopList = $shopMdl->getList('shop_id', ['shop_bn|in' => $cosCodeArr]);
+                if ($shopList) {
+                    $base_filter['shop_id'] = array_column($shopList, 'shop_id');
+                }
             }
         }
         $params = array(
@@ -81,15 +87,21 @@ class dealer_ctl_admin_series_endorse_products extends desktop_controller
         // 根据权限，只展示当前账号有权限的商品
         $cosList = kernel::single('organization_cos')->getCosList('', ['shop']);
         if (!$cosList[0]) {
-            $base_filter['shop_id'] = 0;
+            // 无权限时用空数组，避免 finder_filter 中 implode 对标量报错
+            $base_filter['shop_id'] = [0];
         } elseif ($cosList[0] && $cosList[1] != '_ALL_') {
-            $base_filter['shop_id'] = 0;
+            $base_filter['shop_id'] = [0];
 
-            $cosCodeArr = array_column($cosList[1], 'cos_code');
-            $shopMdl    = app::get('ome')->model('shop');
-            $shopList   = $shopMdl->getList('shop_id', ['shop_bn|in'=>$cosCodeArr]);
-            if ($shopList) {
-                $base_filter['shop_id'] = array_column($shopList, 'shop_id');
+            $shopCosList = array_filter((array) $cosList[1], function ($item) {
+                return isset($item['cos_type']) && $item['cos_type'] == 'shop';
+            });
+            $cosCodeArr = array_column($shopCosList, 'cos_code');
+            if ($cosCodeArr) {
+                $shopMdl  = app::get('ome')->model('shop');
+                $shopList = $shopMdl->getList('shop_id', ['shop_bn|in' => $cosCodeArr]);
+                if ($shopList) {
+                    $base_filter['shop_id'] = array_column($shopList, 'shop_id');
+                }
             }
         }
 

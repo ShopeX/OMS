@@ -133,6 +133,13 @@ $db['po_items']=array (
       'default' => 0,
       'label' => '不良品',
     ),
+    'sn'           => array(
+          'type'            => 'text',
+          'editable'        => false,
+          'in_list'         => true,
+          'default_in_list' => true,
+          'label'           => '唯一码',
+    ),
   ),
   'index' =>
   array (

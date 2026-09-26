@@ -431,42 +431,48 @@ class ome_order {
         $freeze_obj_type = material_basic_material_stock_freeze::__ORDER;
         $bmsq_id = material_basic_material_stock_freeze::__SHARE_STORE;
         $needFreezeItems = [];
-        foreach($sdf['order_objects'] as $key => $object)
-        {
-            $store_code = $object['store_code'];
-            
-            //[刷单]brush特殊订单,不用预占库存
-            if($sdf['order_type'] == 'brush'){
-                continue;
-            }
 
-            // 已关闭订单不用预占库存
-            if (in_array($sdf['status'], ['close', 'dead']) || in_array($sdf['source_status'], ['TRADE_CLOSED'])) {
-                continue;
-            }
+        // 平台发货订单在创建时不需要添加预占库存
+        $skipStockFreeze = !empty($sdf['skip_order_stock_freeze']);
+        if (!$skipStockFreeze) {
+            foreach($sdf['order_objects'] as $key => $object)
+            {
+                $store_code = $object['store_code'];
+                
+                //[刷单]brush特殊订单,不用预占库存
+                if($sdf['order_type'] == 'brush'){
+                    continue;
+                }
 
-            $branch_id = 0;
-            if($store_code) {
-                $appointBranch = kernel::single('ome_branch_type')->isAppointBranch($sdf);
-                $arrBranch     = kernel::single('ome_branch_type')->getBranchIdByStoreCode($store_code, $appointBranch);
-                $branch_id = $arrBranch[$store_code];
-            }
-            //order_items
-            if($object['order_items']){
-                foreach($object['order_items'] as $k=>$item)
-                {
-                    $num = intval($item['quantity'])-intval($item['sendnum']);
-                    $product_id = $item['product_id'];
-                    
-                    if($product_id > 0 && ($item['delete'] == 'false' || !isset($item['delete'])) && $num > 0){
-                        $item['store_code'] = $store_code;
-                        $item['branch_id'] = $branch_id;
-                        $item['goods_id'] = $object['goods_id'];
-                        $needFreezeItems[] = $item;
+                // 已关闭订单不用预占库存
+                if (in_array($sdf['status'], ['close', 'dead']) || in_array($sdf['source_status'], ['TRADE_CLOSED'])) {
+                    continue;
+                }
+
+                $branch_id = 0;
+                if($store_code) {
+                    $appointBranch = kernel::single('ome_branch_type')->isAppointBranch($sdf);
+                    $arrBranch     = kernel::single('ome_branch_type')->getBranchIdByStoreCode($store_code, $appointBranch);
+                    $branch_id = $arrBranch[$store_code];
+                }
+                //order_items
+                if($object['order_items']){
+                    foreach($object['order_items'] as $k=>$item)
+                    {
+                        $num = intval($item['quantity'])-intval($item['sendnum']);
+                        $product_id = $item['product_id'];
+                        
+                        if($product_id > 0 && ($item['delete'] == 'false' || !isset($item['delete'])) && $num > 0){
+                            $item['store_code'] = $store_code;
+                            $item['branch_id'] = $branch_id;
+                            $item['goods_id'] = $object['goods_id'];
+                            $needFreezeItems[] = $item;
+                        }
                     }
                 }
             }
         }
+        
         $branchBatchList = [];
         if($needFreezeItems) {
             uasort($needFreezeItems, [kernel::single('console_iostockorder'), 'cmp_productid']);
@@ -495,9 +501,18 @@ class ome_order {
         //修改预占库存流水
         $err = '';
         $rsFB = $basicMStockFreezeLib->freezeBatch($branchBatchList, __CLASS__.'::'.__FUNCTION__, $err);
-
+        
+        // [订单创建之前]注册service，修改了订单字段值
+        $service_rewrite_msg = '';
+        if(isset($sdf['is_service_rewrite']) && $sdf['is_service_rewrite']){
+            $service_rewrite_msg = $sdf['service_rewrite_msg'];
+        }
+        
+        // log msg
+        $log_msg = '订单创建成功'.($rsFB ? '' : '，预占库存失败：'.$err) . $service_rewrite_msg;
+        
         //增加订单创建日志
-        $logObj->write_log('order_create@ome',$sdf['order_id'],'订单创建成功'.($rsFB ? '' : '，预占库存失败：'.$err));
+        $logObj->write_log('order_create@ome',$sdf['order_id'], $log_msg);
         
         //判断是否jdl
         if(kernel::single('ome_order_bool_type')->isJDLVMI($sdf['order_bool_type'])){
@@ -632,6 +647,11 @@ class ome_order {
         $smBmRate = $this->getSmBmRate($order);
         foreach ($order['order_objects'] as $k => $object)
         {
+            // 补发相似单：已拷贝原单 BM 金额，跳过按占比重分摊
+            if (!empty($object['keep_origin_item_amount'])) {
+                continue;
+            }
+
             $goods_id = $object['goods_id'];
             $obj_type = $object['obj_type'];
             
@@ -2333,8 +2353,20 @@ class ome_order {
         $orderObj = app::get('ome')->model('orders');
         $returnObj = app::get('ome')->model('return_product');
         
-        //获取"发货中"的订单
-        $sql = "SELECT order_id,pay_status,createway FROM sdb_ome_orders WHERE ship_status='1' AND sync='run' AND createway='matrix' LIMIT 0, 200";
+        // 小时补：只扫「10分钟前 ~ 2小时内」的已发货平台单
+        // - 10分钟前：避开刚发货瞬时写后读不一致窗口
+        // - 2小时内：控制扫描范围
+        // sync=none：发货后回写被跳过时不会变成 run，需纳入补扫
+        $sql = "SELECT order_id, order_bn, pay_status, createway, order_type FROM sdb_ome_orders
+                WHERE ship_status = '1'
+                  AND createway = 'matrix'
+                  AND sync IN ('run', 'none')
+                  AND pay_status NOT IN ('5')
+                  AND is_delivery = 'Y'
+                  AND is_not_combine = 0
+                  AND last_modified <= UNIX_TIMESTAMP() - 600
+                  AND last_modified > UNIX_TIMESTAMP() - 7200
+                LIMIT 0, 200";
         $dataList = $orderObj->db->select($sql);
         if(empty($dataList)){
             return true;
@@ -2357,11 +2389,22 @@ class ome_order {
             
             //check
             if($val['createway'] != 'matrix'){
+                // 直接更新回写状态：回写成功
+                $orderObj->update(array('sync'=>'succ'), array('order_id'=>$order_id));
+                
                 continue;
             }
             
             //过滤已经有售后单的订单
             if($returnList[$order_id]){
+                continue;
+            }
+            
+            // 线下订单：不需要回传平台发货状态
+            if(in_array($val['order_type'], array('offline'))){
+                // 直接更新回写状态：回写成功
+                $orderObj->update(array('sync'=>'succ'), array('order_id'=>$order_id));
+                
                 continue;
             }
             
@@ -2759,23 +2802,23 @@ class ome_order {
             return false;
         }
         
-        if(empty($orderInfo['relate_order_bn']) || empty($orderInfo['order_id'])){
-            $error_msg = '没有关联订单号';
+        if(empty($orderInfo['platform_order_bn']) || empty($orderInfo['order_id'])){
+            $error_msg = '没有平台订单号';
             return false;
         }
         
         //原平台订单
-        $originalInfo = $orderObj->dump(array('order_bn'=>$orderInfo['relate_order_bn']), 'order_id,order_bn,createway,relate_order_bn');
+        $originalInfo = $orderObj->dump(array('order_bn'=>$orderInfo['platform_order_bn']), 'order_id,order_bn,createway,relate_order_bn,platform_order_bn');
         if(empty($originalInfo)){
             $error_msg = '没有原平台订单信息';
             return false;
         }
         
         //售后换货生成的新订单
-        if($originalInfo['createway'] != 'matrix' && $originalInfo['relate_order_bn']){
+        if($originalInfo['createway'] != 'matrix' && $originalInfo['platform_order_bn']){
             for ($i=0; $i<10; $i++)
             {
-                $tempOrderInfo = $orderObj->dump(array('order_bn'=>$originalInfo['relate_order_bn']), 'order_id,order_bn,createway,relate_order_bn');
+                $tempOrderInfo = $orderObj->dump(array('order_bn'=>$originalInfo['platform_order_bn']), 'order_id,order_bn,createway,relate_order_bn,platform_order_bn');
                 if(empty($tempOrderInfo)){
                     break;
                 }
@@ -2788,8 +2831,8 @@ class ome_order {
                     break;
                 }
                 
-                //没有关联订单
-                if(empty($tempOrderInfo['relate_order_bn'])){
+                //没有平台订单
+                if(empty($tempOrderInfo['platform_order_bn'])){
                     break;
                 }
             }
@@ -2807,17 +2850,17 @@ class ome_order {
         $receiverObj->save($receiverInfo);
         
         //msg
-        $log_msg = '复制订单号：'. $orderInfo['relate_order_bn'] .'收件人敏感信息；';
+        $log_msg = '复制平台订单号：'. $orderInfo['platform_order_bn'] .'收件人敏感信息；';
         
-        //更新关联订单
-        if($orderInfo['relate_order_bn'] != $originalInfo['order_bn']){
-            $orderObj->update(array('relate_order_bn'=>$originalInfo['order_bn']), array('order_id'=>$orderInfo['order_id']));
-            $log_msg .= '并更新为平台订单号：'. $originalInfo['order_bn'];
-        }
+//        //更新关联订单
+//        if($orderInfo['relate_order_bn'] != $originalInfo['order_bn']){
+//            $orderObj->update(array('relate_order_bn'=>$originalInfo['order_bn']), array('order_id'=>$orderInfo['order_id']));
+//            $log_msg .= '并更新为平台订单号：'. $originalInfo['order_bn'];
+//        }
         
         //logs
-//        $logObj = app::get('ome')->model('operation_log');
-//        $logObj->write_log('order_modify@ome', $orderInfo['order_id'], $log_msg);
+        $logObj = app::get('ome')->model('operation_log');
+        $logObj->write_log('order_modify@ome', $orderInfo['order_id'], $log_msg);
         
         return true;
     }

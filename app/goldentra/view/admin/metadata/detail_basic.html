@@ -1,0 +1,32 @@
+<div class="tableform">
+    <h4>字典头</h4>
+    <table width="100%" cellspacing="0" cellpadding="0" border="0" class="gridlist">
+        <tbody>
+        <tr><th width="120">业务编码</th><td><{$row.code}></td></tr>
+        <tr><th>业务名称</th><td><{$row.name}></td></tr>
+        <tr><th>唯一KEY</th><td><{$row.unique_key}></td></tr>
+        <tr><th>创建时间</th><td><{if $row.at_time}><{$row.at_time|cdate:'SDATE_STIME'}><{else}>—<{/if}></td></tr>
+        <tr><th>更新时间</th><td><{if $row.up_time}><{$row.up_time|cdate:'SDATE_STIME'}><{else}>—<{/if}></td></tr>
+        </tbody>
+    </table>
+
+    <{if $ext_rows}>
+    <h4 style="margin-top:12px;">扩展字段</h4>
+    <table width="100%" cellspacing="0" cellpadding="0" border="0" class="gridlist">
+        <thead>
+        <tr>
+            <th>字段</th>
+            <th>值</th>
+        </tr>
+        </thead>
+        <tbody>
+        <{foreach from=$ext_rows item=ext}>
+        <tr>
+            <td><{$ext.key}></td>
+            <td><{$ext.value}></td>
+        </tr>
+        <{/foreach}>
+        </tbody>
+    </table>
+    <{/if}>
+</div>

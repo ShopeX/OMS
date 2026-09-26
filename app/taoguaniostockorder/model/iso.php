@@ -563,6 +563,52 @@ class taoguaniostockorder_mdl_iso extends dbeav_model{
         return [$listV2, $colArray];
     }
 
+    /**
+     * 导出唯一码平铺明细（snlists Sheet）
+     */
+    public function getexportsnlists($field, $filter, $offset = 0, $limit = -1, $first_sheet = false)
+    {
+        $isoIds = array();
+        if (!empty($filter['iso_id'])) {
+            $isoIds = is_array($filter['iso_id']) ? $filter['iso_id'] : array($filter['iso_id']);
+        } elseif (!empty($filter['iso_id|in'])) {
+            $isoIds = $filter['iso_id|in'];
+        }
+        if (empty($isoIds)) {
+            return array();
+        }
+
+        $isoList = $this->getList('iso_id,iso_bn', array('iso_id' => $isoIds), $offset, $limit);
+        if (empty($isoList)) {
+            if ($first_sheet) {
+                $columnDefs = console_adjust_serial::getColumnDefinitions();
+                $title = array('*:出入库单号');
+                foreach ($columnDefs as $def) {
+                    $title[] = $def['label'];
+                }
+                return array(console_adjust_serial::buildExportCsvTitleLine($title));
+            }
+            return array();
+        }
+
+        $objItems = $this->app->model('iso_items');
+        $items = $objItems->getList('*', array('iso_id' => $isoIds), 0, -1);
+        $itemsByIso = array();
+        foreach ((array) $items as $item) {
+            $itemsByIso[$item['iso_id']][] = $item;
+        }
+
+        return console_adjust_serial::buildExportSnListCsvData(
+            '*:出入库单号',
+            $isoList,
+            'iso_id',
+            'iso_bn',
+            $itemsByIso,
+            array('console_adjust_serial', 'buildRowsFromIsoItems'),
+            $first_sheet
+        );
+    }
+
     // public function getexportdetail($fields,$filter,$offset=0,$limit=1,$has_title=false){
     //     $iso = $this->getList('iso_id,iso_bn', array('iso_id|in'=>$filter['iso_id']));
     //     $aIso = array();

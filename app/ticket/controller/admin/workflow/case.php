@@ -43,9 +43,6 @@ class ticket_ctl_admin_workflow_case extends desktop_controller {
         //filter
         $base_filter = [];
         
-        //button
-        $buttonList = array();
-        
         //view
         $_GET['view'] = (empty($_GET['view']) ? '0' : $_GET['view']);
         switch ($_GET['view'])
@@ -81,7 +78,8 @@ class ticket_ctl_admin_workflow_case extends desktop_controller {
             0 => array('label'=>app::get('base')->_('全部'), 'filter'=>$base_filter, 'optional'=>false),
             1 => array('label'=>app::get('base')->_('待审批'), 'filter'=>['status'=>['pending','processing','approved'], 'current_node_type'=>['start','approval']], 'optional'=>false),
             2 => array('label'=>app::get('base')->_('已完成'), 'filter'=>['current_node_type'=>'end'], 'optional'=>false),
-            3 => array('label'=>app::get('base')->_('取消'), 'filter'=>['status'=>['rejected','cancelled']], 'optional'=>false),
+            3 => array('label'=>app::get('base')->_('取消'), 'filter'=>['status'=>['rejected','cancelled','source_cancelled']], 'optional'=>false),
+            4 => array('label'=>app::get('base')->_('异常'), 'filter'=>['abnormal_status'=>'true'], 'optional'=>false),
         );
         
         foreach($sub_menu as $k => $v)
@@ -110,7 +108,7 @@ class ticket_ctl_admin_workflow_case extends desktop_controller {
     }
     
     /**
-     * 审核页面
+     * 审核赠品订单页面
      */
     public function audit($id)
     {
@@ -130,7 +128,7 @@ class ticket_ctl_admin_workflow_case extends desktop_controller {
         
         if($row['current_node_type'] == 'end'){
             die('审批流已经结束，不能操作！');
-        }elseif(in_array($row['status'], ['rejected','cancelled'])){
+        }elseif(in_array($row['status'], ['rejected','cancelled','source_cancelled'])){
             die('审批已拒绝或取消，不能操作！');
         }
         
@@ -242,6 +240,13 @@ class ticket_ctl_admin_workflow_case extends desktop_controller {
         if($orderResult['rsp'] != 'succ'){
             die($orderResult['error_msg']);
         }
+
+        if ($row['scene_type'] == 'approve_orders') {
+            $row['items_list'] = $orderResult['data']['approvalItemList'] ?? array();
+        } else {
+            $row['items_list'] = $orderResult['data']['addGiftList'] ?? array();
+        }
+        $row['order_retail_amount'] = $orderResult['data']['order_retail_amount'] ?? ($row['order_retail_amount'] ?? 0);
         
         $this->pagedata['data'] = $row;
         $this->pagedata['records'] = $recordResult['data'];
@@ -317,5 +322,93 @@ class ticket_ctl_admin_workflow_case extends desktop_controller {
         
         echo $result['data'];
         exit;
+    }
+    
+    /**
+     * 审核补发单页面
+     */
+    public function audit_bufa($id)
+    {
+        $nodeLib = kernel::single('ticket_workflow_node');
+        $businessLib = kernel::single('ticket_workflow_business');
+        
+        // info
+        $row = $this->_mdl->dump($id);
+        
+        // check
+        if(empty($row)){
+            die('数据不存在，请检查！');
+        }
+        
+        if($row['current_node_type'] == 'end'){
+            die('审批流已经结束，不能操作！');
+        }elseif(in_array($row['status'], ['rejected','cancelled','source_cancelled'])){
+            die('审批已拒绝或取消，不能操作！');
+        }elseif(!empty($row['bpm_status']) && $row['bpm_status'] == 'pending'){
+            die('该审批单正在等待BPM三级审批结果，不能在OMS继续操作！');
+        }
+
+        $zeroLib = kernel::single('ticket_workflow_case_zero');
+        if ($zeroLib->shouldRefreshBufaAssigneeOnOpen($row)) {
+            $refresh = $zeroLib->refreshApprovalCaseAssignee($row);
+            if ($refresh['rsp'] != 'succ') {
+                die($refresh['error_msg']);
+            }
+        }
+        
+        // 去除补发原因中的固定文字
+        if($row['reason']){
+            $row['reason'] = str_replace('零元订单补发：', '', $row['reason']);
+        }
+        
+        // order info
+        $result = $businessLib->getOrderDetails($row);
+        if($result['rsp'] != 'succ'){
+            die($result['error_msg']);
+        }
+        
+        $orderInfo = $result['data'];
+        
+        $approvalItemList = $orderInfo['approvalItemList'] ?? array();
+        
+        // 当前节点
+        $currentNode = $nodeLib->getCurrentNode($row['current_node_id']);
+        
+        $this->pagedata['currentNode'] = $currentNode;
+        $this->pagedata['approvalItemList'] = $approvalItemList;
+        $this->pagedata['approvalAmount'] = $orderInfo['order_retail_amount'] ?? 0;
+        $this->pagedata['sceneType'] = $row['scene_type'];
+        $this->pagedata['orderInfo'] = $orderInfo;
+        $this->pagedata['data'] = $row;
+        $this->page('admin/workflow/case/bufa_audit.html');
+    }
+    
+    /**
+     * 审核确认
+     */
+    public function do_audit_bufa()
+    {
+        $url = $this->url.'&act=index';
+        
+        $zeroLib = kernel::single('ticket_workflow_case_zero');
+        
+        // POST
+        $data = $_POST;
+        
+        // check
+        $checkResult = $zeroLib->checkAuditParams($data);
+        if($checkResult['rsp'] != 'succ'){
+            $error_msg = '审批检测失败：'. $checkResult['error_msg'];
+            $this->splash('error', $url, $error_msg);
+        }
+        
+        // save
+        $saveResult = $zeroLib->processAudit($data);
+        if($saveResult['rsp'] != 'succ'){
+            $error_msg = '审批处理失败：'. $saveResult['error_msg'];
+            $this->splash('error', $url, $error_msg);
+        }
+        
+        $this->splash('success', $url, '审批操作成功');
     }
 }

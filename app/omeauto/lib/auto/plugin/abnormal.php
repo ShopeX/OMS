@@ -74,9 +74,14 @@ class omeauto_auto_plugin_abnormal extends omeauto_auto_plugin_abstract implemen
             );
             if ($order['createway'] != 'matrix' && $order['order_source'] != 'platformexchange' && kernel::single('ome_security_router',$order['shop_type'])->is_encrypt($consignee,'order')) 
             {
-                $allow = false;
-                $msg = $order['order_bn'].' '.'订单含有密文';
-                $group->setOrderStatus($order['order_id'], $this->getMsgFlag());
+                // 补发订单类型
+                if(in_array($order['order_type'], array('bufa'))){
+                    //--不需要检查收货信息人加密
+                }else{
+                    $allow = false;
+                    $msg = $order['order_bn'].' '.'订单含有密文';
+                    $group->setOrderStatus($order['order_id'], $this->getMsgFlag());
+                }
             }
 
             if($order['pay_status']=='3' && !kernel::single('ome_order_func')->checkPresaleOrder()){

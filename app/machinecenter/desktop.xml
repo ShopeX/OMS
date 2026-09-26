@@ -1,0 +1,15 @@
+<desktop>
+    <permissions>
+        <permission id="machine_center_sn">SN列表</permission>
+        <permission id="machine_center_sn_delivery_op">门店发货唯一码记录</permission>
+    </permissions>
+
+ 
+    <workground name="机器中心" id="machine_center" order="1850" icon="icon-jichudangan-01">
+        <menugroup name="SN列表" en="sn-list">
+
+            <menu controller='admin_sn' action='index' permission='machine_center_sn' display='true' order='6000102'>SN列表</menu>
+            <menu controller='admin_sn_delivery_op' action='index' permission='machine_center_sn_delivery_op' display='true' order='6000103'>门店发货唯一码记录</menu>
+        </menugroup>
+    </workground>
+</desktop>

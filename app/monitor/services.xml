@@ -29,8 +29,14 @@
     <service id="extend_filter_monitor_mdl_event_notify">
         <class>monitor_finder_extend_filter_notify</class>
     </service>
+    <service id="extend_filter_base_mdl_rpcnotify">
+        <class>monitor_finder_extend_filter_rpcnotify</class>
+    </service>
     <service id="desktop_finder.monitor_mdl_event_group">
         <class>monitor_finder_event_group</class>
+    </service>
+    <service id="desktop_finder.monitor_mdl_workwx_rule">
+        <class>monitor_finder_workwx_rule</class>
     </service>
 </services>
 

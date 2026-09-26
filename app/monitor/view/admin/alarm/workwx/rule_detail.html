@@ -1,0 +1,17 @@
+<div class="tableform">
+    <table width="100%" cellspacing="0" cellpadding="0">
+        <tbody>
+        <tr><th width="120">规则名称</th><td><{$rule.rule_name}></td></tr>
+        <tr><th>企微Webhook</th><td><{$rule.workwx_webhook}></td></tr>
+        <tr><th>关联门店</th><td>
+            <{if $stores}>
+            <{foreach from=$stores item=store}>[<{$store.store_bn}>] <{$store.store_name}>；<{/foreach}>
+            <{else}>-<{/if}>
+        </td></tr>
+        <tr><th>触发事件</th><td><{$event_type_names}></td></tr>
+        <tr><th>通知条件</th><td><{$config_text}></td></tr>
+        <tr><th>状态</th><td><{if $rule.disabled=='true'}>禁用<{else}>启用<{/if}></td></tr>
+        <tr><th>备注</th><td><{$rule.memo|default:'-'}></td></tr>
+        </tbody>
+    </table>
+</div>

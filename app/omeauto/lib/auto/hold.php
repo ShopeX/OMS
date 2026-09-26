@@ -71,6 +71,12 @@ class omeauto_auto_hold {
                     $upFilter['bn'] = $skuRoleConfig;
                 }
                 app::get('ome')->model('order_objects')->update(array('estimate_con_time'=>$holdTime),$upFilter);
+                
+                // 同步订单 timing_confirm，供 CRM 补赠品等入口继承 hold 时限
+                //@todo：目前只更新拼多多类型的订单；
+                $updateFilter = array('order_id'=>$orderId, 'shop_type'=>'pinduoduo');
+                app::get('ome')->model('orders')->update(array('timing_confirm' => $holdTime), $updateFilter);
+                
                 $msg = 'hold单成功，hold单名称:'.$config['name'].'('.$config['tid'].'),hold单时限：'.($holdTime == $this->maxHoldTime ? '手工操作' : date('Y-m-d H:i:s', $holdTime)) . ($skuRoleConfig ? ',hold单商品：' . implode(',', $skuRoleConfig) : '');
                 app::get('ome')->model('operation_log')->write_log('order_modify@ome',$orderId,$msg);
                 break;

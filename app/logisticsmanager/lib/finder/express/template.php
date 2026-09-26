@@ -22,7 +22,13 @@ class logisticsmanager_finder_express_template{
     var $column_confirm_order = COLUMN_IN_HEAD;
     function column_confirm($row){
         $id = $row[$this->col_prefix.'template_id'];
+        $finder_id = $_GET['_finder']['finder_id'];
         if($row[$this->col_prefix . 'out_template_id']) {
+            if ($row['template_type'] == 'wxshipin_standard') {
+                return  <<<EOF
+            <span class="lnk" onclick="new Dialog('index.php?app=logisticsmanager&ctl=admin_express_template&act=editField&p[0]=$id&finder_id=$finder_id',{title:'关联微信视频号自定义区',width:560,height:230})">关联自定义区</span>
+EOF;
+            }
             if (in_array($row['control_type'], ['xhs', 'youzan'])) {
                 return  <<<EOF
             <span class="lnk" onclick="new Dialog('index.php?app=logisticsmanager&ctl=admin_express_template&act=editField&p[0]=$id&finder_id=$finder_id',{title:'快递面单编辑',width:500,height:140})">编辑</span>
@@ -31,7 +37,6 @@ EOF;
             return '';
         }
 
-        $finder_id = $_GET['_finder']['finder_id'];
         $type = $row['template_type'];
 
         if ($row[$this->col_prefix.'control_type'] == 'lodop') {
@@ -118,6 +123,19 @@ EOF;
         if(in_array($control_type, ['xhs'])) {
             $template_data = @json_decode($row[$this->col_prefix . 'template_data'], 1);
             return $template_data['customerTemplateUrl'];
+        }
+        if ($row['template_type'] == 'wxshipin_standard') {
+            $template_select = @unserialize($row[$this->col_prefix . 'template_select']);
+            $template_select = is_array($template_select) ? $template_select : array();
+            $customTplId = isset($template_select['wxshipin_custom_tpl_id']) ? intval($template_select['wxshipin_custom_tpl_id']) : 0;
+            if (!$customTplId) {
+                return '-';
+            }
+            $template = app::get('logisticsmanager')->model('express_template')->db_dump(
+                array('template_id' => $customTplId),
+                'template_name,status'
+            );
+            return $template && $template['status'] == 'true' ? $template['template_name'] : '关联模板已失效';
         }
 
         // if (in_array($control_type, ['youzan'])) {

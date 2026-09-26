@@ -1090,8 +1090,22 @@ class logisticsmanager_ctl_admin_express_template extends desktop_controller{
     public function editField($template_id){
         $tmplMdl  = app::get('logisticsmanager')->model('express_template');
         $template = $tmplMdl->db_dump($template_id,'template_id,control_type,template_data,template_select,template_type');
+        if (!$template) {
+            $this->splash('error', 'index.php?app=logisticsmanager&ctl=admin_express_template', '模板不存在');
+            return;
+        }
 
-        if (in_array($template['control_type'], ['youzan'])) {
+        if ($template['template_type'] == 'wxshipin_standard') {
+            $template_select = @unserialize($template['template_select']);
+            $template_select = is_array($template_select) ? $template_select : array();
+            $tmpl = array(
+                'template_id' => $template['template_id'],
+                'control_type' => $template['control_type'],
+                'template_type' => $template['template_type'],
+                'wxshipin_custom_tpl_id' => isset($template_select['wxshipin_custom_tpl_id']) ? $template_select['wxshipin_custom_tpl_id'] : 0,
+            );
+            $this->pagedata['lodop_templates'] = $tmplMdl->getPrintTemplates('electron', 'lodop');
+        } elseif (in_array($template['control_type'], ['youzan'])) {
             $template_select = @unserialize($template['template_select']);
 
             $tmpl = [
@@ -1124,6 +1138,9 @@ class logisticsmanager_ctl_admin_express_template extends desktop_controller{
         }
         $tmplMdl  = app::get('logisticsmanager')->model('express_template');
         $res = $tmplMdl->saveTemplate($_POST);
+        if ($res !== true) {
+            $this->end(false, $res ? $res : '保存失败');
+        }
         $this->end(true,'保存成功');
     }
 }

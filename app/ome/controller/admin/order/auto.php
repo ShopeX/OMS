@@ -1,20 +1,5 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/**
  * 订单获取
  */
 class ome_ctl_admin_order_auto extends desktop_controller {
@@ -27,11 +12,10 @@ class ome_ctl_admin_order_auto extends desktop_controller {
 
     /**
      * 获取订单，其中隐藏自动确认规则
-     * 
+     *
      * @param void
      * @return void
      */
-
     function index() {
         if(app::get('replacesku')->is_installed()){
             $oOrders = app::get('ome')->model('orders');
@@ -117,7 +101,7 @@ class ome_ctl_admin_order_auto extends desktop_controller {
 
     /**
      * 检查自动审单的配置
-     * 
+     *
      * @param void
      * @return void
      */
@@ -166,7 +150,7 @@ class ome_ctl_admin_order_auto extends desktop_controller {
 
     /**
      * 检查物流公司
-     * 
+     *
      * @param boolean $singleBranch
      * @return void
      */
@@ -176,7 +160,7 @@ class ome_ctl_admin_order_auto extends desktop_controller {
 
     /**
      * 检查是否有默认审单规则
-     * 
+     *
      * @param void
      * @return void
      */
@@ -195,7 +179,7 @@ class ome_ctl_admin_order_auto extends desktop_controller {
 
     /**
      * 增加默认自动审单规则
-     * 
+     *
      * @param void
      * @return void
      */
@@ -216,10 +200,10 @@ class ome_ctl_admin_order_auto extends desktop_controller {
 
     /**
      * 获取处理结果
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function getResult($process_id)
     {
         $batchLogModel = app::get('ome')->model('batch_log');
@@ -248,7 +232,7 @@ class ome_ctl_admin_order_auto extends desktop_controller {
 
     /**
      * AJAX 调用过程，用来处理指定数量的订单组
-     * 
+     *
      * @author hzjsq (2011/3/24)
      * @param void
      * @return void
@@ -388,7 +372,7 @@ class ome_ctl_admin_order_auto extends desktop_controller {
 
     /**
      * 解析AJAX传过来的信息
-     * 
+     *
      * @param String $string 原始内容
      * @return mixed
      * @author hzjsq (2011/3/25)
@@ -418,7 +402,7 @@ class ome_ctl_admin_order_auto extends desktop_controller {
 
     /**
      *  对输入的内容进行格式化输出至AJAX
-     * 
+     *
      * @author hzjsq (2011/3/24)
      * @param Mixed $param 要转换的内容
      * @return String
@@ -436,7 +420,7 @@ class ome_ctl_admin_order_auto extends desktop_controller {
 
     /**
      * 匹配所有未对应的商品
-     * 
+     *
      * @param void
      * @return void
      */
@@ -450,8 +434,8 @@ class ome_ctl_admin_order_auto extends desktop_controller {
     }
 
     /**
-     * 不再提醒
-     */
+    * 不再提醒
+    */
     function notify(){
         $is_super = kernel::single('desktop_user')->is_super();
         if($is_super){
@@ -515,10 +499,6 @@ class ome_ctl_admin_order_auto extends desktop_controller {
         echo json_encode($data);
     }
 
-    /**
-     * timingConfirm
-     * @return mixed 返回值
-     */
     public function timingConfirm() {
         if($_POST['isSelectedAll'] == '_ALL_') {
             $baseFilter = array(
@@ -555,10 +535,6 @@ class ome_ctl_admin_order_auto extends desktop_controller {
         $this->page('admin/order/timing.html');
     }
 
-    /**
-     * doTimingConfirm
-     * @return mixed 返回值
-     */
     public function doTimingConfirm() {
         $timingConfirmTime = strtotime($_POST['timing_confirm_time']);
         $arrOrderId = $_POST['order_id'];
@@ -585,6 +561,15 @@ class ome_ctl_admin_order_auto extends desktop_controller {
             );
             $modelMisc->saveMiscTask($data);
         }
+        
+        // 是否允许自动审单
+        if($_POST['is_auto_timing_confirm_order'] == 'false') {
+            $prop_error_msg = '';
+            $orderIds = $arrOrderId;
+            $propSdf = ['props_col'=>'auto_timing_confirm_order', 'props_value'=>'false'];
+            $propsSaved = kernel::single('ome_order_props')->saveOrderProps($orderIds, $propSdf, $prop_error_msg);
+        }
+        
         app::get('ome')->model('operation_log')->batch_write_log('order_edit@ome', array('order_id' => $arrOrderId),'设置定时审单时间：' . $_POST['timing_confirm_time'], time());
         $this->splash('success');
     }

@@ -22,7 +22,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<title>退货退款</title>
 	<link rel="stylesheet" type="text/css" href="<{$env.app.res_url}>/css/common.css" />
-	<link rel="stylesheet" type="text/css" href="<{$env.app.res_url}>/css/index.css" />
+	<link rel="stylesheet" type="text/css" href="<{$env.app.res_url}>/css/index.css?v=20260714" />
 	<link rel="stylesheet" type="text/css" href="<{$env.app.res_url}>/css/change.css" />
 	<script src="<{$env.app.res_url}>/js/axios.min.js"></script>
 	<script src="<{$env.app.res_url}>/js/flexible.js"></script>
@@ -77,8 +77,8 @@
 					
 				</div>
 
-				<div class="text-wrapper_4 flex-col">
-					<input class="text_10 search-input" type="text" placeholder="请输入订单号" style="display:block">
+				<div class="text-wrapper_4 flex-col search-input-wrap">
+					<input class="text_10 search-input" type="text" placeholder="请输入订单号" autocomplete="off" autocorrect="off" autocapitalize="off" enterkeyhint="search">
 					<div class="custom-channel-select" data-name="channel" style="display:none">
 						<div class="custom-channel-select-trigger">
 							<span class="custom-channel-select-value"></span>
@@ -401,8 +401,30 @@
 	const options = document.getElementById('selectOptions');
 	const currentType = selectBox.querySelector('.current-type');
 	const searchInput = document.querySelector('.search-input');
+	const searchInputWrap = document.querySelector('.search-input-wrap');
 	const mask = document.querySelector('.mask');
 	let isOpen = false;
+
+	if (searchInputWrap && searchInput) {
+		searchInputWrap.addEventListener('click', function (e) {
+			if (searchInput.style.display === 'none') {
+				return;
+			}
+			if (e.target.closest('.custom-channel-select') || e.target.closest('.custom-store-select')) {
+				return;
+			}
+			if (document.activeElement === searchInput) {
+				return;
+			}
+			searchInput.focus();
+			if (typeof searchInput.setSelectionRange === 'function') {
+				try {
+					const len = searchInput.value.length;
+					searchInput.setSelectionRange(len, len);
+				} catch (err) {}
+			}
+		});
+	}
 
 	function openSelect() {
 		if (!isOpen) {

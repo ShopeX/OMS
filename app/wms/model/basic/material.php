@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class wms_mdl_basic_material extends material_mdl_basic_material
 {
     //是否有导出配置
@@ -23,11 +7,6 @@ class wms_mdl_basic_material extends material_mdl_basic_material
     //导出的文件名
     var $export_name = '库存总览';
     
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
     public function table_name($real = false)
     {
         if ($real) {
@@ -38,10 +17,6 @@ class wms_mdl_basic_material extends material_mdl_basic_material
         return $table_name;
     }
 
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema()
     {
         return app::get('material')->model('basic_material')->get_schema();
@@ -122,13 +97,6 @@ class wms_mdl_basic_material extends material_mdl_basic_material
         return intval(count($row));
     }
 
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter, $tableAlias = null, $baseWhere = null)
     {
         $where = '';
@@ -162,6 +130,9 @@ class wms_mdl_basic_material extends material_mdl_basic_material
             return false;
         }
 
+        $list = material_basic_material_master::fillListRows($list);
+        $masterCols = material_basic_material_master::extraCols();
+
         $bm_id     = array_column($list, 'bm_id');
         $branch_id = kernel::single('wms_branch')->getBranchwmsByUser(kernel::single('desktop_user')->is_super());
 
@@ -188,6 +159,9 @@ class wms_mdl_basic_material extends material_mdl_basic_material
             $detail['store']        = $store;
             $detail['store_freeze'] = $store_freeze;
             $detail['arrive_store'] = $arrive_store;
+            foreach ($masterCols as $colKey => $colDef) {
+                $detail[$colKey] = isset($aFilter[$colKey]) ? $this->charset->utf2local($aFilter[$colKey]) : '';
+            }
             foreach ($this->oSchema['csv']['products'] as $k => $v) {
 
                 $pRow[$k] = utils::apath($detail, explode('/', $v));
@@ -198,12 +172,6 @@ class wms_mdl_basic_material extends material_mdl_basic_material
         return true;
     }
 
-    /**
-     * export_csv
-     * @param mixed $data 数据
-     * @param mixed $exportType exportType
-     * @return mixed 返回值
-     */
     public function export_csv($data, $exportType = 1)
     {
 
@@ -222,12 +190,6 @@ class wms_mdl_basic_material extends material_mdl_basic_material
         fwrite($fp, implode("\n", $output));
     }
 
-    /**
-     * io_title
-     * @param mixed $filter filter
-     * @param mixed $ioType ioType
-     * @return mixed 返回值
-     */
     public function io_title($filter, $ioType = 'csv')
     {
 
@@ -242,6 +204,9 @@ class wms_mdl_basic_material extends material_mdl_basic_material
                     '*:冻结库存' => 'store_freeze',
                     '*:在途库存' => 'arrive_store',
                 );
+                foreach (material_basic_material_master::extraCols() as $colKey => $colDef) {
+                    $this->oSchema['csv'][$filter]['*:' . $colDef['label']] = $colKey;
+                }
                 break;
         }
         $this->ioTitle[$ioType][$filter] = array_keys($this->oSchema[$ioType][$filter]);

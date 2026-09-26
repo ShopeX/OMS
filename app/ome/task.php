@@ -1,26 +1,22 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class ome_task{
 
     function post_install($options){
 
-        // base_initial 已在 base_application_manage::install() 中于 post_install 前执行，勿重复 init，
-        // 否则 initial/*.sql（如 ome.branch_type.sql）会执行两次并触发唯一键冲突。
+        //kernel::single('base_initial', 'ome')->init();
+        $file = ROOT_DIR.'/config/defined_ext.php';
+         if ($options['matrix_type']=='2'){
+            $matrix_url = $options['matrix_url'];
+            $constants_ext['LICENSE_CENTER_INFO'] = 'http://'.$matrix_url.'/proxy/usercenter';
+            $constants_ext['LICENSE_CENTER'] = 'http://'.$matrix_url.'/proxy/usercenter';
+            $constants_ext['LICENSE_CENTER_V'] = 'http://'.$matrix_url.'/proxy/usercenter';
+            $constants_ext['MATRIX_URL'] = 'http://'.$matrix_url.'/proxy/matrix';
+            $constants_ext['MATRIX_REALTIME_URL'] = 'http://'.$matrix_url.'/proxy/matrix/sync';
+            $constants_ext['MATRIX_RELATION_URL'] = 'http://'.$matrix_url.'/proxy/bind';
+            file_put_contents($file
+                ,'<?php $constants_ext='.var_export($constants_ext,1).';');
+            kernel::database()->exec("UPDATE sdb_base_network SET node_url='".$constants_ext['MATRIX_URL']."' ");
+        }
 
         $this->_insert_role();
 
@@ -54,6 +50,10 @@ class ome_task{
                 'pd_ver'=>array('type'=>'select','required'=>true,'vtype'=>'required','default'=>1,'title'=>'安装模式','options'=>array(
                     1=>'正式环境',2=>'开发环境',
                 )),
+            'matrix_type'=>array('type'=>'select','required'=>true,'vtype'=>'required','default'=>1,'title'=>'联通方式','options'=>array(
+                    1=>'默认',2=>'全内网',
+                ),'desc'=>'默认是互联网环境,全内网是局域网环境'),
+             'matrix_url'=>array('type'=>'input','required'=>true,'vtype'=>'required','default'=>'www.abc.com','title'=>'联通地址','desc'=>'(不可用http开头或/特殊字符)'),
             );
     }
 
@@ -73,7 +73,38 @@ class ome_task{
     function post_update($params){
 
         $dbver = $params['dbver'];
+        $shell = new base_shell_loader;
 
+        $script_dri = ROOT_DIR."/app/ome/script/update/";
+
+        if(version_compare($dbver,'1.0.1','<')){
+            //增加默认打印快递模板
+            $this->_default_dlytpl();
+
+            include_once($script_dri."1.0.1.php");
+        }
+
+        if(version_compare($dbver,'1.0.2','<')){
+            include_once(ROOT_DIR."/app/ome/script/update/1.0.2.php");
+        }
+        if(version_compare($dbver,'1.0.3','<')){
+            include_once(ROOT_DIR."/app/ome/script/update/1.0.3.php");
+        }
+        if(version_compare($dbver,'1.0.4','<')){
+            include_once(ROOT_DIR."/app/ome/script/update/1.0.4.php");
+        }
+        if(version_compare($dbver,'1.0.5','<')){
+            include_once(ROOT_DIR."/app/ome/script/update/1.0.5.php");
+        }
+        if(version_compare($dbver,'1.0.6','<')){
+            include_once(ROOT_DIR."/app/ome/script/update/1.0.6.php");
+        }
+        if(version_compare($dbver,'1.0.7','<')){
+            include_once(ROOT_DIR."/app/ome/script/update/1.0.7.php");
+        }
+        if(version_compare($dbver,'1.0.8','<')){
+            include_once(ROOT_DIR."/app/ome/script/update/1.0.8.php");
+        }
         if (version_compare($dbver, '1.0.9','<')) {
             // 插入默认打印模板
             $this->insert_otmpl_default();

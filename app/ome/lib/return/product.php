@@ -1,25 +1,9 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class ome_return_product extends ome_abstract
 {
     /**
      * $err_msg
-     * 
+     *
      * @param $status_type
      * @param $return_id
      * @return array
@@ -113,8 +97,8 @@ class ome_return_product extends ome_abstract
     }
 
     /**
-     * 获取可操作列表
-     */
+    * 获取可操作列表
+    */
     function return_list($return_id){
         set_time_limit(0);
         $oReturn = app::get('ome')->model('return_product');
@@ -131,7 +115,7 @@ class ome_return_product extends ome_abstract
     
     /**
      * 格式化售后申请单数据
-     * 
+     *
      * @param $sdf
      * @param $error_msg string
      * @return array
@@ -300,7 +284,7 @@ class ome_return_product extends ome_abstract
     
     /**
      * 根据发货单ID获取售后服务单数据
-     * 
+     *
      * @param $deliveryInfo array
      * @param $error_msg string
      * @return array
@@ -410,6 +394,7 @@ class ome_return_product extends ome_abstract
                 'title' => $deliveryInfo['title'], //退货记录标题
                 'content' => $deliveryInfo['content'], //申请售后原因
                 'source' => 'delivery_back', //来源
+                'sub_source' => 2, // 子来源(0、默认，1、订单，2、发货单，3、售后申请单)
                 'op_id' => $opInfo['op_id'], //操作员ID
                 'status' => '1',
                 'flag_type' => ome_reship_const::__LANJIE_RUKU, //拦截入库标识
@@ -495,7 +480,7 @@ class ome_return_product extends ome_abstract
     /**
      * 自动创建售后服务单
      * @todo：主要用于发货单物流拦截成功后,自动创建售后服务单,并且自动审核生成售后退货单;
-     * 
+     *
      * @param $sdf
      * @param $error_msg
      * @return false|mixed
@@ -616,9 +601,9 @@ class ome_return_product extends ome_abstract
         return $return_id;
     }
 
-     /**
-      * 换货单冻结预占
-      */
+    /**
+     * 换货单冻结预占
+     */
      public function addExchangeFreeze($return_id, &$branch_id, $tmall_detail=[]) {
         $returninfo = app::get('ome')->model('return_product')->db_dump(array('return_id'=>$return_id));
         if(empty($tmall_detail)) {
@@ -706,7 +691,7 @@ class ome_return_product extends ome_abstract
     
     /**
      * 换货冻结释放
-     * 
+     *
      * @param $return_id
      * @param $bm_id
      * @return array
@@ -766,7 +751,7 @@ class ome_return_product extends ome_abstract
     /**
      * 重置售后申请单创建的数据
      * @todo：平台退货金额大于OMS订单已支付金额,通过销售单明细重置平台退货商品金额;
-     * 
+     *
      * @param $data
      * @return array
      */

@@ -179,8 +179,6 @@ class console_ctl_admin_vopick extends desktop_controller{
         {
             $this->end(false, "拣货单不存在,请检查!");
         }
-
-
         
         //检查
         $itemList        = array();
@@ -213,8 +211,7 @@ class console_ctl_admin_vopick extends desktop_controller{
                 if($p_val['delivery_status'] == 1)
                 {
                     $this->end(false, "拣货单已审核过,不能重复操作!");
-                }elseif($branch_send_num > $pick_num)
-                {
+                }elseif($branch_send_num > $pick_num){
                     $this->end(false, "拣货单已完成发货,不能重复操作!");
                 }
                 

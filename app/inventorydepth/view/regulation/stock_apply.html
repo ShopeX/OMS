@@ -231,6 +231,7 @@ void function(){
 
     $('regulation-apply-submit').addEvent('click',function(){
         var form = $('regulation-apply-form');
+        compactSalesMaterialArrayInputs(form);
 
         W.page(form.action,{
             data:form,
@@ -274,6 +275,37 @@ void function(){
 		ajax_onload_html(apply_id);
 	}
 }();
+
+// 保存接口要求 sm_id 为数组。提交前将明细 sm_id[] 禁用，并把页面维护的逗号字符串
+// 作为唯一一个 sm_id[] 提交，既满足后端校验，也避免触发 max_input_vars 截断。
+function compactSalesMaterialArrayInputs(form)
+{
+    var compactInput = form.getElement('input[data-sm-id-compact="true"]') ||
+        form.getElement('input[name="sm_id"]');
+    var detailInputs = [];
+    var smIds = [];
+
+    form.getElements('input[name="sm_id[]"]').each(function(input) {
+        if (input !== compactInput) {
+            detailInputs.push(input);
+            if (input.get('value')) {
+                smIds.push(input.get('value'));
+            }
+        }
+    });
+
+    if (!compactInput) {
+        return;
+    }
+
+    detailInputs.each(function(input) {
+        input.set('disabled', true);
+    });
+    compactInput.set('data-sm-id-compact', 'true');
+    compactInput.set('name', 'sm_id[]');
+    compactInput.set('value', smIds.join(','));
+    compactInput.set('disabled', !smIds.length);
+}
 
 function ajax_onload_html(apply_id)
 {

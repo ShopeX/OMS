@@ -124,6 +124,7 @@ class taskmgr_whitelist
                 'threadNum' => 5,
                 'timeout' => 180,
             ),
+           
         );
         return array_merge($_tasks, $task);
     }
@@ -193,6 +194,7 @@ class taskmgr_whitelist
             'ediws_fixaccountorders'=>array('method'=>'ediws_autotask_timer_fixaccountorders', 'threadNum' => 1),// EDI实销实结明细补拉任务
             'invoice_queryinvoicelist'       => array('method' => 'invoice_autotask_timer_queryinvoicelist', 'threadNum' => 1),
             'platform_timeliness' => array('method' => 'ome_autotask_timer_platform_timeliness', 'threadNum' => 1),// 平台时效检查
+            'lanjiereshipapprove' => array('method'    => 'ome_autotask_timer_lanjiereshipapprove','threadNum' => 1),
         );
         return array_merge($_tasks, $task);
     }
@@ -427,6 +429,10 @@ class taskmgr_whitelist
                 'threadNum' => 1,
                 'rule' => '0 */20 * * * *',
             ),
+            'lanjiereshipapprovedomainqueue' => array(
+                'threadNum' => 1,
+                'rule' => '0 */10 * * * *', // 每10分钟：拦截入库已录入物流号未审核 → 报警+自动审核
+            ),
         );
         return array_merge($_tasks, $task);
     }
@@ -486,11 +492,13 @@ class taskmgr_whitelist
                 'method' => 'ome_autotask_rpc_wmsrpc', 
                 'threadNum' => 5,
                 'name' => 'WMS发货通知队列',
+                'timeout' =>  60,
             ),
             'orderrpc'    => array(
                 'method' => 'ome_autotask_rpc_orderrpc', 
                 'threadNum' => 5,
                 'name' => '收单队列',
+                'timeout' =>  60,
             ),
         );
         return array_merge($_tasks, $task);

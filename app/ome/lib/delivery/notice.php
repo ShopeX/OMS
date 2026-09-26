@@ -136,6 +136,113 @@ class ome_delivery_notice{
         return array(true);
     }
 
+    /**
+     * @description OME发货单签收后同步给WAP/WMS
+     * @access public
+     * @param int $delivery_id 发货单ID
+     * @param int|string $sign_time 签收时间
+     * @return array
+     */
+    static public function sign($delivery_id, $sign_time = 0, $sync = false)
+    {
+        $deliveryObj = app::get('ome')->model('delivery');
+        $operationLogObj = app::get('ome')->model('operation_log');
+        $packageObj = app::get('ome')->model('delivery_package');
+
+        $delivery = $deliveryObj->dump(array('delivery_id' => $delivery_id), 'delivery_id,delivery_bn,branch_id,logi_id,sign_time,wms_channel_id');
+        if (empty($delivery['delivery_id'])) {
+            return array('rsp' => 'fail', 'msg' => '发货单不存在');
+        }
+
+        $signTime = $sign_time;
+        $signTime = is_numeric($signTime) ? intval($signTime) : strtotime($signTime);
+        if ($signTime <= 0) {
+            $signTime = intval($delivery['sign_time']);
+        }
+        if ($signTime <= 0) {
+            $signTime = time();
+        }
+
+        $data = array(
+            'delivery_bn' => $delivery['delivery_bn'],
+            'sign_time' => date('Y-m-d H:i:s', $signTime),
+            'memo' => '订单签收后独立同步签收',
+            'status' => 'sign',
+        );
+
+        if ($delivery['wms_channel_id']) {
+            $package = $packageObj->dump(array('delivery_id' => $delivery_id), 'package_bn');
+            if (!empty($package['package_bn'])) {
+                $data['oid'] = $package['package_bn'];
+            }
+        }
+
+        $result = kernel::single('ome_event_receive_delivery')->update($data);
+        $msg = $result['rsp'] == 'succ' ? '订单签收后独立同步下游签收成功' : '订单签收后独立同步下游签收失败：' . ($result['err_msg'] ? $result['err_msg'] : $result['msg']);
+        $operationLogObj->write_log('delivery_modify@ome', $delivery_id, $msg);
+
+        return $result;
+    }
+
+    /**
+     * @description 平台确认收货后，将签收状态同步给门店（WAP）
+     * @access public
+     * @param int $delivery_id 发货单ID
+     * @param int|string $sign_time 签收时间
+     * @param bool $sync 是否同步请求
+     * @return array
+     */
+    static public function syncSignDownstream($delivery_id, $sign_time = 0, $sync = false)
+    {
+        $dlyObj = app::get('ome')->model('delivery');
+        $operationLogObj = app::get('ome')->model('operation_log');
+
+        $delivery = $dlyObj->dump(
+            array('delivery_id' => $delivery_id),
+            'delivery_id,delivery_bn,branch_id,logi_id,sign_time,wms_channel_id,status,sync_status'
+        );
+        if (empty($delivery['delivery_id'])) {
+            return array('rsp' => 'fail', 'msg' => '发货单不存在');
+        }
+        if ($delivery['status'] !== 'succ') {
+            return array('rsp' => 'fail', 'msg' => '发货单未发货，无法同步签收');
+        }
+
+        $store_id = kernel::single('ome_branch')->isStoreBranch($delivery['branch_id']);
+        if (!$store_id) {
+            return array('rsp' => 'succ', 'msg' => '非门店仓发货单，无需同步下游签收');
+        }
+
+        $signTime = $sign_time;
+        $signTime = is_numeric($signTime) ? intval($signTime) : strtotime($signTime);
+        if ($signTime <= 0) {
+            $signTime = intval($delivery['sign_time']);
+        }
+        if ($signTime <= 0) {
+            $signTime = time();
+        }
+
+        $data = array(
+            'outer_delivery_id' => $delivery_id,
+            'outer_delivery_bn' => $delivery['delivery_bn'],
+            'sign_time'         => date('Y-m-d H:i:s', $signTime),
+            'memo'              => '平台确认收货同步签收给门店',
+            'sync_status'       => $delivery['sync_status'],
+            'wms_channel_id'    => $delivery['wms_channel_id'],
+        );
+
+        $dlyTriggerLib = kernel::single('ome_event_trigger_delivery');
+        $rs            = $dlyTriggerLib->sign('store', $store_id, $data, $sync);
+
+        $isSucc = in_array(($rs['rsp'] ?? ''), array('succ', 'success'), true);
+        $msg = $isSucc
+            ? '平台确认收货同步门店签收成功'
+            : '平台确认收货同步门店签收失败：' . ($rs['msg'] ? $rs['msg'] : '');
+        $operationLogObj->write_log('delivery_modify@ome', $delivery_id, $msg);
+
+        return $rs;
+    }
+
     static public function isAutoNoticeWms($delivery_id) {
         $orderId = app::get('ome')->model('delivery')->getOrderIdByDeliveryId($delivery_id);
 
@@ -254,7 +361,7 @@ class ome_delivery_notice{
         $dlyTriggerLib = kernel::single('ome_event_trigger_delivery');
         $rs = $dlyTriggerLib->cancel($channel_type,$channel_id,$data,$sync);
 
-        if ($rs['rsp'] == 'succ'){
+        if ($rs['rsp'] == 'succ' || $rs['rsp'] == 'success'){
             if(!$store_id && $rs['data']){
                 !is_array($rs['data']) && $rs['data'] = @json_decode($rs['data'],true);
                 if ($rs['data']['response']['message'] == 'Picked'){
@@ -280,54 +387,100 @@ class ome_delivery_notice{
             self::_sendDeliveryCancelWmsNotify($dly_id);
 
         } else {
+
             kernel::single('console_delivery')->update_sync_status($dly_id, 'cancel_fail', $rs['msg']);
+            self::_sendDeliveryCancelWmsFailNotify($dly_id, $rs);
+            
         }
         return $rs;
     }
 
     static public function cut($params){
-        $dly = app::get('ome')->model('delivery')->db_dump(['logi_no'=>$params['logi_no']]);
-        if(empty($dly)) {
-            return ['rsp'=>'fail', 'msg'=>'未找到物流单：'.$params['logi_no'].'的发货单'];
+        $delivery_id = isset($params['delivery_id']) ? (int) $params['delivery_id'] : 0;
+        $logi_no = isset($params['logi_no']) ? trim((string) $params['logi_no']) : '';
+        if ($delivery_id <= 0 || $logi_no === '') {
+            return ['rsp' => 'fail', 'msg' => '缺少发货单ID或物流单号'];
+        }
+        $dly = app::get('ome')->model('delivery')->db_dump(['delivery_id' => $delivery_id]);
+        if (empty($dly)) {
+            return ['rsp' => 'fail', 'msg' => '未找到发货单：' . $delivery_id];
         }
         $dly_id = $dly['delivery_id'];
         $data = array();
         $data['outer_delivery_id'] = $dly_id;
         $data['outer_delivery_bn'] = $dly['delivery_bn'];
         $data['branch_id'] = $dly['branch_id'];
+        $data['logi_no'] = $logi_no;
 
         $dlyObj = app::get('ome')->model("delivery");
         $branchObj = app::get('ome')->model("branch");
 
         //根据仓库识别是否门店仓还是电商仓
         $store_id = kernel::single('ome_branch')->isStoreBranch($dly['branch_id']);
-        if($store_id){
-            return ['rsp'=>'succ', 'msg'=>'门店无拦截'];
-        }else{
-            //$branch =$branchObj->getList('branch_bn',array('branch_id'=>$params['branch_id']),0,1);
-            $branch =$branchObj->db->selectrow("SELECT branch_bn FROM sdb_ome_branch WHERE branch_id=".$dly['branch_id']);
-            $data['branch_bn'] =$branch['branch_bn'];
-            $dlyExtObj = app::get('console')->model('delivery_extension');
-            $dlyExtInfo = $dlyExtObj->dump(array('delivery_bn'=>$dly['delivery_bn']),'original_delivery_bn');
-            $data['original_delivery_bn'] = $dlyExtInfo['original_delivery_bn'];
-            $branchLib = kernel::single('ome_branch');
-            $wms_id = $branchLib->getWmsIdById($dly['branch_id']);
-            $channel_type = 'wms';
-            $channel_id = $wms_id;
+        if ($store_id) {
+            return self::_cutFinish(['rsp' => 'succ', 'msg' => '门店无拦截'], $dly_id, $logi_no);
         }
+
+        //$branch =$branchObj->getList('branch_bn',array('branch_id'=>$params['branch_id']),0,1);
+        $branch = $branchObj->db->selectrow("SELECT branch_bn FROM sdb_ome_branch WHERE branch_id=" . $dly['branch_id']);
+        $data['branch_bn'] = $branch['branch_bn'];
+        $dlyExtObj = app::get('console')->model('delivery_extension');
+        $dlyExtInfo = $dlyExtObj->dump(array('delivery_bn' => $dly['delivery_bn']), 'original_delivery_bn');
+        $data['original_delivery_bn'] = $dlyExtInfo['original_delivery_bn'];
+        $branchLib = kernel::single('ome_branch');
+        $wms_id = $branchLib->getWmsIdById($dly['branch_id']);
+        $channel_type = 'wms';
+        $channel_id = $wms_id;
 
         $wmsMdl = app::get('wmsmgr')->model('wms');
         $wms = $wmsMdl->dump($wms_id, 'channel_id,crop_config,node_type');
         if (isset($wms['crop_config']['saleorder_callback']) && $wms['crop_config']['saleorder_callback'] == '0') {
-            return ['rsp'=>'succ', 'msg'=>'配送拦截未开启'];
+            return self::_cutFinish(['rsp' => 'succ', 'msg' => '配送拦截未开启'], $dly_id, $logi_no);
         }
 
         $dlyTriggerLib = kernel::single('ome_event_trigger_delivery');
-        $rs = $dlyTriggerLib->cut($channel_type,$channel_id,$data);
-        if($rs['msg'] == '接口方法不存在' || strpos($rs['msg'], '重复请求') !== false) {
+        $rs = $dlyTriggerLib->cut($channel_type, $channel_id, $data);
+        if ($rs['msg'] == '接口方法不存在' || strpos($rs['msg'], '重复请求') !== false) {
             $rs['rsp'] = 'succ';
         }
+        return self::_cutFinish($rs, $dly_id, $logi_no);
+    }
+
+    /**
+     * 截单结果回写包裹运单 intercept_status
+     *
+     * @param array  $rs
+     * @param int    $delivery_id
+     * @param string $logi_no
+     * @return array
+     */
+    private static function _cutFinish($rs, $delivery_id, $logi_no)
+    {
+        $intercept_status = (isset($rs['rsp']) && ($rs['rsp'] == 'succ' || $rs['rsp'] == 'success'))
+            ? 'launch_succ'
+            : 'launch_fail';
+        self::_updateDeliveryBillInterceptStatus($delivery_id, $logi_no, $intercept_status);
         return $rs;
+    }
+
+    /**
+     * @param int    $delivery_id
+     * @param string $logi_no
+     * @param string $intercept_status
+     */
+    private static function _updateDeliveryBillInterceptStatus($delivery_id, $logi_no, $intercept_status)
+    {
+        $delivery_id = (int) $delivery_id;
+        $logi_no = trim((string) $logi_no);
+        if ($delivery_id <= 0 || $logi_no === '' || $intercept_status === '') {
+            return;
+        }
+        $billModel = app::get('ome')->model('delivery_bill');
+        $filter = array('delivery_id' => $delivery_id, 'logi_no' => $logi_no);
+        if (!$billModel->count($filter)) {
+            return;
+        }
+        $billModel->update(array('intercept_status' => $intercept_status), $filter);
     }
 
     static public function pause($params, $sync = false){
@@ -816,6 +969,70 @@ class ome_delivery_notice{
             $monitorNotifyObj = kernel::single('monitor_event_notify');
             $monitorNotifyObj->addNotify('delivery_cancel_wms', $notifyParams, true);
             
+        } catch (Exception $e) {
+            // 记录错误日志，但不影响主流程
+        }
+    }
+
+    /**
+     * 发货单撤销 WMS 失败预警（与 _sendDeliveryCancelWmsNotify 字段对齐，便于监控模板复用）
+     *
+     * @param int   $delivery_id 发货单ID
+     * @param array $rs          cancel 接口返回，建议含 rsp、msg
+     * @return void
+     */
+    static public function _sendDeliveryCancelWmsFailNotify($delivery_id, $rs) {
+        try {
+            $fail_msg = isset($rs['msg']) ? (string) $rs['msg'] : '';
+            $fail_rsp = isset($rs['rsp']) ? (string) $rs['rsp'] : '';
+
+            $deliveryObj = app::get('ome')->model('delivery');
+            $deliveryInfo = $deliveryObj->db_dump(['delivery_id' => $delivery_id], 'delivery_bn,branch_id,shop_type,shop_id');
+
+            if (empty($deliveryInfo)) {
+                return;
+            }
+
+            $branchObj = app::get('ome')->model('branch');
+            $branchInfo = $branchObj->db_dump(['branch_id' => $deliveryInfo['branch_id']], 'name,email');
+
+            $deliveryItemsObj = app::get('ome')->model('delivery_items');
+            $items = $deliveryItemsObj->getList('bn,product_name,number', ['delivery_id' => $delivery_id]);
+
+            $detail_list = '';
+            if (!empty($items)) {
+                foreach ($items as $index => $item) {
+                    $seq = $index + 1;
+                    $product_bn = $item['bn'];
+                    $product_name = $item['product_name'];
+                    $quantity = $item['number'];
+                    $detail_list .= "\r\n<br/>序号：<font color=\"warning\">{$seq}</font>，物料号：<font color=\"warning\">{$product_bn}</font>，物料名称：<font color=\"warning\">{$product_name}</font>，数量：<font color=\"warning\">{$quantity}</font>";
+                }
+            } else {
+                $detail_list = "\r\n<br/>（无发货明细）";
+            }
+
+            $shopObj = app::get('ome')->model('shop');
+            $shopInfo = $shopObj->dump($deliveryInfo['shop_id'], 'name');
+            $shop_name = $shopInfo['name'] ?? '';
+
+            $notifyParams = [
+                'delivery_bn' => $deliveryInfo['delivery_bn'],
+                'shop_type' => ome_shop_type::shop_name($deliveryInfo['shop_type']),
+                'shop_name' => $shop_name,
+                'detail_list' => $detail_list,
+                'branch_name' => $branchInfo['name'] ?? '',
+                'fail_msg' => $fail_msg,
+                'fail_rsp' => $fail_rsp,
+            ];
+
+            if (!empty($branchInfo['email'])) {
+                $notifyParams['receiver'] = explode(',', $branchInfo['email']);
+            }
+
+            $monitorNotifyObj = kernel::single('monitor_event_notify');
+            $monitorNotifyObj->addNotify('delivery_cancel_wms_fail', $notifyParams, true);
+
         } catch (Exception $e) {
             // 记录错误日志，但不影响主流程
         }

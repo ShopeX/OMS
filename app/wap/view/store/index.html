@@ -114,15 +114,18 @@
             <ul class="block-grid-13 no-bullet">
                 <li><a><span>今日订单总数</span><span><{$count_data.today_num}></span></a></li>
                 <li class="wire"><em></em></li>
-                <li><a><span>待发货</span><span><{$count_data.wap_order_index}></span></a></li>
+                <li><{if $stat_links.wap_order_index}><a href="<{$stat_links.wap_order_index}>"><{else}><a><{/if}><span>待发货</span><span><{$count_data.wap_order_index}></span></a></li>
                 <li class="wire"><em></em></li>
-                <li><a><span>待退货</span><span><{$count_data.wap_aftersale_returnproduct}></span></a></li>
+                <li><{if $stat_links.wap_aftersale_returnproduct}><a href="<{$stat_links.wap_aftersale_returnproduct}>"><{else}><a><{/if}><span>待退货</span><span><{$count_data.wap_aftersale_returnproduct}></span></a></li>
             </ul>
         </div>
         <div class="stat_line">
             <ul class="block-grid-13 no-bullet">
                 <li><a><span>今日发货取消</span><span><{$count_data.delivery_cancel_num}></span></a></li>
+                <li class="wire"><em></em></li>
                 <li><a><span>今日退货取消</span><span><{$count_data.aftersale_cancel_num}></span></a></li>
+                <li class="wire"><em></em></li>
+                <li><a><span>今日派单量</span><span><{$count_data.today_dispatch_num|default:0}></span></a></li>
             </ul>
         </div>
   </div>

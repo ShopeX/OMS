@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class ome_order_func
 {
 
@@ -1153,5 +1137,66 @@ HTML;
 
         return false;
 
+    }
+
+    /**
+     * order_objects.pay_status 枚举文案（与 dbschema order_objects.pay_status 一致）
+     *
+     * @return array<string,string>
+     */
+    public static function orderObjectPayStatusMap()
+    {
+        static $map = null;
+        if ($map !== null) {
+            return $map;
+        }
+        $model = app::get('ome')->model('order_objects');
+        $type = isset($model->schema['columns']['pay_status']['type'])
+            ? $model->schema['columns']['pay_status']['type'] : array();
+        $map = is_array($type) ? $type : array();
+        return $map;
+    }
+
+    /**
+     * @param string|int $payStatus
+     * @return string
+     */
+    public static function orderObjectPayStatusLabel($payStatus)
+    {
+        $ps = (string) $payStatus;
+        if ($ps === '0') {
+            return '-';
+        }
+        $map = self::orderObjectPayStatusMap();
+        if (isset($map[$ps])) {
+            return (string) $map[$ps];
+        }
+        if (isset($map[(int) $ps])) {
+            return (string) $map[(int) $ps];
+        }
+        return $ps === '' ? '-' : $ps;
+    }
+
+    /**
+     * 订单明细 item_list 各 obj 补充 pay_status_label（子订单支付状态展示用）
+     *
+     * @param array $itemList getItemList($order_id, true) 结构
+     * @return array
+     */
+    public static function attachOrderObjectPayStatusLabels(array $itemList)
+    {
+        foreach ($itemList as $objType => $objects) {
+            if (!is_array($objects)) {
+                continue;
+            }
+            foreach ($objects as $objId => $objInfo) {
+                if (!is_array($objInfo)) {
+                    continue;
+                }
+                $ps = isset($objInfo['pay_status']) ? $objInfo['pay_status'] : '0';
+                $itemList[$objType][$objId]['pay_status_label'] = self::orderObjectPayStatusLabel($ps);
+            }
+        }
+        return $itemList;
     }
 }

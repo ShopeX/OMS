@@ -1,0 +1,67 @@
+<div class="tableform">
+    <h3>SAP HTTP 推送配置</h3>
+    <p class="notice">
+        OMS → SAP 使用 Basic Auth。测试 Base：<code><{$cfg.base_url}></code>，账号 OMS。
+        门店销售/退货上传：<code>/UpdStoreSalesInfo</code>；
+        确认收货：<code>/ConfirmGoodsReceipt</code>。
+        财务凭证地址待 SAP 提供；未配置时对应推送保持「待上传」。
+    </p>
+    <form method="post" action="index.php?app=goldentra&ctl=admin_push_http&act=index">
+        <table width="100%" cellspacing="0" cellpadding="0" class="gridlist">
+            <tbody>
+            <tr>
+                <th width="180">启用推送</th>
+                <td>
+                    <label><input type="checkbox" name="enabled" value="1" <{if $cfg.enabled=='1'}>checked<{/if}> /> 启用 HTTP 推送</label>
+                </td>
+            </tr>
+            <tr>
+                <th>Base URL</th>
+                <td><input type="text" name="base_url" value="<{$cfg.base_url}>" style="width:480px;" /></td>
+            </tr>
+            <tr>
+                <th>用户名</th>
+                <td><input type="text" name="username" value="<{$cfg.username}>" style="width:240px;" autocomplete="off" /></td>
+            </tr>
+            <tr>
+                <th>密码</th>
+                <td>
+                    <input type="password" name="password" value="<{$cfg.password_display}>" style="width:240px;" autocomplete="new-password" />
+                    <span class="notice">留空或 ****** 表示不修改</span>
+                </td>
+            </tr>
+            <tr>
+                <th>超时(秒)</th>
+                <td><input type="text" name="timeout" value="<{$cfg.timeout}>" style="width:80px;" /></td>
+            </tr>
+            <tr>
+                <th>来源系统 ZLY</th>
+                <td><input type="text" name="zly" value="<{$cfg.zly}>" style="width:80px;" />
+                    <span class="notice">有赞约定一般为 7</span>
+                </td>
+            </tr>
+            <tr>
+                <th>目标系统 DESTSYSTEM</th>
+                <td><input type="text" name="destsystem" value="<{$cfg.destsystem}>" style="width:120px;" /></td>
+            </tr>
+            <tr>
+                <th>门店销售/退货上传</th>
+                <td><input type="text" name="url_sd003" value="<{$cfg.url_sd003}>" style="width:480px;" />
+                    <span class="notice">相对 Base 或完整 http(s) URL</span>
+                </td>
+            </tr>
+            <tr>
+                <th>确认收货</th>
+                <td><input type="text" name="url_sd004" value="<{$cfg.url_sd004}>" style="width:480px;" /></td>
+            </tr>
+            <tr>
+                <th>财务凭证</th>
+                <td><input type="text" name="url_fi001" value="<{$cfg.url_fi001}>" style="width:480px;" /></td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="table-action">
+            <button class="btn" type="submit"><span><span>保存</span></span></button>
+        </div>
+    </form>
+</div>

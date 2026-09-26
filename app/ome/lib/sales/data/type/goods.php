@@ -1,27 +1,7 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 class ome_sales_data_type_goods{
 
-    /**
-     * doTrans
-     * @param mixed $obj obj
-     * @return mixed 返回值
-     */
     public function doTrans($obj){
         $deliveryObj = app::get('ome')->model('delivery');
         $delivery_items_detailObj = app::get('ome')->model('delivery_items_detail');
@@ -68,6 +48,7 @@ class ome_sales_data_type_goods{
                 'oid' => $obj['oid'],
                 'order_item_id' => $item['item_id'],
                 'platform_amount' => $platformAmount,
+                'refund_money' => isset($obj['refund_money']) ? $obj['refund_money'] : 0,
                 'addon' => json_encode(['shop_goods_id' => $item['shop_goods_id'], 'shop_product_id' => $item['shop_product_id']],JSON_UNESCAPED_UNICODE),
             );
 

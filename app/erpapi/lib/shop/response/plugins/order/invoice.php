@@ -114,6 +114,12 @@ class erpapi_shop_response_plugins_order_invoice extends erpapi_shop_response_pl
         if($invoice['tax_no'] || $invoice['tax_title']) {
             if ($platform->_tgOrder) {
                 $oldInvoice = app::get('ome')->model('order_invoice')->db_dump(array('order_id'=>$platform->_tgOrder['order_id']));
+                
+                // 读取归档订单发票记录
+                if(empty($oldInvoice)){
+                    $oldInvoice = app::get('archive')->model('order_invoice')->db_dump(array('order_id'=>$platform->_tgOrder['order_id']));
+                }
+                
                 if($oldInvoice) {
                     foreach ($invoice as $k => $val) {
                         if (isset($oldInvoice[$k]) && $val != $oldInvoice[$k]) {

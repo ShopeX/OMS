@@ -162,6 +162,7 @@ class erpapi_shop_response_process_reshipping
             'order_id' => $order_id,
             'order_bn' => $order['order_bn'] ?: '',
             'platform_order_bn' => $order['platform_order_bn'] ?: $sdf['alipay_no'],
+            'original_bn' => $order['order_bn'] ?: ($order['platform_order_bn'] ?: $sdf['alipay_no']),
             'source' => 'matrix',
             'buyer_address' => $sdf['buyer_address'] ?: '',
             'buyer_province' => $sdf['buyer_province'] ?: '',
@@ -185,6 +186,7 @@ class erpapi_shop_response_process_reshipping
             'refuse_reason' => $sdf['refuse_reason'] ?: '',
             'refuse_reason_id' => $sdf['refuse_reason_id'] ?: '',
             'extend_field' => $sdf['extend_field'] ?: '',
+            'source'=>'matrix',
         );
 
         // 时间信息

@@ -181,6 +181,8 @@ class logisticsmanager_template_lodop{
                     ),
                 );
 
+                $table['header'] = $this->extendTableFields($type, $table['header']);
+
                 $qrcode = array(
                     array('label' => '自定义', 'value' => 'empty'),
                 );
@@ -200,6 +202,16 @@ class logisticsmanager_template_lodop{
                     array('label' => '顺丰-中转分拣二维码', 'value' => 'sf_twoDimensionCode_qrcode'),
                     array('label' => '物流单号(得物)', 'value' => 'dewu_qrcode'),
                     array('label' => '自定义', 'value' => 'empty'),
+                );
+                $table = array(
+                    'name' => 'delivery_items',
+                    'header' => array(
+                        array('label' => '商品名称', 'value' => 'name'),
+                        array('label' => '数量', 'value' => 'number'),
+                        array('label' => '货号', 'value' => 'bn'),
+                        array('label' => '规格', 'value' => 'spec_info'),
+                    ),
+                    'footer' => array(),
                 );
                 $logo = array(
                     array('label' => '顺丰', 'value' => 'sf.jpg'),
@@ -263,6 +275,34 @@ class logisticsmanager_template_lodop{
         );
 
         return $data;
+    }
+
+    /**
+     * 通过 service 扩展 LODOP 明细表字段，未注册 service 时保持标品字段不变。
+     */
+    protected function extendTableFields($templateType, array $fields)
+    {
+        $fieldValues = array_column($fields, 'value');
+        foreach (kernel::servicelist('logisticsmanager.service.lodop.table.fields') as $service) {
+            if (!method_exists($service, 'getTableFields')) {
+                continue;
+            }
+
+            $extendFields = $service->getTableFields($templateType);
+            if (!is_array($extendFields)) {
+                continue;
+            }
+
+            foreach ($extendFields as $field) {
+                if (empty($field['label']) || empty($field['value']) || in_array($field['value'], $fieldValues, true)) {
+                    continue;
+                }
+                $fields[] = $field;
+                $fieldValues[] = $field['value'];
+            }
+        }
+
+        return $fields;
     }
 
     //格式转化template_data
@@ -765,5 +805,194 @@ class logisticsmanager_template_lodop{
     </footer>';
         $xml .= '</page>';
         echo $xml;
+    }
+
+    public function getToWxshipinTpl()
+    {
+        $tplId = intval($_GET['tpl_id']);
+        $tpl = app::get('logisticsmanager')->model('express_template')->db_dump(
+            array('template_id' => $tplId),
+            'template_id,template_type,control_type,template_width,template_height,template_data,status'
+        );
+        header('Content-Type: text/html; charset=utf-8');
+        if (!$tpl || $tpl['template_type'] != 'electron' || $tpl['control_type'] != 'lodop' || $tpl['status'] != 'true') {
+            echo '<div>自定义区模板不存在或已失效</div>';
+            return;
+        }
+
+        $plugins = @unserialize($tpl['template_data']);
+        $unsupported = app::get('logisticsmanager')->model('express_template')->getWxshipinUnsupportedPlugins($tpl['template_data']);
+        if (!is_array($plugins) || $unsupported) {
+            echo '<div>自定义区模板包含暂不支持的控件</div>';
+            return;
+        }
+
+        $canvasWidth = floatval($tpl['template_width']) / 25.4 * $this->dpi;
+        $canvasHeight = floatval($tpl['template_height']) / 25.4 * $this->dpi;
+        if ($canvasWidth <= 0 || $canvasHeight <= 0) {
+            echo '<div>自定义区模板尺寸无效</div>';
+            return;
+        }
+
+        // width/height are the final custom-area pixels; custom_width/custom_height
+        // remain accepted for old generated URLs during the transition.
+        $templateWidth = isset($_GET['width']) ? floatval($_GET['width']) : (isset($_GET['custom_width']) ? floatval($_GET['custom_width']) : 0);
+        $templateHeight = isset($_GET['height']) ? floatval($_GET['height']) : (isset($_GET['custom_height']) ? floatval($_GET['custom_height']) : 0);
+        $templateWidth = $templateWidth > 0 ? round($templateWidth, 2) : round(floatval($tpl['template_width']) * 10, 2);
+        $templateHeight = $templateHeight > 0 ? round($templateHeight, 2) : round(floatval($tpl['template_height']) * 10, 2);
+
+        uasort($plugins, array($this, 'order_by_y'));
+        $html = array();
+        foreach ($plugins as $plugin) {
+            if (!is_array($plugin) || empty($plugin['plugin'])) {
+                continue;
+            }
+            $html[] = $this->wxshipinPluginHtml($plugin, $canvasWidth, $canvasHeight, $templateWidth);
+        }
+
+        echo '<style>'
+            . '.wxshipin-custom-area{position:relative;overflow:hidden;color:#000;background:#fff;box-sizing:border-box;}'
+            . '.wxshipin-item{position:absolute;box-sizing:border-box;overflow:hidden;}'
+            . '.wxshipin-text{display:flex;word-break:break-all;white-space:pre-wrap;}'
+            . '.wxshipin-item img{display:block;width:100%;height:100%;object-fit:contain;}'
+            . '.wxshipin-item bar-code,.wxshipin-item qr-code{display:block;width:100%;height:100%;}'
+            . '.wxshipin-table{width:100%;border-collapse:collapse;table-layout:fixed;}'
+            . '.wxshipin-table th,.wxshipin-table td{border:1px solid #000;padding:1px;word-break:break-all;}'
+            . '</style><div class="wxshipin-custom-area" style="width:' . $templateWidth . 'px;height:' . $templateHeight . 'px;">'
+            . implode('', $html)
+            . '</div>';
+    }
+
+    private function wxshipinPluginHtml($plugin, $canvasWidth, $canvasHeight, $templateWidth)
+    {
+        $style = $this->wxshipinPositionStyle($plugin, $canvasWidth, $canvasHeight);
+        $fontStyle = $this->wxshipinFontStyle($plugin, $canvasWidth, $templateWidth);
+        $field = isset($plugin['type']['value']) ? $plugin['type']['value'] : '';
+        switch ($plugin['plugin']) {
+            case 'sp-input':
+                $mustacheField = $field == 'shop_name' ? 'shopName' : $field;
+                $content = ($mustacheField && $mustacheField != 'empty') ? '{{' . $mustacheField . '}}' : '';
+                return '<div class="wxshipin-item wxshipin-text" style="' . $style . $fontStyle . $this->wxshipinFlexStyle($plugin) . '">' . $content . '</div>';
+            case 'sp-label':
+                return '<div class="wxshipin-item wxshipin-text" style="' . $style . $fontStyle . $this->wxshipinFlexStyle($plugin) . '">' . $this->wxshipinEscape(isset($plugin['edit']) ? $plugin['edit'] : '') . '</div>';
+            case 'sp-image':
+                $src = isset($plugin['src']) ? $plugin['src'] : '';
+                if ($src && strpos($src, 'http://') !== 0 && strpos($src, 'https://') !== 0) {
+                    $src = kernel::base_url(1) . $src;
+                }
+                return '<div class="wxshipin-item" style="' . $style . '"><img src="' . $this->wxshipinEscape($src) . '" alt=""></div>';
+            case 'sp-barcode':
+                $content = ($field && $field != 'custom' && $field != 'empty') ? '{{productBarcode}}' : (isset($plugin['code']) ? $plugin['code'] : '');
+                $config = '{&quot;displayValue&quot;:' . (isset($plugin['text']) && $plugin['text'] == 'false' ? 'false' : 'true') . ',&quot;format&quot;:&quot;auto&quot;}';
+                return '<div class="wxshipin-item" style="' . $style . '"><bar-code content="' . $this->wxshipinEscape($content) . '" config="' . $config . '"></bar-code></div>';
+            case 'sp-qrcode':
+                $content = ($field && $field != 'empty' && $field != 'custom') ? '{{productQRcode}}' : (isset($plugin['code']) ? $plugin['code'] : '');
+                return '<div class="wxshipin-item" style="' . $style . '"><qr-code content="' . $this->wxshipinEscape($content) . '"></qr-code></div>';
+            case 'sp-table':
+                return $this->wxshipinTableHtml($plugin, $style, $fontStyle);
+        }
+        return '';
+    }
+
+    private function wxshipinTableHtml($plugin, $style, $fontStyle)
+    {
+        $fieldMap = array(
+            'name' => 'name',
+            'number' => 'count',
+            'bn' => 'code',
+            'spec_info' => 'description',
+        );
+        if ($this->isWxshipinMaterialList($plugin)) {
+            $parts = array();
+            $materialFieldHtml = array(
+                'name' => '{{name}}',
+                'number' => '{{count}}件',
+                'bn' => '【{{code}}】',
+            );
+            foreach ((array)$plugin['tableHeader'] as $header) {
+                $parts[] = $materialFieldHtml[$header['type']['value']];
+            }
+            return '<div class="wxshipin-item" style="' . $style . $fontStyle . '"><div>{{#productInfo}}'
+                . '<div>' . implode(' ', $parts) . '</div>'
+                . '{{/productInfo}}</div></div>';
+        }
+
+        $head = $body = '';
+        foreach ((array)(isset($plugin['tableHeader']) ? $plugin['tableHeader'] : array()) as $header) {
+            $label = !empty($header['name']) ? $header['name'] : (isset($header['type']['label']) ? $header['type']['label'] : '');
+            $width = isset($header['width']) ? floatval($header['width']) : 0;
+            $head .= '<th style="width:' . $width . '%">' . $this->wxshipinEscape($label) . '</th>';
+            $fieldKey = isset($header['type']['value']) ? $header['type']['value'] : '';
+            $field = isset($fieldMap[$fieldKey]) ? $fieldMap[$fieldKey] : '';
+            if (!$field) {
+                continue;
+            }
+            $body .= '<td>{{' . $field . '}}</td>';
+        }
+        return '<div class="wxshipin-item" style="' . $style . $fontStyle . '"><table class="wxshipin-table"><thead><tr>'
+            . $head . '</tr></thead><tbody>{{#productInfo}}<tr>' . $body . '</tr>{{/productInfo}}</tbody></table></div>';
+    }
+
+    private function isWxshipinMaterialList($plugin)
+    {
+        $headers = array_values((array)(isset($plugin['tableHeader']) ? $plugin['tableHeader'] : array()));
+        if (count($headers) != 3) {
+            return false;
+        }
+
+        $supported = array(
+            'name' => '物料名称',
+            'number' => '数量',
+            'bn' => '物料编码',
+        );
+        $fields = array();
+        foreach ($headers as $header) {
+            $label = !empty($header['name']) ? $header['name'] : (isset($header['type']['label']) ? $header['type']['label'] : '');
+            $field = isset($header['type']['value']) ? $header['type']['value'] : '';
+            if (!isset($supported[$field]) || $label != $supported[$field] || in_array($field, $fields)) {
+                return false;
+            }
+            $fields[] = $field;
+        }
+        return count($fields) == count($supported);
+    }
+
+    private function wxshipinPositionStyle($plugin, $canvasWidth, $canvasHeight)
+    {
+        return 'left:' . $this->wxshipinPercent(isset($plugin['x']) ? $plugin['x'] : 0, $canvasWidth)
+            . '%;top:' . $this->wxshipinPercent(isset($plugin['y']) ? $plugin['y'] : 0, $canvasHeight)
+            . '%;width:' . $this->wxshipinPercent(isset($plugin['width']) ? $plugin['width'] : 0, $canvasWidth)
+            . '%;height:' . $this->wxshipinPercent(isset($plugin['height']) ? $plugin['height'] : 0, $canvasHeight)
+            . '%;z-index:' . intval(isset($plugin['z']) ? $plugin['z'] : 0) . ';';
+    }
+
+    private function wxshipinFontStyle($plugin, $canvasWidth, $templateWidth)
+    {
+        $fontSize = floatval(isset($plugin['fontSize']) ? $plugin['fontSize'] : 0);
+        $fontSize = $fontSize > 0 ? $fontSize : 12;
+        $fontFamily = !empty($plugin['fontFamily']) ? $plugin['fontFamily'] : 'Arial,sans-serif';
+        $color = !empty($plugin['color']) ? $plugin['color'] : '#000';
+        $weight = intval(isset($plugin['bold']) ? $plugin['bold'] : 0) >= 600 ? 'bold' : 'normal';
+        $fontSize = round($fontSize * $templateWidth / $canvasWidth, 2);
+        return 'font-size:' . $fontSize . 'px;font-family:' . $this->wxshipinEscape($fontFamily)
+            . ';color:' . $this->wxshipinEscape($color) . ';font-weight:' . $weight . ';';
+    }
+
+    private function wxshipinFlexStyle($plugin)
+    {
+        $arrangement = isset($plugin['Arrangement']) ? (array)$plugin['Arrangement'] : array();
+        $justify = !empty($arrangement['lm']) ? 'center' : (!empty($arrangement['lr']) ? 'flex-end' : 'flex-start');
+        $align = !empty($arrangement['vm']) ? 'center' : (!empty($arrangement['vb']) ? 'flex-end' : 'flex-start');
+        return 'justify-content:' . $justify . ';align-items:' . $align . ';';
+    }
+
+    private function wxshipinPercent($value, $total)
+    {
+        return round(floatval($value) * 100 / $total, 4);
+    }
+
+    private function wxshipinEscape($value)
+    {
+        return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
     }
 }

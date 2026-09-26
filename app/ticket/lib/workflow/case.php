@@ -155,6 +155,7 @@ class ticket_workflow_case extends ticket_abstract
         // create record
         $recordData = [
             'case_id' => $data['id'],
+            'case_bn' => $caseInfo['case_bn'],
             'node_id' => $caseInfo['current_node_id'], // 审批流节点ID
             'original_bn' => $caseInfo['original_bn'], // 来源单号(订单号)
             'assignee_type' => 'user',
@@ -235,6 +236,7 @@ class ticket_workflow_case extends ticket_abstract
             // create end record
             $recordData = [
                 'case_id' => $data['id'],
+                'case_bn' => $caseInfo['case_bn'],
                 'node_id' => $updateData['current_node_id'], // 审批流节点ID
                 'action' => $updateData['current_node_type'], // 审批流节点类型
                 'original_bn' => $caseInfo['original_bn'], // 来源单号(订单号)
@@ -347,8 +349,8 @@ class ticket_workflow_case extends ticket_abstract
             'items_context' => json_encode($data['gift_items']),
             'status' => 'pending',
             'template_id' => $templateInfo['id'],
-            'submitter_id' => $op_id,
-            'submitter_name' => $op_name,
+            'bpm_submitter' => $op_id,
+            'bpm_approver' => $op_name,
             'current_node_id' => $firstNode['id'],
             'start_time' => time(),
             'assignee_type' => $firstNode['assignee_type'],
@@ -459,7 +461,7 @@ class ticket_workflow_case extends ticket_abstract
         $user = kernel::single('desktop_user');
         $current_user_id = $user->get_id();
         
-        if($caseInfo['submitter_id'] != $current_user_id){
+        if($caseInfo['assignee_id'] != $current_user_id){
             $error_msg = '只有提交人才能取消审批';
             return $this->error($error_msg);
         }
@@ -526,7 +528,7 @@ class ticket_workflow_case extends ticket_abstract
         }
         
         // check case status
-        if($caseInfo['status'] != 'rejected' && $caseInfo['status'] != 'cancelled'){
+        if(!in_array($caseInfo['status'], ['rejected', 'cancelled', 'source_cancelled'])){
             $error_msg = '审批实例状态不允许重新提交';
             return $this->error($error_msg);
         }
@@ -630,7 +632,7 @@ class ticket_workflow_case extends ticket_abstract
                 $case['title'],
                 $case['scene_type'],
                 $case['status'],
-                $case['submitter_name'],
+                $case['bpm_approver'],
                 date('Y-m-d H:i:s', strtotime($case['at_time'])),
                 empty($record) ? '' : $record['assignee_name'],
                 empty($record) ? '' : date('Y-m-d H:i:s', $record['process_time']),
@@ -920,4 +922,65 @@ class ticket_workflow_case extends ticket_abstract
         return $caceInfo;
     }
     
+    /**
+     * 原单据已取消时，更新关联审批单状态
+     *
+     * @param int $order_id
+     * @param string $remark
+     * @return array
+     */
+    public function updateCaseBySourceCancelled($order_id, $remark = '')
+    {
+        $caseMdl = app::get('ticket')->model('workflow_case');
+        $recordMdl = app::get('ticket')->model('workflow_record');
+        $operLogMdl = app::get('ome')->model('operation_log');
+        $statusList = $caseMdl->getStatusList();
+        
+        $caseList = $caseMdl->getList('*', array(
+            'original_id' => $order_id,
+            'bill_type' => 'order',
+            'status' => array('pending', 'processing'),
+        ), 0, -1);
+        
+        if (empty($caseList)) {
+            return $this->succ('无待更新的审批单');
+        }
+        
+        $defaultRemark = $remark ?: '原单据已取消';
+        foreach ($caseList as $caseInfo) {
+            $updateData = array(
+                'status' => 'source_cancelled',
+                'end_time' => time(),
+                'assignee_type' => '',
+                'assignee_id' => 0,
+                'assignee_name' => '',
+            );
+            
+            $rs = $caseMdl->update($updateData, array('id' => $caseInfo['id']));
+            if (is_bool($rs)) {
+                return $this->error('更新审批实例状态失败');
+            }
+            
+            $recordData = array(
+                'case_id' => $caseInfo['id'],
+                'case_bn' => $caseInfo['case_bn'],
+                'node_id' => $caseInfo['current_node_id'],
+                'original_bn' => $caseInfo['original_bn'],
+                'assignee_type' => 'system',
+                'assignee_id' => 0,
+                'assignee_name' => '系统',
+                'action' => $caseInfo['current_node_type'],
+                'status' => 'source_cancelled',
+                'remark' => $defaultRemark,
+                'process_time' => time(),
+            );
+            $recordMdl->insert($recordData);
+            
+            $logType = ($caseInfo['scene_type'] == 'approve_orders') ? 'order_workflow_case_bufa@wms' : 'order_workflow_case@wms';
+            $log_msg = '审批单状态更新为：'. $statusList['source_cancelled'] .'；原因：'. $defaultRemark;
+            $operLogMdl->write_log($logType, $caseInfo['id'], $log_msg);
+        }
+        
+        return $this->succ('审批单状态更新成功');
+    }
 }

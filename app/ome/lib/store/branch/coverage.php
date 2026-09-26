@@ -82,6 +82,8 @@ class ome_store_branch_coverage
         if (count($areaParts) < 3) {
             return false;
         }
+
+        $shipRegionId = intval($areaParts[2]);
         
         // 第二个部分包含省市区街道信息，用/分割
         $regionNames = explode('/', $areaParts[1]);
@@ -113,6 +115,11 @@ class ome_store_branch_coverage
             
             // 取每组路径的最后一个ID（末级区域ID）
             $lastRegionId = end($pathIds);
+
+            // 收货地址末级 region_id 落在覆盖路径中（如 2589,2590,2595 覆盖成华区 2595）
+            if ($shipRegionId > 0 && in_array($shipRegionId, $pathIds, true)) {
+                return true;
+            }
             
             // 查询该区域的等级和名称
             $regionModel = app::get('eccommon')->model('regions');

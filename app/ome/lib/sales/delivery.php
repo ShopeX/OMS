@@ -31,7 +31,8 @@ class ome_sales_delivery {
         $sales_delivery = $saledeliverysObj->db_dump(array('delivery_id'=>$delivery_id),'delivery_id');
         if ($sales_delivery) return true;
 
-        $rs = $this->insertRow($delivery_id);
+        $refundMoneyTotal = $this->sumRefundMoneyFromSalesData($sales_data);
+        $rs = $this->insertRow($delivery_id, $refundMoneyTotal);
         if (!$rs) {
             $msg = '发货销售单插入失败!';
             return false;
@@ -90,6 +91,7 @@ class ome_sales_delivery {
             $orderItemSum[$item['order_item_id']]['settlement_amount'] += $item['settlement_amount'];
             $orderItemSum[$item['order_item_id']]['actually_amount'] += $item['actually_amount'];
             $orderItemSum[$item['order_item_id']]['platform_pay_amount'] += $item['platform_pay_amount'];
+            $orderItemSum[$item['order_item_id']]['refund_money'] += isset($item['refund_money']) ? (float) $item['refund_money'] : 0;
         }
 
         $shop_detail = $this->get_shop_detail($deliveryDetail['shop_id']);
@@ -140,6 +142,7 @@ class ome_sales_delivery {
                 $tmpSaleDeliveryData['settlement_amount'] = $tmpItemSalePrice['settlement_amount'];
                 $tmpSaleDeliveryData['platform_pay_amount'] = $tmpItemSalePrice['platform_pay_amount'];
                 $tmpSaleDeliveryData['actually_amount'] = $tmpItemSalePrice['actually_amount'];
+                $tmpSaleDeliveryData['refund_money'] = isset($tmpItemSalePrice['refund_money']) ? sprintf('%.2f', (float) $tmpItemSalePrice['refund_money']) : '0.00';
                
             } else {
             
@@ -154,6 +157,9 @@ class ome_sales_delivery {
                     $tmpSaleDeliveryData['settlement_amount'] = sprintf('%.2f',$tmpItemSalePrice['settlement_amount'] - $orderItemSum[$val['order_item_id']]['settlement_amount']);
                     $tmpSaleDeliveryData['platform_pay_amount'] = sprintf('%.2f',$tmpItemSalePrice['platform_pay_amount'] - $orderItemSum[$val['order_item_id']]['platform_pay_amount']);
                     $tmpSaleDeliveryData['actually_amount'] = sprintf('%.2f',$tmpItemSalePrice['actually_amount'] - $orderItemSum[$val['order_item_id']]['actually_amount']);
+                    $rmSum = isset($orderItemSum[$val['order_item_id']]['refund_money']) ? $orderItemSum[$val['order_item_id']]['refund_money'] : 0;
+                    $rmLine = isset($tmpItemSalePrice['refund_money']) ? (float) $tmpItemSalePrice['refund_money'] : 0.0;
+                    $tmpSaleDeliveryData['refund_money'] = sprintf('%.2f', $rmLine - $rmSum);
                 } else {
                     $tmpSaleDeliveryData['pmt_price'] = sprintf('%.2f', $tmpItemSalePrice['pmt_price']*$val['number']/$tmpItemSalePrice['nums']);
                     $tmpSaleDeliveryData['sale_price'] = sprintf('%.2f',$tmpItemSalePrice['sale_price']*$val['number']/$tmpItemSalePrice['nums']);
@@ -164,6 +170,8 @@ class ome_sales_delivery {
                     $tmpSaleDeliveryData['settlement_amount'] = sprintf('%.2f', $tmpItemSalePrice['settlement_amount']*$val['number']/$tmpItemSalePrice['nums']);
                     $tmpSaleDeliveryData['platform_pay_amount'] = sprintf('%.2f', $tmpItemSalePrice['platform_pay_amount']*$val['number']/$tmpItemSalePrice['nums']);
                     $tmpSaleDeliveryData['actually_amount'] = sprintf('%.2f', $tmpItemSalePrice['actually_amount']*$val['number']/$tmpItemSalePrice['nums']);
+                    $rmBase = isset($tmpItemSalePrice['refund_money']) ? (float) $tmpItemSalePrice['refund_money'] : 0.0;
+                    $tmpSaleDeliveryData['refund_money'] = sprintf('%.2f', $rmBase * $val['number'] / $tmpItemSalePrice['nums']);
                 }
             }
           
@@ -235,10 +243,36 @@ class ome_sales_delivery {
     }
 
 
-    public function insertRow($delivery_id) {
+    /**
+     * 汇总 ome_sales_data::generate 产生的各明细 refund_money（与 sales 主单 refund_money 口径一致）
+     *
+     * @param array $salesData get_sales_data 返回值
+     * @return string
+     */
+    public function sumRefundMoneyFromSalesData($salesData)
+    {
+        if (empty($salesData) || !is_array($salesData)) {
+            return '0.00';
+        }
+        $sum = 0.0;
+        foreach ($salesData as $data) {
+            if (empty($data['sales_items']) || !is_array($data['sales_items'])) {
+                continue;
+            }
+            foreach ($data['sales_items'] as $item) {
+                $sum += isset($item['refund_money']) ? (float) $item['refund_money'] : 0.0;
+            }
+        }
+        return sprintf('%.2f', $sum);
+    }
+
+    public function insertRow($delivery_id, $refund_money = null) {
 
         $deliveryObj = app::get('ome')->model('delivery');
         $dly = $deliveryObj->dump($delivery_id, '*');
+        if ($refund_money === null || $refund_money === '') {
+            $refund_money = '0.00';
+        }
         $sdf = array(
             'delivery_id'   => $dly['delivery_id'],
             'delivery_bn'   => $dly['delivery_bn'],
@@ -266,6 +300,7 @@ class ome_sales_delivery {
             'shop_type'     => $dly['shop_type'],
             'sale_time'     =>  time(),
             'org_id'        =>  $dly['org_id'],
+            'refund_money'  => $refund_money,
         );
         $saledeliverysObj = app::get('sales')->model('delivery_order');
         return $saledeliverysObj->insert($sdf);

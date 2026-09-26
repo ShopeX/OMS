@@ -35,12 +35,13 @@ class erpapi_wms_response_reship extends erpapi_wms_response_abstract
         $params['reship_bn'] = trim($params['reship_bn']);
         $this->_dealWMSParams($params);
         $extendProps = $params['extendProps'] ? is_string($params['extendProps']) ? json_decode($params['extendProps'], true) : $params['extendProps'] : [];
-
+        
+        // 退货拦截单
+        //@todo：美团闪购、淘宝闪购会推送拦截单，这里做拦截单处理；
         if($extendProps['is_sxts'] == '1'){
-
             return $this->lanjieReship($params);
-
         }
+        
         $data = array(
           'reship_bn'    => $params['reship_bn'],
           'return_order_id' => $params['return_order_id'],
@@ -270,12 +271,16 @@ class erpapi_wms_response_reship extends erpapi_wms_response_abstract
             'operate_time' => $params['order_confirm_time'] ? $params['order_confirm_time'] : date('Y-m-d H:i:s'),
             'wms_id' => $this->__channelObj->channel['channel_id'],
         );
-        $filter = array('branch_bn'=>$params['branch_bn']);
-        $wmsBranchRelation = app::get('wms')->model('branch_relation')->db_dump(array('wms_id'=>$data['wms_id'],'wms_branch_bn'=>$data['branch_bn'],'is_virtual'=>'0'),'branch_id');
+        // 第三方仓储仓库关联（同 status_update：wmsmgr.branch_relation，非 wms）
+        $filter = array('branch_bn' => $data['branch_bn']);
+        $wmsBranchRelation = app::get('wmsmgr')->model('branch_relation')->db_dump(
+            array('wms_id' => $data['wms_id'], 'wms_branch_bn' => $data['branch_bn']),
+            'sys_branch_bn'
+        );
         if ($wmsBranchRelation) {
-            $filter = array('branch_id'=>$wmsBranchRelation['branch_id']);
+            $filter = array('branch_bn' => $wmsBranchRelation['sys_branch_bn'], 'check_permission' => 'false');
         }
-        $branch = app::get('ome')->model('branch')->db_dump($filter, 'branch_id,name');
+        $branch = app::get('ome')->model('branch')->db_dump($filter, 'branch_id,name,branch_bn');
         if (!$branch) {
             $this->__apilog['result']['msg'] = '仓库不存在';
             return false;
@@ -330,22 +335,65 @@ class erpapi_wms_response_reship extends erpapi_wms_response_abstract
         
         return $params;
     }
-
+    
+    /**
+     * 拦截退货单
+     * @todo：美团闪购、淘宝闪购会推送拦截单，这里做拦截单处理；
+     *
+     * @param $params
+     * @return array|false
+     */
     public function lanjieReship($params) {
         $this->__apilog['title'] = $this->__channelObj->channel['channel_name'] . '拦截退货单';
         $this->__apilog['original_bn'] = $params['reship_bn'];
+        
+        // 物流公司编码
+        $logi_code = '';
+        if(isset($params['logistics_code']) && $params['logistics_code']){
+            $logi_code = $params['logistics_code'];
+        }elseif(isset($params['logistics']) && $params['logistics']){
+            $logi_code = $params['logistics'];
+        }elseif(isset($params['logi_code']) && $params['logi_code']){
+            $logi_code = $params['logi_code'];
+        }
+        
+        // 物流运单号
+        $logi_no = '';
+        if(isset($params['express_code']) && $params['express_code']){
+            $logi_no = $params['express_code'];
+        }elseif(isset($params['logi_no']) && $params['logi_no']){
+            $logi_no = $params['logi_no'];
+        }
+        
+        // 仓库编码
+        $branch_bn = '';
+        if(isset($params['warehouse']) && $params['warehouse']){
+            $branch_bn = $params['warehouse'];
+        }elseif(isset($params['branch_bn']) && $params['branch_bn']){
+            $branch_bn = $params['branch_bn'];
+        }
+        
+        // check
+        if(empty($branch_bn)){
+            $this->__apilog['result']['msg'] = '仓库编码没有传值，请检查!';
+            return false;
+        }
+        
+        // data
         $data = array(
             'reship_bn' => trim($params['reship_bn']),
-            'logi_code' => $params['logistics_code'],
+            'logi_code' => $logi_code,
             'logi_name' => $params['logistics_name'],
-            'logi_no' => $params['express_code'],
-            'branch_bn' => $params['warehouse'],
+            'logi_no' => $logi_no,
+            'branch_bn' => $branch_bn,
             'memo' => $params['remark'],
             'operate_time' => $params['order_confirm_time'] ? $params['order_confirm_time'] : date('Y-m-d H:i:s'),
             'wms_id' => $this->__channelObj->channel['channel_id'],
-            'act'   =>'lanjiereship',
+            'act' => 'lanjiereship',
         );
+        
         $params['status'] = $params['status'] ? $params['status'] : $params['io_status'];
+        
         switch($params['status']){
           case 'FINISH': $data['status']='FINISH';break;
           case 'PARTIN': $data['status']='PARTIN';break;
@@ -356,18 +404,25 @@ class erpapi_wms_response_reship extends erpapi_wms_response_abstract
           default:
             $data['status'] = $params['status'];break;
         }
-        $filter = array('branch_bn'=>$params['branch_bn']);
+        
+        // 第三方仓储仓库关联关系统
+        $filter = array('branch_bn'=>$data['branch_bn']);
         $wmsBranchRelation = app::get('wmsmgr')->model('branch_relation')->db_dump(array('wms_id'=>$data['wms_id'],'wms_branch_bn'=>$data['branch_bn']),'sys_branch_bn');
         if ($wmsBranchRelation) {
             $filter = array('branch_bn'=>$wmsBranchRelation['sys_branch_bn'],'check_permission'=>'false');
         }
+        
+        // 仓库信息
         $branch = app::get('ome')->model('branch')->db_dump($filter, 'branch_id,name,branch_bn');
         if (!$branch) {
             $this->__apilog['result']['msg'] = '仓库不存在';
             return false;
         }
         $data['branch'] = $branch;
+        
+        // item
         $items = isset($params['item']) ? json_decode($params['item'], true) : array();
+        
         $reship_items = array();
         $refund_ids = [];
         if ($items) {
@@ -375,6 +430,8 @@ class erpapi_wms_response_reship extends erpapi_wms_response_abstract
                 if(empty($val['subSourceOrderCode'])) {
                     continue;
                 }
+                
+                // extendProps
                 $extendProps = $val['extendProps'];
                 $extendProps = is_string($extendProps) ? json_decode($extendProps, true) : $extendProps;
                 if($extendProps){
@@ -382,18 +439,21 @@ class erpapi_wms_response_reship extends erpapi_wms_response_abstract
                         $refund_ids[] = $extendProps['tradeReturnId'];
                     }
                 }
+                
+                // items
                 $reship_items[] = array(
-                    'order_bn' => $val['sourceOrderCode'],
-                    'oid' => $val['subSourceOrderCode'],
-                    'bn' => $val['product_bn'],
-                    'num' => $val['normal_num'],
-                    'ccnum' => $val['defective_num'],
+                    'order_bn' => $val['sourceOrderCode'], // 订单号
+                    'oid' => $val['subSourceOrderCode'], // 子订单号
+                    'bn' => $val['product_bn'], // 基础物料编码
+                    'num' => $val['normal_num'], // 良品数量
+                    'ccnum' => $val['defective_num'], // 残次数量
                     'extendProps'=>$val['extendProps'],
                 );
             }
         }
+        
         $data['items'] = $reship_items;
-
+        
         return $data;
     }
 }

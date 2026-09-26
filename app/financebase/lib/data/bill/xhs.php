@@ -115,7 +115,11 @@ class financebase_data_bill_xhs extends financebase_abstract_bill
 
     public function getBillCategory($params)
     {
-        // 小红书账单固定类别
+        // 资金结算单（货款明细）与旧版国补导入字段不同，委托结算单类走收支分类规则
+        if (isset($params['financial_no']) || (isset($params['trade_type']) && (isset($params['income_amount']) || isset($params['outcome_amount'])))) {
+            return kernel::single('financebase_data_bill_xhs_settlement')->getBillCategory($params);
+        }
+
         return '小红书账单';
     }
 

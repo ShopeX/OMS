@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class wms_operation_log{
 
     /**
@@ -91,6 +75,9 @@ class wms_operation_log{
             
             // 赠品审批实例
             'order_workflow_case' => array('name'=>'赠品审批', 'type'=>'workflow_case@ticket'),
+            
+            // 零元补发单审批实例
+            'order_workflow_case_bufa' => array('name'=>'零元补发单审批', 'type'=>'workflow_case@ticket'),
             
             // SET商品
             'set_materialprice_create' => array('name'=>'创建加价购', 'type'=>'basic_material_price@miele'),

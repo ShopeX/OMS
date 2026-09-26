@@ -182,6 +182,10 @@ class invoice_event_receive_invoice extends invoice_event_response
 
     private function _updateItem($data)
     {
+        // 发票本地存储（发票是否存储到本地服务器）
+        $is_save_file = app::get('ome')->getConf('ome.invoice.local.storage');
+        
+        // data
         $updateInfo = [
             'invoice_status' => $data['invoice_status']
         ];
@@ -197,19 +201,38 @@ class invoice_event_receive_invoice extends invoice_event_response
                 $updateInfo['invoice_no']   = $data['invoice_no'];
                 $updateInfo['url']          = $data['url'] ?? '';
                 $updateInfo['create_time']  = $data['invoice_date'];
+                $pdfUrl = array_key_exists('pdf_url', $data) ? $data['pdf_url'] : $data['url'];
                 // 文件上传
-                if ($data['url']) {
-                    $file_id = $this->_uploadInvoiceFile($data['url']);
+                if ($pdfUrl) {
+                    // 发票是否存储到本地服务器
+                    if($is_save_file == 'on'){
+                        $file_id = $this->_uploadInvoiceFile($pdfUrl);
+                    }else{
+                        $file_id = 0;
+                    }
+                    
                     $updateInfo['file_id'] = $file_id;
-                    $file_path['pdf_url'] = $data['url'];
+                    $file_path['pdf_url'] = $pdfUrl;
                 }
                 if($data['xml_url']){
-                    $xml_file_id = $this->_uploadInvoiceFile($data['xml_url']);
+                    // 发票是否存储到本地服务器
+                    if($is_save_file == 'on'){
+                        $xml_file_id = $this->_uploadInvoiceFile($data['xml_url']);
+                    }else{
+                        $xml_file_id = 0;
+                    }
+                    
                     $updateInfo['xml_file_id'] = $xml_file_id;
                     $file_path['xml_url'] = $data['xml_url'];
                 }
                 if($data['ofd_url']){
-                    $ofd_file_id = $this->_uploadInvoiceFile($data['ofd_url']);
+                    // 发票是否存储到本地服务器
+                    if($is_save_file == 'on'){
+                        $ofd_file_id = $this->_uploadInvoiceFile($data['ofd_url']);
+                    }else{
+                        $ofd_file_id = 0;
+                    }
+                    
                     $updateInfo['ofd_file_id'] = $ofd_file_id;
                     $file_path['ofd_url'] = $data['ofd_url'];
                 }
@@ -344,11 +367,27 @@ class invoice_event_receive_invoice extends invoice_event_response
                 array ('taobao', '360buy', 'wesite', 'd1mwestore', 'pekon', 'luban'))) {
             return;
         }
-
+        
+        // params
+        $api_method = 'upload_invoice'; // 发票上传方法
+        $sub_obj_bn = (isset($this->_invoice['order_bn']) ? (string)$this->_invoice['order_bn'] : ''); // 这里保存订单号
+        $errMsg = '';
+        
+        // 触发上传发票
         $apiFailMdl = app::get('erpapi')->model('api_fail');
-        $apiFailMdl->saveTriggerRequest($data['invoice_no'], 'upload_invoice');
+        $insert_id = $apiFailMdl->saveTriggerRequest($data['invoice_no'], 'upload_invoice', $api_method, $errMsg, $sub_obj_bn);
+        
+        // log
         app::get('ome')->model('operation_log')->write_log('einvoice_upload@invoice', $this->_invoice['id'],
             $data['sync'] == '3' ? '开蓝成功准备上传' : '冲红成功准备上传');
+        
+        // 开蓝成功，实时回传平台，不用再等待一个小时
+        if($insert_id){
+            $apilogInfo = $apiFailMdl->dump(array('id'=>$insert_id), '*');
+            if($apilogInfo){
+                $apiFailMdl->retry($apilogInfo);
+            }
+        }
     }
 
     //根据红票号获取红票信息创建红票pdf文件

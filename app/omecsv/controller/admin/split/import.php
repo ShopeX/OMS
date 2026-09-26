@@ -100,6 +100,7 @@ class omecsv_ctl_admin_split_import extends desktop_controller
     {
         try {
             $errmsg = [];
+            $postData['opInfo'] = kernel::single('ome_func')->getDesktopUser();
             $params = [
                 'data' => $listData,
                 'title' => $listData[0],
@@ -149,6 +150,7 @@ class omecsv_ctl_admin_split_import extends desktop_controller
         $queueData['queue_name'] = sprintf("%s_导入文件_分派任务", $filename);
         $queueData['queue_data']['file_type'] = $file_type;
         $queueData['queue_data']['type'] = $_POST['type'];
+        $queueData['queue_data']['opInfo'] = kernel::single('ome_func')->getDesktopUser();
         $queueData['parent_id'] = '0';
         $queueData['remote_url'] = $remote_url;
         $queueData['queue_data'] = json_encode(array_merge($queueData['queue_data'], (array)$_POST['queue_data']));

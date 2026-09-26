@@ -257,10 +257,7 @@
             <div class="form-layout-fields">
 
                 <{foreach from=$customcols  item=customcol}>
-                <div class="form-field">
-                    <span class="form-field-label"><{$customcol.col_name}>：</span>
-                    <input class="form-input"  type="text" name="props[<{$customcol.col_key}>]" value=""  />
-                </div>
+                <{include file="admin/material/basic/customcol_field.html" app="material" customcol=$customcol}>
                 <{/foreach}>
                 
             </div>

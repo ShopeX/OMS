@@ -66,6 +66,14 @@ class material_finder_extend_filter_basic_material{
                     'filtertype' => 'textarea',
                     'filterdefault' => true,
                 ),
+                'material_label' => array(
+                    'type' => kernel::single('ome_bill_label')->getBillLabelFilterOptions('basic_material'),
+                    'label' => '物料标记',
+                    'width' => 120,
+                    'filtertype' => 'normal',
+                    'filterdefault' => true,
+                    'editable' => false,
+                ),
             )
         );
         

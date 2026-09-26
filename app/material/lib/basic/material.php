@@ -33,7 +33,6 @@ class material_basic_material{
      * @param string $row 物料是否可见字段
      * @return string
      */
-
     function countAnother($filter=null){
         $other_table_name = app::get('ome')->model('branch_product')->table_name(1);
         $count = ' COUNT(*) ';
@@ -219,7 +218,7 @@ class material_basic_material{
 
     /**
      * 根据货号获取基础物料信息及扩展信息
-     * 
+     *
      * @param string  $material_bn
      * @return string
      */
@@ -264,7 +263,7 @@ class material_basic_material{
     
     /**
      * 传入多个bns获取barcode
-     * 
+     *
      * @param  Array $bm_ids
      * @return Array
      */
@@ -332,7 +331,7 @@ class material_basic_material{
 
     /**
      * 根据基础物料ID数组识别是否是全渠道货品
-     * 
+     *
      * @param Int $bm_ids 基础物料ID数组
      * @return Array
      */
@@ -347,7 +346,7 @@ class material_basic_material{
 
     /**
      * 根据条形码获取基础物料bm_id
-     * 
+     *
      * @param string $code
      * @return intval
      */
@@ -364,7 +363,7 @@ class material_basic_material{
     }
 
     /**
-     * 
+     *
      * 根据成品基础物料ID获取半成品物料的明细信息
      * @param Int $bm_id
      * @return Array
@@ -450,5 +449,25 @@ class material_basic_material{
         $materialList = array_column($materialList, null, 'bm_id');
         
         return $materialList;
+    }
+
+    /**
+     * 获取导入操作人（入队时调用，队列执行时无登录态）
+     */
+    public function getImportOpInfo()
+    {
+        return kernel::single('ome_func')->getDesktopUser();
+    }
+
+    /**
+     * 写入基础物料导入操作日志
+     */
+    public function writeImportLog($operation, $objId, $memo, $opInfo = null)
+    {
+        $operationLogObj = app::get('ome')->model('operation_log');
+        if (!empty($opInfo['op_id'])) {
+            return $operationLogObj->write_log($operation, $objId, $memo, null, $opInfo);
+        }
+        return $operationLogObj->write_log($operation, $objId, $memo);
     }
 }

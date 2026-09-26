@@ -35,18 +35,23 @@ class erpapi_logistics_matrix_wxshipin_request_template extends erpapi_logistics
         if ($rs['rsp'] == 'succ' && $rs['data']) {
             $resData      = json_decode($rs['data'], 1);
             $rs['data']   = [];
-            $templateList = $resData['config'];
-            foreach ($templateList as $code => $v) {
-                $rs['data'][] = array(
-                    'tpl_index'       => 'standard' . '-' . $v['single']['type'] . '_' . $code,
-                    'cp_code'         => $code,
-                    'out_template_id' => $v['single']['type'] . '_' . $code,
-                    'template_name'   => $code . $v['single']['desc'] . '(微信视频号)',
-                    'template_type'   => 'wxshipin_standard',
-                    'template_data'   => json_encode([$code => $v]),
-                    'template_width'  => $v['single']['width'],
-                    'template_height' => $v['single']['height'],
-                );
+            $templateList = isset($resData['config']) && is_array($resData['config']) ? $resData['config'] : array();
+            foreach ($templateList as $code => $_detail) {
+                foreach ((array)$_detail as $_type => $v) {
+                    if (!is_array($v) || empty($v['width']) || empty($v['height'])) {
+                        continue;
+                    }
+                    $rs['data'][] = array(
+                        'tpl_index'       => 'standard' . '-' . $_type . '_' . $code,
+                        'cp_code'         => $code,
+                        'out_template_id' => $_type . '_' . $code,
+                        'template_name'   => $code . $v['desc'] . '(微信视频号)',
+                        'template_type'   => 'wxshipin_standard',
+                        'template_data'   => json_encode([$code => $v]),
+                        'template_width'  => $v['width'],
+                        'template_height' => $v['height'],
+                    );
+                }
             }
         } else {
             $rs['data'] = [];
@@ -67,22 +72,22 @@ class erpapi_logistics_matrix_wxshipin_request_template extends erpapi_logistics
         if ($rs['rsp'] == 'succ' && $rs['data']) {
             $resData    = json_decode($rs['data'], 1);
             $rs['data'] = [];
-            $totalList  = $resData['total_template'];
+            $totalList  = isset($resData['total_template']) && is_array($resData['total_template']) ? $resData['total_template'] : array();
             foreach ($totalList as $k => $tList) {
-                $templateList = $tList['template_list'];
+                $templateList = isset($tList['template_list']) && is_array($tList['template_list']) ? $tList['template_list'] : array();
                 foreach ($templateList as $k => $v) {
 
                     $v['delivery_id'] = $tList['delivery_id'];
 
                     $rs['data'][] = array(
-                        'tpl_index'       => 'standard' . '-' . $v['template_id'],
+                        'tpl_index'       => 'user' . '-' . $v['template_id'],
                         'cp_code'         => $tList['delivery_id'],
                         'out_template_id' => $v['template_id'],
                         'template_name'   => $v['template_name'] . '(微信视频号)',
                         'template_type'   => 'wxshipin_user',
                         'template_data'   => json_encode($v),
-                        'template_width'  => '',
-                        'template_height' => '',
+                        'template_width'  => '76', // 接口没有值，给个默认值
+                        'template_height' => '130', // 接口没有值，给个默认值
                         'is_default'      => $v['is_default'],
                     );
                 }

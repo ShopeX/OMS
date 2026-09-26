@@ -1,0 +1,229 @@
+<{capture name="header"}>
+<{css app="ome" src="ome.css"}>
+<{css app="ome" src="style.css"}>
+<{script src="coms/modedialog.js" app="desktop"}>
+<{script src="coms/pager.js" app="desktop"}>
+<{/capture}>
+<style>
+    .notice-inline.error  {background-image:none;margin-left:25px}
+    #fm1 .division td label ,#fm1 .division div label {vertical-align:top;}
+    .propetyList li{display:inline-block;width:40%;padding-bottom:8px;}
+    .areabox{
+        padding:2px;
+    }
+    .mapping-range-tip{
+        color:#c52f24;
+        background:#fff7f6;
+        border:1px solid #f0d0cc;
+        padding:8px 12px;
+        margin:0 0 10px;
+        line-height:1.6;
+    }
+    .mapping-matched-row td{
+        background:#f5f5f5;
+        color:#666;
+    }
+    .mapping-matched-tag{
+        color:#999;
+        font-size:12px;
+        margin-left:6px;
+    }
+    .range-op{
+        color:#c52f24;
+        font-size:12px;
+        padding:0 2px;
+        white-space:nowrap;
+    }
+</style>
+<form method="post" id="fm1" action="index.php?app=goldentra&ctl=admin_mapping&act=save_edit&finder_id=<{$finder_id}>">
+    <div class="tableform">
+       
+        <div class="division">
+            <div class="mapping-range-tip">
+                区间取值说明（克重段 / 主石重段 / 辅石重段 / 标签价段）：填写「下限 ~ 上限」时，匹配范围为 <b>≥下限</b> 且 <b>＜上限</b>（左闭右开）。
+                例：填写 <b>0.8 ~ 1.2</b>，表示 <b>≥0.8</b> 且 <b>＜1.2</b>。
+            </div>
+            <table border="0" cellspacing="0" cellpadding="0" class="gridlist">
+               
+            
+                <tr>
+                    <td align="right" nowrap="nowrap">模号：</td>
+                    <td colspan="13">
+                      <{$mold_detail.mold_code}>&nbsp;&nbsp;&nbsp;&nbsp;<input type="button" name="add_btn" id="add_btn" value="新增克重段">
+                    </td>
+                </tr>
+                <tbody>
+                    <{foreach from=$items_list item=items}>
+
+                    <{if $items.edit_flag==1}>
+                        <tr class="mapping-matched-row">
+                            <td align="right">克重段：</td>
+                            <td><span class="range-op">≥</span><{$items.min_weight}> ~ <{$items.max_weight}><span class="range-op">＜</span><span class="mapping-matched-tag">(已匹配，不可编辑)</span></td>
+                            <td align="right">显示克重：</td>
+                            <td><{$items.weight}></td>
+                            <td align="right" nowrap="nowrap">主石重段：</td>
+                            <td><span class="range-op">≥</span><{$items.min_main}> ~ <{$items.max_main}><span class="range-op">＜</span></td>
+                            <td align="right">显示主石重：</td>
+                            <td><{$items.main_weight}></td>
+                            <td align="right" nowrap="nowrap">辅石重段：</td>
+                            <td><span class="range-op">≥</span><{$items.min_extra}> ~ <{$items.max_extra}><span class="range-op">＜</span></td>
+                            <td align="right">显示辅石重：</td>
+                            <td><{$items.extra_weight}></td>
+                            <td align="right" nowrap="nowrap">标签价段：</td>
+                            <td><span class="range-op">≥</span><{$items.min_tag_price}> ~ <{$items.max_tag_price}><span class="range-op">＜</span></td>
+                            <td align="right">显示标签价：</td>
+                            <td><{$items.tag_price}></td>
+                        </tr>
+                    <{else}>
+                    <input type="hidden" name="item_id[<{$items.item_id}>]" value="<{$items.item_id}>">
+                <tr>
+                    <td align="right">克重段：</td>
+                    <td>
+                        <span class="range-op">≥</span>
+                        <input type="text"  name="min_weight[<{$items.item_id}>]"   size=6 vtype="required&&unsigned" value="<{$items.min_weight}>"/>
+                        ~
+                        <input type="text"  name="max_weight[<{$items.item_id}>]"  size=6 vtype="required&&unsigned" value="<{$items.max_weight}>"/>
+                        <span class="range-op">＜</span>
+                    </td>
+                    <td align="right">显示克重：</td><td><input type="text" name="weight[<{$items.item_id}>]" vtype="required&&unsigned" size=6 value="<{$items.weight}>"/>
+                        <span style="color:red;">*</span></td>
+                      <td align="right" nowrap="nowrap">主石重段：</td>
+                    <td>
+                        <span class="range-op">≥</span>
+                        <input type="text"  name="min_main[<{$items.item_id}>]"  size=10 vtype="required&&unsigned" value="<{$items.min_main}>"/>
+                        ~
+                        <input type="text"  name="max_main[<{$items.item_id}>]"  size=6 vtype="required&&unsigned" value="<{$items.max_main}>"/>
+                        <span class="range-op">＜</span>
+                       <span style="color:red;">*</span>
+                    </td>
+                    <td align="right">显示主石重：</td><td><input type="text" name="main_weight[<{$items.item_id}>]" vtype="required&&unsigned" size=6 value="<{$items.main_weight}>"/>
+                        <span style="color:red;">*</span></td>
+                       <td align="right" nowrap="nowrap">辅石重段：</td>
+                    <td>
+                        <span class="range-op">≥</span>
+                        <input type="text" name="min_extra[<{$items.item_id}>]"  size=6 vtype="required&&unsigned" value="<{$items.min_extra}>"/>
+                        ~
+                        <input type="text" name="max_extra[<{$items.item_id}>]"  size=6 vtype="required&&unsigned" value="<{$items.max_extra}>"/>
+                        <span class="range-op">＜</span>
+                       <span style="color:red;">*</span>
+                    </td>
+                    <td align="right">显示辅石重：</td><td><input type="text" name="extra_weight[<{$items.item_id}>]"  vtype="required&&unsigned" size=6 value="<{$items.extra_weight}>"/>
+                        <span style="color:red;">*</span></td>
+                       <td align="right" nowrap="nowrap">标签价段：</td>
+                    <td>
+                        <span class="range-op">≥</span>
+                        <input type="text" name="min_tag_price[<{$items.item_id}>]" size=6 vtype="required&&unsigned" value="<{$items.min_tag_price}>"/>
+                        ~
+                        <input type="text" name="max_tag_price[<{$items.item_id}>]" size=6 vtype="required&&unsigned" value="<{$items.max_tag_price}>"/>
+                        <span class="range-op">＜</span>
+                       <span style="color:red;">*</span>
+                    </td>
+                    <td align="right">显示标签价：</td><td><input type="text" name="tag_price[<{$items.item_id}>]"  vtype="required&&unsigned" size=6 value="<{$items.tag_price}>"/>
+                        <span style="color:red;">*</span><a href="#" onclick='deleteItems(this,<{$items.item_id}>)'><{img src="bundle/delecate.gif" app="desktop" key="state" class="pointer btn-delete-item"}></a></td>
+                </tr>
+                <{/if}>
+                <{/foreach}>
+               </tbody>
+               
+                <tbody id="spec_body">
+                </tbody>
+               
+            </table>
+            
+
+        </div>
+
+        <div id="cc" class="noprint table-action">
+            <{button type="button" id="model-save-btn" label="保 存"}> &nbsp;
+            <{button type="button" class="btn-secondary" id="return-btn" label="关 闭" onclick="javascript:void(window.close());"}>
+        </div>
+    </div>
+<input type="hidden" name="mapping_id" value="<{$mold_detail.mapping_id}>">
+    <input type="hidden" name="finder_id" value="<{$finder_id}>">
+</form>
+<script>
+
+$('model-save-btn').addEvent('click',function(e){
+
+    var _this = this;
+    var form = this.getParent('form');
+
+    form.store('target', {
+        onRequest: function () {
+            _this.disabled = true;
+        },
+        onComplete: function (jsontext) {
+            try {
+                var json = JSON.decode(jsontext);
+                if (typeof (json.error) != 'undefined') {
+                    _this.disabled = false;
+                    MessageBox.error(json.error);
+                } else {
+                    _this.disabled = true;
+                    opener.finderGroup['<{$env.get.finder_id}>'].refresh.delay(400, opener.finderGroup['<{$env.get.finder_id}>']);
+                    window.close();
+                }
+            } catch (e) {
+            }
+        }
+    });
+
+    form.fireEvent('submit',e);
+});
+  
+
+var getTemp = function(index){
+
+    temp='<td align="right">克重段：</td>';
+    temp+='<td><span class="range-op">≥</span><input type="text"  name="min_weight[]"   size=6 vtype="required&&unsigned" />~<input type="text" name="max_weight[]"  size=6 vtype="required&&unsigned"/><span class="range-op">＜</span></td>';
+    temp+='<td align="right">显示克重：</td><td><input type="text" name="weight[]"  vtype="required&&unsigned" size=6 /><span style="color:red;">*</span></td>';                
+    temp+='<td align="right" nowrap="nowrap">主石重段：</td>'; 
+    temp+='<td><span class="range-op">≥</span><input type="text"  name="min_main[]"  size=10 vtype="required&&unsigned" />~<input type="text" name="max_main[]"  size=6 vtype="required&&unsigned"/><span class="range-op">＜</span><span style="color:red;">*</span></td>';          
+    temp+='<td align="right">显示主石重：</td><td><input type="text" name="main_weight[]"  vtype="required&&unsigned" size=6/><span style="color:red;">*</span></td>';                 
+    temp+='<td align="right" nowrap="nowrap">辅石重段：</td>'; 
+    temp+='<td><span class="range-op">≥</span><input type="text"  name="min_extra[]" size=6 vtype="required&&unsigned" />~<input type="text"  name="max_extra[]"  size=6 vtype="required&&unsigned"/><span class="range-op">＜</span><span style="color:red;">*</span></td>';             
+    temp+='<td align="right">显示辅石重：</td><td><input type="text" name="extra_weight[]" vtype="required&&unsigned" size=6/><span style="color:red;">*</span></td>';              
+    temp+='<td align="right" nowrap="nowrap">标签价段：</td>';
+    temp+='<td><span class="range-op">≥</span><input type="text" name="min_tag_price[]" size=6 vtype="required&&unsigned" />~<input type="text" name="max_tag_price[]" size=6 vtype="required&&unsigned"/><span class="range-op">＜</span><span style="color:red;">*</span></td>';
+    temp+='<td align="right">显示标签价：</td><td><input type="text" name="tag_price[]" vtype="required&&unsigned" size=6/><span style="color:red;">*</span><a href="#" onclick="delStockout(this)"><{img src="bundle/delecate.gif" app="desktop" key="state" class="pointer btn-delete-item"}></a></td>';
+                     
+    return temp;
+};
+
+
+$('add_btn').addEvent('click',function(e){
+
+    
+    var index = uniqueID();
+    var newRow=new Element('tr',{html:getTemp(index)}).inject($('spec_body'));
+});
+
+uniqueID = (function () {
+    var id = 0;
+    return function () {
+        return id++;
+    };
+})();
+
+
+function deleteItems(o,item_id){
+    if (!confirm('删除后无法恢复，确定要删除吗？')){
+        return;
+    }
+
+    new Request({url:'index.php?app=goldentra&ctl=admin_mapping&act=deleteItems&item_id='+item_id,
+        onComplete:function(rs){
+            var json = Json.evaluate(rs);
+            if (typeof(json.error) != 'undefined'){
+                alert('删除失败');
+            }else{
+                alert('删除成功');
+                o.getParent('tr').remove();
+            }
+        }}).send();
+}
+
+delStockout=function(o){
+  o.getParent('tr').remove();
+}
+</script>

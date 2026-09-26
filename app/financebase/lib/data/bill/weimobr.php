@@ -312,6 +312,10 @@ class financebase_data_bill_weimobr extends financebase_abstract_bill
      */
     public function getBillCategory($params)
     {
+        if (isset($params['financial_no']) && (isset($params['income_amount']) || isset($params['outcome_amount']))) {
+            return kernel::single('financebase_data_bill_weimobr_settlement')->getBillCategory($params);
+        }
+
         if (!$this->rules) {
             $this->getRules('weimobr'); // 使用微信支付的规则
         }

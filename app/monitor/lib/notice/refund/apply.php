@@ -2,19 +2,56 @@
 
 class monitor_notice_refund_apply
 { 
+    protected function buildRefundShopParams($order)
+    {
+        $notifyLib = kernel::single('monitor_event_notify');
+        $shopParams = $notifyLib->buildOrderShopParams($order);
+
+        if (!empty($shopParams['shop_type']) && !empty($shopParams['shop_name'])) {
+            return $shopParams;
+        }
+
+        $result = array(
+            'shop_type' => !empty($shopParams['shop_type']) ? $shopParams['shop_type'] : '',
+            'shop_name' => !empty($shopParams['shop_name']) ? $shopParams['shop_name'] : '',
+        );
+
+        if (empty($order['shop_id'])) {
+            return $result;
+        }
+
+        $shopInfo = app::get('ome')->model('shop')->getShopInfo($order['shop_id']);
+        if (empty($result['shop_name']) && !empty($shopInfo['name'])) {
+            $result['shop_name'] = trim((string) $shopInfo['name']);
+        }
+
+        if (empty($result['shop_type'])) {
+            $shopType = !empty($shopInfo['shop_type']) ? (string) $shopInfo['shop_type'] : (isset($order['shop_type']) ? (string) $order['shop_type'] : '');
+            if ($shopType !== '' && class_exists('ome_shop_type')) {
+                $typeLabel = trim((string) ome_shop_type::shop_name($shopType));
+                $result['shop_type'] = $typeLabel !== '' ? $typeLabel : $shopType;
+            } else {
+                $result['shop_type'] = $shopType;
+            }
+        }
+
+        return $result;
+    }
+
     public function erpapi_create($refundApplyId) {
         $refundApplyModel = app::get('ome')->model('refund_apply');
         $refundApply = $refundApplyModel->db_dump($refundApplyId, 'order_id, refund_apply_bn, money,product_data');
         if (!$refundApply) return [false, ['msg' => '退款申请单不存在']];
 
         $orderModel = app::get('ome')->model('orders');
-        $order = $orderModel->db_dump($refundApply['order_id'], 'order_id, order_bn, ship_status');
+        $order = $orderModel->db_dump($refundApply['order_id'], 'order_id, order_bn, ship_status, shop_id, shop_type');
         if (!$order) return [false, ['msg' => '订单不存在']];
-        $notifyData = [
+
+        $notifyData = array_merge(array(
             'order_bn' => $order['order_bn'],
             'refund_apply_bn' => $refundApply['refund_apply_bn'],
-            'refund_fee' => $refundApply['money']
-        ];
+            'refund_fee' => $refundApply['money'],
+        ), $this->buildRefundShopParams($order));
         if ($order['ship_status'] == '1') {
             kernel::single('monitor_event_notify')->addNotify('order_ship_refund_apply', $notifyData);
             return [true, ['msg' => '订单已发货退款发起申请']];
@@ -74,14 +111,18 @@ class monitor_notice_refund_apply
         if (!$refundApply) return [false, ['msg' => '退款申请单不存在']];
 
         $orderModel = app::get('ome')->model('orders');
-        $order = $orderModel->db_dump($refundApply['order_id'], 'order_id, order_bn, ship_status');
+        $order = $orderModel->db_dump($refundApply['order_id'], 'order_id, order_bn, ship_status, shop_id, shop_type');
         if (!$order) return [false, ['msg' => '订单不存在']];
 
-        $notifyData = [
+        $notifyData = array_merge(array(
             'order_bn' => $order['order_bn'],
             'refund_apply_bn' => $refundApply['refund_apply_bn'],
-            'refund_fee' => $refundApply['money']
-        ];
+            'refund_fee' => $refundApply['money'],
+        ), $this->buildRefundShopParams($order));
+        // 已发货、部分退货后仅退款完成，发送 order_ship_refund_finish
+        if (in_array((string) $order['ship_status'], array('1', '3'), true)) {
+            kernel::single('monitor_event_notify')->addNotify('order_ship_refund_finish', $notifyData);
+        }
 
         // 获取订单关联的发货单
         $deliveryOrderModel = app::get('ome')->model('delivery_order');

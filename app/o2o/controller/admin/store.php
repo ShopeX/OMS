@@ -69,6 +69,11 @@ class o2o_ctl_admin_store extends desktop_controller
                     'href'   => sprintf('%s&act=import', $this->url),
                     'target' => 'dialog::{width:660,height:400,title:\'导入门店\'}',
                 ],
+                [
+                    'label'  => '覆盖区域导入',
+                    'href'   => sprintf('%s&act=importRegion', $this->url),
+                    'target' => 'dialog::{width:660,height:420,title:\'覆盖区域导入\'}',
+                ],
             ],
 
         );
@@ -372,6 +377,63 @@ class o2o_ctl_admin_store extends desktop_controller
         $this->display('admin/system/import.html');
     }
 
+    /**
+     * 覆盖区域导入页面
+     */
+    public function importRegion()
+    {
+        $this->display('admin/system/import_region.html');
+    }
+
+    /**
+     * 执行覆盖区域导入
+     */
+    public function toImportRegion()
+    {
+        $summary = '';
+        list($ok, $message) = kernel::single('o2o_store_coverage')->doImport(
+            (array) ($_FILES['import_file'] ?? array()),
+            $summary
+        );
+
+        if ($ok) {
+            $this->splash('success', null, $message ?: $summary);
+        }
+
+        $this->splash('error', null, $message ?: $summary);
+    }
+
+    /**
+     * 覆盖区域导入模板
+     */
+    public function exportRegionTemplate()
+    {
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename=覆盖区域导入模板-' . date('Ymd') . '.csv');
+        header('Cache-Control:must-revalidate,post-check=0,pre-check=0');
+        header('Expires:0');
+        header('Pragma:public');
+
+        $title = array('*:门店编码', '*:覆盖区域');
+        foreach ($title as $key => $val) {
+            $title[$key] = kernel::single('base_charset')->utf2local($val);
+        }
+        echo '"' . implode('","', $title) . '"';
+
+        $samples = array(
+            array('6101', '安徽-合肥市'),
+            array('6200', '中国'),
+            array('6102', '上海;安徽-合肥市'),
+        );
+        foreach ($samples as $items) {
+            foreach ($items as $key => $val) {
+                $items[$key] = kernel::single('base_charset')->utf2local($val);
+            }
+            echo "\n";
+            echo '"' . implode('","', $items) . '"';
+        }
+    }
+
     public function to_import()
     {
         $this->finder('o2o_mdl_store');
@@ -549,7 +611,7 @@ class o2o_ctl_admin_store extends desktop_controller
     public function displayCtrlStore($store_id)
     {
         $storeMdl = app::get('o2o')->model('store');
-        $store   = $storeMdl->db_dump($store_id, 'store_id,is_ctrl_store,store_bn,is_negative_store,is_o2o');
+        $store   = $storeMdl->db_dump($store_id, 'store_id,is_ctrl_store,store_bn,is_negative_store,is_o2o,accept_order_limit');
         $this->pagedata['store'] = $store;
         $this->display("admin/system/ctrl_store.html");
     }
@@ -565,6 +627,11 @@ class o2o_ctl_admin_store extends desktop_controller
         $is_ctrl_store  = $_POST['is_ctrl_store'];
         $is_negative_store = $_POST['is_negative_store'];
         $is_o2o = $_POST['is_o2o'] ?: '1';
+        $accept_order_limit = isset($_POST['accept_order_limit']) ? trim($_POST['accept_order_limit']) : '0';
+        if ($accept_order_limit === '' || !preg_match('/^\d+$/', $accept_order_limit)) {
+            $this->end(false, '接单量必须为非负整数');
+        }
+        $accept_order_limit = (int) $accept_order_limit;
         
         $storeMdl = app::get('o2o')->model('store');
         $store = $storeMdl->db_dump($store_id);
@@ -596,6 +663,7 @@ class o2o_ctl_admin_store extends desktop_controller
             'is_ctrl_store' => $is_ctrl_store,
             'is_negative_store' => $is_negative_store,
             'is_o2o' => $is_o2o,
+            'accept_order_limit' => $accept_order_limit,
         ];
         
         $rs = $storeMdl->update($updateData, ['store_id' => $store_id]);
@@ -645,10 +713,11 @@ class o2o_ctl_admin_store extends desktop_controller
         $ctrlStoreName = ['1' => '是', '2' => '否'];
         $negativeStoreName = ['1' => '是', '2' => '否'];
         $o2oName = ['1' => '是', '2' => '否'];
-        $msg = sprintf('【%s】管控库存，【%s】允许负库存，【%s】参加O2O', 
+        $msg = sprintf('【%s】管控库存，【%s】允许负库存，【%s】参加O2O，【%s】接单量', 
             $ctrlStoreName[$is_ctrl_store], 
             $negativeStoreName[$is_negative_store],
-            $o2oName[$is_o2o]
+            $o2oName[$is_o2o],
+            $accept_order_limit
         );
         app::get('ome')->model('operation_log')->write_log('store_upsert@o2o', $store['store_id'], $msg);
         
@@ -661,26 +730,47 @@ class o2o_ctl_admin_store extends desktop_controller
      */
     public function batchCtrlStore()
     {
-        // 获取选中的门店ID，参考订单定时审单的实现
-        if($_POST['isSelectedAll'] == '_ALL_') {
-            // 处理全选的情况
+        $storeMdl = app::get('o2o')->model('store');
+        $arrStoreId = array();
+
+        // finder 全选：POST isSelectedAll=_ALL_，需按当前列表筛选条件反查 store_id
+        if (!empty($_POST['isSelectedAll']) && $_POST['isSelectedAll'] == '_ALL_') {
             $baseFilter = array(
                 'store_classify' => 'offline',
-                'status' => 'active'
             );
-            $storeMdl = app::get('o2o')->model('store');
-            $selStore = $storeMdl->getList('store_id', $baseFilter, 0, -1);
-            $arrStoreId = array();
-            foreach($selStore as $val) {
+            $filter = array_merge($baseFilter, $_POST);
+            unset(
+                $filter['isSelectedAll'],
+                $filter['_finder'],
+                $filter['finder_id'],
+                $filter['finder_vid'],
+                $filter['app'],
+                $filter['ctl'],
+                $filter['act'],
+                $filter['_DTYPE_BOOL'],
+                $filter['_DTYPE_NUMBER'],
+                $filter['_DTYPE_TIME'],
+                $filter['offset'],
+                $filter['limit']
+            );
+            $storeMdl->filter_use_like = true;
+            $selStore = $storeMdl->getList('store_id', $filter, 0, -1);
+            foreach ($selStore as $val) {
                 $arrStoreId[] = $val['store_id'];
             }
         } else {
-            $arrStoreId = $_POST['store_id'];
+            $arrStoreId = isset($_POST['store_id']) ? (array) $_POST['store_id'] : array();
         }
-        
+
+        $arrStoreId = array_values(array_filter(array_unique($arrStoreId)));
+        if (empty($arrStoreId)) {
+            echo '请选择要设置的门店';
+            exit;
+        }
+
         $this->pagedata['storeIds'] = $arrStoreId;
         $this->pagedata['selected_count'] = count($arrStoreId);
-        
+
         $this->display("admin/system/batch_ctrl_store.html");
     }
     
@@ -704,6 +794,7 @@ class o2o_ctl_admin_store extends desktop_controller
         $success_count = 0;
         $error_count = 0;
         $error_messages = [];
+        $success_store_ids = [];
         
         foreach ($store_ids as $store_id) {
             $store = $storeMdl->dump($store_id);
@@ -791,9 +882,10 @@ class o2o_ctl_admin_store extends desktop_controller
             }
             
             $success_count++;
+            $success_store_ids[] = $store_id;
         }
         
-        // 记录操作日志 - 简化文案
+        // 记录操作日志 - 每个门店单独一条，避免 obj_id(varchar50) 超长
         $ctrlStoreName = ['1' => '是', '2' => '否'];
         $negativeStoreName = ['1' => '是', '2' => '否'];
         $o2oName = ['1' => '是', '2' => '否'];
@@ -802,8 +894,13 @@ class o2o_ctl_admin_store extends desktop_controller
             $negativeStoreName[$is_negative_store],
             $o2oName[$is_o2o]
         );
-        // 使用o2o模块已定义的操作标识符
-        app::get('ome')->model('operation_log')->write_log('store_upsert@o2o', implode(',', $store_ids), $msg);
+        if (!empty($success_store_ids)) {
+            app::get('ome')->model('operation_log')->batch_write_log(
+                'store_upsert@o2o',
+                array('store_id' => $success_store_ids),
+                $msg
+            );
+        }
         
         if ($success_count > 0 && $error_count == 0) {
             $this->splash('success', null, "成功设置 {$success_count} 个门店");
@@ -840,7 +937,12 @@ class o2o_ctl_admin_store extends desktop_controller
         
         // 检查是否已有覆盖区域设置
         $warehouseMdl = app::get('logisticsmanager')->model('warehouse');
-        $existingWarehouse = $warehouseMdl->dump(array('branch_bn' => $store['store_bn'], 'b_type' => 2), '*');
+        $existingWarehouse = kernel::single('o2o_store_coverage')->findWarehouseForStore($store);
+        if (!empty($existingWarehouse['id'])) {
+            $existingWarehouse = $warehouseMdl->dump(array('id' => $existingWarehouse['id']), '*');
+        } else {
+            $existingWarehouse = null;
+        }
         
         $warehouse = array('region_ids' => '', 'region_names' => '');
         if ($existingWarehouse) {
@@ -979,13 +1081,18 @@ class o2o_ctl_admin_store extends desktop_controller
             $addressName = '中国';
         }
 
+        $storeBn = trim((string) ($_POST['store_bn'] ?? ''));
+        if ($storeBn === '') {
+            $storeBn = $branch['branch_bn'];
+        }
+
         if ($id) {
             $update_data = array(
                 'branch_id'              => $_POST['branch_id'],
-                'warehouse_name'         => 'STORE_' . ($_POST['store_bn'] ?: $branch['branch_bn']),
+                'warehouse_name'         => 'STORE_' . $storeBn,
                 'region_ids'             => implode(';', $pRegionId),
                 'region_names'           => $addressName,
-                'branch_bn'              => $branch['branch_bn'],
+                'branch_bn'              => $storeBn,
                 'one_level_region_names' => $oneAddressName,
                 'b_type'                 => $b_type,
             );
@@ -998,7 +1105,7 @@ class o2o_ctl_admin_store extends desktop_controller
 
             // 允许覆盖范围重合，不再校验重合
 
-            $autoWarehouseName = 'STORE_' . ($_POST['store_bn'] ?: $branch['branch_bn']);
+            $autoWarehouseName = 'STORE_' . $storeBn;
             $warehouse = $warehouseObj->dump(array('warehouse_name' => $autoWarehouseName, 'b_type' => $b_type), 'id');
             if ($warehouse) {
                 $this->end(false, '区域仓名称:' . $autoWarehouseName . '已存在');
@@ -1006,7 +1113,7 @@ class o2o_ctl_admin_store extends desktop_controller
 
             $insert_data = array(
                 'branch_id'              => $_POST['branch_id'],
-                'branch_bn'              => $branch['branch_bn'],
+                'branch_bn'              => $storeBn,
                 'warehouse_name'         => $autoWarehouseName,
                 'region_ids'             => implode(';', $pRegionId),
                 'region_names'           => $addressName,

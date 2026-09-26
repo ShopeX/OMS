@@ -1,22 +1,7 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/**
  * 定义售后退货单常量
- *
+ * 
  * @author wangbiao@shopex.cn
  * @version 0.1
  */
@@ -56,24 +41,19 @@ class ome_reship_const
     
     // 退回物流单号重复
     const __RETURN_LOGI_DUP = 0x00001000;
-  
-    //是否是新退换货单
-    /**
-     * isNewExchange
-     * @param mixed $flagType flagType
-     * @return mixed 返回值
-     */
 
+    // 实付相等自动审批未通过（应退与订单明细实付不一致，需人工审核）
+    const __PAID_EQUAL_AUTO_BLOCK = 0x00002000;
+    
+    // 京东引凤标识（仅用于 reship/return_product 的 flag_type，不打 bill_label）
+    const __YINFENG = 0x00200000;
+    
+    //是否是新退换货单
     public function isNewExchange($flagType)
     {
         return $flagType & self::__NEW_EXCHANGE_REPAIR ? true : false;
     }
 
-    /**
-     * 获取Html
-     * @param mixed $flag_type flag_type
-     * @return mixed 返回结果
-     */
     public function getHtml($flag_type) {
         $ret = '';
         if($flag_type){
@@ -130,18 +110,15 @@ class ome_reship_const
                 $style = array('color'=>'#9370DB', 'msg'=>'退回物流单号重复', 'flag'=>'物流重复');
                 $ret .= $this->getViewPanel($style['color'], $style['msg'], $style['flag']);
             }
+            if($flag_type & ome_reship_const::__PAID_EQUAL_AUTO_BLOCK){
+                $style = array('color'=>'#FF8C00', 'msg'=>'实付相等自动审批未通过，应退金额与订单实付不一致', 'flag'=>'实付不等');
+                $ret .= $this->getViewPanel($style['color'], $style['msg'], $style['flag']);
+            }
             $ret = '<div style="overflow: auto;word-break: break-word;white-space: normal;width: 100%;flex-wrap: wrap;display: flex;">'.$ret.'</div>';
         }
         return $ret;
     }
 
-    /**
-     * 获取ViewPanel
-     * @param mixed $color color
-     * @param mixed $msg msg
-     * @param mixed $title title
-     * @return mixed 返回结果
-     */
     public function getViewPanel($color, $msg, $title)
     {
         $html =  sprintf("<span title='%s' style='filter: brightness(0.9) contrast(0.9);border:1px solid %s; color:%s;margin: 2px;padding: 0px 2px;border-radius: 5px;white-space: nowrap;'>%s</span>", $msg, $color, $color, $title);
@@ -149,11 +126,6 @@ class ome_reship_const
         return $html;
     }
     
-    /**
-     * 获取BoolType
-     * @param mixed $filter filter
-     * @return mixed 返回结果
-     */
     public function getBoolType($filter) {
         $where = array();
         if($filter['in']) {

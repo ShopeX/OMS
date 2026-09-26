@@ -1250,8 +1250,27 @@ class console_ctl_admin_delivery extends desktop_controller {
                 }
             }
             
-            //request
-            ome_delivery_notice::create($delivery_id);
+            // 发货单创建完成后的service扩展点
+            $is_notice_wms_create = true; // 是否通知WMS创建发货单
+            foreach(kernel::servicelist('omeauto.service.group.item.confirm.after') as $serviceName => $object) {
+                if(method_exists($object, 'afterCreateDelivery')) {
+                    $afterResult = $object->afterCreateDelivery($delivery_id);
+                    
+                    // 是否禁止发货单通知WMS创建
+                    if(isset($afterResult['rsp']) && $afterResult['rsp'] == 'fail'  && $afterResult['error_code'] == 'forbid_notice_wms_create'){
+                        $is_notice_wms_create = false;
+                    }
+                }
+            }
+            
+            // 发货通知单推送WMS仓库
+            if($is_notice_wms_create === false){
+                // 更新发货单同步状态为失败，并记录失败原因
+                $deliveryObj->db->exec("UPDATE sdb_ome_delivery SET sync_status='2', sync_msg='OMS检查发货单数据，禁止推送给WMS!' WHERE delivery_id=" . $delivery_id);
+            }else{
+                //request
+                ome_delivery_notice::create($delivery_id);
+            }
             
             //succ
             $retArr['isucc'] += 1;
@@ -1560,7 +1579,7 @@ class console_ctl_admin_delivery extends desktop_controller {
             }
 
             //请求WMS进行物流拦截
-            $requestParams = ['logi_no'=>$logi_no];
+            $requestParams = ['delivery_id'=>$delivery_id, 'logi_no'=>$logi_no];
             $res = ome_delivery_notice::cut($requestParams);
             if ($res['rsp'] == 'success' || $res['rsp'] == 'succ') {
                 //更新发货单状态为：拦截通知已发送
@@ -1641,7 +1660,8 @@ class console_ctl_admin_delivery extends desktop_controller {
                             //使用发货单上的退回物流公司、退回物流单号进行更新
                             $updateData = [
                                 'return_logi_name' => $logi_name,
-                                'return_logi_no' => $logi_no
+                                'return_logi_no' => $logi_no,
+                                'sub_source' => 2, // 子来源(0、默认，1、订单，2、发货单，3、售后申请单)
                             ];
 
                             //订单如果是全额退款,需要更新：已退金额

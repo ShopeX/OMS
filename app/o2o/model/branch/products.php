@@ -65,6 +65,10 @@ class o2o_mdl_branch_products extends console_mdl_branch_product{
         $barcodeLib = kernel::single('material_basic_material_barcode');
 
         if( !$list=$this->getlists('*',$filter,0,-1) )return false;
+
+        $list = material_basic_material_master::fillListRowsWithIdField($list, 'product_id');
+        $masterCols = material_basic_material_master::extraCols();
+
         foreach( $list as $aFilter ){
             $branch = $branchObj->dump($aFilter['branch_id'],'name');
             $barcode = $barcodeLib->getBarcodeById($aFilter['product_id']);
@@ -81,6 +85,9 @@ class o2o_mdl_branch_products extends console_mdl_branch_product{
             $detail['material_spu'] = $this->charset->utf2local($aFilter['material_spu']);
             $detail['weight'] = $this->charset->utf2local($aFilter['weight']);
             $detail['unit'] = $this->charset->utf2local($aFilter['unit']);
+            foreach ($masterCols as $colKey => $colDef) {
+                $detail[$colKey] = isset($aFilter[$colKey]) ? $this->charset->utf2local($aFilter[$colKey]) : '';
+            }
 
             foreach( $this->oSchema['csv']['branch_product'] as $k => $v ){
 
@@ -112,6 +119,9 @@ class o2o_mdl_branch_products extends console_mdl_branch_product{
                     '*:货品重量(g)' => 'weight',
                     '*:包装单位' => 'unit'
                 );
+                foreach (material_basic_material_master::extraCols() as $colKey => $colDef) {
+                    $this->oSchema['csv'][$filter]['*:' . $colDef['label']] = $colKey;
+                }
                 break;
         }
         $this->ioTitle[$ioType][$filter] = array_keys($this->oSchema['csv'][$filter]);

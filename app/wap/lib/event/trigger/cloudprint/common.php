@@ -119,4 +119,30 @@ class wap_event_trigger_cloudprint_common
         $channel['machine_code'] = $cloudprint['machine_code'];
         return $channel;
     }
+
+    /**
+     * 门店是否已配置云打印（电子面单打印）
+     */
+    public function isCloudprintConfigured($store_id)
+    {
+        if (empty($store_id) || !app::get('logisticsmanager')->is_installed()) {
+            return false;
+        }
+
+        $cloudprintMdl = app::get('logisticsmanager')->model('cloudprint');
+        $cloudprint    = $cloudprintMdl->dump(
+            array('store_id' => $store_id),
+            'machine_code,channel_id,disabled'
+        );
+        if (empty($cloudprint) || empty($cloudprint['channel_id']) || $cloudprint['disabled'] == 'true') {
+            return false;
+        }
+
+        $channel = app::get('channel')->model('channel')->dump(
+            array('channel_id' => $cloudprint['channel_id']),
+            'app_key,secret_key'
+        );
+
+        return !empty($channel['app_key']) && !empty($channel['secret_key']);
+    }
 }

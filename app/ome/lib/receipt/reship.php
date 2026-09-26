@@ -1,19 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 /**
  * 发货单数据打接口.
@@ -37,7 +22,6 @@ class ome_receipt_reship
         $oReship         = app::get('ome')->model('reship');
         $oReship_item    = app::get('ome')->model('reship_items');
         $oReturn         = app::get('ome')->model('return_product');
-        $oDelivery_order = app::get('ome')->model('delivery_order');
         $oDelivery       = app::get('ome')->model('delivery');
         $oOrder          = app::get('ome')->model('orders');
         $reship          = $oReship->dump($reship_id, '*');
@@ -45,6 +29,8 @@ class ome_receipt_reship
         $order_id        = $reship['order_id'];
         $branch_id       = $reship['branch_id'];
         $reship_item    = $oReship_item->getlist('product_id,bn,product_name as name,num,price,branch_id,order_item_id,item_id as reship_item_id', array('reship_id' => $reship_id, 'return_type' => array('return', 'refuse')), 0, -1);
+        $delivery = [];
+        
         // source=archive or archive=1时，获取发货单信息
         if ($reship['source'] == 'archive' || $reship['archive'] == '1') {
             $archive_ordObj = kernel::single('archive_interface_orders');
@@ -59,14 +45,24 @@ class ome_receipt_reship
             $delivery = $archive_delObj->getDelivery(array('delivery_id' => $deliveryIds), 'delivery_id,delivery_bn');
         } else {
             $order = $oOrder->dump($order_id, 'order_bn,shop_id');
-            // 获取对应的发货单
-            if($reship['logi_no']) $delivery = $oDelivery->db_dump(['logi_no'=>$reship['logi_no']], 'delivery_id,delivery_bn');
+            
+            // 优先通过退货单上的delivery_id获取发货单
+            if(isset($reship['delivery_id']) && $reship['delivery_id']){
+                $delivery = $oDelivery->db_dump(['delivery_id'=>$reship['delivery_id']], 'delivery_id,delivery_bn');
+            }else{
+                //@todo：当一个物流单号有多个发货单时，这里获取的发货单可能不是当前退货单对应的发货单；
+                // 获取对应的发货单
+                if($reship['logi_no']) $delivery = $oDelivery->db_dump(['logi_no'=>$reship['logi_no']], 'delivery_id,delivery_bn');
+            }
+            
+            // 通过订单明细item_id获取对应的发货单
             if(!$delivery) {
                 $order_item_id = current($reship_item)['order_item_id'];
                 $delivery = $oDelivery->db->selectrow("SELECT doi.delivery_id,doi.delivery_bn FROM sdb_sales_delivery_order_item AS doi
                                             WHERE order_item_id=" . $order_item_id);
             }
         }
+        
         $historyLog = app::get('ome')->model('product_serial_history')->getList('bn,serial_number', array('bill_id' => $delivery['delivery_id'], 'bill_type' => '1'));
         if($historyLog) {
             $bnSerial = [];
@@ -170,7 +166,17 @@ class ome_receipt_reship
             'return_reason'        => $return_product['content'],
         );
         $reship_data['apply_remark'] = $reship['shop_type'] == 'luban' ? $return_product['apply_remark'] : '' ;
-    
+        
+        // 拦截入库单，售后问题类型
+        if($reship['source'] == 'local' && $reship['sub_source'] == '1'){
+            $flag_type = $reship['flag_type'];
+            if($flag_type & ome_reship_const::__LANJIE_RUKU){
+                if(empty($reship_data['return_reason'])){
+                    $reship_data['return_reason'] = '其他';
+                }
+            }
+        }
+        
         // 优化：一次性获取所有扩展字段，然后在循环中判断取值
         $arr_props = app::get('ome')->model('branch_props')->getPropsByBranchId($branch_id);
         foreach ($arr_props as $k => $v) {

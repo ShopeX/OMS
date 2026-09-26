@@ -71,6 +71,7 @@ class ome_sales_data_type_lkb{
             'order_item_id' => $item['item_id'],
             'platform_amount' => $platformAmount,
             'sales_material_bn'=>$obj['bn'],
+            'refund_money' => isset($obj['refund_money']) ? $obj['refund_money'] : 0,
         );
 
         $delivery_items_detail_info = $delivery_items_detailObj->dump(array('order_id'=>$lkb['order_id'],'order_item_id'=>$lkb['item_id'],'order_obj_id'=>$lkb['obj_id'],'delivery_id'=>$delivery_id));

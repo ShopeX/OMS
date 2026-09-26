@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class logistics_rule {
     /**
      * 快递配置信息
@@ -43,10 +27,10 @@ class logistics_rule {
     //static $logiRule = array();
 
     /**
-     * 规则分组
-     * @param obj_id
-     * return array
-     */
+    *规则分组
+    *@param obj_id
+    *return array
+    */
     function getGroupAreaRule($obj_id){
         $dly_corpObj = app::get('ome')->model('dly_corp');
         $db = kernel::database();
@@ -105,7 +89,7 @@ class logistics_rule {
 
     /**
      * 根据收货地址匹配物流公司
-     * 
+     *
      * @param String $shipArea 送货地址
      * @return mixed
      */
@@ -113,7 +97,8 @@ class logistics_rule {
 
         $this->initCropData($shop_type);
         $regionId = preg_replace('/.*:([0-9]+)$/is', '$1', $shipArea);
-        $regionPath = self::$region[$regionId];
+        // 按需加载 region_path，避免全量地区表占用内存
+        $regionPath = $this->getRegionPath($regionId);
 
         $corpId = 0;
         if (!empty($regionPath)) {
@@ -148,13 +133,32 @@ class logistics_rule {
 
 
     /**
+     * 按需获取地区 path（带静态缓存，避免一次加载全部地区）
+     *
+     * @param mixed $regionId
+     * @return string
+     */
+    private function getRegionPath($regionId)
+    {
+        if ($regionId === '' || $regionId === null) {
+            return '';
+        }
+        if (!isset(self::$region[$regionId])) {
+            $row = kernel::single('eccommon_regions')->getOneById(intval($regionId), 'region_path');
+            self::$region[$regionId] = ($row && !empty($row['region_path'])) ? $row['region_path'] : '';
+        }
+        return self::$region[$regionId];
+    }
+
+    /**
      * 初始化快递公司配置
-     * 
+     *
      * @param void
      * @return void
      */
     private function initCropData($shop_type) {
-        if (!empty(self::$region)) {
+        // 用快递公司缓存判断是否已初始化（不再依赖全量地区数据）
+        if (!empty(self::$corpList)) {
             return;
         }
         /**/
@@ -179,13 +183,6 @@ class logistics_rule {
         }
         unset($corp);
 
-        //获取地区配置信息
-        $regions = kernel::single('eccommon_regions')->getList('region_id,region_path');
-        foreach ($regions as $row) {
-            self::$region[$row['region_id']] = $row['region_path'];
-        }
-        unset($regions);
-
         //电子面单来源类型
         $channelObj = app::get("logisticsmanager")->model('channel');
         $channel = $channelObj->getList("channel_id,channel_type",array('status'=>'true'));
@@ -197,8 +194,8 @@ class logistics_rule {
     }
 
     /**
-     * 获取仓库物流规则
-     */
+    * 获取仓库物流规则
+    */
     function getMapBranchRule($branch_id,$regionIds,$weight,$shop_id){
         $branch_rule = kernel::database()->select('SELECT branch_id,type,parent_id FROM sdb_logistics_branch_rule WHERE branch_id='.$branch_id.' ORDER BY branch_id DESC');
         $branch_rule = $branch_rule[0];
@@ -276,10 +273,10 @@ class logistics_rule {
         }
     }
 
-     /**
-      * 获取区域对应物流公司
-      * 
-      */
+    /**
+    * 获取区域对应物流公司
+    *
+    */
      function getCorpByArea($corp_rule,$regionIds,$weight) {
         $regionIds = array_reverse($regionIds);
 
@@ -352,10 +349,6 @@ class logistics_rule {
         return array();
     }
 
-    /**
-     * 获取SelfFetchCorp
-     * @return mixed 返回结果
-     */
     public function getSelfFetchCorp(){
         $selfFetchType = 'SELF_FETCH';
         $selfFetchName = '到店自提';
@@ -371,10 +364,6 @@ class logistics_rule {
         return $rowData;
     }
 
-    /**
-     * 获取VopczcCorp
-     * @return mixed 返回结果
-     */
     public function getVopczcCorp(){
         $vopczcType = 'HXPJBEST';
         $vopczcName = '品骏快递';
@@ -390,11 +379,6 @@ class logistics_rule {
         return $rowData;
     }
     
-    /**
-     * 获取JITXCorp
-     * @param mixed $order order
-     * @return mixed 返回结果
-     */
     public function getJITXCorp($order){
 
         $mdlChannel = app::get('logisticsmanager')->model('channel');
@@ -445,11 +429,6 @@ class logistics_rule {
         return $rowData;
     }
 
-    /**
-     * 获取LubanCorp
-     * @param mixed $order order
-     * @return mixed 返回结果
-     */
     public function getLubanCorp($order)
     {
         $mdlChannel = app::get('logisticsmanager')->model('channel');
@@ -470,11 +449,6 @@ class logistics_rule {
         return $rowData;
     }
 
-    /**
-     * 获取JDLVMICorp
-     * @param mixed $order order
-     * @return mixed 返回结果
-     */
     public function getJDLVMICorp($order){
 
         $model = app::get('ome')->model('dly_corp');

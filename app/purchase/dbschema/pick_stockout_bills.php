@@ -134,7 +134,7 @@ $db['pick_stockout_bills']=array (
             array (
                     'type' => 'varchar(32)',
                     'label' => '送货批次时间',
-                    'width' => 100,
+                    'width' => 130,
                     'editable' => false,
                     'in_list' => true,
                     'order' => 30,
@@ -143,7 +143,7 @@ $db['pick_stockout_bills']=array (
             array (
                     'type' => 'varchar(32)',
                     'label' => '要求到货时间',
-                    'width' => 100,
+                    'width' => 130,
                     'editable' => false,
                     'in_list' => true,
                     'order' => 30,

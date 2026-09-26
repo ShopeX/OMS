@@ -390,6 +390,33 @@ class ome_event_receive_delivery extends ome_event_response
 
     }
 
+    private function _getConsignOpInfo()
+    {
+        if (!empty($this->__inputParams['op_id'])) {
+            return [
+                'op_id'   => $this->__inputParams['op_id'],
+                'op_name' => $this->__inputParams['op_name'] ?: '',
+            ];
+        }
+
+        return kernel::single('ome_func')->getDesktopUser();
+    }
+
+    private function _getConsignOpUpdateFields()
+    {
+        $opInfo = $this->_getConsignOpInfo();
+        if (empty($opInfo['op_id'])) {
+            return [];
+        }
+
+        $fields = ['op_id' => $opInfo['op_id']];
+        if (!empty($opInfo['op_name'])) {
+            $fields['op_name'] = $opInfo['op_name'];
+        }
+
+        return $fields;
+    }
+
     private function _dealSnList() {
         foreach ((array)$this->__inputParams['items'] as $item) {
 
@@ -397,7 +424,7 @@ class ome_event_receive_delivery extends ome_event_response
 
                 $bnBm = app::get('material')->model('basic_material')->db_dump(array('material_bn'=>$item['bn']), 'bm_id,material_name');
                 $serialHistoryObj = app::get('ome')->model('product_serial_history');
-                $opInfo = kernel::single('ome_func')->getDesktopUser();
+                $opInfo = $this->_getConsignOpInfo();
                 $historyData = [];
 
                 $_tmp = [
@@ -439,38 +466,601 @@ class ome_event_receive_delivery extends ome_event_response
                 $serialHistoryObj->db->exec(ome_func::get_insert_sql($serialHistoryObj, $historyData));
             }
         }
+
+        //机器中心发货单添加（回写落库，不做业务校验）
+        if (app::get('machinecenter')->is_installed()) {
+            $this->machineCenterDeliveryAdd(array_merge($this->__currDlyInfo, ['items' => $this->__inputParams['items']]));
+        }
+    }
+
+    /**
+     * 与 sdb_ome_orders.pay_status 一致；合单多 order_id 时取排序后首个订单的付款状态
+     *
+     * @param string $orderIdCsv 英文逗号分隔的 order_id，可为空
+     * @return string
+     */
+    private function _deliveryPackagePayStatusForOrderIdCsv($orderIdCsv)
+    {
+        $oid = $this->_firstIntFromCsvField($orderIdCsv);
+        if ($oid <= 0) {
+            return '0';
+        }
+        $row = app::get('ome')->model('orders')->db_dump(array('order_id' => $oid), 'pay_status');
+        if (empty($row) || !array_key_exists('pay_status', $row)) {
+            return '0';
+        }
+
+        return (string) $row['pay_status'];
+    }
+
+    /**
+     * 根据发货单 + 基础物料号，从 delivery_items / delivery_items_detail 解析 order_id、order_item_id（多条逗号分隔）、pay_status
+     *
+     * @param int    $delivery_id
+     * @param string $bn
+     * @return array order_id, order_item_id, pay_status
+     */
+    private function _deliveryPackageOrderFieldsFromBn($delivery_id, $bn)
+    {
+        $delivery_id = (int) $delivery_id;
+        $bn = trim((string) $bn);
+        if ($delivery_id <= 0 || $bn === '') {
+            return array('order_id' => '', 'order_item_id' => '', 'pay_status' => '0');
+        }
+        $itemsModel = app::get('ome')->model('delivery_items');
+        $itemRows = $itemsModel->getList('item_id', array('delivery_id' => $delivery_id, 'bn' => $bn));
+        if (empty($itemRows)) {
+            return array('order_id' => '', 'order_item_id' => '', 'pay_status' => '0');
+        }
+        $itemIds = array_values(array_unique(array_map('intval', array_column($itemRows, 'item_id'))));
+        if (empty($itemIds)) {
+            return array('order_id' => '', 'order_item_id' => '', 'pay_status' => '0');
+        }
+        $detailModel = app::get('ome')->model('delivery_items_detail');
+        $detailRows = $detailModel->getList('order_id,order_item_id', array(
+            'delivery_id' => $delivery_id,
+            'delivery_item_id|in' => $itemIds,
+        ));
+        if (empty($detailRows)) {
+            return array('order_id' => '', 'order_item_id' => '', 'pay_status' => '0');
+        }
+        $orderIds = array();
+        $orderItemIds = array();
+        foreach ($detailRows as $row) {
+            if (isset($row['order_id']) && $row['order_id'] !== '' && $row['order_id'] !== null) {
+                $orderIds[] = (string) (int) $row['order_id'];
+            }
+            if (isset($row['order_item_id']) && $row['order_item_id'] !== '' && $row['order_item_id'] !== null) {
+                $orderItemIds[] = (string) (int) $row['order_item_id'];
+            }
+        }
+        $orderIds = array_values(array_unique($orderIds));
+        $orderItemIds = array_values(array_unique($orderItemIds));
+        sort($orderIds, SORT_NUMERIC);
+        sort($orderItemIds, SORT_NUMERIC);
+        $orderIdCsv = implode(',', $orderIds);
+
+        return array(
+            'order_id' => $orderIdCsv,
+            'order_item_id' => implode(',', $orderItemIds),
+            'pay_status' => $this->_deliveryPackagePayStatusForOrderIdCsv($orderIdCsv),
+        );
+    }
+
+    /**
+     * 按 sdb_ome_delivery_items_detail 一行一条包裹明细（order_id + order_item_id + bn + number），
+     * 与 {@see console_reship::orderRefundToLJRK} 使用的 didItems 粒度一致，便于拦截入库后按包裹分摊 apply_num / return_num
+     *
+     * @param string $logisticsCode 物流公司编码
+     * @param string $expressCode   运单号
+     * @return array
+     */
+    private function _buildDeliveryPackageRowsFromItemsDetail($logisticsCode, $expressCode)
+    {
+        $delivery_id = (int) $this->__currDlyId;
+        $detailModel = app::get('ome')->model('delivery_items_detail');
+        $detailRows = $detailModel->getList('*', array('delivery_id' => $delivery_id), 0, -1, 'item_detail_id ASC');
+        $rows = array();
+        foreach ($detailRows as $d) {
+            $bn = isset($d['bn']) ? trim((string) $d['bn']) : '';
+            if ($bn === '') {
+                continue;
+            }
+            $orderIdCsv = (isset($d['order_id']) && $d['order_id'] !== '' && $d['order_id'] !== null)
+                ? (string) (int) $d['order_id'] : '';
+            $row = array(
+                'delivery_id' => $delivery_id,
+                'package_bn' => $this->__currDlyBn,
+                'logi_bn' => $logisticsCode,
+                'logi_no' => $expressCode,
+                'product_id' => isset($d['product_id']) ? $d['product_id'] : 0,
+                'bn' => $bn,
+                'status' => 'delivery',
+                'number' => isset($d['number']) ? (int) $d['number'] : 0,
+                'order_id' => $orderIdCsv,
+                'order_item_id' => (isset($d['order_item_id']) && $d['order_item_id'] !== '' && $d['order_item_id'] !== null)
+                    ? (string) (int) $d['order_item_id'] : '',
+                'pay_status' => $this->_deliveryPackagePayStatusForOrderIdCsv($orderIdCsv),
+                'create_time' => time(),
+                'delivery_time' => time(),
+            );
+            if (isset($d['is_wms_gift'])) {
+                $row['is_wms_gift'] = $d['is_wms_gift'];
+            }
+            $rows[] = $row;
+        }
+        return $rows;
+    }
+
+    /**
+     * WMS 回传的 package 行合并到按明细拆好的包裹行（对齐条数时按下标；否则按 bn 首次匹配）
+     *
+     * @param array $package
+     * @param array $inputPackage
+     */
+    private function _mergeWmsDeliveryPackageInput(array &$package, array $inputPackage)
+    {
+        if (empty($package) || empty($inputPackage)) {
+            return;
+        }
+        $n = count($package);
+        $m = count($inputPackage);
+        $used = array();
+        foreach ($package as $i => &$row) {
+            $v = null;
+            if ($n === $m && isset($inputPackage[$i])) {
+                $v = $inputPackage[$i];
+            } else {
+                $bn = isset($row['bn']) ? trim((string) $row['bn']) : '';
+                foreach ($inputPackage as $j => $pv) {
+                    if (!empty($used[$j])) {
+                        continue;
+                    }
+                    $pbn = isset($pv['bn']) ? trim((string) $pv['bn']) : '';
+                    if ($bn !== '' && $pbn !== '' && $bn === $pbn) {
+                        $v = $pv;
+                        $used[$j] = true;
+                        break;
+                    }
+                }
+                if ($v === null && isset($inputPackage[0])) {
+                    $v = $inputPackage[0];
+                }
+            }
+            if ($v === null || !is_array($v)) {
+                continue;
+            }
+            if (!empty($v['package_bn'])) {
+                $row['package_bn'] = $v['package_bn'];
+            }
+            if (!empty($v['logi_bn'])) {
+                $row['logi_bn'] = $v['logi_bn'];
+            }
+            if (!empty($v['logi_no'])) {
+                $row['logi_no'] = $v['logi_no'];
+            } elseif (!empty($this->__formatParams['logi_no'])) {
+                $row['logi_no'] = $this->__formatParams['logi_no'];
+            } elseif (!empty($this->__currDlyInfo['logi_no'])) {
+                $row['logi_no'] = $this->__currDlyInfo['logi_no'];
+            }
+            if (!empty($v['create_time'])) {
+                $row['create_time'] = is_numeric($v['create_time']) ? (int) $v['create_time'] : strtotime($v['create_time']);
+            }
+            if (!empty($v['delivery_time'])) {
+                $row['delivery_time'] = is_numeric($v['delivery_time']) ? (int) $v['delivery_time'] : strtotime($v['delivery_time']);
+            }
+            if (isset($v['number']) && $v['number'] !== '') {
+                $row['number'] = (int) $v['number'];
+            }
+            if (!empty($v['outer_sku'])) {
+                $row['outer_sku'] = $v['outer_sku'];
+            }
+        }
+        unset($row);
+    }
+
+    /**
+     * 存在 sdb_ome_delivery_items_detail 时：按 item_detail_id ASC 建池，按 WMS 行顺序对 bn 做 FIFO 扣减。
+     * 每条写入行对应「WMS 物理包裹 × 明细切片」——合单下同运单号可多条，order_id/order_item_id 与明细一致，不再合并为逗号串。
+     *
+     * @param array  $inputPackage   WMS 拍平行（与 erpapi _dealDeliveryPackage 一致）
+     * @param string $logisticsCode  物流公司编码（兜底）
+     * @param string $expressCode    运单号（兜底）
+     * @return array
+     */
+    private function _allocateDeliveryPackageFromWmsAndDetail(array $inputPackage, $logisticsCode, $expressCode)
+    {
+        $delivery_id = (int) $this->__currDlyId;
+        $detailModel = app::get('ome')->model('delivery_items_detail');
+        $detailRows = $detailModel->getList('*', array('delivery_id' => $delivery_id), 0, -1, 'item_detail_id ASC');
+        $pool = array();
+        foreach ($detailRows as $d) {
+            $bn = isset($d['bn']) ? trim((string) $d['bn']) : '';
+            if ($bn === '') {
+                continue;
+            }
+            $pool[] = array(
+                'bn' => $bn,
+                'remaining' => isset($d['number']) ? (int) $d['number'] : 0,
+                'detail' => $d,
+            );
+        }
+
+        $out = array();
+        $now = time();
+        foreach ($inputPackage as $pv) {
+            if (!is_array($pv)) {
+                continue;
+            }
+            $bn = isset($pv['bn']) ? trim((string) $pv['bn']) : '';
+            $need = isset($pv['number']) ? (int) $pv['number'] : 0;
+            if ($bn === '' || $need <= 0) {
+                continue;
+            }
+
+            $remainingNeed = $need;
+            while ($remainingNeed > 0) {
+                $foundIdx = -1;
+                foreach ($pool as $pi => $p) {
+                    if ($p['bn'] === $bn && $p['remaining'] > 0) {
+                        $foundIdx = $pi;
+                        break;
+                    }
+                }
+                if ($foundIdx < 0) {
+                    break;
+                }
+                $take = min($remainingNeed, $pool[$foundIdx]['remaining']);
+                $pool[$foundIdx]['remaining'] -= $take;
+                $remainingNeed -= $take;
+
+                $d = $pool[$foundIdx]['detail'];
+                $oid = isset($d['order_id']) ? (int) $d['order_id'] : 0;
+                $oiid = isset($d['order_item_id']) ? (int) $d['order_item_id'] : 0;
+                $orderIdCsv = $oid > 0 ? (string) $oid : '';
+
+                $product_id = isset($pv['product_id']) ? (int) $pv['product_id'] : 0;
+                if ($product_id <= 0 && !empty($d['product_id'])) {
+                    $product_id = (int) $d['product_id'];
+                }
+                if ($product_id <= 0) {
+                    $bm = app::get('material')->model('basic_material')->db_dump(array('material_bn' => $bn), 'bm_id');
+                    if (!empty($bm['bm_id'])) {
+                        $product_id = (int) $bm['bm_id'];
+                    }
+                }
+
+                $ct = !empty($pv['create_time']) ? (is_numeric($pv['create_time']) ? (int) $pv['create_time'] : strtotime($pv['create_time'])) : $now;
+                $dt = !empty($pv['delivery_time']) ? (is_numeric($pv['delivery_time']) ? (int) $pv['delivery_time'] : strtotime($pv['delivery_time'])) : $now;
+
+                $row = array(
+                    'delivery_id' => $delivery_id,
+                    'package_bn' => !empty($pv['package_bn']) ? $pv['package_bn'] : $this->__currDlyBn,
+                    'logi_bn' => !empty($pv['logi_bn']) ? $pv['logi_bn'] : $logisticsCode,
+                    'logi_no' => !empty($pv['logi_no']) ? $pv['logi_no'] : $expressCode,
+                    'product_id' => $product_id,
+                    'bn' => $bn,
+                    'status' => !empty($pv['status']) ? $pv['status'] : 'delivery',
+                    'number' => $take,
+                    'order_id' => $orderIdCsv,
+                    'order_item_id' => $oiid > 0 ? (string) $oiid : '',
+                    'pay_status' => $this->_deliveryPackagePayStatusForOrderIdCsv($orderIdCsv),
+                    'create_time' => $ct,
+                    'delivery_time' => $dt,
+                );
+                if (!empty($pv['outer_sku'])) {
+                    $row['outer_sku'] = $pv['outer_sku'];
+                }
+                if (isset($d['is_wms_gift'])) {
+                    $row['is_wms_gift'] = $d['is_wms_gift'];
+                }
+                if (isset($pv['shipping_status'])) {
+                    $row['shipping_status'] = $pv['shipping_status'];
+                }
+                $out[] = $row;
+            }
+
+            if ($remainingNeed > 0) {
+                $ordFields = $this->_deliveryPackageOrderFieldsFromBn($delivery_id, $bn);
+                $ct = !empty($pv['create_time']) ? (is_numeric($pv['create_time']) ? (int) $pv['create_time'] : strtotime($pv['create_time'])) : $now;
+                $dt = !empty($pv['delivery_time']) ? (is_numeric($pv['delivery_time']) ? (int) $pv['delivery_time'] : strtotime($pv['delivery_time'])) : $now;
+                $row = array(
+                    'delivery_id' => $delivery_id,
+                    'package_bn' => !empty($pv['package_bn']) ? $pv['package_bn'] : $this->__currDlyBn,
+                    'logi_bn' => !empty($pv['logi_bn']) ? $pv['logi_bn'] : $logisticsCode,
+                    'logi_no' => !empty($pv['logi_no']) ? $pv['logi_no'] : $expressCode,
+                    'product_id' => isset($pv['product_id']) ? (int) $pv['product_id'] : 0,
+                    'bn' => $bn,
+                    'status' => !empty($pv['status']) ? $pv['status'] : 'delivery',
+                    'number' => $remainingNeed,
+                    'order_id' => $ordFields['order_id'],
+                    'order_item_id' => $ordFields['order_item_id'],
+                    'pay_status' => isset($ordFields['pay_status']) ? $ordFields['pay_status'] : '0',
+                    'create_time' => $ct,
+                    'delivery_time' => $dt,
+                );
+                if (!empty($pv['outer_sku'])) {
+                    $row['outer_sku'] = $pv['outer_sku'];
+                }
+                if (isset($pv['shipping_status'])) {
+                    $row['shipping_status'] = $pv['shipping_status'];
+                }
+                if ($row['product_id'] <= 0) {
+                    $bm = app::get('material')->model('basic_material')->db_dump(array('material_bn' => $bn), 'bm_id');
+                    if (!empty($bm['bm_id'])) {
+                        $row['product_id'] = (int) $bm['bm_id'];
+                    }
+                }
+                $out[] = $row;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * WMS 回传 package 行数多于按 delivery_items_detail 拆出的行数时（同 SKU 多包裹），
+     * 按 WMS 行逐条生成包裹，并从明细按 bn 顺序扣减数量以回填 order_id / order_item_id / product_id。
+     *
+     * @param array  $inputPackage   WMS 拍平后的 package 数组
+     * @param string $logisticsCode  物流公司编码（兜底）
+     * @param string $expressCode    运单号（兜底）
+     * @return array
+     */
+    private function _expandDeliveryPackageRowsFromWmsInput(array $inputPackage, $logisticsCode, $expressCode)
+    {
+        $delivery_id = (int) $this->__currDlyId;
+        $detailModel = app::get('ome')->model('delivery_items_detail');
+        $detailRows = $detailModel->getList('*', array('delivery_id' => $delivery_id), 0, -1, 'item_detail_id ASC');
+        $pool = array();
+        foreach ($detailRows as $d) {
+            $bn = isset($d['bn']) ? trim((string) $d['bn']) : '';
+            if ($bn === '') {
+                continue;
+            }
+            $pool[] = array(
+                'bn' => $bn,
+                'remaining' => isset($d['number']) ? (int) $d['number'] : 0,
+                'detail' => $d,
+            );
+        }
+
+        $out = array();
+        $now = time();
+        foreach ($inputPackage as $pv) {
+            if (!is_array($pv)) {
+                continue;
+            }
+            $bn = isset($pv['bn']) ? trim((string) $pv['bn']) : '';
+            $need = isset($pv['number']) ? (int) $pv['number'] : 0;
+            if ($bn === '' || $need <= 0) {
+                continue;
+            }
+
+            $remainingNeed = $need;
+            $orderIds = array();
+            $orderItemIds = array();
+            $product_id = isset($pv['product_id']) ? (int) $pv['product_id'] : 0;
+            $is_wms_gift = null;
+
+            while ($remainingNeed > 0) {
+                $found = false;
+                foreach ($pool as &$p) {
+                    if ($p['bn'] !== $bn || $p['remaining'] <= 0) {
+                        continue;
+                    }
+                    $take = min($remainingNeed, $p['remaining']);
+                    $p['remaining'] -= $take;
+                    $remainingNeed -= $take;
+                    $d = $p['detail'];
+                    $orderIds[] = (string) (int) $d['order_id'];
+                    $orderItemIds[] = (string) (int) $d['order_item_id'];
+                    if ($product_id <= 0 && !empty($d['product_id'])) {
+                        $product_id = (int) $d['product_id'];
+                    }
+                    if ($is_wms_gift === null && isset($d['is_wms_gift'])) {
+                        $is_wms_gift = $d['is_wms_gift'];
+                    }
+                    $found = true;
+                    break;
+                }
+                unset($p);
+                if (!$found) {
+                    break;
+                }
+            }
+
+            if ($product_id <= 0) {
+                $bm = app::get('material')->model('basic_material')->db_dump(array('material_bn' => $bn), 'bm_id');
+                if (!empty($bm['bm_id'])) {
+                    $product_id = (int) $bm['bm_id'];
+                }
+            }
+
+            $ordFields = array('order_id' => '', 'order_item_id' => '', 'pay_status' => '0');
+            if (!empty($orderIds)) {
+                $orderIds = array_values(array_unique($orderIds));
+                $orderItemIds = array_values(array_unique($orderItemIds));
+                sort($orderIds, SORT_NUMERIC);
+                sort($orderItemIds, SORT_NUMERIC);
+                $ordFields['order_id'] = implode(',', $orderIds);
+                $ordFields['order_item_id'] = implode(',', $orderItemIds);
+                $ordFields['pay_status'] = $this->_deliveryPackagePayStatusForOrderIdCsv($ordFields['order_id']);
+            } else {
+                $ordFields = $this->_deliveryPackageOrderFieldsFromBn($delivery_id, $bn);
+            }
+
+            $row = array(
+                'delivery_id' => $delivery_id,
+                'package_bn' => !empty($pv['package_bn']) ? $pv['package_bn'] : $this->__currDlyBn,
+                'logi_bn' => !empty($pv['logi_bn']) ? $pv['logi_bn'] : $logisticsCode,
+                'logi_no' => !empty($pv['logi_no']) ? $pv['logi_no'] : $expressCode,
+                'product_id' => $product_id,
+                'bn' => $bn,
+                'status' => !empty($pv['status']) ? $pv['status'] : 'delivery',
+                'number' => $need,
+                'order_id' => $ordFields['order_id'],
+                'order_item_id' => $ordFields['order_item_id'],
+                'pay_status' => isset($ordFields['pay_status']) ? $ordFields['pay_status'] : '0',
+                'create_time' => !empty($pv['create_time']) ? (is_numeric($pv['create_time']) ? (int) $pv['create_time'] : strtotime($pv['create_time'])) : $now,
+                'delivery_time' => !empty($pv['delivery_time']) ? (is_numeric($pv['delivery_time']) ? (int) $pv['delivery_time'] : strtotime($pv['delivery_time'])) : $now,
+            );
+            if (!empty($pv['outer_sku'])) {
+                $row['outer_sku'] = $pv['outer_sku'];
+            }
+            if ($is_wms_gift !== null) {
+                $row['is_wms_gift'] = $is_wms_gift;
+            }
+            $out[] = $row;
+        }
+
+        return $out;
+    }
+
+    /**
+     * 合并或按 WMS 行扩展 delivery_package：WMS 行数多于明细行数时走扩展，避免同 bn 只匹配第一条导致数量合并、子单运单丢失。
+     *
+     * @param array  $package
+     * @param array  $inputPackage
+     * @param string $logisticsCode
+     * @param string $expressCode
+     * @return array
+     */
+    private function _applyWmsDeliveryPackageInput(array $package, array $inputPackage, $logisticsCode, $expressCode)
+    {
+        $detailCnt = app::get('ome')->model('delivery_items_detail')->count(array('delivery_id' => $this->__currDlyId));
+        if ($detailCnt > 0) {
+            return $this->_allocateDeliveryPackageFromWmsAndDetail($inputPackage, $logisticsCode, $expressCode);
+        }
+
+        $n = count($package);
+        $m = count($inputPackage);
+        if ($m > $n) {
+            return $this->_expandDeliveryPackageRowsFromWmsInput($inputPackage, $logisticsCode, $expressCode);
+        }
+        $this->_mergeWmsDeliveryPackageInput($package, $inputPackage);
+
+        return $package;
+    }
+
+    /**
+     * 从已通过退款申请（status=4）的 product_data 汇总「申请退货数量」，写入包裹行 apply_num（不超过本行发货数 number）
+     * 与 {@see console_reship::oneOrderRefundToLJRK} 中按 apply_num 生成拦截退货明细一致
+     *
+     * @param array $packageRows
+     */
+    private function _deliveryPackageApplyNumsFromRefundApply(array &$packageRows)
+    {
+        if (empty($packageRows)) {
+            return;
+        }
+        $orderIds = array();
+        foreach ($packageRows as $r) {
+            $oid = $this->_firstIntFromCsvField(isset($r['order_id']) ? $r['order_id'] : '');
+            if ($oid > 0) {
+                $orderIds[$oid] = $oid;
+            }
+        }
+        if (empty($orderIds)) {
+            return;
+        }
+        $refundModel = app::get('ome')->model('refund_apply');
+        $refunds = $refundModel->getList('order_id,product_data,bool_type', array(
+            'order_id' => array_values($orderIds),
+            'status' => '4',
+        ));
+        $applyMap = array();
+        foreach ($refunds as $rf) {
+            if (!empty($rf['bool_type']) && ($rf['bool_type'] & ome_refund_bool_type::__PROTECTED_CODE)) {
+                continue;
+            }
+            $arr = @unserialize($rf['product_data']);
+            if (!is_array($arr)) {
+                continue;
+            }
+            $oidOrder = (int) $rf['order_id'];
+            foreach ($arr as $p) {
+                $oiid = isset($p['order_item_id']) ? (int) $p['order_item_id'] : 0;
+                $bn = isset($p['bn']) ? trim((string) $p['bn']) : '';
+                $n = isset($p['num']) ? (int) $p['num'] : 0;
+                if ($oiid <= 0 || $bn === '' || $n <= 0) {
+                    continue;
+                }
+                $k = $oidOrder . '|' . $oiid . '|' . $bn;
+                if (!isset($applyMap[$k])) {
+                    $applyMap[$k] = 0;
+                }
+                $applyMap[$k] += $n;
+            }
+        }
+        if (empty($applyMap)) {
+            return;
+        }
+        foreach ($packageRows as $i => &$row) {
+            $oidOrder = $this->_firstIntFromCsvField(isset($row['order_id']) ? $row['order_id'] : '');
+            $oiid = $this->_firstIntFromCsvField(isset($row['order_item_id']) ? $row['order_item_id'] : '');
+            $bn = isset($row['bn']) ? trim((string) $row['bn']) : '';
+            $maxNum = isset($row['number']) ? (int) $row['number'] : 0;
+            if ($oidOrder <= 0 || $oiid <= 0 || $bn === '') {
+                continue;
+            }
+            $k = $oidOrder . '|' . $oiid . '|' . $bn;
+            if (isset($applyMap[$k]) && $applyMap[$k] > 0) {
+                $row['apply_num'] = $maxNum > 0 ? min($maxNum, (int) $applyMap[$k]) : (int) $applyMap[$k];
+            }
+        }
+        unset($row);
+    }
+
+    /**
+     * order_id / order_item_id 可能为逗号串，取第一个整数
+     *
+     * @param string $v
+     * @return int
+     */
+    private function _firstIntFromCsvField($v)
+    {
+        if ($v === '' || $v === null) {
+            return 0;
+        }
+        $v = trim((string) $v);
+        if ($v === '') {
+            return 0;
+        }
+        if (strpos($v, ',') !== false) {
+            $parts = preg_split('/\s*,\s*/', $v, -1, PREG_SPLIT_NO_EMPTY);
+            if (!empty($parts[0])) {
+                return (int) $parts[0];
+            }
+            return 0;
+        }
+        return (int) $v;
     }
 
     private function _dealDeliveryPackage() {
         $packageObj = app::get('ome')->model('delivery_package');
         if($packageObj->db_dump(['delivery_id'=>$this->__currDlyId], 'package_id')) {
+            $this->_saveMainDeliveryBillIfNeeded(array(
+                'delivery_id' => $this->__currDlyId,
+                'delivery_bn' => $this->__currDlyBn,
+                'logi_no'     => !empty($this->__formatParams['logi_no']) ? $this->__formatParams['logi_no'] : '',
+                'weight'      => isset($this->__formatParams['weight']) ? $this->__formatParams['weight'] : null,
+            ));
             return;
         }
-        if($this->__inputParams['package']) {
-            $package = $this->__inputParams['package'];
-            foreach($package as $k => $v) {
-                $package[$k]['delivery_id'] = $this->__currDlyId;
-                if(empty($v['create_time'])) {
-                    $package[$k]['create_time'] = time();
-                }
-                if(empty($v['delivery_time'])) {
-                    $package[$k]['delivery_time'] = time();
-                }
-                if(empty($v['logi_no'])) {
-                    $v['logi_no'] = $this->__formatParams['logi_no'] ? : $this->__currDlyInfo['logi_no'];
-                }
-            }
+        if($this->__formatParams['logi_id']) {
+            $logi_id = $this->__formatParams['logi_id'];
         } else {
-            if($this->__formatParams['logi_id']) {
-                $logi_id = $this->__formatParams['logi_id'];
-            } else {
-                $logi_id = $this->__currDlyInfo['logi_id'];
-            }
-            $logisticsCode = app::get('ome')->model('dly_corp')->db_dump(['corp_id'=>$logi_id], 'type')['type'];
-            $expressCode = $this->__formatParams['logi_no'] ? : $this->__currDlyInfo['logi_no'];
-            $package = [];
+            $logi_id = $this->__currDlyInfo['logi_id'];
+        }
+        $logisticsCode = app::get('ome')->model('dly_corp')->db_dump(['corp_id'=>$logi_id], 'type')['type'];
+        $expressCode = $this->__formatParams['logi_no'] ? : $this->__currDlyInfo['logi_no'];
+
+        $package = $this->_buildDeliveryPackageRowsFromItemsDetail($logisticsCode, $expressCode);
+        if (empty($package)) {
             foreach($this->__currDlyInfo['delivery_items'] as $iv) {
-                $package[] = [
+                $ordFields = $this->_deliveryPackageOrderFieldsFromBn($this->__currDlyId, isset($iv['bn']) ? $iv['bn'] : '');
+                $package[] = array_merge(array(
                     'delivery_id' => $this->__currDlyId,
                     'package_bn' => $this->__currDlyBn,
                     'logi_bn' => $logisticsCode,
@@ -481,11 +1071,28 @@ class ome_event_receive_delivery extends ome_event_response
                     'number' => $iv['number'],
                     'create_time' => time(),
                     'delivery_time' => time(),
-                ];
+                ), $ordFields);
             }
         }
-        $packageObj->db->exec(ome_func::get_insert_sql($packageObj, $package));
+        if (!empty($this->__inputParams['package'])) {
+            // WMS quantity 全为 0 时分配结果为空，保留 OMS 已组好的包裹，避免空数组 insert 失败
+            $wmsPackage = $this->_applyWmsDeliveryPackageInput($package, $this->__inputParams['package'], $logisticsCode, $expressCode);
+            if (!empty($wmsPackage)) {
+                $package = $wmsPackage;
+            }
+        }
+        $this->_deliveryPackageApplyNumsFromRefundApply($package);
+        if (!empty($package)) {
+            $packageObj->db->exec(ome_func::get_insert_sql($packageObj, $package));
+        }
+        $this->_saveMainDeliveryBillIfNeeded(array(
+            'delivery_id' => $this->__currDlyId,
+            'delivery_bn' => $this->__currDlyBn,
+            'logi_no'     => !empty($this->__formatParams['logi_no']) ? $this->__formatParams['logi_no'] : '',
+            'weight'      => isset($this->__formatParams['weight']) ? $this->__formatParams['weight'] : null,
+        ));
     }
+
 
     /**
      * 发货详细处理流程
@@ -505,7 +1112,8 @@ class ome_event_receive_delivery extends ome_event_response
         $reservationMdl = app::get('ome')->model('order_reservation');
         
         $err_msg = '';
-        $opinfo = [];
+        $opinfo = $this->_getConsignOpInfo();
+        $consignOpFields = $this->_getConsignOpUpdateFields();
         
         //是否合并发货单
         if ($this->__isBind) {
@@ -670,13 +1278,20 @@ class ome_event_receive_delivery extends ome_event_response
                 $maindly['delivery_logi_number'] = $maindly['logi_number'] = $num + 1;
 
             }
+            if ($consignOpFields) {
+                $maindly = array_merge($maindly, $consignOpFields);
+            }
 
             $affect_row = $this->__dlyObj->update($maindly, array('delivery_id' => $maindly['delivery_id'], 'process' => 'false'));
             if (!is_numeric($affect_row) || $affect_row <= 0) {
                 $msg = '发货单发货状态更新失败!';
                 return false;
             }
-            $this->__operationLogObj->write_log('delivery_process@ome', $this->__currDlyId, '发货单发货完成,（发货单号：' . $this->__currDlyBn . '）', '', $opinfo);
+            $consignLogMsg = '发货单发货完成,（发货单号：' . $this->__currDlyBn . '）';
+            if ($this->__isStoreBranch && !empty($opinfo['op_name'])) {
+                $consignLogMsg .= '，门店操作员：' . $opinfo['op_name'];
+            }
+            $this->__operationLogObj->write_log('delivery_process@ome', $this->__currDlyId, $consignLogMsg, '', $opinfo);
 
         } else {
             $de     = $this->__currDlyInfo['delivery_order'];
@@ -754,13 +1369,20 @@ class ome_event_receive_delivery extends ome_event_response
                 $singledly['delivery_logi_number'] = $singledly['logi_number'] = $num + 1;
 
             }
+            if ($consignOpFields) {
+                $singledly = array_merge($singledly, $consignOpFields);
+            }
 
             $affect_row = $this->__dlyObj->update($singledly, array('delivery_id' => $singledly['delivery_id'], 'process' => 'false'));
             if (!is_numeric($affect_row) || $affect_row <= 0) {
                 $msg = '发货单发货状态更新失败!';
                 return false;
             }
-            $this->__operationLogObj->write_log('delivery_process@ome', $this->__currDlyId, '发货单发货完成,（发货单号：' . $this->__currDlyBn . '）', '', $opinfo);
+            $consignLogMsg = '发货单发货完成,（发货单号：' . $this->__currDlyBn . '）';
+            if ($this->__isStoreBranch && !empty($opinfo['op_name'])) {
+                $consignLogMsg .= '，门店操作员：' . $opinfo['op_name'];
+            }
+            $this->__operationLogObj->write_log('delivery_process@ome', $this->__currDlyId, $consignLogMsg, '', $opinfo);
 
             $item_num = $this->__dlyObj->countOrderSendNumber($ord_id);
             if ($item_num == 0) {
@@ -843,29 +1465,58 @@ class ome_event_receive_delivery extends ome_event_response
             $packageMdl = app::get('ome')->model('delivery_package');
             $corpMdl    = app::get('ome')->model('dly_corp');
 
-            $logi_id = $singledly['logi_id'] ? $singledly['logi_id'] : $this->__currDlyInfo['logi_id'];
+            if ($this->__isBind) {
+                $logi_id = !empty($maindly['logi_id']) ? $maindly['logi_id'] : $this->__currDlyInfo['logi_id'];
+            } else {
+                $logi_id = !empty($singledly['logi_id']) ? $singledly['logi_id'] : $this->__currDlyInfo['logi_id'];
+            }
             $corp = $corpMdl->db_dump($logi_id, 'type');
 
-            $packages = [];
+            $expressFallback = $this->__formatParams['logi_no'] ? $this->__formatParams['logi_no'] : $this->__currDlyInfo['logi_no'];
+            $flatInput = array();
             foreach ($this->__inputParams['packages'] as $package) {
                 foreach ($package['items'] as $item) {
-                    $packages[] = [
-                        'delivery_id'       => $this->__currDlyId,
-                        'package_bn'        => $package['package_bn'],
-                        'logi_bn'           => $corp['type'],
-                        'logi_no'           => $package['logi_no'],
-                        'product_id'        => $item['product_id'],
-                        'bn'                => $item['bn'],
-                        'status'            => 'delivery',
-                        'shipping_status'   => '8',
-                        'number'            => $item['number'],
-                        'create_time'       => time(),
-                        'delivery_time'     => $package['delivery_time']
-                    ];
+                    $flatInput[] = array(
+                        'package_bn'      => $package['package_bn'],
+                        'logi_bn'         => $corp['type'],
+                        'logi_no'         => isset($package['logi_no']) ? $package['logi_no'] : $expressFallback,
+                        'bn'              => isset($item['bn']) ? $item['bn'] : '',
+                        'number'          => isset($item['number']) ? (int) $item['number'] : 0,
+                        'product_id'      => isset($item['product_id']) ? (int) $item['product_id'] : 0,
+                        'status'          => 'delivery',
+                        'shipping_status' => '8',
+                        'create_time'     => time(),
+                        'delivery_time'   => isset($package['delivery_time']) ? $package['delivery_time'] : time(),
+                    );
                 }
             }
 
-            if ($packages) $packageMdl->db->exec(ome_func::get_insert_sql($packageMdl, $packages));
+            $detailCnt = app::get('ome')->model('delivery_items_detail')->count(array('delivery_id' => $this->__currDlyId));
+            if ($detailCnt > 0 && !empty($flatInput)) {
+                $packages = $this->_allocateDeliveryPackageFromWmsAndDetail($flatInput, $corp['type'], $expressFallback);
+            } else {
+                $packages = array();
+                foreach ($flatInput as $line) {
+                    $ordFields = $this->_deliveryPackageOrderFieldsFromBn($this->__currDlyId, isset($line['bn']) ? $line['bn'] : '');
+                    $packages[] = array_merge(array(
+                        'delivery_id'       => $this->__currDlyId,
+                        'package_bn'        => $line['package_bn'],
+                        'logi_bn'           => $line['logi_bn'],
+                        'logi_no'           => $line['logi_no'],
+                        'product_id'        => $line['product_id'],
+                        'bn'                => $line['bn'],
+                        'status'            => 'delivery',
+                        'shipping_status'   => '8',
+                        'number'            => $line['number'],
+                        'create_time'       => $line['create_time'],
+                        'delivery_time'     => $line['delivery_time'],
+                    ), $ordFields);
+                }
+            }
+
+            if ($packages) {
+                $packageMdl->db->exec(ome_func::get_insert_sql($packageMdl, $packages));
+            }
         }
 
 
@@ -969,8 +1620,7 @@ class ome_event_receive_delivery extends ome_event_response
         // 补寄发货处理
         $this->_after_consign_reshipping();
 
-        //淘宝全链路
-        $this->_after_consign_tmc();
+       
 
         //状态回写
         $this->_after_consign_shop();
@@ -983,7 +1633,8 @@ class ome_event_receive_delivery extends ome_event_response
 
         //订单全额退款包裹拦截
         kernel::single('console_reship')->orderRefundToLJRK($this->__currDlyId);
-        
+        kernel::single('ome_return_reshipping')->updateDeliveryPackageApplyNumFromLanJieReship($this->__currDlyId);
+
         // order_ids
         $orderIds = array_column($this->__currDlyInfo['delivery_order'], 'order_id');
         
@@ -1004,6 +1655,8 @@ class ome_event_receive_delivery extends ome_event_response
                 $service->after_consign($this->__currDlyId);
             }
         }
+         //淘宝全链路
+         $this->_after_consign_tmc();
     }
 
     //自动开蓝票处理
@@ -1166,7 +1819,7 @@ class ome_event_receive_delivery extends ome_event_response
         $sql = 'select delivery_id from sdb_tgkpi_pick WHERE delivery_id =' . $this->__currDlyId;
         $row = $this->__dlyObj->db->selectrow($sql);
         if ($row) {
-            $opInfo = kernel::single('ome_func')->getDesktopUser();
+            $opInfo = $this->_getConsignOpInfo();
             $sql    = sprintf('UPDATE `sdb_tgkpi_pick` SET `pick_status`="deliveryed",`op_name`="%s" WHERE delivery_id="%s"', $opInfo['op_name'], $this->__currDlyId);
             kernel::database()->exec($sql);
         }
@@ -1551,19 +2204,18 @@ class ome_event_receive_delivery extends ome_event_response
         $logi_info = $this->__currDlyInfo['logi_no'] ? ',物流单号' . $this->__currDlyInfo['logi_no'] : '';
         $this->__operationLogObj->write_log('delivery_back@ome', $this->__currDlyId, $log_prefix . $logi_info);
 
-        //门店拒绝添加统计
-        if ($this->__isStoreBranch && app::get('o2o')->is_installed()) {
-            $reason_data = array(
+        //门店拒绝添加统计（b_type=2 门店仓：ome_store_manage::isStoreBranch 恒为 false，改用 ome_branch 判断）
+        if (app::get('o2o')->is_installed()
+            && kernel::single('ome_branch')->isStoreBranch($this->__currDlyInfo['branch_id'])) {
+            kernel::single('o2o_store_refuse_analysis')->saveRecord(array(
                 'delivery_bn' => $this->__currDlyBn,
                 'delivery_id' => $this->__currDlyId,
+                'branch_id'   => $this->__currDlyInfo['branch_id'],
                 'store_bn'    => $this->__inputParams['store_bn'],
                 'store_name'  => $this->__inputParams['store_name'],
                 'reason_id'   => $this->__inputParams['reason_id'],
                 'memo'        => $this->__inputParams['memo'],
-                'createtime'  => time(),
-            );
-            $reasonAnalysisObj = app::get('o2o')->model('store_refuse_analysis');
-            $reasonAnalysisObj->save($reason_data);
+            ));
         }
 
         //子发货单处理
@@ -1670,7 +2322,59 @@ class ome_event_receive_delivery extends ome_event_response
 
         $this->__dlyObj->updateOrderPrintFinish($this->__currDlyId, 1);
 
+        // 门店拒单回写 OMS 后，延迟 5 分钟重新路由审单
+        if (app::get('o2o')->is_installed()
+            && kernel::single('ome_branch')->isStoreBranch($this->__currDlyInfo['branch_id'])
+            && !empty($validOrderIdsForDelete)) {
+            $this->_scheduleStoreRefuseAutoReroute($validOrderIdsForDelete);
+        }
+
         return true;
+    }
+
+    /**
+     * 门店拒单后延迟重新路由（5 分钟）
+     *
+     * @param array $orderIds
+     * @return void
+     */
+    private function _scheduleStoreRefuseAutoReroute(array $orderIds)
+    {
+        $orderModel = app::get('ome')->model('orders');
+        $orderLib   = kernel::single('ome_order');
+
+        foreach (array_unique(array_map('intval', $orderIds)) as $orderId) {
+            if ($orderId <= 0) {
+                continue;
+            }
+
+            $orderInfo = $orderModel->dump(
+                $orderId,
+                'order_id,pay_status,ship_status,status,process_status'
+            );
+            if (empty($orderInfo)) {
+                continue;
+            }
+
+            if ($orderInfo['status'] != 'active' || $orderInfo['ship_status'] != '0') {
+                continue;
+            }
+            if (!in_array($orderInfo['process_status'], array('unconfirmed', 'confirmed'))) {
+                continue;
+            }
+
+            // 恢复订单暂停状态，满足自动审单 pause=false 条件
+            $orderModel->renewOrder($orderId, '门店拒单后重新路由');
+
+            $sdf = array(
+                'op_type'            => 'timing_confirm',
+                'timing_time'        => strtotime('5 minutes'),
+                'memo'               => '门店拒单后重新路由',
+                'is_check_last_time' => true,
+                'cnAuto'             => 'true',
+            );
+            $orderLib->auto_order_combine($orderId, $sdf);
+        }
     }
 
     /**
@@ -1955,25 +2659,217 @@ class ome_event_receive_delivery extends ome_event_response
         return $this->send_succ();
     }
 
+    /**
+     * 物流公司编码：与 sdb_ome_dly_corp.type、delivery_package.logi_bn 一致。
+     * 第三方回写入参里 logi_id 即为编码（见 _convertConsignSdf 按 type 查 corp），可直接用，不必再查表。
+     * $delivery / __formatParams / __currDlyInfo 里多为 corp_id，纯数字时再查 dly_corp.type。
+     *
+     * @param array $delivery maindly|singledly 等，可含 logi_id
+     * @return string
+     */
+    private function _deliveryLogiCodeFromContext(array $delivery = array())
+    {
+        if (!empty($this->__inputParams['logi_id'])) {
+            $raw = $this->__inputParams['logi_id'];
+            if (!is_numeric($raw)) {
+                return (string) $raw;
+            }
+        }
+
+        $logiId = null;
+        if (!empty($delivery['logi_id'])) {
+            $logiId = $delivery['logi_id'];
+        } elseif (!empty($this->__formatParams['logi_id'])) {
+            $logiId = $this->__formatParams['logi_id'];
+        } elseif (!empty($this->__currDlyInfo['logi_id'])) {
+            $logiId = $this->__currDlyInfo['logi_id'];
+        }
+        if ($logiId === null || $logiId === '') {
+            return '';
+        }
+        if (!is_numeric($logiId)) {
+            return (string) $logiId;
+        }
+        $row = app::get('ome')->model('dly_corp')->db_dump(array('corp_id' => $logiId), 'type');
+
+        return (!empty($row['type'])) ? (string) $row['type'] : '';
+    }
+
+    /**
+     * 发货单店铺：shop_id 优先取入参/当前发货单，shop_bn 由店铺表补全。
+     *
+     * @param array $delivery
+     * @return array [shop_id, shop_bn]
+     */
+    private function _deliveryShopIdAndBnFromContext(array $delivery = array())
+    {
+        $shopId = '';
+        if (!empty($delivery['shop_id'])) {
+            $shopId = (string) $delivery['shop_id'];
+        } elseif (!empty($this->__currDlyInfo['shop_id'])) {
+            $shopId = (string) $this->__currDlyInfo['shop_id'];
+        }
+        if ($shopId === '') {
+            return array('', '');
+        }
+        $shop = app::get('ome')->model('shop')->db_dump(array('shop_id' => $shopId), 'shop_bn');
+
+        return array($shopId, !empty($shop['shop_bn']) ? (string) $shop['shop_bn'] : '');
+    }
+
+    /**
+     * 主运单写入 sdb_ome_delivery_bill（bill_kind=main），按运单号去重
+     *
+     * @param array $dly 含 delivery_id、delivery_bn；logi_no 优先取此数组，否则回退当前发货单
+     */
+    private function _saveMainDeliveryBillIfNeeded(array $dly)
+    {
+        $logiNo = isset($dly['logi_no']) ? trim((string) $dly['logi_no']) : '';
+        if ($logiNo === '' && !empty($this->__currDlyInfo['logi_no'])) {
+            $logiNo = trim((string) $this->__currDlyInfo['logi_no']);
+        }
+        if ($logiNo === '') {
+            return;
+        }
+
+        $dliBill = app::get('ome')->model('delivery_bill');
+        if ($dliBill->count(array('logi_no' => $logiNo)) > 0) {
+            return;
+        }
+
+        $deliveryId = !empty($dly['delivery_id']) ? $dly['delivery_id'] : $this->__currDlyId;
+        $deliveryBn = !empty($dly['delivery_bn']) ? $dly['delivery_bn'] : $this->__currDlyBn;
+        list($orderIdJoined, $orderBnJoined) = $this->_deliveryOrderIdsAndBnsJoined((int) $deliveryId);
+        $logiCode = $this->_deliveryLogiCodeFromContext($dly);
+        list($shopId, $shopBn) = $this->_deliveryShopIdAndBnFromContext($dly);
+
+        $bill = array(
+            'status'        => '1',
+            'logi_no'       => $logiNo,
+            'bill_kind'     => 'main',
+            'delivery_id'   => $deliveryId,
+            'delivery_bn'   => $deliveryBn,
+            'create_time'   => $this->__formatParams['delivery_time'],
+            'delivery_time' => $this->__formatParams['delivery_time'],
+        );
+        if ($logiCode !== '') {
+            $bill['logi_code'] = $logiCode;
+        }
+        if ($orderIdJoined !== '') {
+            $bill['order_id'] = $orderIdJoined;
+            $bill['order_bn'] = $orderBnJoined;
+        }
+        if ($shopId !== '') {
+            $bill['shop_id'] = $shopId;
+        }
+        if ($shopBn !== '') {
+            $bill['shop_bn'] = $shopBn;
+        }
+        if (!empty($this->__currDlyInfo['org_id'])) {
+            $bill['org_id'] = $this->__currDlyInfo['org_id'];
+        }
+        if (isset($dly['weight'])) {
+            $bill['weight'] = $dly['weight'];
+        }
+        $dliBill->db_save($bill);
+    }
+
     private function _save_bill_logi_weight($bill_logi_weight, $delivery)
     {
         $dliBill = app::get('ome')->model('delivery_bill');
+
+        $deliveryId = isset($delivery['delivery_id']) ? (int) $delivery['delivery_id'] : 0;
+        list($orderIdJoined, $orderBnJoined) = $this->_deliveryOrderIdsAndBnsJoined($deliveryId);
+        $logiCode = $this->_deliveryLogiCodeFromContext($delivery);
+        list($shopId, $shopBn) = $this->_deliveryShopIdAndBnFromContext($delivery);
 
         foreach ($bill_logi_weight as $k => $val) {
             $bill                  = array();
             $bill['status']        = '1';
             $bill['logi_no']       = $k;
             $bill['weight']        = $val;
+            $bill['bill_kind']     = 'child';
             $bill['delivery_id']   = $delivery['delivery_id'];
             $bill['delivery_bn']   = $delivery['delivery_bn'];
             $bill['create_time']   = $this->__formatParams['delivery_time'];
             $bill['delivery_time'] = $this->__formatParams['delivery_time'];
+            if ($logiCode !== '') {
+                $bill['logi_code'] = $logiCode;
+            }
+            if ($orderIdJoined !== '') {
+                $bill['order_id'] = $orderIdJoined;
+                $bill['order_bn'] = $orderBnJoined;
+            }
+            if ($shopId !== '') {
+                $bill['shop_id'] = $shopId;
+            }
+            if ($shopBn !== '') {
+                $bill['shop_bn'] = $shopBn;
+            }
+            if (!empty($this->__currDlyInfo['org_id'])) {
+                $bill['org_id'] = $this->__currDlyInfo['org_id'];
+            }
 
             $dliBill->db_save($bill);
 
         }
         return true;
 
+    }
+
+    /**
+     * 发货单关联订单：order_id、order_bn 按出现顺序去重后以英文逗号拼接。
+     * 优先用 __currDlyInfo['delivery_order']（与 _initDlyInfo dump 一致，免再查 delivery_order）；否则按 delivery_id 查表。
+     * order_bn 仍从 sdb_ome_orders 取（关联表无订单号字段）。
+     *
+     * @param int $deliveryId
+     * @return array [order_id 拼接串, order_bn 拼接串]
+     */
+    private function _deliveryOrderIdsAndBnsJoined($deliveryId)
+    {
+        if ($deliveryId <= 0) {
+            return array('', '');
+        }
+        $rows = null;
+        if ((int) $deliveryId === (int) $this->__currDlyId
+            && !empty($this->__currDlyInfo['delivery_order'])
+            && is_array($this->__currDlyInfo['delivery_order'])) {
+            $rows = $this->__currDlyInfo['delivery_order'];
+        }
+        if ($rows === null) {
+            $doMdl = app::get('ome')->model('delivery_order');
+            $rows  = $doMdl->getList('order_id', array('delivery_id' => $deliveryId));
+        }
+        if (empty($rows)) {
+            return array('', '');
+        }
+        $orderIds = array();
+        $seen     = array();
+        foreach ($rows as $r) {
+            if (!is_array($r) || !isset($r['order_id'])) {
+                continue;
+            }
+            $oid = (int) $r['order_id'];
+            if ($oid > 0 && !isset($seen[$oid])) {
+                $seen[$oid]   = true;
+                $orderIds[] = $oid;
+            }
+        }
+        if (empty($orderIds)) {
+            return array('', '');
+        }
+        $ordersMdl = app::get('ome')->model('orders');
+        $ordRows   = $ordersMdl->getList('order_id,order_bn', array('order_id' => $orderIds));
+        $bnMap     = array();
+        foreach ($ordRows as $o) {
+            $bnMap[(int) $o['order_id']] = (string) $o['order_bn'];
+        }
+        $bns = array();
+        foreach ($orderIds as $oid) {
+            $bns[] = isset($bnMap[$oid]) ? $bnMap[$oid] : '';
+        }
+
+        return array(implode(',', $orderIds), implode(',', $bns));
     }
 
     /**
@@ -2095,5 +2991,103 @@ class ome_event_receive_delivery extends ome_event_response
         }
         
         return $this->send_succ();
+    }
+
+    public function machineCenterDeliveryAdd($params)
+    {
+        //机器中心增加数据
+        $original_id = $params['delivery_id'];
+        $original_bn = $params['delivery_bn'];
+        $branch_id   = $params['branch_id'];
+        $snParams    = $this->snParams($params);
+        $orderInfo   = app::get('ome')->model('delivery')->getOrderBnbyDeliveryId($original_id);
+        $branchInfo  = app::get('ome')->model('branch')->db_dump($branch_id, 'branch_bn');
+        foreach ((array)$params['items'] as $item) {
+            if ($item['sn_list']) {
+                $bnBm = app::get('material')->model('basic_material')->db_dump(array ('material_bn' => $item['bn']), 'bm_id,material_name');
+                // 获取条码 - 通过码库获取
+                $barcode = material_codebase::getBarcodeBybn($item['bn']) ?: '';
+                foreach ($item['sn_list'] as $serial) {
+                    $tmpSnParams                      = [];
+                    $tmpSnParams['sn']                = $serial;
+                    $tmpSnParams['bm_id']             = $bnBm['bm_id'];
+                    $tmpSnParams['material_bn']       = $item['bn'];
+                    $tmpSnParams['barcode']           = $barcode;
+                    
+                    // 从 imeiList 中获取对应 sn 的 IMEI 值，以逗号分隔
+                    $imei_number = '';
+                    if (isset($item['imeiList']) && is_array($item['imeiList']) && isset($item['imeiList'][$serial])) {
+                        $imeiArray = $item['imeiList'][$serial];
+                        if (is_array($imeiArray)) {
+                            $imei_number = implode(',', array_filter($imeiArray));
+                        } else {
+                            $imei_number = (string)$imeiArray;
+                        }
+                    } elseif (isset($item['imei_number'])) {
+                        // 兼容旧格式
+                        $imei_number = $item['imei_number'];
+                    }
+                    $tmpSnParams['imei_number']       = $imei_number;
+                    
+                    $tmpSnParams['order_bn']          = $orderInfo['order_bn'];
+                    $tmpSnParams['branch_id']         = $branch_id;
+                    $tmpSnParams['branch_bn']         = $branchInfo['branch_bn'];
+                    $tmpSnParams['original_id']       = $original_id;
+                    $tmpSnParams['original_bn']       = $original_bn;
+                    $tmpSnParams['bill_bn']           = $original_bn;
+                    $tmpSnParams['original_type']     = 'delivery';
+                    $tmpSnParams['io_time']           = $params['delivery_time'] ?: time();
+                    $tmpSnParams['platform_order_bn'] = $orderInfo['origin_order_bn'] ?: $orderInfo['order_bn'];
+                    $tmpSnParams['qa_expire_item']    = $params['delivery_time'] ? strtotime('+2 years', $params['delivery_time']) : strtotime('+2 years');
+                    $tmpSnParams['shop_id']           = $params['shop_id'];
+                    $tmpSnParams['status']            = '0';
+
+                    //机器中心回写落库
+                    kernel::single('machinecenter_event_receive_sn')->add(array_merge($snParams, $tmpSnParams));
+                }
+            }
+        }
+    }
+
+    /**
+     * 获取订单参数信息
+     *
+     * 该方法用于准备和返回与当前订单相关的参数信息，包括买家信息、配送信息等
+     * 它首先从成员模型中获取当前成员的信息，然后构建一个包含必要信息的数组
+     *
+     * @return array 包含订单所需参数信息的数组
+     */
+    public function snParams($params)
+    {
+        $memberMdl   = app::get('ome')->model('members');
+        $memberInfo  = $memberMdl->db_dump(array ('member_id' => $params['member_id']));
+        $basicSnInfo = [
+            'buyer_open_id'  => $memberInfo['buyer_open_uid'],
+            'buyer_nickname' => $memberInfo['uname'],
+            'buyer_name'     => $memberInfo['name'],
+            'buyer_mobile'   => $memberInfo['mobile'],
+            'buyer_email'    => $memberInfo['email'],
+            'buyer_address'  => $memberInfo['addr'],
+            'ship_oaid'      => '',
+            'ship_name'      => $params['consignee']['name'],
+            'ship_mobile'    => $params['consignee']['mobile'] ?: $params['consignee']['telephone'],
+            'ship_email'     => $params['consignee']['email'],
+            'ship_address'   => $params['consignee']['addr'],
+            'ship_province'  => $params['consignee']['province'],
+            'ship_city'      => $params['consignee']['city'],
+            'ship_district'  => $params['consignee']['district'],
+            'ship_town'      => $params['consignee']['town'],
+            'ship_village'   => $params['consignee']['village'],
+            'user_name'      => $params['consignee']['name'],
+            'user_mobile'    => $params['consignee']['mobile'] ?: $params['consignee']['telephone'],
+            'user_email'     => $params['consignee']['email'],
+            'user_address'   => $params['consignee']['addr'],
+            'user_province'  => $params['consignee']['province'],
+            'user_city'      => $params['consignee']['city'],
+            'user_district'  => $params['consignee']['district'],
+            'user_town'      => $params['consignee']['town'],
+            'user_village'   => $params['consignee']['village'],
+        ];
+        return $basicSnInfo;
     }
 }

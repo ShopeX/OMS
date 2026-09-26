@@ -276,6 +276,10 @@ class material_sales_material{
             {
                 foreach ($sales_basic_material_list as $bm_key => $bm_item)
                 {
+                    // 绑定表有 bm_id 但基础物料主档已缺失时跳过，避免 PHP8 array_merge(null) TypeError
+                    if (empty($basic_material_infos[$bm_key]) || !is_array($basic_material_infos[$bm_key])) {
+                        continue;
+                    }
                     $bmList[$sm_key][]    = array_merge($basic_material_infos[$bm_key], $bm_item, ($bmExts[$bm_key] ? : []));
                 }
             }

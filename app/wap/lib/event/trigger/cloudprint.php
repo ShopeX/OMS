@@ -49,17 +49,28 @@ class wap_event_trigger_cloudprint {
             $result['err_msg'] = $printRes['msg'] ? $printRes['msg'] : $printRes['err_msg'];
             return $result;
         }
-        $wapdelivery = $wapDlyMdl->dump(array('delivery_id'=>$delivery_id),'print_count');
-        $print_count = $wapdelivery['print_count']+1;
-        # 更新发货单的打印状态
-        $updateDly = [
-            'print_status' => 1,//已打印
-            'confirm'      => 1, //接单
-            'print_count'  => $print_count,
-        ];
-        $wapDlyMdl->update($updateDly, ['delivery_id' => $delivery_id]);
+        $this->updatePrintStatus($delivery_id);
         
         return $result;
+    }
+
+    /**
+     * 更新 WAP 发货单打印状态（与 doPrint 成功后一致）
+     */
+    public function updatePrintStatus($delivery_id)
+    {
+        $wapDlyMdl = app::get('wap')->model('delivery');
+        $wapdelivery = $wapDlyMdl->dump(array('delivery_id' => $delivery_id), 'print_count');
+        if (!$wapdelivery) {
+            return false;
+        }
+        $print_count = intval($wapdelivery['print_count']) + 1;
+        $updateDly = array(
+            'print_status' => 1,
+            'confirm'      => 1,
+            'print_count'  => $print_count,
+        );
+        return $wapDlyMdl->update($updateDly, array('delivery_id' => $delivery_id));
     }
 
 

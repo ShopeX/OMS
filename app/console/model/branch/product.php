@@ -17,6 +17,36 @@
 class console_mdl_branch_product extends dbeav_model{
      var $export_name = '仓库库存';
 
+     private $_export_extra_gt_master_done = false;
+
+     public function extra_cols()
+     {
+         return material_basic_material_master::extraCols();
+     }
+
+     public function extra_gt_master($rows)
+     {
+         if (empty($rows)) {
+             return $rows;
+         }
+         return material_basic_material_master::fillListRowsWithIdField($rows, 'product_id');
+     }
+
+     public function export_extra_cols()
+     {
+         return material_basic_material_master::extraCols();
+     }
+
+     public function export_extra_gt_master($list)
+     {
+         if ($this->_export_extra_gt_master_done || empty($list)) {
+             return $list;
+         }
+         $list = material_basic_material_master::fillListRowsWithIdField($list, 'product_id');
+         $this->_export_extra_gt_master_done = true;
+         return $list;
+     }
+
      public function table_name($real = false){
         if($real){
            $table_name = 'sdb_ome_branch_product';
@@ -33,7 +63,7 @@ class console_mdl_branch_product extends dbeav_model{
         return $schema;
     }
 
-    function fgetlist_csv( &$data,$filter,$offset,$exportType = 1 ) {
+    function fgetlist_csv( &$data,$filter,$offset,$exportType = 1,$limit = 1000,$orderby = null ) {
 
         $branchObj = app::get('ome')->model('branch');
         if( !$data['title']){
@@ -44,10 +74,14 @@ class console_mdl_branch_product extends dbeav_model{
             }
             $data['content']['main'][] = '"'.implode('","',$title).'"';
         }
-        //$limit =100;
         $barcodeLib = kernel::single('material_basic_material_barcode');
 
-        if( !$list=$this->getlists('*',$filter,0,-1) )return false;
+        // 每次只读取当前分片，避免全部库存一次进入 PHP 内存。
+        if( !$list=$this->getlists('*',$filter,$offset * $limit,$limit,$orderby) )return false;
+
+        $list = material_basic_material_master::fillListRowsWithIdField($list, 'product_id');
+        $masterCols = material_basic_material_master::extraCols();
+
         foreach( $list as $aFilter ){
             $branch = $branchObj->dump($aFilter['branch_id'],'name');
             $barcode = $barcodeLib->getBarcodeById($aFilter['product_id']);
@@ -63,6 +97,9 @@ class console_mdl_branch_product extends dbeav_model{
             $detail['branch_name'] = $this->charset->utf2local($branch['name']);
             $detail['arrive_store'] = $aFilter['arrive_store'];
             $detail['material_spu'] = $this->charset->utf2local($aFilter['material_spu']);
+            foreach ($masterCols as $colKey => $colDef) {
+                $detail[$colKey] = isset($aFilter[$colKey]) ? $this->charset->utf2local($aFilter[$colKey]) : '';
+            }
             foreach( $this->oSchema['csv']['branch_product'] as $k => $v ){
 
                 $pRow[$k] =  utils::apath( $detail,explode('/',$v) );
@@ -76,7 +113,27 @@ class console_mdl_branch_product extends dbeav_model{
 
     public function fcount_csv($filter = NULL)
     {
-        return 600;
+        return $this->countlist($filter);
+    }
+
+    /**
+     * 后台导出按起始位置调用原 CSV 逻辑，保持字段和格式不变。
+     */
+    public function getExportDataByCustom($fields, $filter, $has_detail, $curr_sheet, $start, $end, $op_id)
+    {
+        // 同步导出由框架注入字符集对象，队列入口需自行补齐。
+        $this->charset = kernel::single('base_charset');
+        $data = array();
+        if (intval($curr_sheet) !== 1) {
+            // 每个分片都会新建模型实例，需初始化列映射但不重复输出标题。
+            $this->io_title('branch_product');
+            $data['title'] = array('main' => true);
+        }
+
+        $limit = max(1, intval($end));
+        $page = intdiv(max(0, intval($start)), $limit);
+
+        return $this->fgetlist_csv($data, $filter, $page, 1, $limit, 'bp.id ASC') ? $data : false;
     }
 
     function io_title( $filter, $ioType='csv' ){
@@ -95,6 +152,9 @@ class console_mdl_branch_product extends dbeav_model{
                 '*:可售库存' => 'available_store',
                 '*:在途库存'=>'arrive_store'
                 );
+                foreach (material_basic_material_master::extraCols() as $colKey => $colDef) {
+                    $this->oSchema['csv'][$filter]['*:' . $colDef['label']] = $colKey;
+                }
                 break;
         }
         $this->ioTitle[$ioType][$filter] = array_keys( $this->oSchema[$ioType][$filter] );
@@ -114,8 +174,15 @@ class console_mdl_branch_product extends dbeav_model{
         $branch_id = $_POST['branch_id'];
 
         $branchObj = app::get('ome')->model('branch');
-        if(isset($branch_id) && trim($branch_id)){
-            $branch = $branchObj->getlist('name',array('branch_id'=>$branch_id));
+        if(isset($branch_id) && $branch_id){
+            if(is_array($branch_id)){
+                $branch = $branchObj->getlist('name',array('branch_id'=>$branch_id));
+            }else{
+                $branch_id = trim($branch_id);
+                $branch_id = intval($branch_id);
+                $branch = $branchObj->getlist('name',array('branch_id'=>$branch_id));
+            }
+            
             $export_name = $branch[0]['name'];
         }else{
             $export_name='全部仓库';
@@ -139,6 +206,12 @@ class console_mdl_branch_product extends dbeav_model{
     function countlist($filter=null)
     {
          $strWhere = '';
+         
+         // check isset
+         if(!isset($cols)){
+             $cols = '';
+         }
+         
         if($cols){
             $cols = str_replace('Array,','branch_id,product_id,',$cols);
             $cols = trim($cols);
@@ -157,14 +230,21 @@ class console_mdl_branch_product extends dbeav_model{
                 $col_tmp[$k] = 'bp.'.$v;
             }
         }
-        //仓库号
+        
+        //仓库号（仅拼有效数字 ID，避免 IN (Array)）
         if(isset($filter['branch_id']) && $filter['branch_id']){
             if (is_array($filter['branch_id'])){
-                $strWhere = ' AND bp.branch_id IN ('.implode(',', $filter['branch_id']).') ';
-            }else {
-                $strWhere = ' AND bp.branch_id = '.$filter['branch_id'];
+                $branchIds = array_values(array_filter(array_map('intval', $filter['branch_id']), function ($v) {
+                    return $v > 0;
+                }));
+                if (!empty($branchIds)) {
+                    $strWhere = ' AND bp.branch_id IN ('.implode(',', $branchIds).') ';
+                }
+            }elseif (is_numeric($filter['branch_id']) && intval($filter['branch_id']) > 0) {
+                $strWhere = ' AND bp.branch_id = '.intval($filter['branch_id']);
             }
         }
+        
         //货号
         if(isset($filter['bn']) && $filter['bn']!=''){
             $strWhere.=' AND p.material_bn like \''.$filter['bn'].'%\'';
@@ -210,6 +290,9 @@ class console_mdl_branch_product extends dbeav_model{
             $filter['visibility']    = ($filter['visibility'] == 'true' ? 1 : 0);
             $strWhere .= ' and p.visibled='."'{$filter['visibility']}'";
         }
+
+        material_basic_material_master::appendMasterWhere($filter, $strWhere, 'bp', 'product_id');
+
         $col_tmp[] = 'p.material_bn AS bn, p.material_name AS name, p.visibled AS visibility';
         $cols = implode(",",$col_tmp);
         //$orderType = $orderby?$orderby:$this->defaultOrder;
@@ -254,18 +337,33 @@ class console_mdl_branch_product extends dbeav_model{
             $cols.=','.$this->appendCols;
         }
         $col_tmp = explode(",",$cols);
+        $hasProductId = false;
+        foreach ($col_tmp as $v) {
+            if (preg_match('/\bproduct_id\b/i', $v)) {
+                $hasProductId = true;
+                break;
+            }
+        }
+        if (!$hasProductId) {
+            $col_tmp[] = 'product_id';
+        }
         foreach($col_tmp as $k=>$v){
             $tmp = explode(" ",$v);
             if(!is_numeric($tmp[0])){
                 $col_tmp[$k] = 'bp.'.$v;
             }
         }
-        //仓库号
+        //仓库号（仅拼有效数字 ID，避免 IN (Array)）
         if(isset($filter['branch_id']) && $filter['branch_id']){
             if (is_array($filter['branch_id'])){
-                $strWhere = ' AND bp.branch_id IN ('.implode(',', $filter['branch_id']).') ';
-            }else {
-                $strWhere = ' AND bp.branch_id = '.$filter['branch_id'];
+                $branchIds = array_values(array_filter(array_map('intval', $filter['branch_id']), function ($v) {
+                    return $v > 0;
+                }));
+                if (!empty($branchIds)) {
+                    $strWhere = ' AND bp.branch_id IN ('.implode(',', $branchIds).') ';
+                }
+            }elseif (is_numeric($filter['branch_id']) && intval($filter['branch_id']) > 0) {
+                $strWhere = ' AND bp.branch_id = '.intval($filter['branch_id']);
             }
         }
         //货号
@@ -312,6 +410,9 @@ class console_mdl_branch_product extends dbeav_model{
             $filter['visibility']    = ($filter['visibility'] == 'true' ? 1 : 0);
             $strWhere .= ' and p.visibled='."'{$filter['visibility']}'";
         }
+
+        material_basic_material_master::appendMasterWhere($filter, $strWhere, 'bp', 'product_id');
+
         $col_tmp[] = 'p.material_bn AS bn, p.material_name AS name, p.visibled AS visibility, mt.specifications AS spec_info,p.material_spu, mt.weight, mt.unit';
         $cols = implode(",",$col_tmp);
         $orderType = $orderby?$orderby:$this->defaultOrder;
@@ -327,7 +428,7 @@ class console_mdl_branch_product extends dbeav_model{
                 $branchWhere .= ' AND b.is_ctrl_store = '.$filter['is_ctrl_store'];
             }
         }
-        
+
         $sql = 'SELECT '.$cols.' FROM (sdb_ome_branch_product AS bp LEFT join sdb_material_basic_material as p on bp.product_id=p.bm_id)
                LEFT JOIN sdb_material_basic_material_ext AS mt on bp.product_id=mt.bm_id'
                .$branchJoin.
@@ -336,7 +437,11 @@ class console_mdl_branch_product extends dbeav_model{
         if($orderType)$sql.=' ORDER BY '.(is_array($orderType)?implode(' ',$orderType):$orderType);
 
         $data = $this->db->selectLimit($sql,$limit,$offset);
-        
+
+        if (!empty($data)) {
+            $data = material_basic_material_master::fillListRowsWithIdField($data, 'product_id');
+        }
+
         return $data;
     }
 }

@@ -58,8 +58,13 @@ class ome_event_trigger_shop_data_delivery_wxshipin extends ome_event_trigger_sh
                     $logi_type       = $this->__sdf['logi_type'];
                     $logi_name       = $this->__sdf['logi_name'];
                     $shop_product_id = $item['shop_product_id'];
+                    // 组合商品(pkg)等场景 shop_product_id 常为 0，平台要求 sku_id > 0
+                    // 视频号子单 oid 即为平台 sku_id
+                    if (empty($shop_product_id) || $shop_product_id == '0' || $shop_product_id == '-1') {
+                        $shop_product_id = $object['oid'];
+                    }
                     
-                    $newKey                                                  = $item['oid'] . '_' . $item['shop_product_id'];
+                    $newKey                                                  = $object['oid'] . '_' . $shop_product_id;
                     $expresses[$newKey]['nums']                              = $quantity;
                     $expresses[$newKey]['packages'][$newKey]['logistics_no'] = $logi_no;
                     $expresses[$newKey]['packages'][$newKey]['company_code'] = $logi_type;

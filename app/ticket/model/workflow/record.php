@@ -35,6 +35,7 @@ class ticket_mdl_workflow_record extends dbeav_model {
             'approved' => '同意',
             'rejected' => '拒绝',
             'cancelled' => '取消',
+            'source_cancelled' => '原单据已取消',
         );
     }
     

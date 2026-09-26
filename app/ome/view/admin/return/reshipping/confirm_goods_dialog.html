@@ -36,6 +36,9 @@
                             <{t}>销售物料编码<{/t}>
                         </th>
                         <th>
+                            <{t}>子订单号<{/t}>
+                        </th>
+                        <th>
                             <{t}>商品名称<{/t}>
                         </th>
                         <th>
@@ -53,6 +56,7 @@
                     <{foreach from=$items item=item name=items}>
                     <tr>
                         <td><{$item.bn}></td>
+                        <td><{$item.oid_display|default:'-'}></td>
                         <td>
                             <{if $item.sales_material}>
                             <{$item.sales_material.sales_material_name}>
@@ -242,15 +246,23 @@
             }
 
             var numsInputs = _form.getElements('input[name*="[nums]"]');
+            var hasPositiveQty = false;
             numsInputs.each(function (input) {
-                var nums = parseInt(input.value);
-                if (isNaN(nums) || nums <= 0) {
-                    alert('确认数量必须大于0');
+                var nums = parseInt(input.value, 10);
+                if (isNaN(nums) || nums < 0) {
+                    alert('确认数量不能小于0');
                     hasError = true;
                     return;
                 }
+                if (nums > 0) {
+                    hasPositiveQty = true;
+                }
             });
             if (hasError) {
+                return;
+            }
+            if (!hasPositiveQty) {
+                alert('至少需要一条确认数量大于0的商品');
                 return;
             }
 

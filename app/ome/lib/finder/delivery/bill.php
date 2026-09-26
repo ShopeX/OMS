@@ -123,8 +123,20 @@ class ome_finder_delivery_bill
     {
         $render = app::get('ome')->render();
         $data = app::get('ome')->model('delivery_bill')->dump($id);
-        
+
+        // 物流查询需要父发货单的 logi_id（渠道判断）
+        $logi_id = 0;
+        if (!empty($data['delivery_id'])) {
+            $delivery = app::get('ome')->model('delivery')->db_dump($data['delivery_id'], 'logi_id');
+            $logi_id = isset($delivery['logi_id']) ? $delivery['logi_id'] : 0;
+        }
+
+        $is_hqepay_on = app::get('ome')->getConf('ome.delivery.hqepay');
+        $is_hqepay_on = ($is_hqepay_on == 'false') ? false : true;
+
         $render->pagedata['data'] = $data;
+        $render->pagedata['logi_id'] = $logi_id;
+        $render->pagedata['is_hqepay_on'] = $is_hqepay_on;
         return $render->fetch('admin/delivery/bill/detail_basic.html');
     }
 

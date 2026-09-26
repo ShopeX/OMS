@@ -1,0 +1,82 @@
+<{capture name="header"}>
+<{css app="desktop" src="../perfect/main.css"}>
+<{script src="coms/autocompleter.js" app="desktop"}>
+<{script src="coms/pager.js" app="desktop"}>
+<{/capture}>
+<style>
+    .form-layout .form-layout-fields-column .form-field .form-input {
+        width: 50%;
+    }
+</style>
+<div class="content-container ">
+    <h3>编辑SN使用人信息</h3>
+    <div class="form-layout">
+        <form action="index.php?ctl=admin_sn&act=save&app=machinecenter&finder_id=<{$env.get.finder_id}>" id="fm1" method="post">
+            <div class="tableform tableform-tabs">
+                <div class="form-layout-block form-layout-fields-column">
+                    <h3>基本信息</h3>
+                    <input type="hidden" name="id" value="<{$data.id}>">
+                    <div class="form-layout-fields">
+                        <div class="form-field" style="width: 80%">
+                            <span class="form-field-label"><span style="color:red;">*</span>质保过期时间：</span>
+                            <{input id="start_time" size="30" style="width:90px; font-family:arial;"  type='date' name='start_time' value=$data.start_time vtype="required" }>
+                        </div>
+                        <div class="form-field" style="width: 50%">
+                            <span class="form-field-label">使用人姓名：</span>
+                            <input class="form-input" name="user_name" placeholder="使用人姓名" type="text"  value="<{$data.user_name}>">
+                        </div>
+                        <div class="form-field" style="width: 50%">
+                            <span class="form-field-label">使用人手机：</span>
+                            <input class="form-input" name="user_mobile" placeholder="使用人手机" type="text" value="<{$data.user_mobile}>">
+                        </div>
+                        <div class="form-field" style="width: 50%">
+                            <span class="form-field-label">使用人邮箱：</span>
+                            <input class="form-input" name="user_email" placeholder="使用人邮箱" type="text" value="<{$data.user_email}>">
+                        </div>
+                        <div class="form-field" style="">
+                            <span class="form-field-label">省市区：</span>
+                            <{input type='region' app='eccommon' name="area"  value=$data.area   }>
+                        </div>
+                        <div class="form-field" style="width: 50%">
+                            <span class="form-field-label">使用人地址：</span>
+                            <input class="form-input" name="user_address" placeholder="使用人地址" type="text" value="<{$data.user_address}>">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="noprint table-action" id="cc">
+                    <{button type="button" id="order-save-btn" label="保存"}> &nbsp;
+                    <{button type="button" class="btn-secondary" id="return-btn" label="关 闭" onclick="javascript:void(window.close());"}>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    $('order-save-btn').addEvent('click', function (e) {
+        var _this = this;
+        var form = this.getParent('form');
+
+        form.store('target', {
+            onRequest: function () {
+                _this.disabled = true;
+            },
+            onComplete: function (jsontext) {
+                try {
+                    var json = JSON.decode(jsontext);
+
+                    if (typeof (json.error) != 'undefined') {
+                        _this.disabled = false;
+                    } else {
+                        _this.disabled = true;
+                        if (opener.finderGroup['<{$env.get.finder_id}>']) opener.finderGroup['<{$env.get.finder_id}>'].refresh.delay(100, opener.finderGroup['<{$env.get.finder_id}>']);
+                        setTimeout('window.close()', 200);
+                    }
+                } catch (e) {
+                }
+            }
+        });
+
+        form.fireEvent('submit', e);
+    });
+</script>

@@ -66,6 +66,12 @@ class erpapi_channel_bind extends erpapi_channel_abstract
             'shop_name' => '汇付发票',
             'title'     => '汇付电子发票',
         ),
+        'piaoyitong' => array(
+            'node_type' => 'piaoyitong',
+            'to_node'   => '',
+            'shop_name' => '票易通',
+            'title'     => '票易通电子发票',
+        ),
     );
     
     public $channel;

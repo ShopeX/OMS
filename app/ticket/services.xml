@@ -8,9 +8,14 @@
   <service id="desktop_finder.ticket_mdl_workflow_node">
     <class>ticket_finder_workflow_node</class>
   </service>
+
   <service id="desktop_finder.ticket_mdl_workflow_case">
     <class>ticket_finder_workflow_case</class>
   </service>
+  <service id="extend_filter_ticket_mdl_workflow_case">
+    <class>ticket_finder_extend_filter_workflow_case</class>
+  </service>
+
   <service id="desktop_finder.ticket_mdl_workflow_record">
     <class>ticket_finder_workflow_record</class>
   </service>

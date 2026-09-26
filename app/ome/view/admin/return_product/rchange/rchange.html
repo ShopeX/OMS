@@ -350,7 +350,7 @@
                                             <input type='hidden' id='amount-<{$aGoods.order_item_id}>' name='return[amount][<{$aGoods.order_item_id}>]' price='<{$aGoods.price}>' class="hidden_money" value='<{$aGoods.amount}>' size='6'>
                                             <{$aGoods.amount}>
                                             <{else}>
-                                            <input type='text' id='amount-<{$aGoods.order_item_id}>' class="amount" name='return[amount][<{$aGoods.order_item_id}>]' price='<{$aGoods.price}>' class="hidden_money" value='<{$aGoods.amount}>' size='6'>
+                                            <input type='text' id='amount-<{$aGoods.order_item_id}>' class="amount" name='return[amount][<{$aGoods.order_item_id}>]' price='<{$aGoods.price}>' class="hidden_money" value='<{$aGoods.amount}>' size='6' onchange="changeGoodsAmount(this)">
                                             <{/if}>
                                         </td>
                                         <td><{$aGoods.normal_num}></td>
@@ -517,7 +517,7 @@
             <{button_permission label="确认并审核" permission='aftersale_rchange_check' type="button" id="reship-check"}> &nbsp;&nbsp;
             <{button_permission label="确定并保存" permission='aftersale_rchange_edit' class="btn-primary" type="button"}> &nbsp; &nbsp;
 <!--            <{button label="取消" class="btn-secondary" isCloseDialogBtn="true" onclick="this.getParent('.dialog').retrieve('instance').close();"}>-->
-            <{button_permission label="返 回"  class="btn-secondary" type="button" onclick="location.href=window.frameElement.src;"}> &nbsp; &nbsp;
+            <{button_permission label="返 回"  class="btn-secondary" type="button" onclick="rchangeGoBack(document.id('return-apply'));" }> &nbsp; &nbsp;
             <{/if}>
         </div>
     </form>
@@ -599,6 +599,36 @@ $('select-diff-order').addEvent('click',function(e){
     });
 });
 
+function rchangeGoBack(form) {
+    var dialogEl = form.getParent('.dialog');
+    if (dialogEl) {
+        dialogEl.retrieve('instance').close();
+        return;
+    }
+    if (window.frameElement && window.frameElement.src) {
+        location.href = window.frameElement.src;
+    }
+}
+
+function rchangeFinishInDialogOrRedirect(form, resp) {
+    var msg = resp.success || resp.succ;
+    if (msg) {
+        MessageBox.success(msg);
+    }
+    var dialogEl = form.getParent('.dialog');
+    if (dialogEl) {
+        var finderId = '<{$env.get.finder_id}>';
+        if (finderId && window.finderGroup && window.finderGroup[finderId]) {
+            window.finderGroup[finderId].refresh();
+        }
+        dialogEl.retrieve('instance').close();
+        return;
+    }
+    if (resp.redirect) {
+        W.page(resp.redirect);
+    }
+}
+
 $E('#return-apply #reship-check').addEvent('click',function(e){
     var _this = this;
     _this.set('disabled',true);
@@ -670,8 +700,7 @@ $E('#return-apply #reship-check').addEvent('click',function(e){
                 MessageBox.error(resp.error);return;
               }
 
-              MessageBox.success(resp.success);
-              W.page(resp.redirect);
+              rchangeFinishInDialogOrRedirect(_this.form, resp);
             }
           }).send();
 
@@ -738,10 +767,7 @@ if($E('#return-apply .btn-primary'))
                     MessageBox.error(resp.error);return;
                 }
 
-                MessageBox.success(resp.succ);
-                W.page(resp.redirect);
-                // finderGroup['<{$env.get.finder_id}>'].refresh.delay(400,finderGroup['<{$env.get.finder_id}>']);
-                // _this.getParent('.dialog').retrieve('instance').close();
+                rchangeFinishInDialogOrRedirect(_this.form, resp);
             }
         }).send();
     });
@@ -1205,9 +1231,25 @@ function choose_branch(obj,branch_id,product_id){
 
 function changeGoodsAmount(obj) {
     let order_item_id = obj.getParent('TR').get('key');
-    let price = $('price-'+order_item_id).value;
-    let num = $('num-'+order_item_id).value;
-    $('amount-'+order_item_id).setAttribute('value', (num*price).toFixed(2));
+    let priceEl = $('price-'+order_item_id);
+    let numEl = $('num-'+order_item_id);
+    let amountEl = $('amount-'+order_item_id);
+    let price = parseFloat(priceEl.value) || 0;
+    let num = parseFloat(numEl.value) || 0;
+    let amount = parseFloat(amountEl.value) || 0;
+
+    if (obj.id && String(obj.id).indexOf('amount-') === 0) {
+        if (num <= 0) {
+            return;
+        }
+        price = (amount / num).toFixed(2);
+        priceEl.value = price;
+        priceEl.setAttribute('value', price);
+    } else {
+        amount = (num * price).toFixed(2);
+        amountEl.value = amount;
+        amountEl.setAttribute('value', amount);
+    }
 }
 </script>
 

@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class console_finder_iso{
 
    function __construct($app)
@@ -63,24 +47,12 @@ class console_finder_iso{
 
     public $column_applynum = '申请数量';
     public $column_applynum_width = '100';
-    /**
-     * column_applynum
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_applynum($row, $list){
         $total = $this->_getTotal($row, $list);
         return $total['applynum'];
     }
     public $column_applymoney = '申请金额';
     public $column_applymoney_width = '100';
-    /**
-     * column_applymoney
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_applymoney($row, $list){
         $total = $this->_getTotal($row, $list);
         if (!kernel::single('desktop_user')->has_permission('purchase_price')) {
@@ -90,24 +62,12 @@ class console_finder_iso{
     }
     public $column_actualnum = '实际数量';
     public $column_actualnum_width = '100';
-    /**
-     * column_actualnum
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_actualnum($row, $list){
         $total = $this->_getTotal($row, $list);
         return $total['actualnum'];
     }
     public $column_actualmoney = '实际金额';
     public $column_actualmoney_width = '100';
-    /**
-     * column_actualmoney
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_actualmoney($row, $list){
         $total = $this->_getTotal($row, $list);
         if (!kernel::single('desktop_user')->has_permission('purchase_price')) {
@@ -330,6 +290,12 @@ EOF;
             $order_item['product_name'] = $product['material_name'];
             $order_item['unit'] = isset($product['unit']) ? $product['unit'] : '';
             $order_item['detail'] = isset($newDetailList[$order_item['product_id']]) ? $newDetailList[$order_item['product_id']] : [];
+            if (empty($order_item['sn']) && !empty($order_item['sn_list'])) {
+                $snList = json_decode($order_item['sn_list'], true);
+                if (is_array($snList)) {
+                    $order_item['sn'] = implode(',', $snList);
+                }
+            }
             $iso['iso_items'][$k] = $order_item;
         }
        
@@ -340,6 +306,19 @@ EOF;
         }else{
             return $render->fetch("admin/iostock/outstock_item.html");
         }
+    }
+
+    public $detail_serial = "唯一码列表";
+    public function detail_serial($iso_id)
+    {
+        $render = app::get('console')->render();
+        $page = max(1, intval($_GET['serial_page'] ?? 1));
+        $render->pagedata = array_merge(
+            $render->pagedata,
+            console_adjust_serial::preparePagedIsoSerialListViewData($iso_id, $page, 50)
+        );
+
+        return $render->fetch('admin/iostock/serial_list.html');
     }
 
     private $totalNumMoney;
@@ -386,11 +365,6 @@ EOF;
     }
     
     public $detail_oplog = "操作记录";
-    /**
-     * detail_oplog
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function detail_oplog($id){
         $render = app::get('console')->render();
         $opObj  = app::get('ome')->model('operation_log');
@@ -418,11 +392,6 @@ EOF;
     }
 
     public $detail_useful = "有效期记录";
-    /**
-     * detail_useful
-     * @param mixed $iso_id ID
-     * @return mixed 返回值
-     */
     public function detail_useful($iso_id){
        
         $isoMdl  = app::get('taoguaniostockorder')->model('iso');

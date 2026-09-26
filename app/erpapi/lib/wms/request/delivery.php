@@ -182,16 +182,25 @@ class erpapi_wms_request_delivery extends erpapi_wms_request_abstract
         $callback = array(
             'class'  => get_class($this),
             'method' => 'delivery_create_callback',
-            'params' => array('delivery_bn' => $delivery_bn, 'obj_bn' => $delivery_bn, 'obj_type' => 'delivery'),
+            'params' => array(
+                'delivery_bn' => $delivery_bn,
+                'obj_bn'      => $delivery_bn,
+                'obj_type'    => 'delivery',
+                'wms_id'      => (string) $this->__channelObj->wms['channel_id'],
+                'wms_name'    => (string) $this->__channelObj->wms['channel_name'],
+            ),
         );
-
+        
+        // 过滤 emoji（4 字节 UTF-8），避免 api_fail.retry_params 入库报 Incorrect string value
+        $retryArgs = kernel::single('ome_order_func')->filterEmoji(func_get_args());
+        
         $retry = array(
             'obj_bn'        => $delivery_bn,
             'obj_type'      => 'delivery',
             'channel'       => 'wms',
             'channel_id'    => $this->__channelObj->wms['channel_id'],
             'method'        => 'delivery_create',
-            'args'          => func_get_args(),
+            'args'          => $retryArgs,
             'next_obj_type' => $this->_getNextObjType()
         );
         $apiFailId = app::get('erpapi')->model('api_fail')->saveRunning($retry);
@@ -446,9 +455,114 @@ class erpapi_wms_request_delivery extends erpapi_wms_request_abstract
         if($rsp != 'succ'){
             $operationLogObj = app::get('ome')->model('operation_log');
             $operationLogObj->write_log('delivery_modify@ome', $deliverys['delivery_id'], 'WMS响应结果：'. $msg);
+            $this->_sendDeliveryCreateFailNotify($delivery_bn, $response, $callback_params);
         }
         
         return $this->callback($response, $callback_params);
+    }
+
+    /**
+     * 发货单推送 WMS 创建失败预警（异步回调 delivery_create_callback，事件码 delivery_create_fail_notify）
+     *
+     * @param string $delivery_bn
+     * @param array  $response        WMS 回调响应，含 rsp、err_msg、res
+     * @param array  $callback_params 创建时写入的回调参数
+     */
+    protected function _sendDeliveryCreateFailNotify($delivery_bn, $response, $callback_params = array())
+    {
+        try {
+            $fail_msg = '';
+            if (!empty($response['err_msg'])) {
+                $fail_msg = (string) $response['err_msg'];
+            } elseif (!empty($response['res'])) {
+                $fail_msg = (string) $response['res'];
+            }
+            $fail_rsp = isset($response['rsp']) ? (string) $response['rsp'] : '';
+
+            $deliveryObj = app::get('ome')->model('delivery');
+            $deliveryInfo = $deliveryObj->db_dump(
+                array('delivery_bn' => $delivery_bn),
+                'delivery_id,delivery_bn,branch_id,shop_id,shop_type'
+            );
+            if (empty($deliveryInfo)) {
+                return;
+            }
+
+            $order_bn = '';
+            $dlyOrder = app::get('ome')->model('delivery_order')->db_dump(
+                array('delivery_id' => $deliveryInfo['delivery_id']),
+                'order_id'
+            );
+            if (!empty($dlyOrder['order_id'])) {
+                $orderRow = app::get('ome')->model('orders')->db_dump(
+                    array('order_id' => $dlyOrder['order_id']),
+                    'order_bn'
+                );
+                $order_bn = !empty($orderRow['order_bn']) ? (string) $orderRow['order_bn'] : '';
+            }
+
+            $branch_bn = '';
+            $branch_name = '';
+            $receiver = array();
+            if (!empty($deliveryInfo['branch_id'])) {
+                $branchRow = app::get('ome')->model('branch')->db_dump(
+                    array('branch_id' => $deliveryInfo['branch_id']),
+                    'branch_bn,name,email'
+                );
+                if (!empty($branchRow)) {
+                    $branch_bn = (string) $branchRow['branch_bn'];
+                    $branch_name = (string) $branchRow['name'];
+                    if (!empty($branchRow['email'])) {
+                        $receiver = explode(',', $branchRow['email']);
+                    }
+                }
+            }
+
+            $shop_name = '';
+            if (!empty($deliveryInfo['shop_id'])) {
+                $shopRow = app::get('ome')->model('shop')->db_dump(
+                    array('shop_id' => $deliveryInfo['shop_id']),
+                    'name'
+                );
+                $shop_name = !empty($shopRow['name']) ? (string) $shopRow['name'] : '';
+            }
+
+            $shop_type_label = '';
+            if (!empty($deliveryInfo['shop_type']) && class_exists('ome_shop_type')) {
+                $shop_type_label = ome_shop_type::shop_name($deliveryInfo['shop_type']);
+            } elseif (!empty($deliveryInfo['shop_type'])) {
+                $shop_type_label = (string) $deliveryInfo['shop_type'];
+            }
+
+            $wms_id = !empty($callback_params['wms_id']) ? (string) $callback_params['wms_id'] : '';
+            $wms_name = !empty($callback_params['wms_name']) ? (string) $callback_params['wms_name'] : '';
+            if (empty($wms_id) && !empty($this->__channelObj->wms['channel_id'])) {
+                $wms_id = (string) $this->__channelObj->wms['channel_id'];
+            }
+            if (empty($wms_name) && !empty($this->__channelObj->wms['channel_name'])) {
+                $wms_name = (string) $this->__channelObj->wms['channel_name'];
+            }
+
+            $notifyParams = array(
+                'delivery_bn' => (string) $delivery_bn,
+                'order_bn'    => $order_bn,
+                'branch_bn'   => $branch_bn,
+                'branch_name' => $branch_name,
+                'wms_id'      => $wms_id,
+                'wms_name'    => $wms_name,
+                'shop_type'   => $shop_type_label,
+                'shop_name'   => $shop_name,
+                'fail_rsp'    => $fail_rsp,
+                'fail_msg'    => $fail_msg,
+            );
+            if (!empty($receiver)) {
+                $notifyParams['receiver'] = $receiver;
+            }
+
+            kernel::single('monitor_event_notify')->addNotify('delivery_create_fail_notify', $notifyParams, true);
+        } catch (Exception $e) {
+            // 不影响主流程
+        }
     }
 
     /**
@@ -581,7 +695,7 @@ class erpapi_wms_request_delivery extends erpapi_wms_request_abstract
     }
 
     /**
-     * @param $sdf = array('delivery_bn'=>'', 'branch_id'=>'', 'branch_bn'=>'', 'original_delivery_bn'=>'')
+     * @param $sdf = array('delivery_bn'=>'', 'branch_id'=>'', 'branch_bn'=>'', 'original_delivery_bn'=>'', 'logi_no'=>'')
      * @return array
      */
     protected function _format_cut_params($sdf) {
@@ -589,6 +703,7 @@ class erpapi_wms_request_delivery extends erpapi_wms_request_abstract
             'warehouse_code' => $this->get_warehouse_code($this->__channelObj->wms['channel_id'], $sdf['branch_bn']),
             'delivery_order_code' => $sdf['outer_delivery_bn'],
             'order_id' => $sdf['original_delivery_bn'],
+            'express_code' => isset($sdf['logi_no']) ? trim((string) $sdf['logi_no']) : '',
         );
         return $params;
     }

@@ -1,0 +1,47 @@
+<style>
+    #workwx_store_list li {
+        width: 48%;
+        overflow: hidden;
+        float: left;
+        margin-bottom: 10px;
+        font-size: 12px;
+        line-height: 20px;
+        list-style: none;
+    }
+    #workwx_store_list .current-set { color: #c00; font-weight: 700; }
+    #workwx_store_list .store-occupied { color: #999; }
+    #workwx_store_list .store-occupied label { cursor: not-allowed; }
+    #workwx_store_list .occupied-tip {
+        color: #999;
+        font-size: 11px;
+        margin-left: 4px;
+    }
+    #workwx_store_list:after { content: ''; display: block; clear: both; }
+</style>
+<{if $o2o_installed && $stores}>
+<ul id="workwx_store_list">
+    <{foreach from=$stores item=store}>
+    <li<{if $store.is_disabled=='true'}> class="store-occupied"<{/if}>>
+        <label for="workwx_store_<{$store.store_id}>">
+            <input type="checkbox" value="<{$store.store_id}>" id="workwx_store_<{$store.store_id}>" name="store_id[]"
+                <{if $store.is_checked=='true'}>checked="checked"<{/if}>
+                <{if $store.is_disabled=='true'}>disabled="disabled"<{/if}> />
+            [<{$store.store_bn}>] <{$store.store_name}>
+            <{if $store.is_disabled=='true'}><span class="occupied-tip">（已归属：<{$store.occupied_rule_name}>）</span><{/if}>
+        </label>
+    </li>
+    <{/foreach}>
+</ul>
+<script type="text/javascript">
+(function () {
+    $$('#workwx_store_list input[type=checkbox]:not([disabled])').addEvent('click', function () {
+        this.getParent()[this.checked ? 'addClass' : 'removeClass']('current-set');
+    });
+    $$('#workwx_store_list input[type=checkbox]:not([disabled])').each(function (item) {
+        item.getParent()[item.checked ? 'addClass' : 'removeClass']('current-set');
+    });
+})();
+</script>
+<{else}>
+<div class="notice" style="color:#c00;">未安装 O2O 应用或暂无可用门店，请先维护门店档案。</div>
+<{/if}>

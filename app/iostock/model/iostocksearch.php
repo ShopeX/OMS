@@ -46,6 +46,8 @@ class iostock_mdl_iostocksearch extends iostock_mdl_iostock{
                     '*:原始单据号' => 'original_bn',
                     '*:发货单号' => 'delivery_bn',
                     '*:供应商/用户名/公司名称' => 'supplier_name',
+                    '*:店铺编码' => 'shop_bn',
+                    '*:店铺名称' => 'shop_name',
                     '*:基础物料编码' => 'bn',
                     '*:货品名称' => 'bn_name',
                     '*:出入库数量' => 'nums',

@@ -172,9 +172,24 @@ class erpapi_shop_response_invoice extends erpapi_shop_response_abstract
 
         $field   = 'order_id,order_bn,ship_name,ship_area,ship_addr,ship_mobile,ship_tel,shop_type,is_tax';
         $tgOrder = $this->getOrder($field, $shop_id, $order_bn);
-
+        
+        // 归档订单
+        if(empty($tgOrder)){
+            $tgOrder = app::get('archive')->model('orders')->dump(array('order_bn'=>$order_bn,'shop_id'=>$shop_id), '*');
+        }
+        
         if ($tgOrder) {
             $oldInvoice = app::get('ome')->model('order_invoice')->db_dump(array('order_id' => $tgOrder['order_id']));
+            
+            // 读取归档订单发票记录
+            if(empty($oldInvoice)){
+                $oldInvoice = app::get('archive')->model('order_invoice')->db_dump(array('order_id'=>$tgOrder['order_id']));
+                if($oldInvoice){
+                    // 归档发票标记
+                    $oldInvoice['is_archive_invoice'] = true;
+                }
+            }
+            
             if ($oldInvoice) {
 //                if ($oldInvoice['register_no']) {
 //                    $this->__apilog['result']['msg'] = '已经存在发票信息';

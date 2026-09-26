@@ -1,0 +1,74 @@
+<div class="finder-detail">
+    <div class="notice">选择要替换的基础物料（单选）</div>
+    
+    <div class="division">
+        <table class="gridlist" width="100%" cellspacing="0" cellpadding="0" border="0">
+            <thead>
+                <tr>
+                    <th width="50">选择</th>
+                    <th>物料编码</th>
+                    <th>物料名称</th>
+                    <th>零售价</th>
+                </tr>
+            </thead>
+            <tbody>
+                <{foreach from=$basic_materials item=material}>
+                <tr>
+                    <td>
+                        <input type="radio" name="selected_material" value="<{$material.bm_id}>" data-material='<{$material|json_encode}>'>
+                    </td>
+                    <td><{$material.material_bn}></td>
+                    <td class="name-cell" title="<{$material.material_name}>"><{$material.material_name}></td>
+                    <td><{$material.retail_price}></td>
+                </tr>
+                <{/foreach}>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="table-action">
+    <{button label="确定选择" type="button" id="confirm-select"}>
+    <{button label="取消" type="button" isCloseDialogBtn="true"}>
+</div>
+
+<style>
+/* 物料名称列样式 */
+.name-cell {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    position: relative;
+    cursor: help;
+}
+.name-cell:hover {
+    background-color: #f0f8ff;
+}
+</style>
+
+<script type="text/javascript">
+    window.addEvent('domready', function() {
+        $('confirm-select').addEvent('click', function() {
+            var selectedMaterial = null;
+            var radios = $ES('input[name="selected_material"]:checked');
+            
+            if (radios.length == 0) {
+                MessageBox.error('请选择要替换的基础物料');
+                return;
+            }
+            
+            var selectedMaterial = JSON.decode(radios[0].get('data-material'));
+            
+            // 使用系统的回调机制
+            if (window.parent && window.parent.finderDialogCallback) {
+                window.parent.finderDialogCallback(JSON.encode([selectedMaterial]));
+            }
+            
+            // 关闭对话框
+            if (window.parent && window.parent.dialog) {
+                window.parent.dialog.close();
+            }
+        });
+    });
+</script>

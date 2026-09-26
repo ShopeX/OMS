@@ -314,11 +314,18 @@ class ome_delivery_template{
         }
 
         $noFirst = false;
+        $data['wxshipin_product_info'] = array();
         if ($value_list['delivery_items']) {
             $totalNum = 0;
             $total_product_weight = 0;
             $i = 0;
             foreach ($value_list['delivery_items'] as $item){
+                $data['wxshipin_product_info'][] = array(
+                    'name' => isset($item['product_name']) ? $item['product_name'] : '',
+                    'count' => isset($item['number']) ? intval($item['number']) : 0,
+                    'code' => isset($item['bn']) ? $item['bn'] : '',
+                    'description' => isset($item['addon']) ? $item['addon'] : '',
+                );
                 if ($item['addon']) {
                     $addon = sprintf(' %s', $item['addon']);
                 } else {

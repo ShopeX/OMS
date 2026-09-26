@@ -1,47 +1,28 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class siso_receipt_iostock_reship extends siso_receipt_iostock_abstract implements siso_receipt_iostock_interface{
     /**
-     * 
+     *
      * 出入库类型id
      * @var int
      */
     public $_typeId = 30;
 
     /**
-     * 
+     *
      * 出库/入库动作
      * @var int
      */
     protected $_io_type = 1;
     
-    /**
-     * 创建
-     * @param mixed $params 参数
-     * @param mixed $data 数据
-     * @param mixed $msg msg
-     * @return mixed 返回值
-     */
     public function create($params, &$data, &$msg = null)
     {
         $reship_id = $params['reship_id'];
         $reship = app::get('ome')->model('reship')->db_dump(['reship_id'=>$reship_id], 'shop_id');
-        $shop = app::get('ome')->model('shop')->db_dump(['shop_id'=>$reship['shop_id']], 'delivery_mode');
+        $shop = app::get('ome')->model('shop')->db_dump(['shop_id'=>$reship['shop_id']], 'delivery_mode,shop_bn,name');
+
+        $params['shop_bn'] = $shop['shop_bn'];
+        $params['shop_name'] = $shop['name'];
+
         if($shop['delivery_mode'] == 'jingxiao') {
             return true;
         }
@@ -49,7 +30,7 @@ class siso_receipt_iostock_reship extends siso_receipt_iostock_abstract implemen
     }
 
     /**
-     * 
+     *
      * 退货入库
      * @param array $data
      */
@@ -90,6 +71,8 @@ class siso_receipt_iostock_reship extends siso_receipt_iostock_abstract implemen
                     'memo'=>$data['memo'],
                     'bill_type'=>$bill_type,
                     'business_bn'=>$reship['reship_bn'],
+                    'shop_bn'   =>$data['shop_bn'],
+                    'shop_name'=>$data['shop_name'],
                 );
             }
             $this->dealBatch($iostock_data, ['reship'], '+', true);

@@ -20,37 +20,13 @@ class ome_preprocess_crm{
     private static  $__crm_gifts = array();
     
     #$type是重新强制请求CRM赠品的标示
-    /**
-     * 处理
-     * @param mixed $order_id ID
-     * @param mixed $msg msg
-     * @param mixed $type type
-     * @return mixed 返回值
-     */
     public function process($order_id,&$msg,$type=false){
-        try {
-            $res = $this->_process($order_id, $msg, $type);
-            // 如果返回false但没有设置msg，设置默认错误信息
-            if($res === false && empty($msg)){
-                $msg = 'CRM赠品预处理执行失败，未返回具体错误信息';
-            }
-            return $res;
-        } catch (Exception $e) {
-            $msg = 'CRM赠品预处理执行异常：'.$e->getMessage();
-            $operationLogObj = app::get('ome')->model('operation_log');
-            $opinfo = kernel::single('ome_func')->getDesktopUser();
-            $operationLogObj->write_log('order_preprocess@ome', $order_id, $msg, time(), $opinfo);
-            return false;
-        }
+
+        $res = $this->_process($order_id, $msg, $type);
+        
+        return $res;
     }
 
-    /**
-     * _process
-     * @param mixed $order_id ID
-     * @param mixed $msg msg
-     * @param mixed $type type
-     * @return mixed 返回值
-     */
     public function _process($order_id,&$msg,$type=false){
         #获取crm基本配置
         $crm_cfg = app::get('crm')->getConf('crm.setting.cfg');
@@ -65,8 +41,6 @@ class ome_preprocess_crm{
         
         $opinfo = kernel::single('ome_func')->getDesktopUser();
         if(!$order_id){
-            $msg = '订单ID为空，无法执行CRM赠品预处理';
-            $operationLogObj->write_log('order_preprocess@ome', 0, $msg, time(), $opinfo);
             return false;
         }
 
@@ -80,8 +54,6 @@ class ome_preprocess_crm{
         $_rs = $Obj_preprocess->getList('preprocess_order_id',array('preprocess_order_id'=>$order_id,'preprocess_status'=>'1','preprocess_type'=>'crm'));
         #不为空，说明已经获取过CRM赠品
         if(!empty($_rs)){
-            $msg = '订单已处理过CRM赠品预处理，跳过本次处理';
-            $operationLogObj->write_log('order_preprocess@ome', $order_id, $msg, time(), $opinfo);
             return true;
         }
 
@@ -90,26 +62,16 @@ class ome_preprocess_crm{
         
         #根据订单号，找到当前订单的相关信息
         $order_info = $obj_channel->getOrderInfo($order_id);
-        if(empty($order_info)){
-            $msg = '获取订单信息失败，无法执行CRM赠品预处理';
-            $operationLogObj->write_log('order_preprocess@ome', $order_id, $msg, time(), $opinfo);
-            return false;
-        }
         if( in_array($order_info['process_status'],array('splitting','splited'))){
-            $msg = '订单状态为拆分中或已拆分，跳过CRM赠品预处理';
-            $operationLogObj->write_log('order_preprocess@ome', $order_id, $msg, time(), $opinfo);
             return true;
         }
         if(!empty($order_info['relate_order_bn'])){
-            $msg = '订单有关联订单号('.$order_info['relate_order_bn'].')，跳过CRM赠品预处理';
-            $operationLogObj->write_log('order_preprocess@ome', $order_id, $msg, time(), $opinfo);
             return true;
         }
         
         //补发订单
         if ($order_info['order_type'] == 'bufa') {
             $msg = '补发订单不需要执行CRM赠品';
-            $operationLogObj->write_log('order_preprocess@ome', $order_id, $msg, time(), $opinfo);
             return true;
         }
         
@@ -199,8 +161,6 @@ class ome_preprocess_crm{
             if($gift_on_off == 'on'){
                 $gift_rule = $obj_crm_rpc->getFormatRst($params);      // 调用本地方法
             } else {
-                $msg = 'CRM赠品配置为空且本地赠品规则未开启(gift.on_off.cfg='.$gift_on_off.')，跳过CRM赠品预处理';
-                $operationLogObj->write_log('order_preprocess@ome', $order_id, $msg, time(), $opinfo);
                 return true;
             }
         }
@@ -217,9 +177,6 @@ class ome_preprocess_crm{
             if(!isset($gift_rule['data']['order_bn']) && isset($gift_rule['msg'])){
                 if($gift_rule['msg']){
                     $operationLogObj->write_log('order_preprocess@ome',$order_id, $gift_rule['msg'],time(),$opinfo);
-                } else {
-                    $msg = '订单CRM赠品规则返回数据缺少order_bn字段';
-                    $operationLogObj->write_log('order_preprocess@ome',$order_id, $msg,time(),$opinfo);
                 }
                 
                 return false;
@@ -252,10 +209,6 @@ class ome_preprocess_crm{
                     $operationLogObj->write_log('order_preprocess@ome',$order_id, $msg,time(),$opinfo);
                     #打标与记日志完成后，程序返回
                     return false;
-                } else {
-                    $msg = '订单CRM预处理失败，gift.error.ways配置异常(dealways='.$dealways.')';
-                    $operationLogObj->write_log('order_preprocess@ome',$order_id, $msg,time(),$opinfo);
-                    return false;
                 }
             } else {
                 #不添加赠品，继续审单发货
@@ -267,10 +220,6 @@ class ome_preprocess_crm{
                     $orderObj->update(array('abnormal_status'=>$status),array('order_id'=>$order_id));
                     $operationLogObj->write_log('order_preprocess@ome',$order_id, $msg,time(),$opinfo);
                     #打标与记日志完成后，程序返回
-                    return false;
-                } else {
-                    $msg = '订单CRM预处理失败，crm_cfg[error]配置异常(error='.(isset($crm_cfg['error']) ? $crm_cfg['error'] : '未设置').')';
-                    $operationLogObj->write_log('order_preprocess@ome',$order_id, $msg,time(),$opinfo);
                     return false;
                 }
             }
@@ -313,8 +262,6 @@ class ome_preprocess_crm{
         
         //check审核订单时,没有可执行的赠送赠品
         if(empty($gift_rule['data']['gifts'])){
-            $msg = '订单审核时没有可执行的赠送赠品(gifts为空，可能有bufaRules延迟补发)';
-            $operationLogObj->write_log('order_preprocess@ome', $order_id, $msg, time(), $opinfo);
             return true;
         }
         
@@ -379,6 +326,21 @@ class ome_preprocess_crm{
 
         kernel::database()->beginTransaction();
 
+        // 订单已 hold 时，CRM 赠品继承同一时限，避免赠品单独先出单
+        // 优先取同单明细 max(estimate_con_time)，再回退订单 timing_confirm（兼容京东预约发货等）
+        $giftHoldTime = 0;
+        $existObjects = $orderObjectObj->getList('estimate_con_time', array('order_id' => $order_id), 0, -1);
+        foreach ($existObjects as $existObj) {
+            $ect = intval($existObj['estimate_con_time']);
+            if ($ect > $giftHoldTime) {
+                $giftHoldTime = $ect;
+            }
+        }
+        
+        if ($giftHoldTime <= 0 && !empty($order_info['timing_confirm'])) {
+            $giftHoldTime = intval($order_info['timing_confirm']);
+        }
+
         $needFreezeItem = [];
         foreach($salesM_info as $info){
 
@@ -404,7 +366,14 @@ class ome_preprocess_crm{
             if (kernel::single('ome_order_bool_type')->isBookingDelivery($order_info['order_bool_type']) && $order_info['timing_confirm']) {
                 $tmp_obj['estimate_con_time'] = $order_info['timing_confirm'];
             }
-
+            
+            // 拼多多订单，赠品使用订单明细上最大的预售发货时间
+            if(in_array($order_info['shop_type'], array('pinduoduo'))){
+                if ($giftHoldTime > 0) {
+                    $tmp_obj['estimate_con_time'] = $giftHoldTime;
+                }
+            }
+            
             if($orderObjectObj->save($tmp_obj)){
                 $basicMInfos = $salesMLib->getBasicMBySalesMId($info['sm_id']);
                 foreach($basicMInfos as $k => $basicMInfo){
@@ -462,12 +431,9 @@ class ome_preprocess_crm{
                 $branchBatchList[] = $freezeData;
             }
 
-            $err = '';
             $res = $basicMStockFreezeLib->freezeBatch($branchBatchList, __CLASS__.'::'.__FUNCTION__, $err);
             if (!$res) {
                 $is_update = false;
-                $msg = '订单CRM赠品库存预占失败：'.($err ? $err : '未知错误');
-                $operationLogObj->write_log('order_preprocess@ome', $order_id, $msg, time(), $opinfo);
                 kernel::database()->rollBack();
             }
 
@@ -477,8 +443,6 @@ class ome_preprocess_crm{
             $data_preprocess = array('preprocess_order_id'=>$order_id,'preprocess_type'=>'crm','preprocess_status'=>'1');
             $rs = $Obj_preprocess->insert($data_preprocess);
             if(!$rs) {
-                $msg = '订单CRM赠品预处理记录插入失败';
-                $operationLogObj->write_log('order_preprocess@ome', $order_id, $msg, time(), $opinfo);
                 kernel::database()->rollBack();
                 return false;
             }
@@ -526,10 +490,6 @@ class ome_preprocess_crm{
                 $operationLogObj->write_log('order_preprocess@ome',$order_id, $msg,time(),$opinfo);
                 #打标与记日志完成后，程序返回
                 return false;
-            } else {
-                $msg = '订单添加CRM赠品数据出错，crm_cfg[error]配置异常(error='.(isset($crm_cfg['error']) ? $crm_cfg['error'] : '未设置').')';
-                $operationLogObj->write_log('order_preprocess@ome',$order_id, $msg,time(),$opinfo);
-                return false;
             }
         }
 
@@ -572,7 +532,7 @@ class ome_preprocess_crm{
     
     /**
      * 平台订单已完成,执行补发赠品任务--延迟**天创建补发订单
-     * 
+     *
      * @param $ordersdf
      * @param $error_msg
      * @return bool
@@ -759,7 +719,7 @@ class ome_preprocess_crm{
     
     /**
      * 获取平台订单商品明细（过滤掉OMS系统赠送的赠品）
-     * 
+     *
      * @param $order_id
      * @return array
      */
@@ -785,7 +745,7 @@ class ome_preprocess_crm{
     
     /**
      * 获取平台订单货品明细（过滤掉OMS系统赠送的赠品）
-     * 
+     *
      * @param $order_id
      * @return array
      */

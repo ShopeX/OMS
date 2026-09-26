@@ -61,6 +61,8 @@ class omeauto_ctl_order_labelrule extends omeauto_controller
     {
         //运营组织
         $operationOrgObj = app::get('ome')->model('operation_organization');
+        
+        $filter = array();
         $orgs = $operationOrgObj->getList('*', $filter, 0, -1);
         $this->pagedata['orgs'] = $orgs;
         
@@ -75,6 +77,8 @@ class omeauto_ctl_order_labelrule extends omeauto_controller
         
         //运营组织
         $operationOrgObj = app::get('ome')->model('operation_organization');
+        
+        $filter = array();
         $orgs = $operationOrgObj->getList('*', $filter, 0, -1);
         $this->pagedata['orgs'] = $orgs;
         

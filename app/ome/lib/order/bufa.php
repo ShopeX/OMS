@@ -290,4 +290,282 @@ class ome_order_bufa
         $result['order_bn'] = $buOrderSdf['order_bn'];
         return $result;
     }
+    
+    /**
+     * [订单创建之前]处理补发订单相关数据
+     *
+     * @param array $orderSdf 待创建的补发订单数据
+     * @return array
+     */
+    public function disposeBufaCreateOrder($orderSdf)
+    {
+        if (!is_array($orderSdf) || ($orderSdf['order_type'] ?? '') !== 'bufa') {
+            return $orderSdf;
+        }
+        
+        // 按关联原订单明细回填客户实付、分摊实付等金额
+        $orderSdf = $this->applyRelateOrderPayAmount($orderSdf);
+        
+        // 扣减原订单价保退款金额
+        $orderSdf = $this->deductionProtectionAmount($orderSdf);
+        
+        return $orderSdf;
+    }
+
+    /**
+     * 按关联原订单明细回填补发单商品实付金额
+     *
+     * 数量一致时直接使用原单 actually_amount / divide_order_fee；
+     * 数量不一致时按原单数量比例折算。
+     *
+     * @param array $orderSdf
+     * @return array
+     */
+    protected function applyRelateOrderPayAmount($orderSdf)
+    {
+        $relateOrderBn = trim($orderSdf['relate_order_bn'] ?? '');
+        if ($relateOrderBn === '' || empty($orderSdf['order_objects'])) {
+            return $orderSdf;
+        }
+
+        $relateOrder = app::get('ome')->model('orders')->dump(['order_bn' => $relateOrderBn], 'order_id');
+        if (empty($relateOrder)) {
+            return $orderSdf;
+        }
+        
+        // 获取关联原订单销售物料明细
+        $fields = 'oid,goods_id,bn,quantity,divide_order_fee,actually_amount,settlement_amount,part_mjz_discount,`delete`';
+        $obj_fiter = ['order_id' => $relateOrder['order_id'], 'delete' => 'false'];
+        $originalObjects = app::get('ome')->model('order_objects')->getList($fields, $obj_fiter);
+        if (empty($originalObjects)) {
+            return $orderSdf;
+        }
+        
+        $originalObjectMap = $this->buildOriginalObjectMap($originalObjects);
+        $sumDivideOrderFee = 0;
+
+        foreach ($orderSdf['order_objects'] as $objKey => $orderObject) {
+            $originalObject = $this->matchOriginalOrderObject($orderObject, $originalObjectMap);
+            if (empty($originalObject)) {
+                $sumDivideOrderFee += floatval($orderObject['divide_order_fee'] ?? $orderObject['sale_price'] ?? 0);
+                continue;
+            }
+
+            $newQuantity = floatval($orderObject['quantity'] ?? 0);
+            $originalQuantity = floatval($originalObject['quantity'] ?? 0);
+            if ($newQuantity <= 0 || $originalQuantity <= 0) {
+                continue;
+            }
+
+            if (bccomp((string) $newQuantity, (string) $originalQuantity, 3) === 0) {
+                $divideOrderFee = sprintf('%.2f', floatval($originalObject['divide_order_fee']));
+                $actuallyAmount = sprintf('%.2f', floatval($originalObject['actually_amount']));
+                $settlementAmount = sprintf('%.2f', floatval($originalObject['settlement_amount']));
+            } else {
+                $ratio = $newQuantity / $originalQuantity;
+                $divideOrderFee = sprintf('%.2f', floatval($originalObject['divide_order_fee']) * $ratio);
+                $actuallyAmount = sprintf('%.2f', floatval($originalObject['actually_amount']) * $ratio);
+                $settlementAmount = sprintf('%.2f', floatval($originalObject['settlement_amount']) * $ratio);
+            }
+
+            $salePrice = floatval($orderObject['sale_price'] ?? $orderObject['amount'] ?? 0);
+            $platformPayAmount = sprintf('%.2f', floatval($divideOrderFee) - floatval($actuallyAmount));
+            $platformAmount = sprintf('%.2f', floatval($settlementAmount) - floatval($divideOrderFee));
+            $partMjzDiscount = sprintf('%.2f', $salePrice - floatval($divideOrderFee));
+
+            $orderSdf['order_objects'][$objKey]['oid'] = $originalObject['oid'];
+            $orderSdf['order_objects'][$objKey]['divide_order_fee'] = $divideOrderFee;
+            $orderSdf['order_objects'][$objKey]['actually_amount'] = $actuallyAmount;
+            $orderSdf['order_objects'][$objKey]['settlement_amount'] = $settlementAmount;
+            $orderSdf['order_objects'][$objKey]['platform_pay_amount'] = $platformPayAmount;
+            $orderSdf['order_objects'][$objKey]['platform_amount'] = $platformAmount;
+            $orderSdf['order_objects'][$objKey]['part_mjz_discount'] = $partMjzDiscount;
+
+            $sumDivideOrderFee += floatval($divideOrderFee);
+        }
+
+        if (bccomp((string) $sumDivideOrderFee, '0', 3) > 0) {
+            $mathLib = kernel::single('eccommon_math');
+            $orderSdf['total_amount'] = $mathLib->number_minus([
+                $mathLib->number_plus([
+                    $sumDivideOrderFee,
+                    floatval($orderSdf['shipping']['cost_shipping'] ?? 0),
+                    floatval($orderSdf['discount'] ?? 0),
+                ]),
+                floatval($orderSdf['pmt_order'] ?? 0),
+            ]);
+        }
+
+        return $orderSdf;
+    }
+
+    /**
+     * 构建原订单明细索引（goods_id / bn -> 明细）
+     *
+     * @param array $originalObjects
+     * @return array
+     */
+    protected function buildOriginalObjectMap($originalObjects)
+    {
+        $map = ['goods_id' => [], 'bn' => []];
+        foreach ($originalObjects as $originalObject) {
+            if (($originalObject['delete'] ?? 'false') === 'true') {
+                continue;
+            }
+            if (!empty($originalObject['goods_id'])) {
+                $map['goods_id'][$originalObject['goods_id']] = $originalObject;
+            }
+            if (!empty($originalObject['bn'])) {
+                $map['bn'][$originalObject['bn']] = $originalObject;
+            }
+        }
+
+        return $map;
+    }
+
+    /**
+     * 按 goods_id / bn 匹配原订单明细
+     *
+     * @param array $orderObject
+     * @param array $originalObjectMap
+     * @return array|null
+     */
+    protected function matchOriginalOrderObject($orderObject, $originalObjectMap)
+    {
+        if (!empty($orderObject['goods_id']) && isset($originalObjectMap['goods_id'][$orderObject['goods_id']])) {
+            return $originalObjectMap['goods_id'][$orderObject['goods_id']];
+        }
+        if (!empty($orderObject['bn']) && isset($originalObjectMap['bn'][$orderObject['bn']])) {
+            return $originalObjectMap['bn'][$orderObject['bn']];
+        }
+
+        return null;
+    }
+    
+    /**
+     * [订单创建之前]扣减掉原订单的价保金额
+     * 场景：原订单 refund_money（价保费用）大于 0 时，按子订单号 oid 匹配价保退款申请单，
+     * 将价保退款金额累加到补发单商品优惠及订单商品促销优惠，并扣减分摊实付、客户实付、结算金额。
+     *
+     * @param $orderSdf
+     * @return array|mixed
+     */
+    public function deductionProtectionAmount($orderSdf)
+    {
+        $relateOrderBn = trim($orderSdf['relate_order_bn'] ?? '');
+        if ($relateOrderBn === '' || empty($orderSdf['order_objects'])) {
+            return $orderSdf;
+        }
+        
+        $orderMdl = app::get('ome')->model('orders');
+        $relateOrder = $orderMdl->dump(['order_bn' => $relateOrderBn], 'order_id,refund_money');
+        if (empty($relateOrder) || bccomp((string) ($relateOrder['refund_money'] ?: 0), '0', 3) <= 0) {
+            return $orderSdf;
+        }
+        
+        $mathLib = kernel::single('eccommon_math');
+        $oidByGoodsId = [];
+        $oidByBn = [];
+        $originalObjects = app::get('ome')->model('order_objects')->getList(
+            'oid,goods_id,bn',
+            ['order_id' => $relateOrder['order_id'], 'delete' => 'false']
+        );
+        foreach ($originalObjects as $originalObject) {
+            $originalOid = trim($originalObject['oid']);
+            if ($originalOid === '') {
+                continue;
+            }
+            if (!empty($originalObject['goods_id'])) {
+                $oidByGoodsId[$originalObject['goods_id']] = $originalOid;
+            }
+            if (!empty($originalObject['bn'])) {
+                $oidByBn[$originalObject['bn']] = $originalOid;
+            }
+        }
+        
+        // 获取价保退款类型的退款申请单
+        $refundByOid = [];
+        $refundApplyList = app::get('ome')->model('refund_apply')->getList(
+            'oid,money',
+            [
+                'order_id' => $relateOrder['order_id'],
+                'tag_type' => '1',
+                'disabled' => 'false',
+            ]
+        );
+        foreach ($refundApplyList as $refundApplyRow) {
+            $refundOid = trim($refundApplyRow['oid']);
+            $refundMoney = floatval($refundApplyRow['money']);
+            if ($refundOid === '' || $refundMoney <= 0) {
+                continue;
+            }
+            if (!isset($refundByOid[$refundOid])) {
+                $refundByOid[$refundOid] = 0;
+            }
+            $refundByOid[$refundOid] = $mathLib->number_plus([$refundByOid[$refundOid], $refundMoney]);
+        }
+        
+        if (empty($refundByOid)) {
+            return $orderSdf;
+        }
+        
+        $extraPmtGoods = 0;
+        foreach ($orderSdf['order_objects'] as $objKey => $orderObject)
+        {
+            $oid = isset($orderObject['oid']) ? trim($orderObject['oid']) : '';
+            if ($oid === '') {
+                if (!empty($orderObject['goods_id']) && isset($oidByGoodsId[$orderObject['goods_id']])) {
+                    $oid = $oidByGoodsId[$orderObject['goods_id']];
+                } elseif (!empty($orderObject['bn']) && isset($oidByBn[$orderObject['bn']])) {
+                    $oid = $oidByBn[$orderObject['bn']];
+                }
+            }
+            
+            if ($oid === '' || !isset($refundByOid[$oid])) {
+                continue;
+            }
+            
+            $refundAmount = $refundByOid[$oid];
+            $objectAmount = floatval(
+                $orderObject['amount'] ?: $mathLib->number_multiple([$orderObject['price'], $orderObject['quantity']])
+            );
+            $objectPmtPrice = floatval(isset($orderObject['pmt_price']) ? $orderObject['pmt_price'] : 0);
+            $objectPmtPrice = $mathLib->number_plus([$objectPmtPrice, $refundAmount]);
+            
+            $orderSdf['order_objects'][$objKey]['oid'] = $oid;
+            $orderSdf['order_objects'][$objKey]['pmt_price'] = $objectPmtPrice;
+            $orderSdf['order_objects'][$objKey]['sale_price'] = $mathLib->number_minus([$objectAmount, $objectPmtPrice]);
+
+            $divideOrderFee = floatval($orderObject['divide_order_fee'] ?? 0);
+            $actuallyAmount = floatval($orderObject['actually_amount'] ?? 0);
+            $settlementAmount = floatval($orderObject['settlement_amount'] ?? 0);
+            $newDivideOrderFee = $mathLib->number_minus([$divideOrderFee, $refundAmount]);
+            $newActuallyAmount = $mathLib->number_minus([$actuallyAmount, $refundAmount]);
+            $newSettlementAmount = $mathLib->number_minus([$settlementAmount, $refundAmount]);
+            $newSalePrice = floatval($orderSdf['order_objects'][$objKey]['sale_price']);
+
+            $orderSdf['order_objects'][$objKey]['divide_order_fee'] = sprintf('%.2f', $newDivideOrderFee);
+            $orderSdf['order_objects'][$objKey]['actually_amount'] = sprintf('%.2f', $newActuallyAmount);
+            $orderSdf['order_objects'][$objKey]['settlement_amount'] = sprintf('%.2f', $newSettlementAmount);
+            $orderSdf['order_objects'][$objKey]['part_mjz_discount'] = sprintf('%.2f', $newSalePrice - floatval($newDivideOrderFee));
+            $orderSdf['order_objects'][$objKey]['platform_pay_amount'] = sprintf('%.2f', floatval($newDivideOrderFee) - floatval($newActuallyAmount));
+            $orderSdf['order_objects'][$objKey]['platform_amount'] = sprintf('%.2f', floatval($newSettlementAmount) - floatval($newDivideOrderFee));
+            
+            $extraPmtGoods = $mathLib->number_plus([$extraPmtGoods, $refundAmount]);
+        }
+        
+        if (bccomp((string) $extraPmtGoods, '0', 3) > 0) {
+            $orderSdf['pmt_goods'] = $mathLib->number_plus([
+                floatval(isset($orderSdf['pmt_goods']) ? $orderSdf['pmt_goods'] : 0),
+                $extraPmtGoods,
+            ]);
+            
+            $orderSdf['total_amount'] = $mathLib->number_minus([
+                floatval(isset($orderSdf['total_amount']) ? $orderSdf['total_amount'] : 0),
+                $extraPmtGoods,
+            ]);
+        }
+        
+        return $orderSdf;
+    }
 }

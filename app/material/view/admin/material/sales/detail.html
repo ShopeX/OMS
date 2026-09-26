@@ -27,11 +27,13 @@
     .content-main {
         width: 100%!important;
     }
+    #extended_cols_block select.ext-col-select { min-width:280px; width:280px; max-width:100%; box-sizing:border-box; }
 </style>
 <link href="../../../../app/desktop/statics/perfect/main.css" rel="stylesheet" type="text/css">
 <div class="form-layout">
     <form method="post" id="sales_material_form" action="index.php?app=material&ctl=admin_material_sales&act=toEdit">
         <input type="hidden" name="sm_id" value="<{$material_info.sm_id}>">
+        <script type="text/template" id="extendedColsForBmPropsJson"><{$extendedColsForBmPropsJson}></script>
         <div class="form-layout-block">
             <h3>查看销售物料基本信息</h3>
             <div class="form-layout-fields form-layout-fields-column">
@@ -54,7 +56,7 @@
                     <{elseif $material_info.sales_material_type ==6}>礼盒
                     <{elseif $material_info.sales_material_type ==7}>福袋组合
                     <{/if}>
-                    <input type="hidden" name="sales_material_type" value="<{$material_info.sales_material_type}>">&nbsp;&nbsp;<span style="color:red;">(已有关联订单或店铺冻结不能修改)</span>
+                    <input type="hidden" name="sales_material_type" value="<{$material_info.sales_material_type}>">
                     <{else}>
                     <div class="form-radios">
                         <input id="type1" type="radio" name="sales_material_type" value="1" <{if $material_info.sales_material_type == 1}>checked="checked"<{/if}> />
@@ -76,7 +78,7 @@
                     <span class="form-field-label">所属店铺：</span>
                     <{if $readonly.shop == true}>
                     <{foreach from=$shops item=shop}><{if $material_info.shop_id == $shop.shop_id }><{$shop.name}><{/if}><{/foreach}>
-                    <input type="hidden" name="shop_id" value="<{$material_info.shop_id}>">&nbsp;&nbsp;<span style="color:red;">(已有关联订单不能修改)</span>
+                    <input type="hidden" name="shop_id" value="<{$material_info.shop_id}>">
                     <{else}>
                     <select class="form-input"  id="shop_id" name="shop_id">
                         <{foreach from=$shops item=shop}>
@@ -99,6 +101,30 @@
                     <span class="form-field-label">关联基础物料：</span>
                     <{input class='form-input' type='material_object' object='basic_material@material' breakpoint='0' name='bm_id' textcol='material_name' value=$bind_bm_id callback='material_object_callback' replacehtml=$replacehtml emptytext='选取基础物料' style='float:left;width:200px;' filter='visibled=1' }>
                 </div>
+                <div id="extended_cols_block" <{if $material_info.sales_material_type == 1 || $material_info.sales_material_type == 6}>style="display:block;"<{else}>style="display:none;"<{/if}>>
+                    <{foreach from=$extendedColsForBmProps item=customcol}>
+                    <{assign var="extColKey" value=$customcol.col_key}>
+                    <{assign var="extColName" value=$customcol.col_name}>
+                    <{assign var="extColType" value=$customcol.col_type|default:'input'}>
+                    <{assign var="extColOptList" value=$customcol.options|default:null}>
+                    <{assign var="extColValue" value=$customcol.col_value|default:''}>
+                    <div class="form-field ext-col-row" data-col-key="<{$extColKey}>">
+                        <span class="form-field-label"><{$extColName}>：</span>
+                        <{if $extColType == 'select' && $extColOptList}>
+                        <{assign var="extColShown" value=$extColValue}>
+                        <{foreach from=$extColOptList item=opt}>
+                            <{assign var="optVal" value=$opt.color_code|default:$opt.value}>
+                            <{if $extColValue eq $optVal}>
+                            <{assign var="extColShown" value=$opt.color_name|default:$opt.label}>
+                            <{/if}>
+                        <{/foreach}>
+                        <span class="form-field-text"><{$extColShown}></span>
+                        <{else}>
+                        <span class="form-field-text"><{$extColValue}></span>
+                        <{/if}>
+                    </div>
+                    <{/foreach}>
+                </div>
                 <div class="form-field" id="bind_basic_giftmaterial" style="display:none">
                     <span class="form-field-label">关联礼盒：</span>
                     <{input class='form-input' type='material_object' object='basic_material@material' breakpoint='0' name='box_id' textcol='material_name' value=$bind_bm_id callback='material_object_callback' replacehtml=$replacehtml emptytext='选取礼盒' style='float:left;width:200px;' filter='visibled=1&type=4' }>
@@ -119,7 +145,6 @@
             <div class="form-layout-fields form-layout-fields-column">
                 <div class="form-field">
                     <{if $readonly.bind_item == true && $material_info.sales_material_type == 2}>
-                    &nbsp;<span id="cantdel" style="color:red;">(绑定物料已有关联订单不能修改)</span>
                     <{else}>
                     <{button label="物料库频道" id="material-find-btn" }>
                     <{/if}>
@@ -133,12 +158,12 @@
                         <th style="display: none;">固定价</th>
                         <th>数量</th>
                         <th id="ratio_column">组合价格贡献占比(1-100数值)</th>
-                        <th id="row_delete_button" style="width:30px;">删除</th>
+                        <{foreach from=$extendedColsForBmProps item=ec}><th><{$ec.col_name}></th><{/foreach}>
                     </tr>
                     </thead>
                     <tbody id="dataNode">
                     <tr>
-                        <td colspan="7" style="padding:0;"><div class="note" style="margin:0;"> 暂无物料信息 </div></td>
+                        <td colspan="<{$materialTableColspan - 1}>" style="padding:0;"><div class="note" style="margin:0;"> 暂无物料信息 </div></td>
                     </tr>
                     </tbody>
                 </table>
@@ -168,7 +193,6 @@
                 </div>
                 <div class="form-field">
                     <{if $readonly.bind_item == true && $material_info.sales_material_type == 5}>
-                    &nbsp;  <span id="cantdel_pickone" style="color:red;">(绑定物料已有关联订单不能修改)</span>
                     <{else}>
                     <{button label="基础物料列表" id="basic_material_find_btn" }>
                     <{/if}>
@@ -344,6 +368,18 @@
 </div>
 
 <script>
+var priceRate = '<{$price_rate|default:"retail_price"}>';
+var priceField = '<{$price_field|default:"retail_price"}>';
+var priceLabel = '<{$price_label|default:"零售价"}>';
+var extendedColsForBmProps = [];
+(function(){
+    var el = document.getElementById('extendedColsForBmPropsJson');
+    if (el && el.textContent) { try { extendedColsForBmProps = JSON.parse(el.textContent); } catch(e) {} }
+})();
+var materialTableColspanServer = parseInt('<{$materialTableColspan|default:8}>', 10) || 8;
+var extendedColsCount = Math.max(materialTableColspanServer - 7, 0);
+var materialTableColspan = materialTableColspanServer - 1;
+
 var sm_id = "<{$material_info.sm_id}>";
 (function() {
     $$("input","button","select").set('disabled','disabled');
@@ -357,6 +393,7 @@ var sm_id = "<{$material_info.sm_id}>";
         if(chose_type == 1){
             $('promotion_items').setStyle('display','none');
             $('bind_brand').setStyle('display','none');
+            if ($('extended_cols_block')) $('extended_cols_block').setStyle('display','block');
             if($('bind_basic_material')){
                 $('bind_basic_material').setStyle('display','flex');
             }
@@ -371,10 +408,12 @@ var sm_id = "<{$material_info.sm_id}>";
         }else if(chose_type == 6){
 
           $('bind_basic_giftmaterial').setStyle('display','table-row');
+          if ($('extended_cols_block')) $('extended_cols_block').setStyle('display','block');
           if($('bind_basic_material')){
                 $('bind_basic_material').setStyle('display','none');
           }
         }else if(chose_type == 2 || chose_type == 3){
+            if ($('extended_cols_block')) $('extended_cols_block').setStyle('display','none');
             $('promotion_items').setStyle('display','block');
             $('bind_brand').setStyle('display','table-row');
             if($('bind_basic_material')){
@@ -397,12 +436,12 @@ var sm_id = "<{$material_info.sm_id}>";
                 $('promotion_items').setStyle('display', 'block');
                 $('ratio_column').setStyle('display', 'none');
                 $('material-compute-rate').setStyle('display', 'none');
-                $('row_delete_button').setStyle('display', 'none');
                 // $('bind_basic_material').setStyle('display', 'none');
 
             }
         }else if(chose_type == 4){
         	$('luckybag_rules').setStyle('display','block');
+        	if ($('extended_cols_block')) $('extended_cols_block').setStyle('display','none');
         	if($('bind_basic_material')){
                 $('bind_basic_material').setStyle('display','none');
             }
@@ -413,6 +452,7 @@ var sm_id = "<{$material_info.sm_id}>";
             }
         }else if(chose_type == 5){
             $('pickone_items').setStyle('display','block');
+            if ($('extended_cols_block')) $('extended_cols_block').setStyle('display','none');
             if($('bind_basic_material')){
                
                 $('bind_basic_material').setStyle('display','none');
@@ -424,6 +464,71 @@ var sm_id = "<{$material_info.sm_id}>";
             }
 
             $('fukubukuro_items').setStyle('display','block');
+            if ($('extended_cols_block')) $('extended_cols_block').setStyle('display','none');
+        }
+
+        function getDetailColorOptVal(opt) {
+            return (opt.color_code != null ? opt.color_code : opt.value) != null ? String(opt.color_code != null ? opt.color_code : opt.value) : '';
+        }
+        function getDetailColorOptTxt(opt) {
+            var oVal = getDetailColorOptVal(opt);
+            return (opt.color_name != null ? opt.color_name : opt.label) || oVal;
+        }
+        function resolveDetailStoredColorDisplay(storedVal, optList) {
+            storedVal = storedVal != null ? String(storedVal).trim() : '';
+            if (!storedVal) return '';
+            var i, oVal, oTxt;
+            for (i = 0; i < optList.length; i++) {
+                oVal = getDetailColorOptVal(optList[i]);
+                oTxt = getDetailColorOptTxt(optList[i]);
+                if (storedVal === oVal || storedVal === oTxt) return oTxt;
+            }
+            var m = storedVal.match(/^(.+?)\((.+)\)\s*$/);
+            if (m) {
+                var code = m[1].trim();
+                for (i = 0; i < optList.length; i++) {
+                    if (getDetailColorOptVal(optList[i]) === code) return getDetailColorOptTxt(optList[i]);
+                }
+            }
+            return storedVal;
+        }
+
+        function buildDetailExtendedColsCells(storeData, smType) {
+            var cols = extendedColsForBmProps && extendedColsForBmProps.length ? extendedColsForBmProps : [];
+            var numCols = cols.length || extendedColsCount;
+            var esc = function (s) {
+                return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+            };
+            storeData.each(function(item) {
+                var cells = [];
+                if (smType == '1' || smType == '6') {
+                    for (var si = 0; si < numCols; si++) cells.push('<td>-</td>');
+                    item.extended_cols_cells = cells.join('');
+                    return;
+                }
+                var isCustomColor = item.is_custom_color == 1;
+                if (cols.length === 0) {
+                    for (var i = 0; i < numCols; i++) cells.push('<td>-</td>');
+                } else {
+                    cols.forEach(function(col) {
+                        var colKey = col.col_key || '';
+                        var colType = (col.col_type || 'input').toLowerCase();
+                        if (!isCustomColor) {
+                            cells.push('<td>-</td>');
+                            return;
+                        }
+                        var rawVal = item[colKey];
+                        var val = (rawVal != null && rawVal !== '') ? String(rawVal).trim() : '';
+                        var optList = (col.options && col.options.length) ? col.options : defaultOptions;
+                        var displayTxt = val;
+                        if (colType === 'select' && val !== '') {
+                            displayTxt = resolveDetailStoredColorDisplay(val, optList);
+                        }
+                        cells.push('<td>' + esc(displayTxt) + '</td>');
+                    });
+                }
+                item.extended_cols_cells = cells.join('');
+            });
         }
 
         $ES('input[name="sales_material_type"]').each(function(item){
@@ -504,6 +609,7 @@ var sm_id = "<{$material_info.sm_id}>";
                         $('brand').value = brand_id;
                        }
                      }
+                    if (typeof buildDetailExtendedColsCells === 'function') buildDetailExtendedColsCells(store, chose_type);
                     createProduct(store);
                 }
                 if(pickone){
@@ -524,7 +630,7 @@ var sm_id = "<{$material_info.sm_id}>";
                 +'  <td style="display: none;">{fixed_price}</td>'
                 +'  <td><input type="text" value="{number}" key="number" vtype="number&amp;&amp;required" tname="at[_PRIMARY_]" size="6" readonly></td>'
                 +'  <td><input type="text" readonly="readonly" vtype="number&amp;&amp;required"  tname="pr[_PRIMARY_]" key="rate" value="{rate}" id="rate_{bm_id}" size="5"></td>'
-                +'  <td style="text-align:center;">-<{img src="bundle/delecate.gif" style="display:none;" app="desktop" key="state" class="pointer btn-delete-item"}></td>'
+                +'  {extended_cols_cells}'
                 +'</tr>';
         }else{
             if (chose_type == 3) {
@@ -532,6 +638,8 @@ var sm_id = "<{$material_info.sm_id}>";
                     + '  <td>{material_bn}</td><td class="material-name">{material_name}</td><td>{display_price}</td>'
                     +'  <td style="display: none;">{fixed_price}</td>'
                     + '  <td><input type="text" readonly="readonly" value="{number}" key="number" vtype="number&amp;&amp;required" tname="at[_PRIMARY_]" size="6"></td>'
+                    + '  <td style="display:none;"><input type="text" readonly="readonly" value="{rate}" id="rate_{bm_id}" size="5"></td>'
+                    + '  {extended_cols_cells}'
                     + '</tr>'; 
             }else{
                 var tpl = '<tr key="{bm_id}" id="bm_{bm_id}" title="点击选取/反选此条记录">'
@@ -539,7 +647,7 @@ var sm_id = "<{$material_info.sm_id}>";
                     +'  <td style="display: none;">{fixed_price}</td>'
                     + '  <td><input type="text" value="{number}" key="number" vtype="number&amp;&amp;required" tname="at[_PRIMARY_]" size="6"></td>'
                     + '  <td><input type="text" readonly="readonly" vtype="number&amp;&amp;required"  tname="pr[_PRIMARY_]" key="rate" value="{rate}" id="rate_{bm_id}" size="5"></td>'
-                    + '  <td><{img src="bundle/delecate.gif" app="desktop" key="state" class="pointer btn-delete-item"}></td>'
+                    + '  {extended_cols_cells}'
                     + '</tr>';
             }
         }
@@ -638,7 +746,7 @@ var sm_id = "<{$material_info.sm_id}>";
         var pag,rows;
         function emptyData(){
             var noData='<tr>'
-                +'<td colspan="7" style="padding:0;"><div class="note" style="margin:0;"> 暂无物料信息 </div></td>'
+                +'<td colspan="'+materialTableColspan+'" style="padding:0;"><div class="note" style="margin:0;"> 暂无物料信息 </div></td>'
                 +'</tr>';
             $('dataNode').set('html',noData);
         }

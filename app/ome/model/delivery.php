@@ -4630,27 +4630,38 @@ class ome_mdl_delivery extends dbeav_model
 
     /**
      * 渲染发货单列表的标签列，包含加急发货标签展示。
+     * 需回写到原列表行并返回完整 $rows，供后续 extra_* 链式处理。
      *
      * @param array $rows
      * @return array
      */
     public function extra_delivery_label($rows)
     {
-        $deliveryIds = array_column((array)$rows, 'delivery_id');
+        $rows = (array) $rows;
+        $deliveryIds = array_column($rows, 'delivery_id');
         if (!$deliveryIds) {
-            return array();
+            return $rows;
         }
+
         $labelRows = app::get('ome')->model('bill_label')->getBIllLabelList($deliveryIds, 'ome_delivery');
-        $result = array();
-        foreach ((array)$labelRows as $label) {
-            $result[$label['bill_id']] .= sprintf(
+        $labelHtml = array();
+        foreach ((array) $labelRows as $label) {
+            $labelHtml[$label['bill_id']] .= sprintf(
                 "<span class='tag-label' title='%s' style='background-color:%s;color:#000000;'>%s</span>",
                 $label['label_name'],
                 $label['label_color'],
                 $label['label_name']
             );
         }
-        return $result;
+
+        foreach ($rows as $k => $row) {
+            $deliveryId = isset($row['delivery_id']) ? $row['delivery_id'] : null;
+            $rows[$k]['column_delivery_label'] = ($deliveryId !== null && isset($labelHtml[$deliveryId]))
+                ? $labelHtml[$deliveryId]
+                : '';
+        }
+
+        return $rows;
     }
 
     public function getDlyId($logi_nos = false)

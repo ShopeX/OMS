@@ -1,0 +1,17 @@
+<app>
+    <name>goldentra</name>
+    <description>goldentra 对接（主档、每日金价、库存更新）</description>
+    <author>
+        <name>开发团队</name>
+        <email>dev@shopex.cn</email>
+    </author>
+    <version>1.0</version>
+    <license>shopex license</license>
+    <parent_model_class>dbeav_model</parent_model_class>
+    <depends>
+        <app>ome</app>
+        <app>material</app>
+        <app>erpapi</app>
+        <app>taskmgr</app>
+    </depends>
+</app>

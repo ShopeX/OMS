@@ -516,4 +516,73 @@ class finance_ar
         }
         return $res;
     }
+
+    /**
+     * 已绑定前端店铺基础筛选（与店铺类型筛选项口径一致）
+     *
+     * @return array
+     */
+    public function getBoundShopBaseFilter()
+    {
+        return array(
+            'active'            => 'true',
+            's_type'            => 1,
+            'delivery_mode'     => 'self',
+            'filter_sql'        => 'node_id IS NOT NULL AND node_id != ""',
+            'shop_type|noequal' => '',
+        );
+    }
+
+    /**
+     * 应收应退单「店铺类型」筛选项：ome_shop_type 中文名 + 仅已绑定店铺存在的类型
+     *
+     * @return array
+     */
+    public function get_name_by_shop_type()
+    {
+        static $options = null;
+        if ($options !== null) {
+            return $options;
+        }
+
+        $typeNames = ome_shop_type::get_shop_type();
+        $shops     = app::get('ome')->model('shop')->getList(
+            'shop_type',
+            $this->getBoundShopBaseFilter(),
+            0,
+            -1
+        );
+
+        $options = array();
+        foreach ((array) $shops as $shop) {
+            $type = isset($shop['shop_type']) ? trim((string) $shop['shop_type']) : '';
+            if ($type === '' || isset($options[$type])) {
+                continue;
+            }
+            $options[$type] = isset($typeNames[$type]) ? $typeNames[$type] : $type;
+        }
+
+        asort($options);
+        return $options;
+    }
+
+    /**
+     * 按店铺类型取已绑定店铺 ID（供应收应退单筛选）
+     *
+     * @param array $shopTypes
+     * @return array
+     */
+    public function getBoundShopIdsByTypes($shopTypes)
+    {
+        $shopTypes = array_filter(array_map('trim', (array) $shopTypes));
+        if (!$shopTypes) {
+            return array();
+        }
+
+        $filter = $this->getBoundShopBaseFilter();
+        $filter['shop_type|in'] = array_values($shopTypes);
+        $shops = app::get('ome')->model('shop')->getList('shop_id', $filter, 0, -1);
+
+        return array_column((array) $shops, 'shop_id');
+    }
 }

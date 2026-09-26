@@ -99,11 +99,13 @@ class ome_ctl_admin_return_reshipping extends desktop_controller
         
         // 获取补寄申请商品明细
         $items = $reshippingItemsModel->getList('*', array('reshipping_id' => $reshipping_id));
+        $items = kernel::single('ome_return_reshipping')->decorateReshippingItemsForView($items, $reshipping);
         $this->pagedata['items'] = $items;
         
-        // 获取补寄确认商品明细
+        // 获取补寄确认商品明细（与申请行金额对齐；历史未落库时在展示层按 item_id 补全）
         $reshippingItemsDetailModel = app::get('ome')->model('return_reshipping_items_detail');
         $itemsDetail = $reshippingItemsDetailModel->getList('*', array('reshipping_id' => $reshipping_id));
+        $itemsDetail = kernel::single('ome_reshipping')->enrichItemsDetailFromItems($items, $itemsDetail);
         $this->pagedata['items_detail'] = $itemsDetail;
         
         // 状态映射
@@ -113,6 +115,48 @@ class ome_ctl_admin_return_reshipping extends desktop_controller
         $this->pagedata['finder_id'] = ($_GET['_finder']['finder_id'] ? $_GET['_finder']['finder_id'] : $_GET['finder_id']);
         
         $this->singlepage('admin/return/reshipping/detail_page.html');
+    }
+
+    /**
+     * 保存商家备注（创建补发订单前可编辑，备注会带入新订单）
+     */
+    public function saveMerchantMark()
+    {
+        $reshipping_id = isset($_POST['reshipping_id']) ? (int) $_POST['reshipping_id'] : 0;
+        $merchant_mark = isset($_POST['merchant_mark']) ? trim($_POST['merchant_mark']) : '';
+
+        if ($reshipping_id <= 0) {
+            echo json_encode(array('rsp' => 'fail', 'msg' => '补寄申请单ID不能为空'));
+            exit;
+        }
+
+        $reshippingModel = app::get('ome')->model('return_reshipping');
+        $reshipping = $reshippingModel->db_dump($reshipping_id, 'reshipping_id,reissue_order_id');
+        if (empty($reshipping)) {
+            echo json_encode(array('rsp' => 'fail', 'msg' => '补寄申请单不存在'));
+            exit;
+        }
+
+        if (!empty($reshipping['reissue_order_id'])) {
+            echo json_encode(array('rsp' => 'fail', 'msg' => '补发订单已创建，无法修改商家备注'));
+            exit;
+        }
+
+        $rs = $reshippingModel->update(
+            array('merchant_mark' => $merchant_mark, 'up_time' => date('Y-m-d H:i:s')),
+            array('reshipping_id' => $reshipping_id)
+        );
+        if (is_bool($rs) && !$rs) {
+            echo json_encode(array('rsp' => 'fail', 'msg' => '保存失败'));
+            exit;
+        }
+
+        $operationLogModel = app::get('ome')->model('operation_log');
+        $memo = $merchant_mark === '' ? '清空商家备注' : ('保存商家备注：' . $merchant_mark);
+        $operationLogModel->write_log('return_reshipping@ome', $reshipping_id, $memo);
+
+        echo json_encode(array('rsp' => 'succ', 'msg' => '保存成功'));
+        exit;
     }
     
     /**
@@ -142,6 +186,7 @@ class ome_ctl_admin_return_reshipping extends desktop_controller
                 $items[$key]['sales_material'] = $salesMaterial;
             }
         }
+        $items = kernel::single('ome_return_reshipping')->decorateReshippingItemsForView($items, $reshipping);
         
         $this->pagedata['reshipping'] = $reshipping;
         $this->pagedata['items'] = $items;
@@ -182,14 +227,22 @@ class ome_ctl_admin_return_reshipping extends desktop_controller
             return;
         }
         
-        // 获取拒绝原因列表
-        $apiResult = kernel::single('erpapi_router_request')->set('shop', $reshipping['shop_id'])->reshipping_refusereason_get(array(
-            'dispute_id' => $reshipping['reshipping_bn'],
-        ));
-        $refuseReasons = ($apiResult['rsp'] == 'succ' && isset($apiResult['data'])) ? $apiResult['data'] : array();
-        
+        $isLocalSource = isset($reshipping['source']) && $reshipping['source'] === 'local';
+        if ($isLocalSource) {
+            // 本地单不同步矩阵，原因列表固定一项即可
+            $refuseReasons = array(
+                array('reason_id' => 'local', 'reason_text' => '本地拒绝'),
+            );
+        } else {
+            $apiResult = kernel::single('erpapi_router_request')->set('shop', $reshipping['shop_id'])->reshipping_refusereason_get(array(
+                'dispute_id' => $reshipping['reshipping_bn'],
+            ));
+            $refuseReasons = ($apiResult['rsp'] == 'succ' && isset($apiResult['data'])) ? $apiResult['data'] : array();
+        }
+
         $this->pagedata['reshipping'] = $reshipping;
         $this->pagedata['refuse_reasons'] = $refuseReasons;
+        $this->pagedata['is_local_source'] = $isLocalSource;
         
         $this->display('admin/return/reshipping/refuse_dialog.html');
     }
@@ -200,15 +253,23 @@ class ome_ctl_admin_return_reshipping extends desktop_controller
     public function doRefuse()
     {
         $reshipping_id = $_POST['reshipping_id'];
-        $refuse_reason_id = $_POST['refuse_reason_id'];
-        $refuse_reason = $_POST['refuse_reason'];
+        $refuse_reason_id = isset($_POST['refuse_reason_id']) ? $_POST['refuse_reason_id'] : '';
+        $refuse_reason = isset($_POST['refuse_reason']) ? $_POST['refuse_reason'] : '';
         $leave_message = trim($_POST['leave_message']);
-        
-        if (empty($refuse_reason_id)) {
+
+        $reshippingModel = app::get('ome')->model('return_reshipping');
+        $reshippingRow = $reshippingModel->db_dump($reshipping_id);
+        if (empty($reshippingRow)) {
+            echo json_encode(array('rsp' => 'fail', 'msg' => '补寄申请单不存在'));
+            exit;
+        }
+        $isLocalSource = isset($reshippingRow['source']) && $reshippingRow['source'] === 'local';
+
+        if (!$isLocalSource && empty($refuse_reason_id)) {
             echo json_encode(array('rsp' => 'fail', 'msg' => '请选择拒绝原因'));
             exit;
         }
-        
+
         if (empty($leave_message)) {
             echo json_encode(array('rsp' => 'fail', 'msg' => '拒绝留言不能为空'));
             exit;
@@ -261,16 +322,16 @@ class ome_ctl_admin_return_reshipping extends desktop_controller
             }
         }
         
-        if (empty($leave_message_pics)) {
+        if (!$isLocalSource && empty($leave_message_pics)) {
             echo json_encode(array('rsp' => 'fail', 'msg' => '请上传凭证图片'));
             exit;
         }
-        
+
         $refuseData = array(
             'refuse_reason_id' => $refuse_reason_id,
             'refuse_reason' => $refuse_reason,
             'leave_message' => $leave_message,
-            'leave_message_pics' => $leave_message_pics[0], // 只传递单个值
+            'leave_message_pics' => !empty($leave_message_pics) ? $leave_message_pics[0] : '',
         );
         
         $reshippingLib = kernel::single('ome_reshipping');
@@ -317,6 +378,7 @@ class ome_ctl_admin_return_reshipping extends desktop_controller
                 $items[$key]['sales_material'] = $salesMaterial;
             }
         }
+        $items = kernel::single('ome_return_reshipping')->decorateReshippingItemsForView($items, $reshipping);
         
         $this->pagedata['reshipping'] = $reshipping;
         $this->pagedata['items'] = $items;

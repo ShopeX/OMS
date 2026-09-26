@@ -407,7 +407,8 @@ class o2o_store
         
         $store_bn          = $ordExtRow['store_bn'];
         $store_dly_type    = $ordExtRow['store_dly_type'];
-        $dly_corp_type     = ($store_dly_type == 1 ? 'o2o_ship' : 'o2o_pickup');
+        // 与 omeauto/orderextend 一致：1=门店自提(o2o_pickup)，2=门店配送(o2o_ship)
+        $dly_corp_type     = ($store_dly_type == 1 ? 'o2o_pickup' : 'o2o_ship');
         
         if($store_dly_type && $store_bn)
         {
@@ -425,8 +426,13 @@ class o2o_store
             $o2o_order['branch_id']   = $storeRow['branch_id'];
             $o2o_order['store_area']  = $storeRow['area'];
             
-            $store_msg    = array(1=>'客户要求指定【{store_name}】门店进行配送', '客户要求指定到【{store_name}】门店自提');
-            $o2o_order['store_recommend_msg']  = str_replace('{store_name}', $storeRow['name'], $store_msg[$store_dly_type]);
+            $store_msg    = array(
+                1 => '客户要求指定到【{store_name}】门店自提',
+                2 => '客户要求指定【{store_name}】门店进行配送',
+            );
+            if (isset($store_msg[$store_dly_type])) {
+                $o2o_order['store_recommend_msg']  = str_replace('{store_name}', $storeRow['name'], $store_msg[$store_dly_type]);
+            }
         }
         
         return $o2o_order;
@@ -813,6 +819,202 @@ class o2o_store
         } catch (Exception $e) {
             return false;
         }
+    }
+
+    /**
+     * 根据门店仓 branch_id 获取接单量上限，0 表示不限制
+     *
+     * @param int $branch_id
+     * @return int
+     */
+    public function getAcceptOrderLimitByBranchId($branch_id)
+    {
+        $branch_id = (int) $branch_id;
+        if ($branch_id <= 0) {
+            return 0;
+        }
+
+        $storeObj = app::get('o2o')->model('store');
+        $store    = $storeObj->db_dump(array('branch_id' => $branch_id), 'accept_order_limit');
+        if (empty($store)) {
+            return 0;
+        }
+
+        return max(0, (int) $store['accept_order_limit']);
+    }
+
+    /**
+     * 统计门店仓当日派单量（KV 净派单：下发 +1，撤销/拒单 -1）
+     *
+     * @param int $branch_id
+     * @return int
+     */
+    public function getTodayAcceptedOrderCount($branch_id)
+    {
+        $branch_id = (int) $branch_id;
+        if ($branch_id <= 0) {
+            return 0;
+        }
+
+        if (!app::get('wap')->is_installed()) {
+            return 0;
+        }
+
+        return kernel::single('wap_branch_daily_counter')->getDispatchCount($branch_id);
+    }
+
+    /**
+     * 在候选门店仓中按当日派单量最低优先、相同随机选取
+     *
+     * @param array $branchIds
+     * @return int
+     */
+    public function pickBranchByLowestDispatch(array $branchIds)
+    {
+        if (!app::get('wap')->is_installed()) {
+            $branchIds = array_values(array_filter(array_map('intval', $branchIds)));
+            return !empty($branchIds) ? $branchIds[0] : 0;
+        }
+
+        return kernel::single('wap_branch_daily_counter')->pickBranchByLowestDispatch($branchIds);
+    }
+
+    /**
+     * 门店仓当日接单量是否已达上限
+     *
+     * @param int $branch_id
+     * @return bool true=已超限需跳过该门店
+     */
+    public function isAcceptOrderLimitExceeded($branch_id)
+    {
+        $limit = $this->getAcceptOrderLimitByBranchId($branch_id);
+        if ($limit <= 0) {
+            return false;
+        }
+
+        return $this->getTodayAcceptedOrderCount($branch_id) >= $limit;
+    }
+
+    /**
+     * 过滤已达接单量上限的门店仓
+     *
+     * @param array $branchIds
+     * @return array
+     */
+    public function filterBranchIdsByAcceptOrderLimit($branchIds)
+    {
+        if (empty($branchIds)) {
+            return array();
+        }
+
+        $available = array();
+        foreach ((array) $branchIds as $branchId) {
+            if (!$this->isAcceptOrderLimitExceeded($branchId)) {
+                $available[] = $branchId;
+            }
+        }
+
+        return $available;
+    }
+
+    /**
+     * 获取订单已拒单的门店编码（store_bn，与 branch_bn 一致）
+     *
+     * @param array|int $orderIds
+     * @return array
+     */
+    public function getRefusedStoreBnsByOrderIds($orderIds)
+    {
+        if (empty($orderIds)) {
+            return array();
+        }
+        $orderIds = array_values(array_unique(array_filter((array) $orderIds)));
+        if (empty($orderIds)) {
+            return array();
+        }
+
+        return (array) app::get('o2o')->model('store_refuse_analysis')->get_refuse_stores($orderIds);
+    }
+
+    /**
+     * 门店仓是否已被当前订单拒单
+     *
+     * @param int       $branch_id
+     * @param array|int $orderIds
+     * @return bool
+     */
+    public function isBranchRefusedByOrder($branch_id, $orderIds)
+    {
+        $refusedStoreBns = $this->getRefusedStoreBnsByOrderIds($orderIds);
+        if (empty($refusedStoreBns)) {
+            return false;
+        }
+
+        $branch_id = (int) $branch_id;
+        if ($branch_id <= 0) {
+            return false;
+        }
+
+        $branchRow = app::get('ome')->model('branch')->db_dump($branch_id, 'branch_bn');
+        if (empty($branchRow['branch_bn'])) {
+            return false;
+        }
+
+        return in_array($branchRow['branch_bn'], $refusedStoreBns, true);
+    }
+
+    /**
+     * 过滤本订单已拒单的门店仓
+     *
+     * @param array     $branchIds
+     * @param array|int $orderIds
+     * @return array
+     */
+    public function filterBranchIdsByOrderRefuse($branchIds, $orderIds)
+    {
+        if (empty($branchIds)) {
+            return array();
+        }
+
+        $refusedStoreBns = $this->getRefusedStoreBnsByOrderIds($orderIds);
+        if (empty($refusedStoreBns)) {
+            return (array) $branchIds;
+        }
+
+        $branchRows = kernel::single('ome_interface_branch')->getList(
+            'branch_id,branch_bn',
+            array('branch_id' => $branchIds),
+            0,
+            -1
+        );
+        $allowedMap = array();
+        foreach ((array) $branchRows as $row) {
+            if (!in_array($row['branch_bn'], $refusedStoreBns, true)) {
+                $allowedMap[$row['branch_id']] = true;
+            }
+        }
+
+        $available = array();
+        foreach ((array) $branchIds as $branchId) {
+            if (!empty($allowedMap[$branchId])) {
+                $available[] = $branchId;
+            }
+        }
+
+        return $available;
+    }
+
+    /**
+     * 门店审单候选仓过滤：接单量 + 本订单已拒单门店
+     *
+     * @param array                        $branchIds
+     * @param array|int                    $orderIds
+     * @return array
+     */
+    public function filterBranchIdsForStoreConfirm($branchIds, $orderIds)
+    {
+        $branchIds = $this->filterBranchIdsByAcceptOrderLimit((array) $branchIds);
+        return $this->filterBranchIdsByOrderRefuse($branchIds, $orderIds);
     }
 
     /**

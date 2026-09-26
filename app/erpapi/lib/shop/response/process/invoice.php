@@ -40,19 +40,33 @@ class erpapi_shop_response_process_invoice {
             $sdf['order_info']['is_tax'] = 'true';
             app::get('ome')->model('orders')->update(array('is_tax' => 'true'), array('order_id' => $sdf['order_info']['order_id']));
         }
+        
+        // 来源标记
+        $sdf['source_marking'] = 'message_push';
+        
+        // 是否自动开票(1:自动开票, 2:手工开票（默认）)
+        $sdf['is_auto'] = '1';
+        
+        $rsp_msg = '';
         if($sdf['old_invoice']) {
             kernel::single('ome_order_invoice')->updateInvoice($sdf, '订单更新发票信息');
             list($rs, $rsData) = kernel::single('invoice_order_front')->insertOrUpdateByOrder($sdf);
             app::get('ome')->model('operation_log')->write_log('order_modify@ome', $sdf['order_id'], '更新发票信息:'.$rsData['msg']);
-            return array('rsp'=>'succ', 'msg'=>'更新发票信息');
+            
+            $rsp_msg = ($rsData['msg'] ? '：' . $rsData['msg'] : '');
+            
+            return array('rsp'=>'succ', 'msg'=>'更新发票信息' . $rsp_msg);
         }else{
-            $rs = kernel::single('ome_order_invoice')->insertInvoice($sdf);
+            $rs = kernel::single('ome_order_invoice')->insertInvoice($sdf, '订单保存发票信息', $rsp_msg);
             if($rs) {
                 app::get('ome')->model('operation_log')->write_log('order_modify@ome',$sdf['order_info']['order_id'],'订单保存发票信息');
                 return array('rsp'=>'succ', 'msg'=>'发票生成成功');
             }
+            
+            $rsp_msg = ($rsp_msg ? '：' . $rsp_msg : '');
         }
-        return array('rsp'=>'fail', 'msg'=>'发票生成失败');
+        
+        return array('rsp'=>'fail', 'msg'=>'发票生成失败'. $rsp_msg);
     }
 
     /**

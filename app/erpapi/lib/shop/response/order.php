@@ -26,38 +26,37 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
 {
     /**
      * ERP订单
-     * 
+     *
      * @var string
-     * */
-
+     **/
     public $_tgOrder = array();
 
     /**
      * 订单接收格式
-     * 
+     *
      * @var array
-     * */
+     **/
     public $_ordersdf = array();
 
     /**
      * 订单标准结构
-     * 
+     *
      * @var string
-     * */
+     **/
     public $_newOrder = array();
 
     /**
      * 可接收未付款订单
-     * 
+     *
      * @var string
-     * */
+     **/
     protected $_accept_unpayed_order = false;
 
     /**
      * 更新订单是否接收死单
-     * 
+     *
      * @var string
-     * */
+     **/
     protected $_update_accept_dead_order = false;
 
     #平台订单状态
@@ -65,24 +64,24 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
 
     /**
      * 订单obj明细唯一标识
-     * 
+     *
      * @var string
-     * */
+     **/
     public $object_comp_key = 'bn-shop_goods_id-obj_type';
 
     /**
      * 订单item唯一标识
-     * 
+     *
      * @var string
-     * */
+     **/
     public $item_comp_key = 'bn-shop_product_id-item_type';
 
     /**
      * 防并发key
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     public function concurrentKey($sdf)
     {
         $this->__lastmodify            = kernel::single('ome_func')->date2time($sdf['lastmodify']);
@@ -172,10 +171,10 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
 
     /**
      * 订单操作：创建 or 更新
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     protected function _operationSel()
     {
         $lastmodify = kernel::single('ome_func')->date2time($this->_ordersdf['lastmodify']);
@@ -203,7 +202,26 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
                     'order_id'=>$this->_tgOrder['order_id'],
                     'source_status' => $this->_ordersdf['source_status']
                 );
-                kernel::single('invoice_order_front_router', 'b2c')->operateTax($arr_create_invoice);
+                
+                // 发票来源
+                $invoice_source = 'b2c';
+                
+                // 注册service，获取发票来源
+                foreach(kernel::servicelist('ome.service.invoice.analysis.prepose') as $object)
+                {
+                    if(method_exists($object, 'get_invoice_source')){
+                        // 获取项目上定制的发票来源
+                        $custom_invoice_source = $object->get_invoice_source();
+                        if($custom_invoice_source){
+                            $invoice_source = $custom_invoice_source;
+                        }
+                    }
+                }
+                
+                // 发票来源
+                $arr_create_invoice['invoice_source'] = $invoice_source;
+                
+                kernel::single('invoice_order_front_router', $invoice_source)->operateTax($arr_create_invoice);
                 
                 //平台订单是已完成状态
                 if($this->_ordersdf['source_status'] == 'TRADE_FINISHED'){
@@ -257,10 +275,10 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
     
     /**
      * 创建订单
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     protected function _createOrder()
     {
         $this->__apilog['title'] = '创建订单[' . $this->_ordersdf['order_bn'] . ']';
@@ -315,10 +333,10 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
 
     /**
      * 订单组件
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     protected function get_convert_components()
     {
         $components = array('master', 'items', 'shipping', 'consignee', 'consigner', 'custommemo', 'markmemo', 'marktype', 'member', 'tax','booltype');
@@ -327,10 +345,10 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
 
     /**
      * 创建订单的插件
-     * 
+     *
      * @return array
      * @author
-     * */
+     **/
     protected function get_create_plugins()
     {
         $plugins = array(
@@ -358,10 +376,10 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
     
     /**
      * 更新订单
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     protected function _updateOrder()
     {
         $this->__apilog['title'] = '更新订单[' . $this->_ordersdf['order_bn'] . ']';
@@ -399,11 +417,6 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
         return true;
     }
     
-        /**
-     * order_get_obj_key
-     * @param mixed $object object
-     * @return mixed 返回值
-     */
     public function order_get_obj_key($object)
     {
         $objkey = '';
@@ -415,10 +428,10 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
 
     /**
      * 订单组件
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     protected function get_update_components()
     {
         $components = array('master', 'items', 'shipping', 'consignee', 'consigner', 'custommemo', 'markmemo', 'marktype', 'member', 'tax');
@@ -427,10 +440,10 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
 
     /**
      * 更新插件
-     * 
+     *
      * @return array
      * @author
-     * */
+     **/
     protected function get_update_plugins()
     {
         $plugins = array('encryptsourcedata','ordertype','coupon');
@@ -440,10 +453,10 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
 
     /**
      * 数据解析
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     protected function _analysis()
     {
         $ordFunLib = kernel::single('ome_order_func');
@@ -462,6 +475,13 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
                 //merge
                 if($analysisSdf){
                     $this->_ordersdf = array_merge($this->_ordersdf, $analysisSdf);
+                    
+                    // 修改apilog中的订单号
+                    if(isset($analysisSdf['is_reset_apilog']) && $analysisSdf['is_reset_apilog']){
+                        $this->__apilog['result']['data'] = array('tid' => $this->_ordersdf['order_bn']);
+                        $this->__apilog['original_bn']    = $this->_ordersdf['order_bn'];
+                        $this->__apilog['title']          = '创建订单[' . $this->_ordersdf['order_bn'] . ']';
+                    }
                 }
             }
         }
@@ -680,10 +700,10 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
 
     /**
      * 是否接收订单
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     protected function _canAccept()
     {
         if (empty($this->_ordersdf) || empty($this->_ordersdf['order_bn']) || empty($this->_ordersdf['order_objects'])) {
@@ -724,10 +744,10 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
 
     /**
      * 创建接收
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     protected function _canCreate()
     {
         // if ($this->_ordersdf['order_type'] != 'platform' && $this->_ordersdf['ship_status'] != '0') {
@@ -844,10 +864,10 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
 
     /**
      * 更新接收
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     protected function _canUpdate()
     {
         if ($this->_ordersdf['order_type'] == 'platform') {
@@ -898,11 +918,6 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
         }
     }
 
-        /**
-     * status_update
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function status_update($sdf)
     {
         $this->__apilog['original_bn'] = $sdf['order_bn'];
@@ -965,11 +980,6 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
         return $updateOrder;
     }
 
-    /**
-     * pay_status_update
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function pay_status_update($sdf)
     {
         $this->__apilog['original_bn'] = $sdf['order_bn'];
@@ -1004,11 +1014,6 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
 
     }
 
-    /**
-     * ship_status_update
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function ship_status_update($sdf)
     {
         $this->__apilog['original_bn'] = $sdf['order_bn'];
@@ -1042,11 +1047,6 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
         return $updateOrder;
     }
 
-    /**
-     * custom_mark_add
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function custom_mark_add($sdf)
     {
         $this->__apilog['original_bn'] = $sdf['order_bn'];
@@ -1089,11 +1089,6 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
         return $updateOrder;
     }
 
-    /**
-     * custom_mark_update
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function custom_mark_update($sdf)
     {
         $this->__apilog['original_bn'] = $sdf['order_bn'];
@@ -1136,11 +1131,6 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
         return $updateOrder;
     }
 
-    /**
-     * memo_add
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function memo_add($sdf)
     {
         $this->__apilog['original_bn'] = $sdf['order_bn'];
@@ -1187,11 +1177,6 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
         return $updateOrder;
     }
 
-    /**
-     * memo_update
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function memo_update($sdf)
     {
         // $this->__apilog['result']['data'] = array('tid'=>$this->_ordersdf['order_bn']);
@@ -1239,11 +1224,6 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
         return $updateOrder;
     }
 
-    /**
-     * payment_update
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function payment_update($sdf)
     {
         // $this->__apilog['result']['data'] = array('tid'=>$this->_ordersdf['order_bn']);
@@ -1282,7 +1262,7 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
     }
 
     /**
-     * 
+     *
      * 订单明细格式化,该方法兼容订单打下来的明细结构，非常重要
      * @param void
      * @return void
@@ -1565,7 +1545,7 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
      * [加密字段处理]收货人、会员信息加密
      * @todo：平台相关加密方式可参考（语雀-->OMS开发手册-->隐私加密）
      * @todo：注意特殊平台：meituan4medicine、xhs、dangdang(当当是明文)
-     * 
+     *
      * @return void
      */
     public function _securityHashCode()

@@ -142,7 +142,18 @@ class erpapi_shop_response_plugins_order_payment extends erpapi_shop_response_pl
             $sql = ome_func::get_insert_sql($paymentObj, $payments);
 
             kernel::database()->exec($sql);
+
+            foreach ($payments as $key => $value) {
+                foreach(kernel::servicelist('ome.service.order.payment.after') as $service) {
+                    if(method_exists($service,'after_payment')) {
+                        $service->after_payment($value);
+                    }
+                }
+            }
+            
         }
+
+
     }
 
     /**

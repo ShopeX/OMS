@@ -1,0 +1,184 @@
+<{capture name="header"}>
+<{css app="ome" src="ome.css"}>
+<{css app="ome" src="style.css"}>
+<{script src="coms/modedialog.js" app="desktop"}>
+<{script src="coms/pager.js" app="desktop"}>
+<{/capture}>
+<style>
+    .notice-inline.error  {background-image:none;margin-left:25px}
+    #fm1 .division td label ,#fm1 .division div label {vertical-align:top;}
+    .propetyList li{display:inline-block;width:40%;padding-bottom:8px;}
+    .areabox{
+        padding:2px;
+    }
+    .mapping-range-tip{
+        color:#c52f24;
+        background:#fff7f6;
+        border:1px solid #f0d0cc;
+        padding:8px 12px;
+        margin:0 0 10px;
+        line-height:1.6;
+    }
+    .range-op{
+        color:#c52f24;
+        font-size:12px;
+        padding:0 2px;
+        white-space:nowrap;
+    }
+</style>
+<form method="post" id="fm1" action="index.php?app=goldentra&ctl=admin_mapping&act=save&finder_id=<{$finder_id}>">
+    <div class="tableform">
+       
+        <div class="division">
+            <div class="mapping-range-tip">
+                区间取值说明（克重段 / 主石重段 / 辅石重段 / 标签价段）：填写「下限 ~ 上限」时，匹配范围为 <b>≥下限</b> 且 <b>＜上限</b>（左闭右开）。
+                例：填写 <b>0.8 ~ 1.2</b>，表示 <b>≥0.8</b> 且 <b>＜1.2</b>。
+            </div>
+          
+            <table border="0" cellspacing="0" cellpadding="0" class="gridlist">
+               
+            
+                <tr>
+                    <td align="right" nowrap="nowrap">模号：</td>
+                    <td colspan="9">
+                        <input type="hidden" id="m_id" name="m_id"/>
+                        <input type="text" id="mold_code" name="mold_code" vtype="required" class="x-input" />
+                       <span>
+                            <{img class="pointer btn_mold" title="查看模号列表" app="desktop" src="bundle/zoom_btn.gif"}>
+                        </span>
+                    </td>
+                </tr>
+                <tbody>
+                <tr>
+                    <td align="right">克重段：</td>
+                    <td>
+                        <span class="range-op">≥</span>
+                        <input type="text"  name="min_weight[]"   size=6 vtype="required&&unsigned" />~
+                        <input type="text"  name="max_weight[]"  size=6 vtype="required&&unsigned"/>
+                        <span class="range-op">＜</span>
+                    </td>
+                    <td align="right">显示克重：</td><td><input type="text" name="weight[]" vtype="required&&unsigned" size=6 />
+                        <span style="color:red;">*</span></td>
+                      <td align="right" nowrap="nowrap">主石重段：</td>
+                    <td>
+                        <span class="range-op">≥</span>
+                        <input type="text"  name="min_main[]"  size=10 vtype="required&&unsigned" />~
+                        <input type="text"  name="max_main[]"  size=6 vtype="required&&unsigned"/>
+                        <span class="range-op">＜</span>
+                       <span style="color:red;">*</span>
+                    </td>
+                    <td align="right">显示主石重：</td><td><input type="text" name="main_weight[]" vtype="required&&unsigned" size=6/>
+                        <span style="color:red;">*</span></td>  
+                       <td align="right" nowrap="nowrap">辅石重段：</td>
+                    <td>
+                        <span class="range-op">≥</span>
+                        <input type="text" name="min_extra[]"  size=6 vtype="required&&unsigned" />~
+                        <input type="text" name="max_extra[]"  size=6 vtype="required&&unsigned"/>
+                        <span class="range-op">＜</span>
+                       <span style="color:red;">*</span>
+                    </td>
+                    <td align="right">显示辅石重：</td><td><input type="text" name="extra_weight[]"  vtype="required&&unsigned" size=6/>
+                        <span style="color:red;">*</span></td> 
+                       <td align="right" nowrap="nowrap">标签价段：</td>
+                    <td>
+                        <span class="range-op">≥</span>
+                        <input type="text" name="min_tag_price[]" size=6 vtype="required&&unsigned" />~
+                        <input type="text" name="max_tag_price[]" size=6 vtype="required&&unsigned"/>
+                        <span class="range-op">＜</span>
+                       <span style="color:red;">*</span>
+                    </td>
+                    <td align="right">显示标签价：</td><td><input type="text" name="tag_price[]"  vtype="required&&unsigned" size=6/>
+                        <span style="color:red;">*</span><input type="button" name="add_btn" id="add_btn" value="新增"></td>  
+                </tr>
+               </tbody>
+               
+                <tbody id="spec_body">
+                </tbody>
+               
+            </table>
+            
+
+        </div>
+
+        <div id="cc" class="noprint table-action">
+            <{button type="button" id="model-save-btn" label="保 存"}> &nbsp;
+            <{button type="button" class="btn-secondary" id="return-btn" label="关 闭" onclick="javascript:void(window.close());"}>
+        </div>
+    </div>
+
+    <input type="hidden" name="finder_id" value="<{$finder_id}>">
+</form>
+<script>
+$('model-save-btn').addEvent('click',function(e){
+    var _this=this;
+    var form=this.getParent('form');
+
+    //
+   
+    form.store('target',{
+                        onRequest:function(){
+                            _this.disabled=true;
+                        },
+                        onComplete:function(jsontext){
+                            try{
+                                var json = JSON.decode(jsontext);
+                                if (typeof(json.error)!='undefined'){
+                                    _this.disabled=false;
+                                }else{
+                                    _this.disabled=true;
+                                    opener.finderGroup['<{$env.get.finder_id}>'].refresh.delay(400,opener.finderGroup['<{$env.get.finder_id}>']);
+                         window.close();
+                                }
+                            }catch(e){}
+                        }
+                    });
+
+                
+    form.fireEvent('submit',e);
+});
+  
+
+var getTemp = function(index){
+
+    temp='<td align="right">克重段：</td>';
+    temp+='<td><span class="range-op">≥</span><input type="text"  name="min_weight[]"   size=6 vtype="required&&unsigned" />~<input type="text" name="max_weight[]"  size=6 vtype="required&&unsigned"/><span class="range-op">＜</span></td>';
+    temp+='<td align="right">显示克重：</td><td><input type="text" name="weight[]"  vtype="required&&unsigned" size=6 /><span style="color:red;">*</span></td>';                
+    temp+='<td align="right" nowrap="nowrap">主石重段：</td>'; 
+    temp+='<td><span class="range-op">≥</span><input type="text"  name="min_main[]"  size=10 vtype="required&&unsigned" />~<input type="text" name="max_main[]"  size=6 vtype="required&&unsigned"/><span class="range-op">＜</span><span style="color:red;">*</span></td>';          
+    temp+='<td align="right">显示主石重：</td><td><input type="text" name="main_weight[]"  vtype="required&&unsigned" size=6/><span style="color:red;">*</span></td>';                 
+    temp+='<td align="right" nowrap="nowrap">辅石重段：</td>'; 
+    temp+='<td><span class="range-op">≥</span><input type="text"  name="min_extra[]" size=6 vtype="required&&unsigned" />~<input type="text"  name="max_extra[]"  size=6 vtype="required&&unsigned"/><span class="range-op">＜</span><span style="color:red;">*</span></td>';             
+    temp+='<td align="right">显示辅石重：</td><td><input type="text" name="extra_weight[]" vtype="required&&unsigned" size=6/><span style="color:red;">*</span></td>';              
+    temp+='<td align="right" nowrap="nowrap">标签价段：</td>';
+    temp+='<td><span class="range-op">≥</span><input type="text" name="min_tag_price[]" size=6 vtype="required&&unsigned" />~<input type="text" name="max_tag_price[]" size=6 vtype="required&&unsigned"/><span class="range-op">＜</span><span style="color:red;">*</span></td>';
+    temp+='<td align="right">显示标签价：</td><td><input type="text" name="tag_price[]" vtype="required&&unsigned" size=6/><span style="color:red;">*</span><a href="#" onclick="delStockout(this)"><{img src="bundle/delecate.gif" app="desktop" key="state" class="pointer btn-delete-item"}></a></td>';
+                     
+    return temp;
+};
+
+
+$('add_btn').addEvent('click',function(e){
+
+    
+    var index = uniqueID();
+    var newRow=new Element('tr',{html:getTemp(index)}).inject($('spec_body'));
+});
+
+uniqueID = (function () {
+    var id = 0;
+    return function () {
+        return id++;
+    };
+})();
+
+$E(".btn_mold").addEvent('click',function(e){
+    var url='?app=desktop&act=alertpages&goto='+encodeURIComponent("index.php?app=goldentra&ctl=admin_mold&act=index&singleselect=1");
+    Ex_Loader('modedialog',function() {
+        new finderDialog(url,{params:{url:'index.php?app=goldentra&ctl=admin_mold&act=getMoldByCode',name:'m_id',type:'radio'},handle:'mold_code',width:1000,height:500});
+    });
+});
+
+delStockout=function(o){
+  o.getParent('tr').remove();
+}
+</script>

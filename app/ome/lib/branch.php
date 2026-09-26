@@ -1,30 +1,19 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-
+* 仓库类
+*
+* @copyright shopex.cn 2013.4.10
+* @author dongqiujin<123517746@qq.com>
+*/
 class ome_branch{
 
     /**
-     * 获取仓库所关联的WMS
-     * 
-     * @access public
-     * @param String $branch_bn 仓库编号
-     * @return String wms_id
-     */
+    * 获取仓库所关联的WMS
+    *
+    * @access public
+    * @param String $branch_bn 仓库编号
+    * @return String wms_id
+    */
     public function getWmsId($branch_bn=''){
         $branchMdl = app::get('ome')->model('branch');
         $branch = $branchMdl->db->selectRow("select wms_id from sdb_ome_branch WHERE branch_bn='$branch_bn'");
@@ -32,17 +21,17 @@ class ome_branch{
     }
 
     /**
-     * 获取WMS渠道列表
-     * 
-     * @access public
-     * @return Array
-     */
+    * 获取WMS渠道列表
+    *
+    * @access public
+    * @return Array
+    */
     public function getWmsChannelList(){
         return kernel::single('channel_func')->getWmsChannelList();
     }
 
     /**
-     * 
+     *
      * 获取绑定过仓储类型的仓库列表
      * @access public
      * @return Array
@@ -54,7 +43,7 @@ class ome_branch{
     }
 
     /**
-     * 
+     *
      * 根据仓库ID获取仓库编码BN
      * @param string $branch_id 仓库ID
      * @return string $branch_bn 仓库编号
@@ -66,7 +55,7 @@ class ome_branch{
     }
 
     /**
-     * 
+     *
      * 根据仓库ID获取仓库编码BN
      * @param string $branch_id 仓库ID
      * @return string $wms_id 仓库类型ID
@@ -100,7 +89,7 @@ class ome_branch{
     }
 
     /**
-     * 
+     *
      * 判断仓库是否是门店关联线下仓
      * @param string $branch_id 仓库ID
      * @return boolean true/false
@@ -139,7 +128,6 @@ class ome_branch{
     *
     * return array
     */
-
     public function getBranchListBywms(){
         $branchMdl = app::get('ome')->model('branch');
         $sql = "SELECT b.branch_id FROM sdb_ome_branch as b LEFT JOIN sdb_channel_adapter as a ON b.wms_id=a.channel_id WHERE a.adapter = 'selfwms' AND b.type='main' AND b.is_deliv_branch='true'";
@@ -153,7 +141,7 @@ class ome_branch{
     }
 
     /**
-     * 
+     *
      * 根据仓库ID获取仓库信息默认返回全部
      * @param string $branch_id 仓库ID
      * @return array
@@ -185,7 +173,7 @@ class ome_branch{
     /**
      * 根据仓库编码获取仓库信息
      * @todo：使用getList方法查询,filter条件会默认增加用户拥有的仓库权限
-     * 
+     *
      * @param array $branch_bn 仓库编号
      * @return array
      */
@@ -216,7 +204,7 @@ class ome_branch{
     
     /**
      * 获取指定平台仓库编码
-     * 
+     *
      * @param string $type
      * @return array
      */
@@ -274,7 +262,7 @@ class ome_branch{
     
     /**
      * 获取已绑定抖音平台的区域仓(按branch_bn为下标)
-     * 
+     *
      * @param $shop_type 店铺平台
      * @return array
      */
@@ -305,7 +293,7 @@ class ome_branch{
     
     /**
      * 获取已绑定抖音平台的区域仓(按branch_id为下标)
-     * 
+     *
      * @param $shop_type 店铺平台
      * @return array
      */
@@ -336,7 +324,7 @@ class ome_branch{
     
     /**
      * 获取指定WMS平台的仓库列表
-     * 
+     *
      * @param string $wms_type 仓储类型
      * return array
      */
@@ -373,10 +361,6 @@ class ome_branch{
         return $branchList;
     }
 
-    /**
-     * 获取BranchTypes
-     * @return mixed 返回结果
-     */
     public function getBranchTypes(){
         $typeMdl = app::get('ome')->model('branch_type');
 
@@ -422,5 +406,54 @@ class ome_branch{
             return $customcolslist;
         }
         return array();
+    }
+
+    /**
+     * 根据仓库ID获取门店发件人信息（WAP 录入运单号等）
+     * @param int $branch_id
+     * @return array|false
+     */
+    public function getStoreSenderInfoByBranchId($branch_id)
+    {
+        if (empty($branch_id)) {
+            return false;
+        }
+
+        $branch_id = intval($branch_id);
+        $fields = 'a.branch_id,a.branch_bn,a.store_id,b.store_bn,b.name,b.area,b.addr,b.contacter,b.mobile,b.tel,b.zip';
+        $sql = "SELECT {$fields} FROM `sdb_ome_branch` AS a LEFT JOIN sdb_o2o_store AS b ON a.store_id = b.store_id"
+            . " WHERE a.branch_id = {$branch_id}";
+        $storeList = kernel::database()->select($sql);
+        if (empty($storeList)) {
+            return false;
+        }
+
+        $row = $storeList[0];
+        $result = array(
+            'branch_id' => $row['branch_id'],
+            'branch_bn' => $row['branch_bn'],
+            'store_id' => $row['store_id'],
+            'store_bn' => $row['store_bn'],
+            'store_name' => $row['name'],
+            'consignee' => array(
+                'name' => $row['contacter'],
+                'area' => $row['area'],
+                'addr' => $row['addr'],
+                'telephone' => $row['tel'],
+                'mobile' => $row['mobile'],
+                'zip' => $row['zip'],
+            ),
+        );
+        if (!empty($row['area']) && strpos($row['area'], ':') !== false) {
+            list(, $to_area) = explode(':', $row['area']);
+            $areaData = explode('/', $to_area);
+            $result['consignee']['province'] = isset($areaData[0]) ? $areaData[0] : '';
+            $result['consignee']['city'] = isset($areaData[1]) ? $areaData[1] : '';
+            $result['consignee']['district'] = isset($areaData[2]) ? $areaData[2] : '';
+            if (!empty($areaData[3])) {
+                $result['consignee']['town'] = $areaData[3];
+            }
+        }
+        return $result;
     }
 }

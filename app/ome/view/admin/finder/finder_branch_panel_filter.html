@@ -1,23 +1,8 @@
-<!--
-  Copyright 2012-2026 ShopeX (https://www.shopex.cn)
 
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
--->
-
-<div id='<{$panel_id}>-filter-list-<{$finder_id}>' class="filter-list" style="float:left;">
+  	<div id='<{$panel_id}>-filter-list-<{$finder_id}>' class="filter-list" style="float:left;">
 	    <{foreach from=$columns key=c item=v}>
 	    	<{if $panel_id==$v.panel_id}>
-	        <div k="<{$c}>" style="<{if $v.filtertype && $v.filterdefault}><{else}>display:none;<{/if}>float:left;border: 1px solid #EBEFF4;margin:2px 16px 2px 0;padding: 4px;height:26px;">
+	        <div k="<{$c}>" style="<{if $v.filtertype && $v.filterdefault}><{else}>display:none;<{/if}>float:left;border: 1px solid #EBEFF4;margin:2px 16px 2px 0;padding: 4px;min-height:26px;<{if $v.filtertype == 'fuzzy_search_multiple'}>height:auto;overflow:visible;<{/if}>">
 		   		<div style="float:left;"><{$v.label}><{$v.addon}>：</div>
 	            <div style="float:left;"><{$v.inputer}></div>
 	        </div>
@@ -51,23 +36,17 @@ void function(){
 	           
 		filter_<{$finder_id}>.update();
  var filter = $('finder-form-<{$finder_id}>').toQueryString();
- var export_url = 'index.php?app=console&ctl=admin_branch_product&act=export';
+ // console / ome 均可能使用该面板
+ var export_url = (window.location.href.indexOf('app=console') >= 0)
+    ? 'index.php?app=console&ctl=admin_branch_product&act=export'
+    : 'index.php?app=ome&ctl=admin_branch_product&act=export';
  
     export_url+='&'+filter;
   
   $$('.export').set('href',export_url);
-//_finder.filter.value=filter;
 	            
 	});
-	         
-	// $('<{$panel_id}>-filter-reset-<{$finder_id}>').addEvent('click',function(){
-	        	 
-	// 	$('<{$panel_id}>-filter-list-<{$finder_id}>').innerHTML = filerHTML;
-	// 	$('<{$panel_id}>-filter-list-<{$finder_id}>').getElements('input.cal').each(function(dpi){
-	// 		dpi.makeCalable();
-	// 	});
-	// });
- 
+
 }();
 
 
@@ -127,6 +106,35 @@ var replace_name=function(box,nice){
 	});
 } 
 
+// 与发货列表/高级筛选一致：可搜索多选；多选去掉空「全部」，避免 SQL：IN (,2)
+var fuzzySearch = $('<{$panel_id}>-filter-list-<{$finder_id}>').getElements('select[data-search="fuzzy-search"]');
+if (fuzzySearch.length > 0) {
+	fuzzySearch.each(function (v) {
+		var option = $(v).getElement('option');
+		if (v.get('multiple')) {
+			$$(v.getElements('option')).each(function (opt) {
+				opt.selected = false;
+				if (opt.value === '' || opt.value === '_NULL_') {
+					opt.destroy();
+				}
+			});
+		} else if (option && option.value == '') {
+			$(option).set({
+				text: '全部',
+				value: ''
+			});
+		}
+	});
+	Ex_Loader("tail.select", function () {
+		tail.select('select[data-search="fuzzy-search"]', {
+			search: true,
+			width: 200,
+			height: 200,
+			searchMinLength: 0,
+			placeholder: '选择仓库...'
+		});
+	});
+}
 
  
 </script>

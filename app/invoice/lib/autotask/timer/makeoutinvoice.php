@@ -25,6 +25,19 @@ class invoice_autotask_timer_makeoutinvoice
 {
     public function process($params, &$error_msg = '')
     {
+        // 注册service，分析是否允许开蓝票
+        foreach(kernel::servicelist('ome.service.invoice.analysis.prepose') as $object)
+        {
+            if(method_exists($object, 'check_blue_invoice')){
+                // check
+                $analysisResult = $object->check_blue_invoice($params);
+                if(isset($analysisResult['rsp']) && $analysisResult['rsp'] == 'fail'){
+                    $error_msg = ($analysisResult['error_msg'] ? $analysisResult['error_msg'] : '禁止自动重试开蓝票；');
+                    return true;
+                }
+            }
+        }
+        
         set_time_limit(0);
         ignore_user_abort(1);
         @ini_set('memory_limit', '512M');

@@ -42,9 +42,7 @@
         </tr>
         <tr>
           <th>订单号：</th>
-          <td><{$delivery_bill.order_bn}></td>
-          <th>京东订单号：</th>
-          <td><{$delivery_bill.package_bn}></td>
+          <td colspan="3"><{$delivery_bill.order_bn}></td>
         </tr>
         <tr>
           <th>创建时间：</th>
@@ -65,8 +63,9 @@
         <thead>
           <tr style="background-color: #f5f5f5;">
             <th style="padding: 8px; border: 1px solid #ddd; text-align: center;">包裹ID</th>
-            <th style="padding: 8px; border: 1px solid #ddd; text-align: center;">京东子单号</th>
             <th style="padding: 8px; border: 1px solid #ddd; text-align: center;">基础物料号</th>
+            <th style="padding: 8px; border: 1px solid #ddd; text-align: center;">订单号</th>
+            <th style="padding: 8px; border: 1px solid #ddd; text-align: center;">付款状态</th>
             <th style="padding: 8px; border: 1px solid #ddd; text-align: center;">外部SKU</th>
             <th style="padding: 8px; border: 1px solid #ddd; text-align: center;">数量</th>
             <th style="padding: 8px; border: 1px solid #ddd; text-align: center;">包裹状态</th>
@@ -83,12 +82,24 @@
           <{foreach from=$packages item=package}>
             <tr>
               <td style="padding: 8px; border: 1px solid #ddd; text-align: center;"><{$package.package_id}></td>
-              <td style="padding: 8px; border: 1px solid #ddd; text-align: center;"><{$package.package_bn}></td>
               <td style="padding: 8px; border: 1px solid #ddd; text-align: center;"><{$package.bn}></td>
+              <td style="padding: 8px; border: 1px solid #ddd; text-align: center;"><{$package.order_bn_display}></td>
+              <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
+                <{if $package.pay_status == '0'}>-
+                <{elseif $package.pay_status == '1'}>已支付
+                <{elseif $package.pay_status == '2'}>处理中
+                <{elseif $package.pay_status == '3'}>部分付款
+                <{elseif $package.pay_status == '4'}>部分退款
+                <{elseif $package.pay_status == '5'}>全额退款
+                <{elseif $package.pay_status == '6'}>退款申请中
+                <{elseif $package.pay_status == '7'}>退款中
+                <{elseif $package.pay_status == '8'}>支付中
+                <{else}>-<{/if}>
+              </td>
               <td style="padding: 8px; border: 1px solid #ddd; text-align: center;"><{$package.outer_sku}></td>
               <td style="padding: 8px; border: 1px solid #ddd; text-align: center;"><{$package.number}></td>
-              <td style="padding: 8px; border: 1px solid #ddd; text-align: center;"><{$package.status}></td>
-              <td style="padding: 8px; border: 1px solid #ddd; text-align: center;"><{$package.shipping_status}></td>
+              <td style="padding: 8px; border: 1px solid #ddd; text-align: center;"><{$package.status_display}></td>
+              <td style="padding: 8px; border: 1px solid #ddd; text-align: center;"><{$package.shipping_status_display}></td>
               <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
                 <{if $package.is_wms_gift == 'true'}>是<{else}>否<{/if}>
               </td>

@@ -43,6 +43,7 @@ class omeauto_auto_plugin_flag extends omeauto_auto_plugin_abstract implements o
 
         $allow = true;
         $fields = $this->_getCheckField($confirmRoles);
+        $remarkRules = $this->_getRemarkRules($confirmRoles);
         
         $mark = kernel::single('omeauto_auto_group_mark');
         foreach ($group->getOrders() as $order) {
@@ -50,22 +51,24 @@ class omeauto_auto_plugin_flag extends omeauto_auto_plugin_abstract implements o
             //检查标记是否已经确认
             $markText = $this->getMark($order['mark_text']);
             $customText = $this->getMark($order['custom_mark']);
+            
             if ($mark->isConfirm($markText, $customText)) {
                  
                 //如需检查客户留言，订单可过，但打上有备注的标记
                 if (in_array('custom_mark', $fields)) {
                     
-                    if ($customText) {
+                    if ($this->_matchRemark($customText, $remarkRules['custom_mark'])) {
                         $group->setOrderStatus($order['order_id'], $this->getMsgFlag());
                     }
                 }
             } else {
                 //备注
                 foreach ($fields as $field) {
-
-                    if ($order[$field]) {
+                    $remarkText = $field == 'custom_mark' ? $customText : $markText;
+                    if ($this->_matchRemark($remarkText, $remarkRules[$field])) {
                         $allow = false;
                         $group->setOrderStatus($order['order_id'], $this->getMsgFlag());
+                        break;
                     }
                 }
             }
@@ -97,6 +100,66 @@ class omeauto_auto_plugin_flag extends omeauto_auto_plugin_abstract implements o
         }
 
         return $result;
+    }
+
+    /**
+     * 获取备注关键字规则
+     *
+     * @param array $configRoles
+     * @return array
+     */
+    private function _getRemarkRules($configRoles)
+    {
+        return array(
+            'custom_mark' => $this->_parseKeywords(isset($configRoles['member_remark']) ? $configRoles['member_remark'] : ''),
+            'mark_text' => $this->_parseKeywords(isset($configRoles['order_remark']) ? $configRoles['order_remark'] : ''),
+        );
+    }
+
+    /**
+     * 按竖线分隔关键字
+     *
+     * @param string $keywords
+     * @return array
+     */
+    private function _parseKeywords($keywords)
+    {
+        $result = array();
+        foreach (explode('|', (string) $keywords) as $keyword) {
+            $keyword = trim($keyword);
+            if ($keyword !== '') {
+                $result[] = $keyword;
+            }
+        }
+
+        return array_unique($result);
+    }
+
+    /**
+     * 校验备注是否命中规则
+     *
+     * @param string $remarkText
+     * @param array $keywords
+     * @return bool
+     */
+    private function _matchRemark($remarkText, $keywords)
+    {
+        $remarkText = trim((string) $remarkText);
+        if ($remarkText === '') {
+            return false;
+        }
+
+        if (empty($keywords)) {
+            return true;
+        }
+
+        foreach ((array) $keywords as $keyword) {
+            if ($keyword !== '' && stripos($remarkText, $keyword) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

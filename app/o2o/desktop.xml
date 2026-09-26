@@ -26,6 +26,7 @@
         <permission id="o2o_inventory" show='ome_roles:show_o2o_branch' save='ome_roles:save_role'>门店盘点</permission>
         <permission id="o2o_store_inventory" show='ome_roles:show_o2o_branch' save='ome_roles:save_role'>门店库存列表</permission>
         <permission id="o2o_refuse_reason">门店拒单原因</permission>
+        <permission id="o2o_store_refuse_list" show='ome_roles:show_o2o_branch' save='ome_roles:save_role'>门店拒单列表</permission>
         <!-- <permission id="o2o_refuse_analysis">门店拒单分析</permission> -->
         <!-- <permission id="o2o_store_daliy_analysis">门店每日统计</permission> -->
         <!--
@@ -73,6 +74,7 @@
         <menugroup name="门店发货" order='10' en="store-delivery-management">
             <menu controller='admin_delivery_pending' action='index' permission='o2o_shop_pending' display='true' order='1000305'>待处理</menu>
             <menu controller='admin_delivery_processed' action='index' permission='o2o_shop_processed' display='true' order='1000405'>已处理</menu>
+            <menu controller='admin_refuse_analysis' action='index' permission='o2o_store_refuse_list' display='true' order='1000410'>门店拒单列表</menu>
         </menugroup>
         <menugroup name="门店库存" order='20' en="store-stock-management">
             <menu controller='admin_store_inventory' action='index' permission='o2o_store_inventory' display='true' order='1000605'>门店库存列表</menu>
@@ -97,14 +99,14 @@
             <menu controller='admin_branch_product' action='index' permission='o2o_branch_product' display='true' order='8'>门店供货管理</menu>
         </menugroup>
     </workground>
-    
+    -->
     <!--
     <workground name="系统" id="setting_tools"  order="800">
         <menugroup name="订单自动设置">
             <menu controller='admin_autostore' action='index' permission='o2o_autostore' display='true' order='4500600'>门店优选规则</menu>
         </menugroup>
     </workground>
-    -->
+   
     <workground name="单据报表" id="invoice_center"  order="1200" icon="icon-danjubaobiao-01">
         <menugroup name="分析报表" en="analytical-statement">
             <menu controller='admin_refuse_reason' action='statistics' permission='o2o_refuse_analysis' display='true' order='1000606'>门店拒单分析</menu>
@@ -113,7 +115,7 @@
             <menu controller='admin_analysis' action='storedaliy' permission='o2o_store_daliy_analysis' display='true' order='1000705'>门店每日统计</menu>
         </menugroup>
     </workground>
-
+ -->
     <workground name="系统设置" id="setting_tools"  order="1100" icon="icon-xitongshezhi-01">
         <menugroup name="基本设置" en="basic-set">
             <menu controller='admin_refuse_reason' action='index' permission='o2o_refuse_reason' display='true' order='1000497'>门店拒单原因</menu>

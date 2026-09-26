@@ -286,18 +286,22 @@ class purchase_purchase_stockout
         $carrierObj    = app::get('purchase')->model('carrier');
 
         //filter
-        $filter    = array('carrier_isvalid'=>1);
+        $filter    = array('carrier_isvalid'=>1, 'disabled'=>'false');
+        
+        // shop_id
         if($shop_id)
         {
             $filter['shop_id']    = $shop_id;
         }
+        
+        // carrier_code
         if($carrier_code)
         {
             $filter['carrier_code']    = $carrier_code;
         }
 
         //getList
-        $tempData      = $carrierObj->getList('*', $filter);
+        $tempData      = $carrierObj->getList('*', $filter, 0, -1, 'carrier_code ASC');
 
         $carrier_list    = array();
         if($tempData)
@@ -660,15 +664,34 @@ class purchase_purchase_stockout
         $data['carrier_isvalid']    = intval($data['carrier_isvalid']);
         $carrier_code    = $data['carrier_code'];
         $shop_id         = $data['shop_id'];
-
-        $row    = $carrierObj->dump(array('carrier_code'=>$carrier_code, 'shop_id'=>$shop_id), '*');
-        if($row)
-        {
-            $carrierObj->update($data, array('cid'=>$row['cid']));
+        $carrier_name    = $data['carrier_name'];
+        
+        // 检查承运商的平台状态
+        if($carrier_name){
+            $carrierList = $this->getVopCarrierList();
+            if(isset($carrierList[$carrier_name]) && $carrierList[$carrier_name]){
+                $carrierInfo = $carrierList[$carrier_name];
+                
+                // 平台状态
+                $data['platform_status'] = $carrierInfo['platform_status'];
+                $data['memo'] = $carrierInfo['memo'];
+                if($carrierInfo['platform_status'] == 'abandon'){
+                    $data['disabled'] = 'true';
+                }else{
+                    $data['disabled'] = 'false';
+                }
+            }
         }
-        else
-        {
-            $carrierObj->insert($data);
+        
+        // save
+        $row    = $carrierObj->dump(array('carrier_code'=>$carrier_code, 'shop_id'=>$shop_id), '*');
+        if($row){
+            $carrierObj->update($data, array('cid'=>$row['cid']));
+        }else{
+            $rs = $carrierObj->insert($data);
+            if(!$rs){
+                return false;
+            }
         }
 
         return true;
@@ -687,6 +710,8 @@ class purchase_purchase_stockout
         $data[2]    = array(1=>'04:00', '12:00', '15:00', '16:00', '20:00', '22:00');//空运
         
         if(isset($dly_mode) && $dly_mode){
+            $dly_mode = intval($dly_mode);
+            
             return $data[$dly_mode];
         }
         
@@ -764,6 +789,8 @@ class purchase_purchase_stockout
         //计算到货时间
         $temp = array();
         if(isset($dly_mode) && $dly_mode){
+            $dly_mode = intval($dly_mode);
+            
             $temp = $data[$dly_mode][$delivery_key];
         }
         
@@ -976,5 +1003,100 @@ class purchase_purchase_stockout
     {
         return $carrier_code == '120001552' ? true : false;
     }
+    
+    /**
+     * 获取唯品会物流承运商，平台状态
+     *
+     * @return array[]
+     */
+    public function getVopCarrierList()
+    {
+        $carrierList = array (
+            '唯品专配' => array (
+                'carrier_code' => '120001552',
+                'carrier_isvalid' => 1,
+                'carrier_name' => '唯品专配',
+                'carrier_shortname' => '唯品专配',
+                'tms_carrier_id' => '9409',
+                'platform_status' => 'allow',
+                'memo' => '',
+            ),
+            '顺丰(入库)' => array (
+                'carrier_code' => '1200000540',
+                'carrier_isvalid' => 1,
+                'carrier_name' => '顺丰(入库)',
+                'carrier_shortname' => '顺丰(入库)',
+                'tms_carrier_id' => '9411',
+                'platform_status' => 'allow',
+                'memo' => '',
+            ),
+            '跨越(入库)' => array (
+                'carrier_code' => '1200000538',
+                'carrier_isvalid' => 1,
+                'carrier_name' => '跨越(入库)',
+                'carrier_shortname' => '跨越(入库)',
+                'tms_carrier_id' => '9410',
+                'platform_status' => 'allow',
+                'memo' => '',
+            ),
+            '唯品标配' => array (
+                'carrier_code' => '1200000672',
+                'carrier_isvalid' => 1,
+                'carrier_name' => '唯品标配',
+                'carrier_shortname' => '唯品标配',
+                'tms_carrier_id' => '',
+                'platform_status' => 'allow',
+                'memo' => '仅预调拨场景下开放，常规订单无需展示',
+            ),
+            '其他' => array (
+                'carrier_code' => '2',
+                'carrier_isvalid' => 1,
+                'carrier_name' => '其他',
+                'carrier_shortname' => '其他',
+                'tms_carrier_id' => '',
+                'platform_status' => 'allow',
+                'memo' => '',
+            ),
+            '品骏航空(入库)' => array (
+                'carrier_code' => '120000831',
+                'carrier_isvalid' => 1,
+                'carrier_name' => '品骏航空(入库)',
+                'carrier_shortname' => '品骏航空(入库)',
+                'tms_carrier_id' => '8a4db4c7540a86bd015428554eed107d',
+                'platform_status' => 'abandon',
+                'memo' => '平台已废弃此承运商',
+            ),
+            '自有车辆送货' => array (
+                'carrier_code' => '1',
+                'carrier_isvalid' => 1,
+                'carrier_name' => '自有车辆送货',
+                'carrier_shortname' => '自有车辆送货',
+                'tms_carrier_id' => '',
+                'platform_status' => 'abandon',
+                'memo' => '平台已废弃此承运商',
+            ),
+            '虚拟承运' => array (
+                'carrier_code' => '3',
+                'carrier_isvalid' => 1,
+                'carrier_name' => '虚拟承运',
+                'carrier_shortname' => '虚拟承运',
+                'tms_carrier_id' => '',
+                'platform_status' => 'abandon',
+                'memo' => '平台已废弃此承运商',
+            ),
+            '大鸿(入库)' => array (
+                'carrier_code' => '120000846',
+                'carrier_isvalid' => 1,
+                'carrier_name' => '大鸿(入库)' ,
+                'carrier_shortname' => '大鸿(入库)',
+                'tms_carrier_id' => '8a4db4cb545c924201545fb57b6b1aed',
+                'platform_status' => 'abandon',
+                'memo' => '平台已废弃此承运商',
+            ),
+        );
+        
+        return $carrierList;
+    }
+    
 }
 ?>

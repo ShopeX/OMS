@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>自提码核销</title>
+  <link rel="stylesheet" type="text/css" href="<{$env.app.res_url}>/css/common.css" />
+  <link rel="stylesheet" type="text/css" href="<{$env.app.res_url}>/css/work_space.css" />
+  <script src="<{$env.app.res_url}>/js/axios.min.js"></script>
+  <script src="<{$env.app.res_url}>/js/flexible.js"></script>
+</head>
+
+<body>
+  <div class="page flex-col">
+    <!-- heder -->
+    <div class="section_1">
+      <div class="text-wrapper_1 flex-row align-center justify-between">
+        <img src="<{$env.app.res_url}>/img/icon-back.png" class="icon-back">
+        <span class="text_1">确认核销</span>
+        <span></span>
+        <!-- <img src="./icon-refresh.png" class="icon-refresh"> -->
+      </div>
+    </div>
+    <div class="main">
+      <!-- goodsInfo -->
+      <div class="section_4 flex-col">
+        <div class="list-item">
+          <div class="list-item wspace-info">
+            <div class="text-wrapper_5 flex-row justify-between">
+              <span class="text_11">订单号：</span>
+              <span class="text_12"><{$order_info.order_bn}></span>
+            </div>
+             <div class="text-wrapper_5 flex-row justify-between">
+              <span class="text_11">门店：</span>
+              <span class="text_12"><{$order_info.store_name}></span>
+            </div>
+             <div class="text-wrapper_5 flex-row justify-between">
+              <span class="text_11">渠道：</span>
+              <span class="text_12"><{$order_info.shop_type_name}></span>
+            </div>
+             <div class="text-wrapper_5 flex-row justify-between">
+              <span class="text_11">下单时间：</span>
+              <span class="text_12"><{$order_info.createtime|date:"Y-m-d H:i:s"}></span>
+            </div>
+          </div>
+          <{if $order_info.order_items}>
+          <{foreach from=$order_info.order_items item=dly_item}>
+          <div class="section_6 flex-row">
+            <{if $dly_item.default_img_url}>
+            <img class="image_2" referrerpolicy="no-referrer"
+              src="<{$dly_item.default_img_url}>" />
+            <{else}>
+            <img class="image_2" referrerpolicy="no-referrer"
+                 src="<{$env.app.res_url}>/img/goods_default.png?v=<{$smarty.now}>" />
+            <{/if}>
+            <div class="text-group_1 flex-col">
+              <div class="status-info"> <span class="text_28 flex-shrink-1"><{$dly_item.product_name}></span>
+                <!-- <span class="status-returned">已退货</span> -->
+              </div>
+              <span class="text_29">商户货号：<{$dly_item.bn}></span>
+              <span class="text_30">子订单号：<{$dly_item.esb_oid}></span>
+              <span class="text_30"><{$dly_item.nums}>件；<{$dly_item.product_attr}></span>
+            </div>
+          </div>
+          <div class="section_6 justify-between flex-wrap">
+            <div class="mrg-side-4">
+              <span class="text_36">买家</span
+              ><span class="text_37">￥<{$dly_item.divide_order_fee}></span>
+            </div>
+            <div class="mrg-side-4">
+              <span class="text_36">优惠</span
+              ><span class="text_37">￥<{$dly_item.esb_pmt_amount}></span>
+            </div>
+            <div class="mrg-side-4">
+              <span class="text_36">商家</span
+              ><span class="text_37">￥<{$dly_item.esb_amount}></span>
+            </div>
+          </div>
+          <{/foreach}>
+          <{/if}>
+        </div>
+      </div>
+    </div>
+    <div class="wspace-footer justify-between">
+      <button class="modal-btn modal-cancle" onclick="history.back()">返回</button>
+      <button class="modal-btn modal-confirm" onclick="doVerify()">确认核销</button>
+      <input type="hidden" name="ziti_code" value="<{$ziti_code}>">
+      <input type="hidden" name="code_type" value="qrcode">
+      <input type="hidden" name="order_bn" value="<{$order_bn}>">
+    </div>
+  </div>
+  <div class="mask" id="mask"></div>
+  <div class="toast" id="toast"></div>
+  <!-- 弹窗组件 -->
+  <!-- 弹窗组件模板 -->
+  <div class="modal" id="commonModal" style="display: none;">
+    <div class="modal-mask"></div>
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title"></h3>
+        <span class="modal-close">×</span>
+      </div>
+      <div class="modal-content">
+        <!-- 动态内容区域 -->
+      </div>
+      <div class="modal-footer justify-between">
+        <button class="modal-btn modal-cancle">取消</button>
+        <button class="modal-btn modal-confirm">确定</button>
+      </div>
+    </div>
+  </div>
+  <!-- 引入共用的js -->
+  <script src="<{$env.app.res_url}>/js/common.js"></script>
+  <script>
+    // 初始化弹窗实例
+    const modal = new Modal();
+    // API 方法封装
+    const api = {
+      // 核销
+      doVerify(params) {
+        return request.post('<{$do_verify_url}>', params);
+      }
+    };
+    // 生成取件时间选项
+    document.addEventListener('DOMContentLoaded', function () {
+      const selectBox = document.getElementById('express_time');
+      const now = new Date();
+      const startHours = 9;
+      const endHours = 21;
+
+      for (let h = 0; h <= endHours; h++) {
+        const h_str = h.toString().padStart(2, '0');
+        // 判断是否需要禁用
+        const disabled_0 = h < startHours  ? 'disabled' : '';
+        const disabled_30 = (h < startHours || h === endHours) ? 'disabled' : '';
+        if (!disabled_0) {
+          selectBox.innerHTML += `<option value="${h_str}:00" ${disabled_0}>${h_str}:00</option>`;
+        }
+        if (!disabled_30) {
+          selectBox.innerHTML += `<option value="${h_str}:30" ${disabled_30}>${h_str}:30</option>`;
+        }
+      }
+    })
+
+    // 发货
+    async function doVerify() {
+      const formData = {
+        ziti_code: document.querySelector(`[name="ziti_code"]`).value,
+        order_bn: document.querySelector(`[name="order_bn"]`).value,
+        code_type: document.querySelector(`[name="code_type"]`).value
+      };
+      var location_url = '<{$verify_return_url}>';
+
+
+      try {
+        // 调用核销API
+        const res = await api.doVerify(formData);
+        console.log(res);
+        if (res.rsp === 'succ') {
+          showToast('核销成功');
+          // 可以根据需要添加其他操作，比如跳转页面
+          window.location.href = location_url;
+        }else{
+          showToast('核销失败：'+res.err_msg);
+        }
+      } catch (error) {
+        console.error('核销失败:', error);
+        showToast('核销失败');
+      }
+    }
+  </script>
+</body>
+
+</html>

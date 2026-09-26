@@ -967,13 +967,19 @@ class inventorydepth_ctl_regulation_apply extends desktop_controller
     {
         $salesMaterialObj = app::get('material')->model('sales_material');
 
-        $sm_id = kernel::single('base_component_request')->get_post('sm_id');
+        $request   = kernel::single('base_component_request');
+        $sm_id     = $request->get_post('sm_id');
+        $show_type = $request->get_post('show_type');
+        $smIdList  = array();
 
         if ($sm_id) {
             //前端店铺_规则应用传值
             if (!is_array($sm_id)) {
-                $sm_id = explode(',', $sm_id);
+                //兼容JSON格式传输（销售物料较多时，避免max_input_vars限制导致sm_id[]被截断）
+                $json_sm_id = json_decode($sm_id, true);
+                $sm_id      = is_array($json_sm_id) ? $json_sm_id : explode(',', $sm_id);
             }
+            $smIdList = array_values($sm_id);
 
             $this->pagedata['_input'] = array(
                 'name'     => 'sm_id',
@@ -986,7 +992,108 @@ class inventorydepth_ctl_regulation_apply extends desktop_controller
             $this->pagedata['_input']['items'] = $list;
         }
 
+        //回写库存规则：新样式弹出框，展示销售物料编码、基础物料编码、销售物料名称，并支持搜索
+        if ($show_type == 'sales_material') {
+            $list = isset($this->pagedata['_input']['items']) ? $this->pagedata['_input']['items'] : array();
+            $list = $this->_buildSalesMaterialShowList($list, $smIdList);
+
+            $basicBnMap = $this->_getSalesBasicMaterialBn(array_unique(array_column($list, 'sm_id')));
+            foreach ($list as $key => $row) {
+                $basicMaterialBnList = isset($basicBnMap[$row['sm_id']]) ? explode(',', $basicBnMap[$row['sm_id']]) : array();
+                $list[$key]['row_key']                   = $row['sm_id'] . '_' . $key;
+                $list[$key]['row_num']                   = $key + 1;
+                $list[$key]['basic_material_bn']         = implode(',', $basicMaterialBnList);
+                $list[$key]['basic_material_bn_display'] = implode('<br>', $basicMaterialBnList);
+            }
+
+            $this->pagedata['_input']['items'] = $list;
+            $this->display('regulation/show_products_sales.html');
+            return;
+        }
+
         $this->display('regulation/show_products.html');
+    }
+
+    /**
+     * 按前端传入顺序构建销售物料展示列表，保留重复 sm_id
+     *
+     * @param array $list     数据库查询结果
+     * @param array $smIdList 前端传入的 sm_id 顺序
+     * @return array
+     */
+    private function _buildSalesMaterialShowList($list, $smIdList)
+    {
+        if (empty($smIdList)) {
+            return $list;
+        }
+
+        $listBySmId = array();
+        foreach ($list as $row) {
+            $listBySmId[$row['sm_id']] = $row;
+        }
+
+        $orderedList = array();
+        foreach ($smIdList as $requestedSmId) {
+            $requestedSmId = trim((string) $requestedSmId);
+            if ($requestedSmId === '') {
+                continue;
+            }
+
+            if (isset($listBySmId[$requestedSmId])) {
+                $orderedList[] = $listBySmId[$requestedSmId];
+                continue;
+            }
+
+            $orderedList[] = array(
+                'sm_id'               => $requestedSmId,
+                'sales_material_bn'     => '',
+                'sales_material_name' => '（物料不存在或不可选）',
+            );
+        }
+
+        return $orderedList;
+    }
+
+    /**
+     * 获取销售物料对应的基础物料编码
+     *
+     * @param array $smIds 销售物料ID
+     * @return array sm_id => 基础物料编码（多个以逗号拼接）
+     */
+    private function _getSalesBasicMaterialBn($smIds)
+    {
+        $result = array();
+        if (empty($smIds)) {
+            return $result;
+        }
+
+        $salesBasicMaterialObj = app::get('material')->model('sales_basic_material');
+        $basicMaterialObj      = app::get('material')->model('basic_material');
+
+        $links = $salesBasicMaterialObj->getList('sm_id,bm_id', array('sm_id' => $smIds), 0, -1);
+        if (empty($links)) {
+            return $result;
+        }
+
+        $bmIds  = array_unique(array_column($links, 'bm_id'));
+        $bmList = $basicMaterialObj->getList('bm_id,material_bn', array('bm_id' => $bmIds), 0, -1);
+
+        $bmBnMap = array();
+        foreach ($bmList as $bm) {
+            $bmBnMap[$bm['bm_id']] = $bm['material_bn'];
+        }
+
+        foreach ($links as $link) {
+            if (isset($bmBnMap[$link['bm_id']])) {
+                $result[$link['sm_id']][] = $bmBnMap[$link['bm_id']];
+            }
+        }
+
+        foreach ($result as $smId => $bns) {
+            $result[$smId] = implode(',', array_unique($bns));
+        }
+
+        return $result;
     }
 
     public function ajax_sales_material_html($id = '', $shop_ids = '')

@@ -304,13 +304,30 @@ class wms_delivery_process{
             $billObj = app::get('wms')->model('delivery_bill');
             $deliveryBillItemMdl = app::get('wms')->model('delivery_bill_items');
 
-            $bill_list = $billObj->getList('*',array('delivery_id'=>$dly_id, 'status'=>'1'));
+            // 逐单发货主路径不会先把包裹单置为已发货(status=1)；若仍按 status=1 过滤，
+            // 会导致 packages=[]、无 logi_no，OME delivery_package 明细落空。
+            $billObj->update(
+                array(
+                    'status'        => '1',
+                    'delivery_time' => $delivery_time,
+                ),
+                array(
+                    'delivery_id' => $dly_id,
+                    'status'      => '0',
+                )
+            );
+
+            // 已发货 + 未取消（兼容历史数据仍为 0 的情况）
+            $bill_list = $billObj->getList('*', array('delivery_id' => $dly_id, 'status|noequal' => '2'));
             
-            // 获取主单运单号
-            $primary_bill = $billObj->dump(array('delivery_id'=>$dly_id, 'type'=>'1', 'status'=>'1'), '*');
+            // 获取主单运单号（不强制 status=1，避免主单未翻转时丢 logi_no）
+            $primary_bill = $billObj->dump(array('delivery_id'=>$dly_id, 'type'=>'1'), '*');
 
             $other_list_0 = array(); $packages = [];
             foreach ($bill_list as $bill) {
+                if ((string) $bill['status'] === '2') {
+                    continue;
+                }
                 // 补打运单号
                 if ($bill['type'] == '2'){
                     $other_list_0[] = array('logi_no'=>$bill['logi_no'],'weight'=>$bill['weight']);
@@ -319,9 +336,9 @@ class wms_delivery_process{
                 // 包裹号
                 $billItemList = $deliveryBillItemMdl->getList('product_id,bn,product_name,number', ['bill_id' => $bill['b_id']]);
                 $packages[] = array (
-                    'package_bn'    => $bill['package_bn'],
+                    'package_bn'    => $bill['package_bn'] ? $bill['package_bn'] : $deliveryInfo['outer_delivery_bn'],
                     'logi_no'       => $bill['logi_no'],
-                    'delivery_time' => $bill['delivery_time'],
+                    'delivery_time' => $bill['delivery_time'] ? $bill['delivery_time'] : $delivery_time,
                     'items'         => $billItemList,
                 );
             }
@@ -338,6 +355,15 @@ class wms_delivery_process{
 
             $data['other_list_0'] = json_encode($other_list_0);
             $data['packages']     = json_encode($packages);
+
+            // 参照 WAP/奇门：补齐 flat package / bill_logi_weight，供 ome 落 delivery_package / delivery_bill
+            $packageBillParams = $this->buildConsignPackageAndBillParams($deliveryInfo, $data, $bill_list, $packages);
+            if (!empty($packageBillParams['package'])) {
+                $data['package'] = $packageBillParams['package'];
+            }
+            if (!empty($packageBillParams['bill_logi_weight'])) {
+                $data['bill_logi_weight'] = $packageBillParams['bill_logi_weight'];
+            }
 
             //因保质期批次重写需要兼容新的方式组数据
             if($data['out_storagelife']){
@@ -480,5 +506,156 @@ class wms_delivery_process{
             }
         }
         return true;
+    }
+
+    /**
+     * 组装自建仓发货回写的包裹/子运单参数（对齐 WAP buildConsignPackageAndBillParams / 奇门 package）
+     * 供 ome_event_receive_delivery::_dealDeliveryPackage / _save_bill_logi_weight / _saveMainDeliveryBillIfNeeded 落库
+     *
+     * @param array $deliveryInfo WMS 发货单
+     * @param array $data         即将回写 OMS 的参数（需已含 logi_no 等）
+     * @param array $bill_list    WMS delivery_bill 列表
+     * @param array $packages     已组装的嵌套 packages（含 items）
+     * @return array{package?:array,bill_logi_weight?:array}
+     */
+    public function buildConsignPackageAndBillParams(array $deliveryInfo, array $data, array $bill_list = array(), array $packages = array())
+    {
+        $result = array();
+        $outerBn = trim((string) (isset($deliveryInfo['outer_delivery_bn']) ? $deliveryInfo['outer_delivery_bn'] : ''));
+        $logi_no = trim((string) (isset($data['logi_no']) ? $data['logi_no'] : ''));
+        if ($outerBn === '') {
+            return $result;
+        }
+
+        $omeDly = app::get('ome')->model('delivery')->dump(
+            array('delivery_bn' => $outerBn, 'disabled' => 'false'),
+            'delivery_id,delivery_bn,logi_id,logi_no'
+        );
+        if (empty($omeDly['delivery_id'])) {
+            return $result;
+        }
+        $deliveryId = (int) $omeDly['delivery_id'];
+        if ($logi_no === '' && !empty($omeDly['logi_no'])) {
+            $logi_no = trim((string) $omeDly['logi_no']);
+        }
+        // 仍无运单号时，从 WMS 主包裹单兜底（逐单发货时常为 status=0）
+        if ($logi_no === '' && !empty($bill_list)) {
+            foreach ($bill_list as $bill) {
+                if ((string) $bill['type'] === '1' && !empty($bill['logi_no'])) {
+                    $logi_no = trim((string) $bill['logi_no']);
+                    break;
+                }
+            }
+        }
+
+        $logisticsCode = '';
+        $logiId = !empty($deliveryInfo['logi_id']) ? $deliveryInfo['logi_id'] : (!empty($omeDly['logi_id']) ? $omeDly['logi_id'] : 0);
+        if ($logiId) {
+            $corp = app::get('ome')->model('dly_corp')->db_dump(array('corp_id' => $logiId), 'type');
+            if (!empty($corp['type'])) {
+                $logisticsCode = (string) $corp['type'];
+            }
+        }
+
+        $now = time();
+        $package = array();
+
+        // 优先：WMS 包裹明细（多包裹/多运单）
+        foreach ((array) $packages as $pkg) {
+            $pkgLogiNo = trim((string) (isset($pkg['logi_no']) ? $pkg['logi_no'] : $logi_no));
+            $pkgBn = trim((string) (isset($pkg['package_bn']) && $pkg['package_bn'] !== '' ? $pkg['package_bn'] : $outerBn));
+            $pkgTime = !empty($pkg['delivery_time']) ? $pkg['delivery_time'] : $now;
+            foreach ((array) (isset($pkg['items']) ? $pkg['items'] : array()) as $item) {
+                $bn = isset($item['bn']) ? trim((string) $item['bn']) : '';
+                if ($bn === '') {
+                    continue;
+                }
+                $package[] = array(
+                    'package_bn'    => $pkgBn,
+                    'logi_bn'       => $logisticsCode,
+                    'logi_no'       => $pkgLogiNo !== '' ? $pkgLogiNo : $logi_no,
+                    'product_id'    => isset($item['product_id']) ? (int) $item['product_id'] : 0,
+                    'bn'            => $bn,
+                    'outer_sku'     => '',
+                    'status'        => 'delivery',
+                    'number'        => isset($item['number']) ? (int) $item['number'] : 0,
+                    'create_time'   => $now,
+                    'delivery_time' => $pkgTime,
+                );
+            }
+        }
+
+        // 回退：OME 明细（bill_items 常为空时与 WAP 一致）
+        if (!$package && $logi_no !== '') {
+            $detailRows = app::get('ome')->model('delivery_items_detail')->getList(
+                '*',
+                array('delivery_id' => $deliveryId),
+                0,
+                -1,
+                'item_detail_id ASC'
+            );
+            if ($detailRows) {
+                foreach ($detailRows as $d) {
+                    $bn = isset($d['bn']) ? trim((string) $d['bn']) : '';
+                    if ($bn === '') {
+                        continue;
+                    }
+                    $package[] = array(
+                        'package_bn'    => $outerBn,
+                        'logi_bn'       => $logisticsCode,
+                        'logi_no'       => $logi_no,
+                        'product_id'    => isset($d['product_id']) ? (int) $d['product_id'] : 0,
+                        'bn'            => $bn,
+                        'outer_sku'     => '',
+                        'status'        => 'delivery',
+                        'number'        => isset($d['number']) ? (int) $d['number'] : 0,
+                        'create_time'   => $now,
+                        'delivery_time' => $now,
+                    );
+                }
+            } else {
+                $items = app::get('ome')->model('delivery_items')->getList('*', array('delivery_id' => $deliveryId));
+                foreach ((array) $items as $iv) {
+                    $bn = isset($iv['bn']) ? trim((string) $iv['bn']) : '';
+                    if ($bn === '') {
+                        continue;
+                    }
+                    $package[] = array(
+                        'package_bn'    => $outerBn,
+                        'logi_bn'       => $logisticsCode,
+                        'logi_no'       => $logi_no,
+                        'product_id'    => isset($iv['product_id']) ? (int) $iv['product_id'] : 0,
+                        'bn'            => $bn,
+                        'outer_sku'     => '',
+                        'status'        => 'delivery',
+                        'number'        => isset($iv['number']) ? (int) $iv['number'] : 0,
+                        'create_time'   => $now,
+                        'delivery_time' => $now,
+                    );
+                }
+            }
+        }
+
+        if ($package) {
+            $result['package'] = $package;
+        }
+
+        // 多运单：主运单外的子单 → bill_logi_weight
+        $billLogiWeight = array();
+        foreach ((array) $bill_list as $bill) {
+            if (!isset($bill['type']) || (string) $bill['type'] !== '2') {
+                continue;
+            }
+            $bnNo = trim((string) (isset($bill['logi_no']) ? $bill['logi_no'] : ''));
+            if ($bnNo === '' || ($logi_no !== '' && $bnNo === $logi_no)) {
+                continue;
+            }
+            $billLogiWeight[$bnNo] = isset($bill['weight']) ? $bill['weight'] : 0;
+        }
+        if ($billLogiWeight) {
+            $result['bill_logi_weight'] = $billLogiWeight;
+        }
+
+        return $result;
     }
 }

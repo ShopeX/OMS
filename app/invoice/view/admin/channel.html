@@ -87,11 +87,18 @@
 
 <script type="text/javascript">
 (function(){
-    $('channel_type').addEvent('change',function(){
+    var channelType = $('channel_type');
+    var goldenTaxVersion = $('golden_tax_version');
+
+    channelType.addEvent('change',function(){
         if (!this.value) {
             $E('#invoice-auth #auto-config').empty();
             return ;
-        } 
+        }
+
+        if (this.value == 'piaoyitong') {
+            goldenTaxVersion.set('value', '1');
+        }
 
         W.page('index.php?app=invoice&ctl=admin_channel&act=getAuthConfigs&p[0]='+this.value+'&p[1]=<{$channel.channel_id}>',{
             update:$E('#invoice-auth #auto-config'),
@@ -99,11 +106,11 @@
         });
     });
 
-    $('channel_type').fireEvent('change');
+    channelType.fireEvent('change');
 
     <{if $channel.channel_id}>
-        $('channel_type').set('disabled',true);
-        $('golden_tax_version').set('disabled',true);
+        channelType.set('disabled',true);
+        goldenTaxVersion.set('disabled',true);
     <{/if}>
 })();
 </script>

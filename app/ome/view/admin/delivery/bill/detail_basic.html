@@ -26,7 +26,13 @@
         </tr>
         <tr>
           <th>物流单号：</th>
-          <td><{$data.logi_no}></td>
+          <td>
+            <{$data.logi_no}>
+            <{if $is_hqepay_on && $data.logi_no}>
+              <a id="bill_hq_on_<{$data.log_id}>" href="javascript:void(0);" onclick="bill_delivery_hq_on('<{$data.log_id}>','<{$data.logi_no}>','<{$data.order_bn}>','<{$logi_id}>');">查询</a>
+              <a id="bill_hq_off_<{$data.log_id}>" href="javascript:void(0);" onclick="bill_delivery_hq_off('<{$data.log_id}>');" style="display:none;">关闭</a>
+            <{/if}>
+          </td>
           <th>包裹状态：</th>
           <td>
             <{if $data.status == '0'}>未发货
@@ -108,5 +114,51 @@
         </tr>
       </tbody>
     </table>
+    <{if $is_hqepay_on && $data.logi_no}>
+    <div id="bill_hq_box_<{$data.log_id}>" style="display:none;margin-top:10px;padding:8px 12px;border-top:1px dotted #ddd;">
+      <div id="bill_hq_content_<{$data.log_id}>"></div>
+    </div>
+    <{/if}>
   </div>
-</div> 
+</div>
+<{if $is_hqepay_on && $data.logi_no}>
+<script>
+if (typeof window.bill_delivery_hq_on !== 'function') {
+  window.bill_delivery_hq_on = function (log_id, logi_no, order_bn, logi_id) {
+    var content = $('bill_hq_content_' + log_id);
+    var box = $('bill_hq_box_' + log_id);
+    var onBtn = $('bill_hq_on_' + log_id);
+    var offBtn = $('bill_hq_off_' + log_id);
+    if (!content || !box) {
+      return;
+    }
+    if (content.get('text')) {
+      box.style.display = '';
+      if (onBtn) onBtn.style.display = 'none';
+      if (offBtn) offBtn.style.display = '';
+      return;
+    }
+    new Request({
+      url: 'index.php?app=ome&ctl=admin_order&act=delviery_hqepay',
+      method: 'post',
+      data: 'logi_no=' + encodeURIComponent(logi_no) + '&order_bn=' + encodeURIComponent(order_bn) + '&logi_id=' + logi_id,
+      onSuccess: function (json) {
+        var rs = JSON.decode(json);
+        content.set('html', rs.html);
+        box.style.display = '';
+        if (onBtn) onBtn.style.display = 'none';
+        if (offBtn) offBtn.style.display = '';
+      }
+    }).send();
+  };
+  window.bill_delivery_hq_off = function (log_id) {
+    var box = $('bill_hq_box_' + log_id);
+    var onBtn = $('bill_hq_on_' + log_id);
+    var offBtn = $('bill_hq_off_' + log_id);
+    if (box) box.style.display = 'none';
+    if (onBtn) onBtn.style.display = '';
+    if (offBtn) offBtn.style.display = 'none';
+  };
+}
+</script>
+<{/if}>

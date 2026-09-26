@@ -31,13 +31,19 @@ class finance_io_bill_verify{
         return $result;
     }
 
-    //金额验证
+    //金额验证（整数最多13位，小数最多3位）
     public static function isPrice($price='',$msg=''){
-        $result['status'] = 'success'; 
-        if($price!=''){
-            if(!preg_match('/^(\d+)(\.\d{1,2})?$|^(-\d+)(\.\d{1,2})?$/',$price,$match) || strlen($match[1]) >= 14){
-                $result['msg'] = $msg;
+        $result['status'] = 'success';
+        if ($price != '') {
+            if (!preg_match('/^-?\d+(\.\d{1,3})?$/', $price)) {
+                $result['msg']    = $msg;
                 $result['status'] = 'fail';
+            } else {
+                $intPart = ltrim(strtok($price, '.'), '-');
+                if (strlen($intPart) >= 14) {
+                    $result['msg']    = $msg;
+                    $result['status'] = 'fail';
+                }
             }
         }
         return $result;

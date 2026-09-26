@@ -1,68 +1,72 @@
-<!--
-  Copyright 2012-2026 ShopeX (https://www.shopex.cn)
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
--->
-
-<style>
-/* 确保店铺类型下拉框的选项列表宽度不超出边界，文本过长时显示省略号 */
-#shop_shop_type + .tail-select .select-dropdown ul li {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-</style>
-
+<{capture name="header"}>
+  <link href="../apps/ome/statics/ome.css" rel="stylesheet" type="text/css">
+<{/capture}>
+<h4 class="head-title">前端店铺</h4>
 <div class="tableform">
            <div class="division">
-<form method="post" action="index.php?app=ome&ctl=admin_shop&act=saveterminal&finder_id=<{$env.get.finder_id}>" id="terminal" isCloseDialog>
+<form method="post" action="index.php?app=ome&ctl=admin_shop&act=saveterminal" id="terminal">
+      <input type="hidden" id="shop_id"   name="shop[shop_id]" value="<{$shop.shop_id}>" />
       <table width="100%" cellspacing="0" cellpadding="0" border="0" >
         <tbody>
        <tr>
           <th><em class="c-red">*</em> 店铺编码：</th>
-          <td><{if $shop.shop_bn}><{$shop.shop_bn}><{else}><{input type='text' name="shop[shop_bn]" value=$shop.shop_bn size="60"}><{/if}>
+          <td><{if $shop.shop_bn}><{$shop.shop_bn}><{else}><{input type='text&&required' name="shop[shop_bn]" value=$shop.shop_bn size="60"}><{/if}>
           <input type='hidden' name="shop[old_shop_bn]" value="<{$shop.shop_bn}>" >
-          <div style="margin-top: 4px; color: #999; font-size: 12px;">前端网店在系统中的唯一标识（示例：JD001、TMALL_001）</div>
+          <{help}><{t}>前端网店在系统中的唯一标识<{/t}><{/help}>
           </td>
         </tr>
         <tr>
         <th ><em class="c-red">*</em>店铺名称：</th>
           <td><{input type="text&&required" size="60" name="shop[name]" value=$shop.name }>
-          <div style="margin-top: 4px; color: #999; font-size: 12px;">前端网店在此系统需要显示的中文名称（示例：京东自营旗舰店、天猫旗舰店）</div>
-          </td>
-        </tr>
-        <tr>
-        <th > 店铺类型：</th>
-          <td>
-              <select name='shop[shop_type]' id="shop_shop_type" data-search="fuzzy-search" class="x-input-select">
-              <option value="">--请选择--</option>
-              <{foreach from=$shop_type item=item}>
-              <option value="<{$item.type_value}>" <{if $shop.shop_type == $item.type_value}>selected<{/if}>><{$item.type_label}></option>
-              <{/foreach}>
-              </select>
-          <div style="margin-top: 4px; color: #999; font-size: 12px;">选择店铺所属的平台类型</div>
+          <{help}><{t}>前端网店在此系统需要显示的中文名称<{/t}><{/help}>
           </td>
         </tr>
         <tr>
         <th ><em class="c-red">*</em> 运营组织：</th>
           <td>
-              <select name='shop[org_id]' id="shop_org_id">
+              <select name='shop[org_id]'>
               <{foreach from=$orgs item=item}>
               <option value="<{$item.org_id}>" <{if $shop.org_id == $item.org_id}>selected<{/if}> ><{$item.name}></option>
               <{/foreach}>
               </select>
-              <a href="javascript:void(0)" id="add_org_btn" style="margin-left: 8px; color: #4A90E2; text-decoration: none; font-size: 12px; cursor: pointer;" onmouseover="this.style.textDecoration='underline';this.style.color='#357ABD';" onmouseout="this.style.textDecoration='none';this.style.color='#4A90E2';">+ 快速添加</a>
-          <div style="margin-top: 4px; color: #999; font-size: 12px;">定义后可针对订单、售后、单据等细分权限进行管理</div>
+          <{help}><{t}>定义后可针对订单、售后、单据等细分权限进行管理<{/t}><{/help}>
+          </td>
+        </tr>
+        <tr>
+          <th><em class="c-red">*</em> 地区：</th>
+          <td><{input type='region' app='eccommon' name="shop[area]" value=$shop.area vtype="area" }>
+          <{help}><{t}>用来联系及打印在“快递单”中发货点所在省/市/县（区）<{/t}><{/help}>
+          </td>
+        </tr>
+        <tr>
+          <th><em class="c-red">*</em> 地址：</th>
+          <td><input class="x-input" type="text" vtype="required" name="shop[addr]" size="60" value="<{$shop.addr}>"/>
+          <{help}><{t}>用来联系及打印在“快递单”中发货点的发货地址<{/t}><{/help}>
+
+          </td>
+        </tr>
+		<tr>
+          <th><em class="c-red">*</em> 邮编：</th>
+          <td><input class="x-input" type="text" vtype="required" id="zip" name="shop[zip]" size="60" maxlength="6" value="<{$shop.zip}>"/>
+          <{help}><{t}>用来联系及打印在“快递单”中发货点所在地区的邮政编号<{/t}><{/help}>
+          </td>
+        </tr>
+        <tr>
+          <th><em class="c-red">*</em> 发件人：</th>
+          <td><input class="x-input" type="text" vtype="required" name="shop[default_sender]" size="60" value="<{$shop.default_sender}>"/>
+          <{help}><{t}>用来联系及打印在“快递单”中发货点负责人的姓名<{/t}><{/help}>
+          </td>
+        </tr>
+        <tr>
+          <th>固定电话：</th>
+          <td><input class="x-input" type="text" id="shop[tel]" name="shop[tel]" size="60" value="<{$shop.tel}>"/>
+          <{help}><{t}>用来联系及打印在“快递单”中发货点的固定电话，卖家固定电话格式为：区号+电话+分机号(没有可不填)，中间用"-"隔开; 卖家固定电话和卖家手机号码,必须填写一个. <{/t}><{/help}>
+          </td>
+        </tr>
+        <tr>
+          <th>手机：</th>
+          <td><input class="x-input" type="text" id="mobile" name="shop[mobile]" size="60" value="<{$shop.mobile}>"/>
+          <{help}><{t}>用来联系及打印在“快递单”中发货点的移动联系方式；号码前请不要加0<{/t}><{/help}>
           </td>
         </tr>
         <tr>
@@ -71,7 +75,7 @@
             <input type="radio" name="shop[delivery_mode]" value="self" <{if $shop.delivery_mode == 'self' || empty($shop.delivery_mode)}>checked="checked"<{/if}> />自发货
             &nbsp;&nbsp;&nbsp;
             <input type="radio" name="shop[delivery_mode]" value="jingxiao" <{if $shop.delivery_mode == 'jingxiao'}>checked="checked"<{/if}>>经销发货
-            <div style="margin-top: 4px; color: #999; font-size: 12px;">经销发货将会把订单改为平台自发</div>
+            <{help}><{t}>经销发货将会把订单改为平台自发<{/t}><{/help}>
           </td>
         </tr>
         <tr>
@@ -82,10 +86,55 @@
             <input type="radio" name="shop[business_category]" value="B2B" <{if $shop.business_category == 'B2B'}>checked="checked"<{/if}>>B2B
           </td>
         </tr>
+        <tr>
+          <th>是否常用店铺：</th>
+          <td>
+            <input type="radio" name="shop[is_common_shop]" value="true" <{if $shop.is_common_shop == 'true'}>checked="checked"<{/if}> />是
+            &nbsp;&nbsp;&nbsp;
+            <input type="radio" name="shop[is_common_shop]" value="false" <{if $shop.is_common_shop != 'true'}>checked="checked"<{/if}> />否
+          </td>
+        </tr>
+        <tr>
+          <th> 网店地址：</th>
+          <td><{input type="text" size="60" name="shop[config][url]" value=$shop_config.url}>
+         <{help}><{t}>前端网店在第三方平台的唯一标识（店铺的链接地址）<{/t}><{/help}>
+          </td>
+        </tr>
+        <tr class="x-ex" style="display:none">
+          <th><em class="c-red">*</em> 账号：</th>
+          <td><{input type="text&&required" name="shop[config][account]" size="32" value=$shop_config.account}>
+          <{help}><{t}>登陆前端网店的账号，系统用来与前端网店数据同步使用<{/t}><{/help}> 
+          
+          </td>
+        </tr>
+        <tr class="x-ex" style="display:none">
+          <th><em class="c-red">*</em> 密码：</th>
+          <td><{input type="password" name="shop[config][password]" size="20" value=$shop_config.password required="true"}>
+            <{help}><{t}> 登陆前端网店的密码，系统用来与前端网店数据同步使用<{/t}><{/help}>
+         
+          </td>
+        </tr>
+
+
+       <tr>
+           <th >渠道适配器：</th>
+           <td>
+               <{if $shop.node_id }>
+               <{input type='select' disabled="true" name='shop[config][adapter]' id='wmstype' rows=$adapter_list valueColumn='value' labelColumn='label' value=$shop_config.adapter required='true'}>
+               <{else}>
+               <{input type='select'  name='shop[config][adapter]'  rows=$adapter_list valueColumn='value' labelColumn='label' value=$shop_config.adapter required='true'}>
+               <{/if}>
+               <ul style='color:red' id="adapter_desc">
+                   <{foreach from=$adapter_list item=item}>
+                   <li id="desc_<{$item.value}>" style="display:none"><{$item.desc}></li>
+                   <{/foreach}>
+               </ul>
+           </td>
+       </tr>
        <tr>
            <th>店铺类型别名：</th>
            <td><input class="x-input" type="text" id="shop_type_alias" name="shop[shop_type_alias]" size="60" value="<{$shop.shop_type_alias}>"/>
-               <div style="margin-top: 4px; color: #999; font-size: 12px;">用来配置推送WMS订单来源项</div>
+               <{help}><{t}>用来配置推送WMS订单来源项<{/t}><{/help}>
            </td>
        </tr>
       <{foreach from=$customcols  item=customcol}>
@@ -102,149 +151,92 @@
     <{if $shop.shop_id}>
  <input type="hidden" name="shop[shop_id]" value="<{$shop.shop_id}>">
 <{/if}>
+<{if $shop.node_id}>
+ <input type="hidden" name="shop[node_id]" value="<{$shop.node_id}>">
+<{/if}>
+<div class="table-action">
+<{button class="btn-primary" type="button" id="saveterminal" name="submit" label="提交"}>
+
+</div>
 </form>
   </div>
     </div>
 
-<{area inject=".mainFoot"}>
-<div class="table-action">
-<{button class="btn-primary" type="button" id="saveterminal" name="submit" label="提交"}>
-</div>
-<{/area}>
-
 <script>
 
-// 添加快捷添加运营组织功能
-window.addEvent('domready', function() {
-    var addBtn = $('add_org_btn');
-    if (addBtn) {
-        addBtn.addEvent('click', function() {
-            new Dialog('index.php?app=ome&ctl=admin_operationorg&act=add&finder_id=<{$env.get.finder_id}>&no_redirect=1', {
-                width: 600,
-                height: 400,
-                title: '添加运营组织',
-                onComplete: function(jsontext) {
-                    if (!jsontext) return;
-                    
-                    var json = {};
-                    try {
-                        json = JSON.decode(jsontext);
-                    } catch(e) {
-                        // 如果解析失败，尝试直接使用
-                        return;
-                    }
-                    
-                    if (json && !json.error) {
-                        // 添加成功后，刷新运营组织下拉列表
-                        new Request({
-                            url: 'index.php?app=ome&ctl=admin_operationorg&act=getOrgs',
-                            method: 'get',
-                            onSuccess: function(response) {
-                                if (!response) return;
-                                
-                                var orgs = [];
-                                try {
-                                    orgs = JSON.decode(response);
-                                } catch(e) {
-                                    return;
-                                }
-                                
-                                var select = $('shop_org_id');
-                                if (select && orgs && orgs.length > 0) {
-                                    // 保存当前选中的值
-                                    var currentValue = select.value;
-                                    // 清空现有选项
-                                    var options = select.getElements('option');
-                                    for (var i = options.length - 1; i >= 0; i--) {
-                                        options[i].destroy();
-                                    }
-                                    // 添加新选项
-                                    orgs.each(function(org) {
-                                        var option = new Element('option', {
-                                            value: org.org_id,
-                                            text: org.name
-                                        });
-                                        if (org.org_id == currentValue) {
-                                            option.set('selected', true);
-                                        }
-                                        select.appendChild(option);
-                                    });
-                                }
-                            }
-                        }).send();
-                    }
-                }
-            });
-        });
+function is_phone(str){
+
+	var partten = /^\d{1,4}-\d{7,8}(-\d{1,6})?$/;
+    var partten1 = /^400\d{7}$/;
+    if(partten.test(str) || partten1.test(str)){
+		return true;
+	}else{
+		return false;
+	}
+}
+
+function is_mobile(str){
+
+	var partten = /^\d{8,15}$/;
+	if(partten.test(str)){
+		return true;
+	}else{
+		return false;
+	}
+}
+
+$('saveterminal').addEvent('click',function(event){
+	if ($('zip').value.length != "6"){
+		   alert('请输入正确的邮编');
+		   $('zip').focus();
+		   return false;
     }
+    //固定电话与手机必填一项
+    var gd_tel,mobile;
+    gd_tel = $('shop[tel]').value.replace(" ","");
+    mobile = $('mobile').value.replace(' ','');
+    if (!gd_tel && !mobile){
+		   alert('固定电话与手机号码必需填写一项');
+		   $('shop[tel]').focus();
+		   return false;
+    }
+    if (gd_tel){
+			if (is_phone(gd_tel) === false){
+				alert('请填写正确的固定电话');
+			    $('shop[tel]').focus();
+			    return false;
+			}
+    }
+    if (mobile){
+		   if ( is_mobile(mobile) === false){
+			    alert('请输入正确的手机号码');
+			    $('mobile').focus();
+			    return false;
+		   }
+		   if (mobile[0] == '0'){
+			    alert('手机号码前请不要加0');
+			    $('mobile').focus();
+			    return false;
+		   }
+    }
+    $('terminal').fireEvent('submit',new Event(event));
 });
 
-window.addEvent('domready', function() {
-    $('saveterminal').addEvent('click',function(event){
-        $('terminal').fireEvent('submit',new Event(event));
+$('terminal').store('target',{
+    onRequest:function(){
+       $('saveterminal').set('disabled', 'true');
+    },
+    onComplete:function(jsontext){
+       var json = Json.evaluate(jsontext);
+       if (typeof(json.error) != 'undefined'){
+           $('saveterminal').set('disabled', '');
+       }else{
+           $('saveterminal').set('disabled', 'true');
+           opener.finderGroup['<{$env.get.finder_id}>'].refresh.delay(400,opener.finderGroup['<{$env.get.finder_id}>']);
+           window.close();
+       }
+    }
     });
 
-    // 扩展 dialog 自动设置的 target store
-    var terminalForm = $('terminal');
-    var existingTarget = terminalForm.retrieve('target');
-    if (existingTarget) {
-        // 扩展 dialog 自动设置的 onRequest 和 onComplete
-        var originalOnRequest = existingTarget.onRequest;
-        var originalOnComplete = existingTarget.onComplete;
-        
-        existingTarget.onRequest = function() {
-            $('saveterminal').set('disabled', 'true');
-            if (originalOnRequest) {
-                originalOnRequest.call(this);
-            }
-        };
-        
-        existingTarget.onComplete = function(jsontext) {
-            var json = Json.evaluate(jsontext);
-            if (typeof(json.error) != 'undefined') {
-                $('saveterminal').set('disabled', '');
-            } else {
-                $('saveterminal').set('disabled', 'true');
-            }
-            if (originalOnComplete) {
-                originalOnComplete.call(this, jsontext);
-            }
-        };
-    }
-});
-
-// 初始化店铺类型可搜索下拉框
-window.addEvent('domready', function() {
-    var shopTypeSelect = $('shop_shop_type');
-    if (shopTypeSelect && typeof tail !== 'undefined' && tail.select) {
-        // 获取同行的 input 框宽度作为参考（店铺名称或店铺编码的 input）
-        var nameInput = document.getElementsByName('shop[name]')[0];
-        var bnInput = document.getElementsByName('shop[shop_bn]')[0];
-        var refInput = nameInput || bnInput;
-        var inputWidth = refInput ? parseInt(refInput.getStyle('width')) : null;
-        
-        var selectOptions = {
-            search: true,
-            height: 250,  // 限制下拉框高度，控制显示的条数（约显示10条）
-            width: inputWidth || 300,   // 使用 input 框的宽度，如果没有则使用默认值
-            searchMinLength: 0,
-            searchPlaceholder: '输入关键词搜索店铺类型',
-            searchFocus: true,
-            searchMark: true,
-        };
-        
-        tail.select('select[data-search="fuzzy-search"]', selectOptions);
-        
-        // 设置下拉选项列表宽度与主框一致
-        var tailSelectInstance = shopTypeSelect.getNext('.tail-select');
-        if (tailSelectInstance && inputWidth) {
-            var dropdown = tailSelectInstance.getElement('.select-dropdown');
-            if (dropdown) {
-                dropdown.setStyle('width', inputWidth + 'px');
-                dropdown.setStyle('max-width', inputWidth + 'px');
-            }
-        }
-    }
-});
 
 </script>

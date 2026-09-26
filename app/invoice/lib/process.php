@@ -29,6 +29,19 @@ class invoice_process
      */
     public function create($params, $type='order_create')
     {
+        // 注册service，分析是否允许开蓝票
+        foreach(kernel::servicelist('ome.service.invoice.analysis.prepose') as $object)
+        {
+            if(method_exists($object, 'check_blue_invoice')){
+                // check
+                $analysisResult = $object->check_blue_invoice($params);
+                if($analysisResult['rsp'] == 'fail'){
+                    $error_msg = ($analysisResult['error_msg'] ? $analysisResult['error_msg'] : '不允许开蓝发票!');
+                    return [false, ['msg'=>$error_msg]];
+                }
+            }
+        }
+        
         //order_id是必须的
         $order_id = $params['order_id'];
         if(!$order_id){
@@ -262,6 +275,7 @@ class invoice_process
                 'payee_receiver' => $rs_setting['payee_receiver'] ? $rs_setting['payee_receiver'] : '',
                 'ship_email'     => $params['receiver_email'] ? $params['receiver_email'] : '',
                 'invoice_apply_bn' => $this->getInvoiceApplyBn(),
+                'is_auto' => ($params['is_auto'] == '2' ? '2' : '1'), // 是否自动开票(1:自动开票, 2:手工开票)
         );
         //对pos判断btq trade 不在列表里显示
         if($insert_arr['shop_type'] == 'pekon'){
@@ -323,6 +337,19 @@ class invoice_process
      */
     public function newCreate($params,$type = '')
     {
+        // 注册service，分析是否允许开蓝票
+        foreach(kernel::servicelist('ome.service.invoice.analysis.prepose') as $object)
+        {
+            if(method_exists($object, 'check_blue_invoice')){
+                // check
+                $analysisResult = $object->check_blue_invoice($params);
+                if($analysisResult['rsp'] == 'fail'){
+                    $error_msg = ($analysisResult['error_msg'] ? $analysisResult['error_msg'] : '不允许开蓝发票。');
+                    return [false, ['msg'=>$error_msg]];
+                }
+            }
+        }
+        
         $mdlInOrder          = app::get('invoice')->model('order');
         $invoiceOrderItemMdl = app::get('invoice')->model('order_items');
         $invoiceOrderLib     = kernel::single('invoice_order');
@@ -331,6 +358,7 @@ class invoice_process
         }
 
         list($check_create,$msg) = kernel::single('invoice_check')->checkInvoiceCreate(array_column($params['items'],'of_id'),$type);
+        
         //创建发票校验
         if(!$check_create){
             return [false, $msg];
@@ -344,6 +372,7 @@ class invoice_process
         $shop_id    = $params["shop_id"];
         $shopInfo = app::get('ome')->model('shop')->getRow(['shop_id'=>$shop_id],'org_id');
         $org_id = $shopInfo['org_id'];
+        
         //发票金额
         $total_amount = number_format($params["amount"], 2, ".", ""); //纸质发票直接取填的开票金额为开票金额
         $tax_rate     = 0;//税率
@@ -366,9 +395,22 @@ class invoice_process
         if (is_array($orderBn)) {
             $orderBn = implode(',',$orderBn);
         }
+        $invoiceApplyBn = $this->getInvoiceApplyBn();
+        if (isset($params['invoice_apply_bn']) && trim((string) $params['invoice_apply_bn']) !== '') {
+            $invoiceApplyBn = trim((string) $params['invoice_apply_bn']);
+        }
+
+        $invoiceSource = 'b2c';
+        if (isset($params['source']) && trim((string) $params['source']) !== '') {
+            $invoiceSource = trim((string) $params['source']);
+        }
+        
+        // order_id
+        $invoiceOrderId = 0;
+        
         $insert_arr = array(
-            'is_print'          => '1',# 这个值对于openapi的用户有用
-            'order_id'          => '',
+            'is_print'          => '1', //这个值对于openapi的用户有用
+            'order_id'          => $invoiceOrderId,
             'order_bn'          => $orderBn,
             'mode'              => 1,//这个key不存在就是0，1为电子发票
             'type_id'           => $type_id,//0普通发票，1专用发票
@@ -396,7 +438,9 @@ class invoice_process
             "ship_company_addr" => $params["ship_company_addr"],
             "ship_company_tel"  => $params["ship_company_tel"],
             "org_id"            => $org_id,
-            'invoice_apply_bn'  => $this->getInvoiceApplyBn(),
+            'source'            => $invoiceSource,
+            'invoice_apply_bn'  => $invoiceApplyBn,
+            'is_auto' => ($params['is_auto'] == '2' ? '2' : '1'), // 是否自动开票(1:自动开票, 2:手工开票)
         );
         //对pos判断btq trade 不在列表里显示
         if ($insert_arr['shop_type'] == 'pekon') {
@@ -433,6 +477,7 @@ class invoice_process
         }
         
         kernel::database()->beginTransaction();
+        
         //新增发票
         $result   = $mdlInOrder->insert($insert_arr);
 
@@ -466,7 +511,7 @@ class invoice_process
             }
             //创建如果是完成订单设置为完成
             kernel::database()->commit();
-            $msg = $msg_part . "成功。";
+            $msg = $msg_part . "成功！";
             $opObj->write_log('invoice_create@invoice', $result, $msg);
             //查询是否发票是否可以直接操作
             kernel::single('invoice_func')->getInvoiceMakeStatus($result);
@@ -487,17 +532,34 @@ class invoice_process
     }
     
     /**
-     * 作废处理函数
+     * [冲红电子发票]作废处理函数
      * @param array $params 传入参数
      */
-    public function cancel($params,$type='order_cancel')
+    public function cancel($params,$type='order_cancel', &$result_msg=null)
     {
-        $rs_invoice = kernel::single('invoice_check')->checkInvoiceCancel($params['id']);
+        // 注册service，分析是否允许冲红发票
+        foreach(kernel::servicelist('ome.service.invoice.analysis.prepose') as $object)
+        {
+            if(method_exists($object, 'check_red_invoice')){
+                // analysis
+                $analysisResult = $object->check_red_invoice($params);
+                if($analysisResult['rsp'] == 'fail'){
+                    // 不允许创建发票，返回false
+                    $result_msg = '不允许冲红发票';
+                    return false;
+                }
+            }
+        }
+        
+        // check
+        $rs_invoice = kernel::single('invoice_check')->checkInvoiceCancel($params['id'], $error_msg);
         if(!$rs_invoice){
+            $result_msg = $error_msg;
             return false;
         }
         //电子发票列表 操作项里的 作废link 必须是同一个id记录 否则返回false
         if($type == 'invoice_list' && intval($rs_invoice["id"]) != intval($params["id"])){
+            $result_msg = '请选择正确的发票记录';
             return false;
         }
         $mdlInOrder = app::get('invoice')->model('order');
@@ -540,34 +602,47 @@ class invoice_process
             //已开票 并且同步状态是 3(开蓝成功) 4(开红票中) 和 5(冲红失败)
             if(intval($rs_invoice['is_status']) == 1 && in_array(intval($rs_invoice['sync']), array(3,4,5,8,9))){
                 //电子发票冲红
-                $checkEinvoiceCreate = kernel::single('invoice_check')->checkEinvoiceCreate($rs_invoice,"2");
+                $checkEinvoiceCreate = kernel::single('invoice_check')->checkEinvoiceCreate($rs_invoice,"2", $error_msg);
                 if(!$checkEinvoiceCreate){
+                    $result_msg = $error_msg;
                     return false;
                 }
-
+                
                 $rs_invoice['invoice_action_type'] = $params['invoice_action_type'];
                 $rs_invoice = kernel::single('invoice_electronic')->getEinvoiceSerialNo($rs_invoice,"2");
                 if(!$rs_invoice){
+                    $result_msg = '没有可操作的明细记录';
                     return false;
                 }
                 //检查必要条件
                 $check_do_einvoice = kernel::single('invoice_check')->checkDoEinvoice($rs_invoice);
                 if(!empty($check_do_einvoice["arr_hint"])){
                     $opObj->write_log('invoice_cancel@invoice', $rs_invoice['id'], '冲红失败:'.(implode(',', $check_do_einvoice['arr_hint'])));
+                    
+                    $result_msg = '电子发票打接口的必要参数是否缺失';
                     return false;
                 }
                 
                 kernel::single('invoice_electronic')->do_einvoice_create_limit($rs_invoice["id"],"red"); //做冲红点击动作缓存 防止连续点击
+                
+                // 电子发票冲红
                 $rs = kernel::single('invoice_event_trigger_einvoice')->cancel($rs_invoice['shop_id'],$rs_invoice);
                 if ($type == 'merge_order') {
                     $opObj->write_log('invoice_cancel@invoice', $rs_invoice['id'], '合并开票冲红原票');
                 }
                 $opObj->write_log('invoice_cancel@invoice', $rs_invoice['id'], $rs['msg']);
+                
+                // rsp
+                if ($result['rsp'] == "fail") {
+                    $result_msg = ($result['msg'] ? $result['msg'] : $result['error_msg']);
+                }
+                
                 return $rs_invoice;
             }
         }else if(intval($rs_invoice['mode']) == 0){
             // 纸质售后不自动作废，需要发票追回的
             if ($type == 'order_aftersale') {
+                $result_msg = '纸质发票不支持作废';
                 return false;
             }
 
@@ -610,8 +685,13 @@ class invoice_process
         
         //记录日志
         if($result){
+            $result_msg = $msg;
+            
             $opObj->write_log('invoice_cancel@invoice', $rs_invoice['id'], $msg);
             return $rs_invoice;
+        }else{
+            $result_msg  = '未处理冲红发票';
+            return false;
         }
     }
     
@@ -625,11 +705,44 @@ class invoice_process
      */
     function billing($params, $event='man', &$error_msg=null)
     {
+        $invOrderMdl = app::get('invoice')->model('order');
+        $opObj = app::get('ome')->model('operation_log');
+        
+        $result = array('rsp'=>'fail', 'error_msg'=>'', 'mode'=>1);
+        
+        // 获取发票信息
+        $invoice_id = intval($params['id']);
+        $invoiceInfo = $invOrderMdl->db_dump(['id'=>$invoice_id]);
+        
+        // check
+        if(empty($invoiceInfo)){
+            $result['error_msg'] = '发票信息不存在';
+            return $result;
+        }
+        
+        // source
+        if(!isset($params['source']) && $invoiceInfo['source']){
+            $params['source'] = $invoiceInfo['source'];
+        }
+        
+        // 注册service，分析是否允许开蓝票
+        foreach(kernel::servicelist('ome.service.invoice.analysis.prepose') as $object)
+        {
+            if(method_exists($object, 'check_blue_invoice')){
+                // check
+                $analysisResult = $object->check_blue_invoice($params);
+                if($analysisResult['rsp'] == 'fail'){
+                    $error_msg = ($analysisResult['error_msg'] ? $analysisResult['error_msg'] : '不允许直接开蓝发票；');
+                    
+                    $result['error_msg'] = $error_msg;
+                    return $result;
+                }
+            }
+        }
+        
         try {
-            $opObj = app::get('ome')->model('operation_log');
-            $invOrderMdl = app::get('invoice')->model('order');
-            if ($oldInvoice = $invOrderMdl->db_dump(['id'=>$params['id']])) {
-                if ($oldInvoice['sync'] == '0') {
+            if ($invoiceInfo) {
+                if ($invoiceInfo['sync'] == '0') {
                     $invOrderMdl->update(['sync'=>'1'],['id'=>$params['id']]);
                 }
             }
@@ -645,7 +758,8 @@ class invoice_process
             
             $rs_invoice['mode'] = intval($rs_invoice['mode']);
             
-            $result = array('rsp'=>'fail', 'error_msg'=>'', 'mode'=>$rs_invoice['mode']);
+            // mode
+            $result['mode'] = $rs_invoice['mode'];
             
             if($rs_invoice['mode'] == 1){
     
@@ -674,11 +788,11 @@ class invoice_process
                 
                 //开票点击动作缓存,防止连续点击
                 $electLib->do_einvoice_create_limit($rs_invoice["id"]);
-    
-                //request
+                
+                //request请求开蓝票
                 $rs = kernel::single('invoice_event_trigger_einvoice')->create($rs_invoice['shop_id'], $rs_invoice, $error_msg);
                 if($rs['rsp'] == 'fail' || !$rs){
-                    $error_msg = '开蓝失败：'. $rs['msg'] .'('.$rs['msg_id'].')';
+                    $error_msg = '开蓝失败：'. ($rs['msg'] ? $rs['msg'] : $error_msg) .'('.$rs['msg_id'].')';
                     throw new Exception($error_msg);
                 }
                 
@@ -720,8 +834,10 @@ class invoice_process
                 }
             }
             $opObj->write_log('invoice_billing@invoice', $params['id'], $msg);
-    
-            return false;
+            
+            $result['error_msg'] = $msg;
+            
+            return $result;
         }
     }
 
@@ -750,7 +866,6 @@ class invoice_process
         $operator = kernel::single('desktop_user')->get_id();
         $cur_time = time();
         $update_arr = array (
-            "mode"              => 1,
             "title"             => $params["title"],
             "content"           => $params["content"],
             "remarks"           => $params["remarks"],
@@ -779,12 +894,30 @@ class invoice_process
             "ship_bank_no"      =>$params["ship_bank_no"],
         );
         
-        $mode = intval($params["mode"]);
-        //纸质发票
-        if ($mode == 0) {
-            $update_arr["type_id"] = '1';
-        } else {
-            $update_arr['type_id'] = '0';
+        if (isset($params['type_id'])) {
+            $update_arr['type_id'] = strval(intval($params['type_id']));
+        }
+        if (isset($params['mode']) && in_array($params['mode'], ['0', '1'])) {
+            $update_arr['mode'] = $params['mode'];
+        }
+        
+        // 验证手机号、电话
+        if(!empty($update_arr['ship_tel'])){
+            $is_mobile = kernel::single('ome_func')->isMobile($update_arr['ship_tel']);
+            $is_tel = kernel::single('ome_func')->isTel($update_arr['ship_tel']);
+            
+            if(!$is_mobile && !$is_tel){
+                $error_msg = '收票人手机号、电话不正确，请正确填写后再提交！';
+                return [false, $error_msg];
+            }
+        }
+        
+        // 收票人Email
+        if(!empty($update_arr['ship_email'])){
+            if (!preg_match("/^([0-9A-Za-z\\-_\\.]+)@([0-9a-z]+\\.[a-z]{2,3}(\\.[a-z]{2})?)$/i", $update_arr['ship_email'])) {
+                $error_msg = '收票人Email不正确，请正确填写后再提交！';
+                return [false, $error_msg];
+            }
         }
         
         //备注
@@ -907,16 +1040,18 @@ class invoice_process
             $opObj = app::get('ome')->model('operation_log');
             if ($result) {
                 $msg = '专票保存改票信息成功。';
+                $result_msg = '';
                 if ($invoiceInfo['mode'] == '1') {
                     $msg = '电票保存改票信息成功。';
                     $param     = array(
                         'id'                  => $data['id'],
                         'order_id'            => $data['order_id'],
-                        'invoice_action_type' => $_POST['invoice_action_type']
+                        'invoice_action_type' => $_POST['invoice_action_type'],
+                        'source'              => $invoiceInfo['source'], // 发票来源,默认值:b2c(默认值)
                     );
-                    $cancelRes = $this->cancel($param, 'invoice_list');
+                    $cancelRes = $this->cancel($param, 'invoice_list', $result_msg);
                     if (!$cancelRes) {
-                        return [false, '原票冲红失败'];
+                        return [false, '原票冲红失败：'. $result_msg];
                     }
                 }
                 $opObj->write_log('invoice_edit@invoice', $data["id"], $msg);

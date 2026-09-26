@@ -60,9 +60,8 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
     public function delivery_cancel($sdf){
         $delivery_bn = $sdf['outer_delivery_bn'];
         $oDelivery_extension = app::get('console')->model('delivery_extension');
-        $dextend = $oDelivery_extension->dump(array('delivery_bn'=>$delivery_bn)); 
-
-
+        $dextend = $oDelivery_extension->dump(array('delivery_bn'=>$delivery_bn));
+        
         $title = $this->__channelObj->wms['channel_name'].'发货单取消';
 
         $params = array(
@@ -71,6 +70,7 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
             'warehouse_code' => $this->get_warehouse_code($this->__channelObj->wms['channel_id'],$sdf['branch_bn']),
             'order_id'       => $dextend['original_delivery_bn'],
         );
+        
         if (isset($sdf['owner_code'])) {
             $params['ownerCode'] = $sdf['owner_code'];
         }
@@ -129,17 +129,16 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
                 }
             }
         }
-
-
+        
         if (in_array($sdf['shop_type'], array('xhs')) && $sdf['extend_field']['openAddressId']) {
-
-
             $sdf['oaid'] = $sdf['extend_field']['openAddressId'];
         }
+        
         //  有些WMS还不支持oaid取号，所以也需要把密文推给他们
         if(in_array($sdf['shop_type'], array('xhs')) && $sdf['encrypt_source_data'] && $sdf['encrypt_source_data']['openAddressId']){
             $sdf['oaid'] = $sdf['encrypt_source_data']['openAddressId'];
         }
+        
         return parent::delivery_create($sdf);
     }
 
@@ -207,6 +206,7 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
         if($sdf['order_source'] == 'platformexchange' && $sdf['shop_type']=='wxshipin'){
             $params['order_source'] = 'OTHER';
         }
+        
         // 得物品牌直发需要处理一些参数，因为品牌直发不支持合单，所以只需要判断订单数组的第一组就好
         $shopType = $shop['shop_type'];
         if($shopType == 'dewu') {
@@ -221,9 +221,11 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
         if ($params['is_cod'] == 'true') {
             $order_flag[] = 'COD';
         }
+        
         $extend_props = [
             'businessCategory' => $sdf['business_category'],
         ];
+        
         //预打包
         if($sdf['prepackage']=='true'){
             $order_flag[] = 'PRESELL';
@@ -234,7 +236,7 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
             $order_flag[] = 'INSURE';
         }
 
-        //
+        // node_id
         $node_id = base_shopnode::node_id('ome');
 
         if(in_array($node_id,array('1901943233','1892160738'))){
@@ -243,13 +245,14 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
                $order_flag[] = 'PRESELL';
             }
         }
+        
         // 天猫物流升级
         if (kernel::single('ome_delivery_bool_type')->isCPUP($sdf['bool_type'])) {
             // 最晚发货时间
             if ($sdf['delivery_time']) {
                 $params['latest_delivery_time'] = date('Y-m-d H:i:s', $sdf['delivery_time']);
             }
-        
+            
             // 最晚送达时间
             if (strstr($sdf['ship_time'],'-')){
                 list($scheduleDay, $scheduleEndTime) = explode(' ', $sdf['ship_time']);
@@ -258,12 +261,12 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
                     'schedule_day' => $scheduleDay,
                     'schedule_end_time' => $scheduleEndTime,
                 );
-            
+                
                 $params['delivery_requirements'] = json_encode(array($delivery_requirements));
             }
-        
+            
             $order_flag[] = 'LIMIT';
-        
+            
             // 上门订单
             if (in_array('201', explode(',', $sdf['cpup_service']))) {
                 $order_flag[] = 'VISIT';
@@ -285,6 +288,7 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
                 $order_flag[] = 'SUG_HOME_DELIVER';
             }
         }
+        
         if ($sdf['bool_type'] & ome_delivery_bool_type::__SHSM_CODE) {
             $extend_props['jdService'] = 'JDWJ_DELIVERY_TO_DOOR';
             $order_flag[] = 'VISIT';
@@ -324,6 +328,7 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
         if ($this->isUrgentDelivery($sdf)) {
             $extend_props['urgent_delivery'] = true;
         }
+        
         //是否是国补订单进行标识推送wms
         $extend_props['isGuobuOrder'] = $sdf['is_guobu_order'] ?: 'false';
 
@@ -436,8 +441,7 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
                         $relate_order_bn = ($objVal['relate_order_bn'] ? $objVal['relate_order_bn'] : $objVal['order_bn']);
 
                         $arrProductData[$product_id]['order_bn'][$relate_order_bn] = $relate_order_bn;
-
-
+                        
                         $sdf['order_bn'] = $relate_order_bn;
 
                         // 补发单不推oaidOrderSourceCode
@@ -583,9 +587,32 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
             // 补发出库
             $params['order_type'] = 'BFCK';
         }
-        
         $params['pay_time'] = $sdf['pay_time'];
-
+        
+        // 唯品会JITX补寄订单
+        if(in_array($sdf['shop_type'], array('vop'))) {
+            if($sdf['order_type'] == 'bufa'){
+                $checkBufaResult = kernel::single('ome_order_platform_vop_bufa')->isDeliveryJitxBufaOrder($sdf);
+                if($checkBufaResult['rsp'] == 'succ'){
+                    // 补发出库（奇门字段名：orderType）
+                    $params['order_type'] = 'BFCK';
+                    
+                    // 订单来源（奇门字段名：sourcePlatformCode）
+                    $order_source = $this->_shop_type_mapping[$sdf['shop_type']];
+                    $params['order_source'] = $order_source;
+                    
+                    // 扩展属性（奇门字段名：extendProps）
+                    $extendProps = $params['extendProps'] ? json_decode($params['extendProps'], true) : [];
+                    
+                    // flag
+                    $extendProps['order_flag'] = '唯品会补寄';
+                    
+                    // json
+                    $params['extendProps'] = json_encode($extendProps);
+                }
+            }
+        }
+        
         return $params;
     }
 

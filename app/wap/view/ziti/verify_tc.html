@@ -1,0 +1,54 @@
+<div class="intercept-goods-item flex-col verify-box">
+    <div class="list-item verify-info">
+        <div class="text-wrapper_5 flex-row justify-between">
+            <span class="text_11">订单号：</span>
+            <span class="text_12"><{$order_info.order_bn}></span>
+        </div>
+        <div class="text-wrapper_5 flex-row justify-between">
+            <span class="text_11">门店：</span>
+            <span class="text_12"><{$order_info.store_name}></span>
+        </div>
+        <div class="text-wrapper_5 flex-row justify-between">
+            <span class="text_11">渠道：</span>
+            <span class="text_12"><{$order_info.shop_type_name}></span>
+        </div>
+        <div class="text-wrapper_5 flex-row justify-between">
+            <span class="text_11">下单时间：</span>
+            <span class="text_12"><{$order_info.createtime|date:"Y-m-d H:i:s"}></span>
+        </div>
+    </div>
+    <{if $order_info.order_items}>
+    <{foreach from=$order_info.order_items item=dly_item}>
+    <div class="section_6 flex-row verify-good">
+        <{if $dly_item.default_img_url}>
+        <img class="image_2" referrerpolicy="no-referrer"
+             src="<{$dly_item.default_img_url}>" />
+        <{else}>
+        <img class="image_2" referrerpolicy="no-referrer"
+             src="<{$env.app.res_url}>/img/goods_default.png?v=<{$smarty.now}>" />
+        <{/if}>
+        <div class="text-group_1 flex-col">
+            <span class="text_28"><{$dly_item.product_name}></span>
+            <span class="text_29">商户货号：<{$dly_item.bn}></span>
+            <span class="text_29">子订单号：<{$dly_item.esb_oid}></span>
+            <span class="text_30"><{$dly_item.number}>件；<{$dly_item.product_attr}></span>
+        </div>
+    </div>
+    <div class="section_6 flex-wrap verify-price">
+        <div class="mrg-side-4">
+              <span class="text_36">买家</span
+              ><span class="text_37">￥<{$dly_item.divide_order_fee}></span>
+        </div>
+        <div class="mrg-side-4">
+              <span class="text_36">优惠</span
+              ><span class="text_37">￥<{$dly_item.esb_pmt_amount}></span>
+        </div>
+        <div class="mrg-side-4">
+              <span class="text_36">商家</span
+              ><span class="text_37">￥<{$dly_item.esb_amount}></span>
+        </div>
+    </div>
+    <{/foreach}>
+    <{/if}>
+
+</div>

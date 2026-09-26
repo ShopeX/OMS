@@ -39,5 +39,41 @@ class ome_mdl_return_reshipping extends dbeav_model
         );
         return isset($refund_phase_map[$col]) ? $refund_phase_map[$col] : ($col ? $col : '-');
     }
+
+    /**
+     * 关联单号搜索：兼容 order_bn / platform_order_bn / reshipping_bn / logi_no
+     * （平台补寄单 historical 数据 original_bn 可能为空）
+     */
+    public function _filter($filter, $tableAlias = null, $baseWhere = null)
+    {
+        $where = '';
+        if (!empty($filter['original_bn'])) {
+            $bns = array();
+            if (is_string($filter['original_bn']) && strpos($filter['original_bn'], "\n") !== false) {
+                $bns = array_unique(array_map('trim', array_filter(explode("\n", $filter['original_bn']))));
+            } else {
+                $bns = array(trim((string) $filter['original_bn']));
+            }
+            unset($filter['original_bn']);
+
+            if ($bns) {
+                $ta = $tableAlias ? $tableAlias . '.' : '';
+                $db = kernel::database();
+                $orParts = array();
+                foreach ($bns as $bn) {
+                    if ($bn === '') {
+                        continue;
+                    }
+                    $q = $db->quote($bn);
+                    $orParts[] = "({$ta}original_bn={$q} OR {$ta}order_bn={$q} OR {$ta}platform_order_bn={$q} OR {$ta}reshipping_bn={$q} OR {$ta}logi_no={$q})";
+                }
+                if ($orParts) {
+                    $where .= ' AND (' . implode(' OR ', $orParts) . ')';
+                }
+            }
+        }
+
+        return parent::_filter($filter, $tableAlias, $baseWhere) . $where;
+    }
 }
 

@@ -24,6 +24,13 @@ class o2o_finder_extend_filter_store
      */
     public function get_extend_colums()
     {
+        // 门店下拉：[编码]名称
+        $storeRows = app::get('o2o')->model('store')->getList('store_id,store_bn,name', array(), 0, -1);
+        $storeList = array();
+        foreach ($storeRows as $row) {
+            $storeList[$row['store_id']] = '[' . $row['store_bn'] . ']' . $row['name'];
+        }
+
         // 获取经销商列表，key是bs_bn，value是[bs_bn]name格式
         $dealerList = app::get('dealer')->model('business')->getList('bs_bn,name');
         $dealerList = array_column($dealerList, 'name', 'bs_bn');
@@ -36,6 +43,13 @@ class o2o_finder_extend_filter_store
 
         $db['store'] = array(
             'columns' => array(
+                'store_id' => array(
+                    'type'          => $storeList,
+                    'label'         => '门店',
+                    'filtertype'    => 'fuzzy_search_multiple',
+                    'filterdefault' => true,
+                    'order'         => 0,
+                ),
                 'dealer_bs_bn'    => array(
                     'type'          => $formattedDealerList,
                     'label'         => '经销商',

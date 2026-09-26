@@ -354,7 +354,11 @@ class erpapi_shop_response_plugins_order_orderlabels extends erpapi_shop_respons
             $gift_order_status = $platform->_ordersdf['extend_field']['gift_order_status'];
             $related_order_list = $platform->_ordersdf['extend_field']['related_order_list'];
             $gift_list = $platform->_ordersdf['extend_field']['gift_list'];
-            $order_sns = array_column($gift_list, 'order_sn');
+            
+            $order_sns = [];
+            if($gift_list){
+                $order_sns = array_column($gift_list, 'order_sn');
+            }
             
             $gift_extdnd = [
                 'gift_order_status' =>  $gift_order_status,
@@ -384,6 +388,13 @@ class erpapi_shop_response_plugins_order_orderlabels extends erpapi_shop_respons
         if ($platform->_ordersdf['fenxiao_order']) {
             $labels[] = [
                 'label_code'    =>  'SOMS_FENXIAO',
+            ];
+        }
+        
+        // 喵住订单打标记
+        if ($platform->_ordersdf['order_source'] == 'miaozhu' || (isset($platform->_ordersdf['trade_from']) && $platform->_ordersdf['trade_from'] == 'miaozhu')) {
+            $labels[] = [
+                'label_code' => 'SOMS_MIAOZHU',
             ];
         }
         
@@ -514,7 +525,14 @@ class erpapi_shop_response_plugins_order_orderlabels extends erpapi_shop_respons
                 'extend_info'   =>  $extend_info,
             ];
         }
-
+        
+        // 淘宝闪购（同时系统也会自动打上标签，小时达：SOMS_XSDBC）
+        if (isset($platform->_ordersdf['store_order']) && $platform->_ordersdf['store_order'] == '淘宝闪购订单') {
+            $labels[] = [
+                'label_code' => 'SOMS_SANGOU',
+            ];
+        }
+        
         // 百补超级半托
         // 只从订单级 ypds_info 获取
         if (isset($platform->_ordersdf['ypds_info']) && !empty($platform->_ordersdf['ypds_info'])) {
@@ -566,6 +584,20 @@ class erpapi_shop_response_plugins_order_orderlabels extends erpapi_shop_respons
             }
         }
 
+        // 京东引凤对接：sendPayMap[1410] == 1 的订单打引凤标签（SOMS_YINFENG）
+        if (!empty($platform->_ordersdf['__yinfeng_order'])) {
+            $labels[] = [
+                'label_code' => 'SOMS_YINFENG',
+            ];
+        }
+        
+        // 唯品会JITX补寄订单
+        if(isset($platform->_ordersdf['is_bufa_order']) && $platform->_ordersdf['is_bufa_order'] == 'true'){
+            $labels[] = [
+                'label_code' => 'SOMS_BUFA_PKG',
+            ];
+        }
+        
         return $labels;
     }
 

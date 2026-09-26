@@ -83,6 +83,15 @@ class erpapi_shop_response_process_refund {
             $rs = $this->_updateOrder($params['order']['order_id'],$params['money']);
             $rs && $msg .= "\n更新订单[{$params['order_bn']}]支付状态";
         }
+
+        $services = kernel::servicelist('ome.service.refund.apply.accept.refund.after');
+        if ($services) {
+            foreach ($services as $service) {
+                if (method_exists($service, 'after_refund')) {
+                    $service->after_refund($refundApply['apply_id']);
+                }
+            }
+        }
         return array('rsp'=>'succ', 'msg'=>$msg);
     }
 

@@ -99,6 +99,7 @@ class  taoexlib_sms
         if(!$this->formatContent($params, $sendParams, $error_msg)){
             return false;
         }
+        $sendParams['direct_send'] = isset($params['direct_send']) && $params['direct_send'] === true;
 
         //执行短信发送
         return $this->doSendSms($sendParams, $error_msg);

@@ -268,7 +268,8 @@ class dealer_mdl_series_endorse_products extends dbeav_model
         unset($filter['is_shopyjdf_type']);
 
         if (isset($filter['shop_id'])) {
-            $where[] = 'p.shop_id in ("' . implode('","', $filter['shop_id']) . '")';
+            $shopIds = (array) $filter['shop_id'];
+            $where[] = 'p.shop_id in ("' . implode('","', $shopIds) . '")';
             unset($filter['shop_id']);
         }
 

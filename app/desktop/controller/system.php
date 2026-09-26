@@ -209,10 +209,13 @@ class desktop_ctl_system extends desktop_controller{
 
         if ($file['logo'] && $file['logo']['tmp_name'] && !$file['logo']['error']){
             
-            $logoFilename= '/tmp/logo.png';
+            $extMap = array(1 => '.gif', 2 => '.jpg', 3 => '.png', 6 => '.bmp');
+            $imgInfo = @getimagesize($file['logo']['tmp_name']);
+            $ext = ($imgInfo && isset($extMap[$imgInfo[2]])) ? $extMap[$imgInfo[2]] : '.png';
+            $logoFilename = '/tmp/logo' . $ext;
 
             move_uploaded_file($file['logo']['tmp_name'], $logoFilename);
-            $id = kernel::single('base_storager')->save_upload( $logoFilename, 'image', '', $msg );
+            $id = kernel::single('base_storager')->save_upload($logoFilename, 'image', '', $msg, $ext);
             
             if (!$id) {
                 $this->end(false, $msg);

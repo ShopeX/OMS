@@ -274,6 +274,12 @@ class wap_receipt_delivery{
         $filter = array('delivery_id' => $deliveryInfo['delivery_id']);
         $data = array('status' => 2,'logi_no'=>'');
         $deliveryBillObj->update($data, $filter);
+
+        if (!empty($deliveryInfo['delivery_id'])) {
+            kernel::single('wap_delivery_serial')->releasePrepareSerialByDelivery(
+                intval($deliveryInfo['delivery_id'])
+            );
+        }
     }
 
     /**
@@ -304,6 +310,54 @@ class wap_receipt_delivery{
         $data = array('status' => 0);
 
         $deliveryObj->update($data, $filter);
+    }
+
+    /**
+     * 仅更新 WAP 本地签收状态，不回写 OME
+     *
+     * @param string $outer_delivery_bn
+     * @param string $err_msg
+     * @return bool
+     */
+    public function signDlyLocalByOuterDlyBn($outer_delivery_bn, &$err_msg = '')
+    {
+        $outer_delivery_bn = trim($outer_delivery_bn);
+        if ($outer_delivery_bn === '') {
+            $err_msg = '发货单号不能为空';
+            return false;
+        }
+
+        $deliveryObj  = app::get('wap')->model('delivery');
+        $deliveryInfo = $deliveryObj->dump(
+            array('outer_delivery_bn' => $outer_delivery_bn),
+            'delivery_id,delivery_bn,is_received'
+        );
+        if (empty($deliveryInfo['delivery_id'])) {
+            $err_msg = '发货单不存在';
+            return false;
+        }
+        if (intval($deliveryInfo['is_received']) === 2) {
+            return true;
+        }
+
+        $result = $deliveryObj->save(array(
+            'delivery_id'   => $deliveryInfo['delivery_id'],
+            'is_received'   => 2,
+            'last_modified' => time(),
+        ));
+        if (!$result) {
+            $err_msg = '更新发货单签收状态失败';
+            return false;
+        }
+
+        if (!empty($deliveryInfo['delivery_bn'])) {
+            app::get('wap')->model('delivery_code')->update(
+                array('status' => 1),
+                array('delivery_bn' => $deliveryInfo['delivery_bn'])
+            );
+        }
+
+        return true;
     }
 
 }

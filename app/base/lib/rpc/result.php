@@ -22,8 +22,8 @@ class base_rpc_result{
         $sign = $response['sign'];
         unset($response['sign']);
 
-        //注销多余的垃圾参数
-        unset($response['_FROM_MQ_QUEUE'], $response['rpc_id'], $response['task_type'], $response['taskmgr_sign'], $response['pathinfo']);
+        //注销多余的垃圾参数（fails 为 taskmgr 重试计数，不能参与业务验签）
+        unset($response['_FROM_MQ_QUEUE'], $response['rpc_id'], $response['task_type'], $response['taskmgr_sign'], $response['pathinfo'], $response['fails']);
 
         $this->response = $response;
 		if (!$app_id || !base_shopnode::token($app_id))

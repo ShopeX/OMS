@@ -66,7 +66,7 @@ $db['carrier']=array (
             ),
             'tms_carrier_id' =>
             array (
-                    'type' => 'varchar(30)',
+                    'type' => 'varchar(64)',
                     'label' => 'tms端承运商ID',
                     'editable' => false,
                     'required' => false,
@@ -84,16 +84,71 @@ $db['carrier']=array (
             'carrier_isvalid' =>
             array (
                     'type' => 'number',
-                    'label' => '是否启用',
+                    'label' => '承运商状态',
                     'editable' => false,
                     'required' => false,
                     'in_list' => false,
                     'default_in_list' => false,
                     'default' => 0,
+                    'order' => 89,
+            ),
+            'platform_status' => array (
+                'type' => 'varchar(30)',
+                'label' => '平台状态',
+                'editable' => false,
+                'required' => false,
+                'in_list' => false,
+                'default_in_list' => false,
+                'order' => 50,
+            ),
+            'memo' => array (
+                'type' => 'varchar(80)',
+                'label' => '备注',
+                'editable' => false,
+                'required' => false,
+                'in_list' => true,
+                'default_in_list' => true,
+                'width' => 300,
+                'order' => 95,
+            ),
+            'disabled' => array(
+                'type'          => 'bool',
+                'label'         => '禁用状态',
+                'default'       => 'false',
+                'in_list'       => true,
+                'default_in_list' => true,
+                'order' => 90,
+            ),
+            'at_time' => array(
+                'type'            => 'TIMESTAMP',
+                'label'           => '创建时间',
+                'default'         => 'CURRENT_TIMESTAMP',
+                'in_list'         => true,
+                'default_in_list' => true,
+                'order'           => 1000,
+            ),
+            'up_time' => array(
+                'type'            => 'TIMESTAMP',
+                'label'           => '更新时间',
+                'default'         => 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+                'in_list'         => true,
+                'default_in_list' => true,
+                'order'           => 1010,
             ),
     ),
     'index' => array (
-            
+        'idx_shop_carrier_code'  => array(
+            'columns' => array(
+                0 => 'shop_id',
+                1 => 'carrier_code',
+            ),
+            'prefix' => 'unique',
+        ),
+        'idx_disabled'  => array(
+            'columns' => array(
+                0 => 'disabled',
+            ),
+        ),
     ),
     'comment' => '承运商管理表',
     'engine' => 'innodb',

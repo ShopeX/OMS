@@ -24,12 +24,12 @@
   <title>
     订单列表
   </title>
-  <link rel="stylesheet" href="<{$env.app.res_url}>/css/common.css">
-  <link rel="stylesheet" href="<{$env.app.res_url}>/css/index.css">
+  <link rel="stylesheet" href="<{$env.app.res_url}>/css/common.css?v=20260714a">
+  <link rel="stylesheet" href="<{$env.app.res_url}>/css/index.css?v=20260714">
   <!-- 添加自定义select组件样式 - 解决Mac版微信小程序兼容性问题 -->
-  <link rel="stylesheet" href="<{$env.app.res_url}>/css/custom-select.css">
+  <link rel="stylesheet" href="<{$env.app.res_url}>/css/custom-select.css?v=20260703d">
   <script src="<{$env.app.res_url}>/js/axios.min.js"></script>
-  <script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js"></script>
+  <{include file="store/wxwork_sdk.html"}>
 </head>
 
 <body>
@@ -52,10 +52,18 @@
               <a href="<{$rs.href}>" style="text-decoration:none;" class="text_5 <{if $rs.curr_view}>tab-active<{/if}>">
                 <{$rs.label}>
               </a>
+              <{if $is_selfpick}>
+              <{if $rsk == 'pending' && $rs.count > 0}>
+              <div class="text-wrapper_3 flex-col">
+                <span class="text_6"><{$rs.count}></span>
+              </div>
+              <{/if}>
+              <{else}>
               <{if in_array($rsk, array('wait_delivery','picked')) && $rs.count > 0}>
               <div class="text-wrapper_3 flex-col">
                 <span class="text_6"><{$rs.count}></span>
               </div>
+              <{/if}>
               <{/if}>
             </div>
           <{/foreach}>
@@ -67,7 +75,7 @@
      
       <div class="group_6 flex-col justify-between">
         <!-- 日期选择 -->
-         <{if $title == '全部' || $title == '待发货'}>
+         <{if !$is_selfpick && ($title == '全部' || $title == '待发货')}>
         <div class="date-select-box flex-row">
           <button class="date-select-item <{if $dateType == 'today'}>active<{/if}>" data-type="today">今天</button>
           <button class="date-select-item <{if $dateType == 'yesterday'}>active<{/if}>" data-type="yesterday">昨天</button>
@@ -87,8 +95,8 @@
           
           </div>
 
-          <div class="text-wrapper_4 flex-col">
-            <input class="text_10 search-input" type="text" placeholder="请输入订单号" style="display:block">
+          <div class="text-wrapper_4 flex-col search-input-wrap">
+            <input class="text_10 search-input" type="text" placeholder="请输入订单号" autocomplete="off" autocorrect="off" autocapitalize="off" enterkeyhint="search">
             <div class="custom-channel-select" data-name="channel" style="display:none">
               <div class="custom-channel-select-trigger">
                 <span class="custom-channel-select-value">请选择</span>
@@ -120,7 +128,7 @@
      
     </div>
     <!-- list -->
-    <div class="section_4 flex-col" id="orderList" <{if $title == '待发货'}><{elseif $title == '全部'}>style="margin: 12.5rem 0.75rem 0;"<{else}>style="margin: 8.62rem 0.75rem 0;"<{/if}>>
+    <div class="section_4 flex-col" id="orderList" <{if $is_selfpick}>style="margin: 8.62rem 0.75rem 0;"<{elseif $title == '待发货'}><{elseif $title == '全部'}>style="margin: 12.5rem 0.75rem 0;"<{else}>style="margin: 8.62rem 0.75rem 0;"<{/if}>>
       <{include file="order/order_list_more.html" }>
     </div>
   </div>
@@ -154,7 +162,7 @@
   </div>
 
   <!-- 底部操作按钮 - 仅在待发货页面显示 -->
-  <{if $title == '待发货'}>
+  <{if !$is_selfpick && $title == '待发货'}>
   <div class="batch-action-footer" id="batchActionFooter" style="display: none;">
     <div class="batch-action-buttons">
       <button class="batch-action-btn" id="batchDeliveryBtn" onclick="goToBatchDelivery()" style="display: none;">下一步</button>
@@ -165,15 +173,16 @@
   <{/if}>
 
   <{include file="store/footer.html"}>
-  <script src="<{$env.app.res_url}>/js/common.js?v=20250813"></script>
+  <script src="<{$env.app.res_url}>/js/common.js?v=20260714a"></script>
   <!-- 添加自定义select组件脚本 - 解决Mac版微信小程序兼容性问题 -->
-  <script src="<{$env.app.res_url}>/js/custom-select.js"></script>
+  <script src="<{$env.app.res_url}>/js/custom-select.js?v=20260703d"></script>
   <script src="<{$env.app.res_url}>/js/batch-print.js?v=20250813"></script>
   <script src="<{$env.app.res_url}>/js/batch-consign.js"></script>
   <script>
     // 页面类型标识
     const currentPageTitle = '<{$title}>';
-    const isDeliveryPage = currentPageTitle === '待发货';
+    const isSelfpickPage = <{if $is_selfpick}>true<{else}>false<{/if}>;
+    const isDeliveryPage = !isSelfpickPage && currentPageTitle === '待发货';
 
     // 初始化弹窗实例
     const modal = new Modal();
@@ -209,6 +218,15 @@
       }
     }
 
+    // 门店拒单原因（订单确认页）
+    const orderRefuseReasons = [
+      <{if $refuse_reasons}>
+      <{foreach from=$refuse_reasons item=reason name=refuseLoop}>
+      { value: '<{$reason.reason_id}>', label: '<{$reason.reason_name|escape:'javascript'}>' }<{if !$smarty.foreach.refuseLoop.last}>,<{/if}>
+      <{/foreach}>
+      <{/if}>
+    ];
+
     // API 方法封装
     const api = {
       // 获取订单列表
@@ -219,7 +237,10 @@
         return request.post('<{$link_url}>', params);
       },
       updateLogino(params) {
-        return request.post("<{$delivery_link.doUpdateLogiNo}>", params);
+        return request.post("<{$delivery_link.doAddLogiNo}>", params);
+      },
+      doRefuse(params) {
+        return request.post("<{$delivery_link.doRefuse}>", params);
       },
     };
 
@@ -285,7 +306,8 @@
                   sensitiveTexts[0].setAttribute('data-raw', shipMobile);
                   sensitiveTexts[1].setAttribute('data-raw', json.data.ship_addr);
 
-                  sensitiveTexts[0].setAttribute('data-raw-copy', shipMobile + ' ' + json.data.ship_addr);
+                  var fullCopyText = json.data.ship_name + ' ' + json.data.ship_mobile + ' ' + json.data.ship_addr;
+                  sensitiveTexts[0].setAttribute('data-raw-copy', fullCopyText);
 
                   sensitiveTexts.forEach(text => {
                     text.textContent = isVisible ?
@@ -300,6 +322,13 @@
                         text.getAttribute('data-masked-copy'));
                     }
                   });
+                  // 同步更新一键复制
+                  const oneClickCopy = listItem.querySelector('.one-click-copy');
+                  if (oneClickCopy) {
+                    oneClickCopy.setAttribute('data-copy', isVisible ?
+                      fullCopyText :
+                      (sensitiveTexts[0].getAttribute('data-masked-copy') || oneClickCopy.getAttribute('data-copy')));
+                  }
                 } else {
                   showToast(json.msg);
                   isVisible = !isVisible;
@@ -329,6 +358,13 @@
                   text.getAttribute('data-masked-copy'));
               }
             });
+            // 同步更新一键复制
+            const oneClickCopy = listItem.querySelector('.one-click-copy');
+            if (oneClickCopy) {
+              oneClickCopy.setAttribute('data-copy', isVisible ?
+                (sensitiveTexts[0].getAttribute('data-raw-copy') || oneClickCopy.getAttribute('data-copy')) :
+                (sensitiveTexts[0].getAttribute('data-masked-copy') || oneClickCopy.getAttribute('data-copy')));
+            }
           });
 
           // 添加触摸反馈
@@ -474,8 +510,30 @@
       const options = document.getElementById('selectOptions');
       const currentType = selectBox.querySelector('.current-type');
       const searchInput = document.querySelector('.search-input');
+      const searchInputWrap = document.querySelector('.search-input-wrap');
       const mask = document.querySelector('.mask');
       let isOpen = false;
+
+      if (searchInputWrap && searchInput) {
+        searchInputWrap.addEventListener('click', function (e) {
+          if (searchInput.style.display === 'none') {
+            return;
+          }
+          if (e.target.closest('.custom-channel-select') || e.target.closest('.custom-store-select')) {
+            return;
+          }
+          if (document.activeElement === searchInput) {
+            return;
+          }
+          searchInput.focus();
+          if (typeof searchInput.setSelectionRange === 'function') {
+            try {
+              const len = searchInput.value.length;
+              searchInput.setSelectionRange(len, len);
+            } catch (err) {}
+          }
+        });
+      }
 
       function openSelect() {
         if (!isOpen) {
@@ -862,6 +920,27 @@
         }
       }
 
+      /** 从第一页重新加载列表（替换 DOM，page 递增后供滚动分页） */
+      async function reloadOrderListFromStart() {
+        pageState.page = 1;
+        pageState.hasMore = true;
+        pageState.loading = false;
+        const existingNoMore = document.querySelector('.loading-more');
+        if (existingNoMore) {
+          existingNoMore.remove();
+        }
+        await loadOrders(false);
+        if (isDeliveryPage) {
+          applySelectionState();
+        }
+        updateSelectedCount();
+      }
+
+      async function refreshOrderListAfterAction() {
+        modal.hide();
+        await reloadOrderListFromStart();
+      }
+
       // 检查是否需要显示"没有更多数据"提示
       function checkAndShowNoMoreTip() {
         // 延迟执行，确保DOM已经更新
@@ -1115,45 +1194,850 @@
         }
       }
     };
- 
+
+    function prepareStock(delivery_id) {
+      if (delivery_id == "") {
+        alert("无效操作!");
+        return false;
+      }
+
+      $.post("<{$delivery_link.getPrepareStockInfo}>", { delivery_id: delivery_id }, function (rs) {
+        let json;
+        try {
+          json = typeof rs === 'string' ? JSON.parse(rs) : rs;
+        } catch (e) {
+          showToast('请求失败');
+          return;
+        }
+        if (json.res !== 'succ') {
+          showToast(json.msg || '获取备货信息失败');
+          return;
+        }
+        if (!json.has_serial) {
+          showToast('该发货单无需备货扫描');
+          return;
+        }
+        showPrepareStockModal(delivery_id, json);
+      }).fail(function () {
+        showToast('请求失败');
+      });
+    }
+
+    function showPrepareStockModal(delivery_id, serialInfo) {
+      const scannedList = (serialInfo.scanned_list || []).map(function (row) {
+        return {
+          item_serial_id: row.item_serial_id,
+          sn: row.sn,
+          bn: row.bn,
+          product_name: row.product_name
+        };
+      });
+      const scannedMap = {};
+      scannedList.forEach(function (row) {
+        scannedMap[row.bn] = (scannedMap[row.bn] || 0) + 1;
+      });
+      let opNoValue = serialInfo.op_no || '';
+
+      function escapeAttr(str) {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/"/g, '&quot;')
+          .replace(/</g, '&lt;');
+      }
+
+      function syncOpNoFromDom() {
+        const opEl = document.getElementById('prepareOpNoInput');
+        if (opEl) {
+          opNoValue = opEl.value.trim();
+        }
+      }
+
+      function getOpNo() {
+        syncOpNoFromDom();
+        return opNoValue;
+      }
+
+      function isOpNoReady() {
+        return getOpNo() !== '';
+      }
+
+      function updateSerialInputState() {
+        const serialInput = document.getElementById('prepareScanInput');
+        const scanIcon = modal.content.querySelector('.prepare-scan-icon');
+        const inlineConfirmBtn = modal.content.querySelector('.serial-input-confirm-btn');
+        const ready = isOpNoReady();
+        if (serialInput) {
+          serialInput.disabled = !ready;
+          serialInput.placeholder = '请扫描或输入唯一码';
+        }
+        if (scanIcon) {
+          scanIcon.style.opacity = ready ? '1' : '0.4';
+          scanIcon.style.cursor = ready ? 'pointer' : 'not-allowed';
+        }
+        if (inlineConfirmBtn) {
+          inlineConfirmBtn.disabled = !ready;
+          inlineConfirmBtn.style.opacity = ready ? '1' : '0.4';
+          inlineConfirmBtn.style.cursor = ready ? 'pointer' : 'not-allowed';
+        }
+      }
+
+      function getTotalRequired() {
+        return (serialInfo.serial_items || []).reduce(function (sum, item) {
+          return sum + parseInt(item.number, 10);
+        }, 0);
+      }
+
+      function isScanComplete() {
+        return scannedList.length >= getTotalRequired();
+      }
+
+      function submitFinishPrepareStock() {
+        if (!isOpNoReady()) {
+          showToast('请先录入工号');
+          const opInput = document.getElementById('prepareOpNoInput');
+          if (opInput) {
+            opInput.focus();
+          }
+          return;
+        }
+        if (!isScanComplete()) {
+          showToast('请先扫描全部唯一码');
+          return;
+        }
+        const confirmBtn = modal.confirmBtn;
+        const originalText = confirmBtn ? confirmBtn.innerHTML : '';
+        if (confirmBtn) {
+          confirmBtn.disabled = true;
+          confirmBtn.style.opacity = '0.6';
+          confirmBtn.innerHTML = '提交中...';
+        }
+        $.post("<{$delivery_link.finishPrepareStock}>", { delivery_id: delivery_id }, function (rs) {
+          let json;
+          try {
+            json = typeof rs === 'string' ? JSON.parse(rs) : rs;
+          } catch (e) {
+            showToast('备货失败');
+            return;
+          }
+          if (json.res !== 'succ') {
+            showToast(json.msg || '备货失败');
+            return;
+          }
+          showToast(json.msg || '备货成功');
+          refreshOrderListAfterAction();
+        }).fail(function () {
+          showToast('备货失败');
+        }).always(function () {
+          if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.style.opacity = '1';
+            confirmBtn.innerHTML = originalText;
+          }
+        });
+      }
+
+      function renderModalContent() {
+        const itemHtml = (serialInfo.serial_items || []).map(function (item) {
+          const scanned = scannedMap[item.bn] || 0;
+          return '<div class="serial-item-row">' +
+            '<div class="serial-item-name">' + item.product_name + '</div>' +
+            '<div class="serial-item-meta">货号：' + item.bn + '　数量：' + item.number + item.unit + '</div>' +
+            '<div class="serial-item-progress">已扫 ' + scanned + ' / ' + item.number + '</div>' +
+            '</div>';
+        }).join('');
+
+        const scannedHtml = scannedList.length
+          ? scannedList.map(function (row, idx) {
+              return '<div class="serial-scanned-row">' +
+                '<span>' + row.product_name + '：' + row.sn + '</span>' +
+                '<span class="serial-remove-btn" data-index="' + idx + '">删除</span>' +
+                '</div>';
+            }).join('')
+          : '<div class="serial-scanned-empty">暂无扫描记录</div>';
+
+        return '<div class="serial-scan-modal">' +
+          '<div class="serial-scan-tip">请先录入工号，再扫描唯一码，全部扫满后可完成备货</div>' +
+          '<div class="serial-item-list">' + itemHtml + '</div>' +
+          '<div class="modal-form-item">' +
+            '<div class="input-box flex-row align-center justify-between">' +
+              '<label style="color:#e53935;">工号</label>' +
+              '<input type="text" class="modal-input" id="prepareOpNoInput" placeholder="请扫描或输入工号" value="' + escapeAttr(opNoValue) + '">' +
+            '</div>' +
+          '</div>' +
+          getSerialInputFieldHtml('prepareScanInput', 'prepare-scan-icon') +
+          '<div class="serial-scanned-title">已扫描</div>' +
+          '<div class="serial-scanned-list" id="prepareScannedList">' + scannedHtml + '</div>' +
+          '</div>';
+      }
+
+      function bindPrepareModalEvents() {
+        const input = document.getElementById('prepareScanInput');
+        const opInput = document.getElementById('prepareOpNoInput');
+        const listEl = document.getElementById('prepareScannedList');
+        if (modal.confirmBtn) {
+          modal.confirmBtn.style.display = isScanComplete() ? 'block' : 'none';
+        }
+
+        function doScan() {
+          if (!isOpNoReady()) {
+            showToast('请先录入工号');
+            if (opInput) {
+              opInput.focus();
+            }
+            return;
+          }
+          const sn = input ? input.value.trim() : '';
+          if (!sn) {
+            showToast('请输入唯一码');
+            return;
+          }
+          $.post("<{$delivery_link.scanPrepareStockSerial}>", {
+            delivery_id: delivery_id,
+            sn: sn,
+            op_no: getOpNo()
+          }, function (rs) {
+            let json;
+            try {
+              json = typeof rs === 'string' ? JSON.parse(rs) : rs;
+            } catch (e) {
+              showToast('扫描失败');
+              return;
+            }
+            if (json.res !== 'succ') {
+              showToast(json.msg || '扫描失败');
+              return;
+            }
+            scannedList.push({
+              item_serial_id: json.item_serial_id,
+              sn: json.sn,
+              bn: json.bn,
+              product_name: json.product_name
+            });
+            scannedMap[json.bn] = (scannedMap[json.bn] || 0) + 1;
+            syncOpNoFromDom();
+            if (input) {
+              input.value = '';
+              input.focus();
+            }
+            modal.content.innerHTML = renderModalContent();
+            bindPrepareModalEvents();
+          }).fail(function () {
+            showToast('扫描失败');
+          });
+        }
+
+        if (opInput) {
+          opInput.oninput = function () {
+            syncOpNoFromDom();
+            updateSerialInputState();
+          };
+          opInput.onkeydown = function (e) {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              syncOpNoFromDom();
+              updateSerialInputState();
+              if (input && isOpNoReady()) {
+                input.focus();
+              }
+            }
+          };
+        }
+
+        if (input) {
+          input.onkeydown = function (e) {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              doScan();
+            }
+          };
+        }
+
+        const inlineConfirmBtn = modal.content.querySelector('.serial-input-confirm-btn');
+        if (inlineConfirmBtn) {
+          inlineConfirmBtn.onclick = function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            doScan();
+          };
+        }
+
+        modal.content.querySelectorAll('.serial-scan-modal .input-box, .serial-scan-modal .input-field-wrap').forEach(function (wrap) {
+          wrap.addEventListener('click', function (e) {
+            if (e.target.closest('.scan-icon') || e.target.closest('.logi-no-confirm-btn')) {
+              return;
+            }
+            const fieldInput = wrap.querySelector('input');
+            if (fieldInput && document.activeElement !== fieldInput) {
+              fieldInput.focus();
+            }
+          });
+        });
+
+        const scanIcon = modal.content.querySelector('.prepare-scan-icon');
+        if (scanIcon) {
+          scanIcon.onclick = function () {
+            if (!isOpNoReady()) {
+              showToast('请先录入工号');
+              if (opInput) {
+                opInput.focus();
+              }
+              return;
+            }
+            scanQRCodeForSerial(function (code) {
+              if (input) {
+                input.value = code;
+              }
+              doScan();
+            });
+          };
+        }
+
+        if (listEl) {
+          listEl.onclick = function (e) {
+            const target = e.target;
+            if (!target.classList.contains('serial-remove-btn')) {
+              return;
+            }
+            const index = parseInt(target.getAttribute('data-index'), 10);
+            if (isNaN(index) || !scannedList[index]) {
+              return;
+            }
+            const removed = scannedList[index];
+            $.post("<{$delivery_link.removePrepareStockSerial}>", {
+              delivery_id: delivery_id,
+              item_serial_id: removed.item_serial_id
+            }, function (rs) {
+              let json;
+              try {
+                json = typeof rs === 'string' ? JSON.parse(rs) : rs;
+              } catch (err) {
+                showToast('删除失败');
+                return;
+              }
+              if (json.res !== 'succ') {
+                showToast(json.msg || '删除失败');
+                return;
+              }
+              scannedList.splice(index, 1);
+              scannedMap[removed.bn] = Math.max(0, (scannedMap[removed.bn] || 0) - 1);
+              syncOpNoFromDom();
+              modal.content.innerHTML = renderModalContent();
+              bindPrepareModalEvents();
+            }).fail(function () {
+              showToast('删除失败');
+            });
+          };
+        }
+
+        if (modal.confirmBtn) {
+          modal.confirmBtn.onclick = function () {
+            submitFinishPrepareStock();
+          };
+        }
+
+        updateSerialInputState();
+      }
+
+      modal.show({
+        title: '唯一码扫描',
+        confirmText: '完成备货',
+        isShowCancleBtn: true,
+        fields: [
+          {
+            type: 'html',
+            html: renderModalContent()
+          }
+        ],
+        onConfirm: function () {},
+        onCancel: function () {
+          modal.hide();
+        }
+      });
+
+      bindPrepareModalEvents();
+      const opInputEl = document.getElementById('prepareOpNoInput');
+      if (opInputEl) {
+        opInputEl.focus();
+      }
+    }
+
     function confirmDelivery(delivery_id) {
       if (delivery_id == "") {
         alert("无效操作!");
         return false;
       }
 
-      var ajax_url = "<{$delivery_link.doConsign}>";
-      $.post(ajax_url, { 'delivery_id': delivery_id }, function (rs) {
-        if (rs) {
-          json = JSON.parse(rs);
+      $.post("<{$delivery_link.getConsignPrepareInfo}>", { delivery_id: delivery_id }, function (rs) {
+        let json;
+        try {
+          json = typeof rs === 'string' ? JSON.parse(rs) : rs;
+        } catch (e) {
+          showToast('请求失败');
+          return;
+        }
+        if (json.res !== 'succ') {
+          showToast(json.msg || '获取发货明细失败');
+          return;
+        }
+        if (!json.has_serial) {
+          submitConsign(delivery_id);
+          return;
+        }
+        if (!json.is_prepare_complete) {
+          showToast('请先完成备货扫描');
+          return;
+        }
+        showConsignPrepareModal(delivery_id, json);
+      }).fail(function () {
+        showToast('请求失败');
+      });
+    }
+
+    function showConsignPrepareModal(delivery_id, info) {
+      var corpList = <{$corpList}>;
+      var corpListOptions = (corpList || []).map(function (corp) {
+        return { value: corp.type, label: corp.name };
+      });
+
+      var tips = '';
+      if (info.source_status === 'WAIT_BUYER_CONFIRM_GOODS') {
+        tips = '平台已发货，请核对填写的物流单号';
+      }
+
+      var scannedHtml = (info.scanned_list || []).map(function (row) {
+        return '<div class="serial-scanned-row">' +
+          '<span>' + row.product_name + '：' + row.sn + '</span>' +
+          '</div>';
+      }).join('');
+
+      var fields = [
+        {
+          type: 'html',
+          html: '<div class="serial-scan-modal">' +
+            '<div class="serial-item-list">' +
+            (info.serial_items || []).map(function (item) {
+              return '<div class="serial-item-row">' +
+                '<div class="serial-item-name">' + item.product_name + '</div>' +
+                '<div class="serial-item-meta">货号：' + item.bn + '　数量：' + item.number + item.unit + '</div>' +
+                '</div>';
+            }).join('') +
+            '</div>' +
+            '<div class="serial-scanned-title">唯一码</div>' +
+            '<div class="serial-scanned-list">' + (scannedHtml || '<div class="serial-scanned-empty">暂无备货唯一码</div>') + '</div>' +
+            '</div>'
+        }
+      ];
+
+      if (!info.has_logi_no) {
+        fields.push({
+          type: 'select',
+          name: 'logi_code',
+          label: '快递公司',
+          required: true,
+          options: corpListOptions
+        });
+        fields.push({
+          type: 'input',
+          name: 'logi_no',
+          label: '运单号',
+          placeholder: '请输入运单号',
+          required: true,
+          append: getLogiNoInputAppend()
+        });
+      }
+
+      modal.show({
+        title: '确认发货',
+        tips: tips,
+        confirmText: '确认发货',
+        isShowCancleBtn: true,
+        fields: fields,
+        onConfirm: async function (formData) {
+          const confirmBtn = modal.confirmBtn;
+          const originalText = confirmBtn ? confirmBtn.innerHTML : '';
+          if (confirmBtn) {
+            confirmBtn.disabled = true;
+            confirmBtn.style.opacity = '0.6';
+            confirmBtn.innerHTML = '提交中...';
+          }
+          try {
+            var logiExtra = null;
+            if (!info.has_logi_no) {
+              if (!formData.logi_code || !formData.logi_no) {
+                showToast('请填写快递公司和运单号');
+                return;
+              }
+              logiExtra = {
+                logi_code: formData.logi_code,
+                logi_no: formData.logi_no
+              };
+            }
+            await submitConsign(delivery_id, info.serial_items_payload || {}, info.op_no || '', logiExtra);
+          } catch (error) {
+            const msg = (error && error.msg) ? error.msg : '提交失败，请稍后重试';
+            showToast(msg);
+          } finally {
+            if (confirmBtn) {
+              confirmBtn.disabled = false;
+              confirmBtn.style.opacity = '1';
+              confirmBtn.innerHTML = originalText;
+            }
+          }
+        },
+        onCancel: function () {
+          modal.hide();
+        }
+      });
+
+      bindLogiNoInputSubmit();
+    }
+
+    function submitConsign(delivery_id, serialItems, opNo, logiExtra) {
+      const postData = { delivery_id: delivery_id };
+      if (serialItems) {
+        postData.serial_items = JSON.stringify(serialItems);
+      }
+      if (opNo) {
+        postData.op_no = opNo;
+      }
+      if (logiExtra && logiExtra.logi_code) {
+        postData.logi_code = logiExtra.logi_code;
+      }
+      if (logiExtra && logiExtra.logi_no) {
+        postData.logi_no = logiExtra.logi_no;
+      }
+      return new Promise(function (resolve, reject) {
+        $.post("<{$delivery_link.doConsign}>", postData, function (rs) {
+          if (!rs) {
+            reject({ msg: '请求失败' });
+            return;
+          }
+          let json;
+          try {
+            json = typeof rs === 'string' ? JSON.parse(rs) : rs;
+          } catch (e) {
+            reject({ msg: '请求失败' });
+            return;
+          }
           if (json.res == 'succ') {
             showToast('发货成功');
-            pageState.page = 1;
-            pageState.hasMore = true;
-
-            const data = api.getOrders(pageState);
-            data.then(html => {
-                // 处理返回的数据，更新页面
-                $('#orderList').empty();
-                $('#orderList').append(html);
-            }).catch(error => {
-                $('#orderList').empty();
-                $('#orderList').append(data);
-            });
-
-            const listContainer = document.querySelector('.section_4');
-            commonFeatures.initAll(listContainer);
-            // 初始化选中状态
-            if (isDeliveryPage) {
-              applySelectionState();
-            }
-            updateSelectedCount();
-
+            modal.hide();
+            reloadOrderListFromStart();
+            resolve(json);
           } else {
-            showToast(json.msg);
+            reject({ msg: json.msg || '发货失败' });
           }
-        } else {
-          showToast('请求失败');
+        }).fail(function () {
+          reject({ msg: '请求失败' });
+        });
+      });
+    }
+
+    function showSerialScanModal(delivery_id, serialInfo) {
+      const scannedList = [];
+      const scannedMap = {};
+      let opNoValue = '';
+
+      function escapeAttr(str) {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/"/g, '&quot;')
+          .replace(/</g, '&lt;');
+      }
+
+      function syncOpNoFromDom() {
+        const opEl = document.getElementById('serialOpNoInput');
+        if (opEl) {
+          opNoValue = opEl.value.trim();
+        }
+      }
+
+      function getOpNo() {
+        syncOpNoFromDom();
+        return opNoValue;
+      }
+
+      function isOpNoReady() {
+        return getOpNo() !== '';
+      }
+
+      function updateSerialInputState() {
+        const serialInput = document.getElementById('serialScanInput');
+        const scanIcon = modal.content.querySelector('.serial-scan-icon');
+        const inlineConfirmBtn = modal.content.querySelector('.serial-input-confirm-btn');
+        const ready = isOpNoReady();
+        if (serialInput) {
+          serialInput.disabled = !ready;
+          serialInput.placeholder = '请扫描或输入唯一码';
+        }
+        if (scanIcon) {
+          scanIcon.style.opacity = ready ? '1' : '0.4';
+          scanIcon.style.cursor = ready ? 'pointer' : 'not-allowed';
+        }
+        if (inlineConfirmBtn) {
+          inlineConfirmBtn.disabled = !ready;
+          inlineConfirmBtn.style.opacity = ready ? '1' : '0.4';
+          inlineConfirmBtn.style.cursor = ready ? 'pointer' : 'not-allowed';
+        }
+      }
+
+      function getSerialItemsPayload() {
+        const payload = {};
+        scannedList.forEach(function (row) {
+          if (!payload[row.bn]) {
+            payload[row.bn] = [];
+          }
+          payload[row.bn].push(row.sn);
+        });
+        return payload;
+      }
+
+      function getTotalRequired() {
+        return (serialInfo.serial_items || []).reduce(function (sum, item) {
+          return sum + parseInt(item.number, 10);
+        }, 0);
+      }
+
+      function isScanComplete() {
+        return scannedList.length >= getTotalRequired();
+      }
+
+      function renderModalContent() {
+        const itemHtml = (serialInfo.serial_items || []).map(function (item) {
+          const scanned = scannedMap[item.bn] || 0;
+          return '<div class="serial-item-row">' +
+            '<div class="serial-item-name">' + item.product_name + '</div>' +
+            '<div class="serial-item-meta">货号：' + item.bn + '　数量：' + item.number + item.unit + '</div>' +
+            '<div class="serial-item-progress">已扫 ' + scanned + ' / ' + item.number + '</div>' +
+            '</div>';
+        }).join('');
+
+        const scannedHtml = scannedList.length
+          ? scannedList.map(function (row, idx) {
+              return '<div class="serial-scanned-row">' +
+                '<span>' + row.product_name + '：' + row.sn + '</span>' +
+                '<span class="serial-remove-btn" data-index="' + idx + '">删除</span>' +
+                '</div>';
+            }).join('')
+          : '<div class="serial-scanned-empty">暂无扫描记录</div>';
+
+        return '<div class="serial-scan-modal">' +
+          '<div class="serial-scan-tip">请先录入工号，再扫描唯一码，全部扫满后可确认发货</div>' +
+          '<div class="serial-item-list">' + itemHtml + '</div>' +
+          '<div class="modal-form-item">' +
+            '<div class="input-box flex-row align-center justify-between">' +
+              '<label style="color:#e53935;">工号</label>' +
+              '<input type="text" class="modal-input" id="serialOpNoInput" placeholder="请扫描或输入工号" value="' + escapeAttr(opNoValue) + '">' +
+            '</div>' +
+          '</div>' +
+          getSerialInputFieldHtml('serialScanInput', 'serial-scan-icon') +
+          '<div class="serial-scanned-title">已扫描</div>' +
+          '<div class="serial-scanned-list" id="serialScannedList">' + scannedHtml + '</div>' +
+          '</div>';
+      }
+
+      function bindSerialModalEvents() {
+        const input = document.getElementById('serialScanInput');
+        const opInput = document.getElementById('serialOpNoInput');
+        const listEl = document.getElementById('serialScannedList');
+        const confirmBtn = modal.confirmBtn;
+
+        if (confirmBtn) {
+          confirmBtn.style.display = isScanComplete() ? 'block' : 'none';
+        }
+
+        function doScan() {
+          if (!isOpNoReady()) {
+            showToast('请先录入工号');
+            if (opInput) {
+              opInput.focus();
+            }
+            return;
+          }
+          const sn = input ? input.value.trim() : '';
+          if (!sn) {
+            showToast('请输入唯一码');
+            return;
+          }
+          $.post("<{$delivery_link.scanDeliverySerial}>", {
+            delivery_id: delivery_id,
+            sn: sn,
+            op_no: getOpNo(),
+            scanned_list: JSON.stringify(scannedList)
+          }, function (rs) {
+            let json;
+            try {
+              json = typeof rs === 'string' ? JSON.parse(rs) : rs;
+            } catch (e) {
+              showToast('扫描失败');
+              return;
+            }
+            if (json.res !== 'succ') {
+              showToast(json.msg || '扫描失败');
+              return;
+            }
+            scannedList.push({
+              sn: json.sn,
+              bn: json.bn,
+              product_name: json.product_name
+            });
+            scannedMap[json.bn] = (scannedMap[json.bn] || 0) + 1;
+            syncOpNoFromDom();
+            if (input) {
+              input.value = '';
+              input.focus();
+            }
+            modal.content.innerHTML = renderModalContent();
+            bindSerialModalEvents();
+          }).fail(function () {
+            showToast('扫描失败');
+          });
+        }
+
+        if (opInput) {
+          opInput.oninput = function () {
+            syncOpNoFromDom();
+            updateSerialInputState();
+          };
+          opInput.onkeydown = function (e) {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              syncOpNoFromDom();
+              updateSerialInputState();
+              if (input && isOpNoReady()) {
+                input.focus();
+              }
+            }
+          };
+        }
+
+        if (input) {
+          input.onkeydown = function (e) {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              doScan();
+            }
+          };
+        }
+
+        const inlineConfirmBtn = modal.content.querySelector('.serial-input-confirm-btn');
+        if (inlineConfirmBtn) {
+          inlineConfirmBtn.onclick = function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            doScan();
+          };
+        }
+
+        modal.content.querySelectorAll('.serial-scan-modal .input-box, .serial-scan-modal .input-field-wrap').forEach(function (wrap) {
+          wrap.addEventListener('click', function (e) {
+            if (e.target.closest('.scan-icon') || e.target.closest('.logi-no-confirm-btn')) {
+              return;
+            }
+            const fieldInput = wrap.querySelector('input');
+            if (fieldInput && document.activeElement !== fieldInput) {
+              fieldInput.focus();
+            }
+          });
+        });
+
+        const scanIcon = modal.content.querySelector('.serial-scan-icon');
+        if (scanIcon) {
+          scanIcon.onclick = function () {
+            if (!isOpNoReady()) {
+              showToast('请先录入工号');
+              if (opInput) {
+                opInput.focus();
+              }
+              return;
+            }
+            scanQRCodeForSerial(function (code) {
+              if (input) {
+                input.value = code;
+              }
+              doScan();
+            });
+          };
+        }
+
+        if (listEl) {
+          listEl.onclick = function (e) {
+            const target = e.target;
+            if (!target.classList.contains('serial-remove-btn')) {
+              return;
+            }
+            const index = parseInt(target.getAttribute('data-index'), 10);
+            if (isNaN(index) || !scannedList[index]) {
+              return;
+            }
+            const removed = scannedList.splice(index, 1)[0];
+            scannedMap[removed.bn] = Math.max(0, (scannedMap[removed.bn] || 0) - 1);
+            syncOpNoFromDom();
+            modal.content.innerHTML = renderModalContent();
+            bindSerialModalEvents();
+          };
+        }
+
+        modal.confirmBtn.onclick = function () {
+          if (!isOpNoReady()) {
+            showToast('请先录入工号');
+            if (opInput) {
+              opInput.focus();
+            }
+            return;
+          }
+          if (!isScanComplete()) {
+            showToast('请先扫描全部唯一码');
+            return;
+          }
+          const confirmBtn = modal.confirmBtn;
+          const originalText = confirmBtn ? confirmBtn.innerHTML : '';
+          if (confirmBtn) {
+            confirmBtn.disabled = true;
+            confirmBtn.style.opacity = '0.6';
+            confirmBtn.innerHTML = '提交中...';
+          }
+          submitConsign(delivery_id, getSerialItemsPayload(), getOpNo());
+          setTimeout(function () {
+            if (confirmBtn) {
+              confirmBtn.disabled = false;
+              confirmBtn.style.opacity = '1';
+              confirmBtn.innerHTML = originalText;
+            }
+          }, 1500);
+        };
+
+        updateSerialInputState();
+      }
+
+      modal.show({
+        title: '唯一码扫描',
+        confirmText: '确认发货',
+        isShowCancleBtn: true,
+        fields: [
+          {
+            type: 'html',
+            html: renderModalContent()
+          }
+        ],
+        onConfirm: function () {},
+        onCancel: function () {
+          modal.hide();
+        }
+      });
+
+      bindSerialModalEvents();
+      const opInputEl = document.getElementById('serialOpNoInput');
+      if (opInputEl) {
+        opInputEl.focus();
+      }
+    }
+
+    function scanQRCodeForSerial(callback) {
+      wapWxScan.requestScan('<{$delivery_link.getWxSign}>', {
+        onSuccess: callback,
+        onFail: function (msg) {
+          showToast(msg);
         }
       });
     }
@@ -1183,25 +2067,7 @@
           json = JSON.parse(rs);
           if (json.rsp == 'succ') {
             showToast('取消快递提交成功');
-            pageState.page = 1;
-            pageState.hasMore = true;
-            const data = api.getOrders(pageState);
-
-            data.then(html => {
-                // 处理返回的数据，更新页面
-                $('#orderList').empty();
-                $('#orderList').append(html);
-            }).catch(error => {
-            });
-
-            const listContainer = document.querySelector('.section_4');
-            commonFeatures.initAll(listContainer);
-            // 初始化选中状态
-            if (isDeliveryPage) {
-              applySelectionState();
-            }
-            updateSelectedCount();
-
+            reloadOrderListFromStart();
           } else {
             showToast(json.msg);
           }
@@ -1220,7 +2086,7 @@
       }
 
       modal.show({
-        title: '补录运单号',
+        title: '录入运单号',
         tips:  tips,
         fields: [
           {
@@ -1236,116 +2102,102 @@
             label: '运单号',
             placeholder: '请输入运单号',
             required: true,
-            append: '<div class="scan-icon" onclick="scanQRCode()"><img src="<{$env.app.res_url}>/img/icon-scan.png" alt="扫码"></div>'
+            append: getLogiNoInputAppend()
           }
         ],
         onConfirm: async (formData) => {
+          const confirmBtn = modal.confirmBtn;
+          const originalText = confirmBtn ? confirmBtn.innerHTML : '';
+          if (confirmBtn) {
+            confirmBtn.disabled = true;
+            confirmBtn.style.opacity = '0.6';
+            confirmBtn.innerHTML = '提交中...';
+          }
           try {
             await api.updateTracking({
               delivery_id,
               ...formData
             });
-            showToast('运单信息更新成功');
+            showToast('录入运单号成功');
             modal.hide();
-
-            pageState.page = 1;
-            pageState.hasMore = true;
-            const data = await api.getOrders(pageState);
-            // 处理返回的数据，更新页面
-            $('#orderList').empty();
-            $('#orderList').append(data);
-
-            const listContainer = document.querySelector('.section_4');
-            commonFeatures.initAll(listContainer);
-            // 初始化选中状态
-            if (isDeliveryPage) {
-              applySelectionState();
-            }
-            updateSelectedCount();
-
-            // 刷新订单列表
+            await reloadOrderListFromStart();
           } catch (error) {
-            if (error.rsp == 'fail') {
-              showToast(error.msg);
+            const msg = (error && error.msg) ? error.msg : '提交失败，请稍后重试';
+            showToast(msg);
+          } finally {
+            if (confirmBtn) {
+              confirmBtn.disabled = false;
+              confirmBtn.style.opacity = '1';
+              confirmBtn.innerHTML = originalText;
             }
           }
         }
       });
+
+      bindLogiNoInputSubmit();
+    }
+
+    function getLogiNoInputAppend() {
+      return '<button type="button" class="logi-no-confirm-btn">确认</button>' +
+        '<div class="scan-icon" onclick="scanQRCode()"><img src="<{$env.app.res_url}>/img/icon-scan.png" alt="扫码"></div>';
+    }
+
+    function getSerialInputAppend(scanIconClass) {
+      return '<button type="button" class="logi-no-confirm-btn serial-input-confirm-btn">确认</button>' +
+        '<div class="scan-icon ' + scanIconClass + '"><img src="<{$env.app.res_url}>/img/icon-scan.png" alt="扫码"></div>';
+    }
+
+    function getSerialInputFieldHtml(inputId, scanIconClass) {
+      return '<div class="modal-form-item modal-form-item--serial-input">' +
+        '<div class="input-box input-box-vertical flex-col">' +
+          '<label class="modal-form-label serial-field-label">唯一码</label>' +
+          '<div class="input-field-wrap input-with-append flex-row align-center">' +
+            '<input type="text" class="modal-input modal-input--append" id="' + inputId + '" placeholder="请扫描或输入唯一码">' +
+            getSerialInputAppend(scanIconClass) +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function bindLogiNoInputSubmit() {
+      const logiNoInput = modal.content.querySelector('input[name="logi_no"]');
+      const inlineConfirmBtn = modal.content.querySelector('.logi-no-confirm-btn');
+
+      function triggerModalConfirm() {
+        if (modal.confirmBtn) {
+          modal.confirmBtn.click();
+        }
+      }
+
+      if (logiNoInput) {
+        logiNoInput.onkeydown = function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            triggerModalConfirm();
+          }
+        };
+      }
+
+      if (inlineConfirmBtn) {
+        inlineConfirmBtn.onclick = function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          triggerModalConfirm();
+        };
+      }
     }
 
     // 扫码功能
     function scanQRCode() {
-      // 先获取签名
-      $.ajax({
-        url: 'getWxSign',
-        type: 'POST',
-        data: {
-          url: window.location.href.split('#')[0]
-        },
-        success: function(res) {
-          // 将返回的字符串转换为JSON对象
-          if (typeof res === 'string') {
-            try {
-              res = JSON.parse(res);
-            } catch (e) {
-              console.error('解析JSON失败:', e);
-              showToast('解析响应数据失败');
-              return;
-            }
-          }
-
-          if(res.rsp == 'succ') {
-            const config = res.data;
-            wx.config({
-              debug: false,
-              appId: config.appId,
-              timestamp: config.timestamp,
-              nonceStr: config.nonceStr,
-              signature: config.signature,
-              jsApiList: ['scanQRCode']
-            });
-
-            wx.ready(function() {
-              wx.scanQRCode({
-                needResult: 1,
-                scanType: ["qrCode","barCode"],
-                success: function(res) {
-                  const result = res.resultStr;
-                  // 检查结果是否包含逗号
-                  let finalValue = result;
-                  if (result.includes(',')) {
-                    // 如果有逗号，取第二部分作为值
-                    const parts = result.split(',');
-                    if (parts.length >= 2) {
-                      finalValue = parts[1];
-                    }
-                  }
-
-                  // 将扫码结果填入运单号输入框
-                  const logiNoInput = document.querySelector('input[name="logi_no"]');
-                  if(logiNoInput) {
-                    logiNoInput.value = finalValue;
-                  }
-                },
-                error: function(res) {
-                  if(res.errMsg.indexOf('function_not_exist') > 0) {
-                    showToast('当前微信版本过低，请升级到最新版本');
-                  } else {
-                    showToast('扫码失败，请重试');
-                  }
-                }
-              });
-            });
-
-            wx.error(function(res) {
-              showToast('微信配置失败，请刷新页面重试');
-            });
-          } else {
-            showToast('网络错误，请重试!');
+      wapWxScan.requestScan('<{$delivery_link.getWxSign}>', {
+        onSuccess: function (finalValue) {
+          const logiNoInput = document.querySelector('input[name="logi_no"]');
+          if (logiNoInput) {
+            logiNoInput.value = finalValue;
           }
         },
-        error: function() {
-          showToast('网络错误，请重试');
+        onFail: function (msg) {
+          showToast(msg);
         }
       });
     }
@@ -1373,18 +2225,7 @@
             });
             showToast('运单号信息更新成功');
             modal.hide();
-
-            pageState.page = 1;
-            pageState.hasMore = true;
-            const data = await api.getOrders(pageState);
-            // 处理返回的数据，更新页面
-            $('#orderList').empty();
-            $('#orderList').append(data);
-
-            const listContainer = document.querySelector('.section_4');
-            commonFeatures.initAll(listContainer);
-
-            // 刷新订单列表
+            await reloadOrderListFromStart();
           } catch (error) {
             if (error.rsp == 'fail') {
               showToast(error.msg);
@@ -1394,6 +2235,62 @@
       });
     }
 
+
+    function showOrderRefuseModal(delivery_id) {
+      if (!delivery_id) {
+        showToast('无效操作');
+        return;
+      }
+      if (!orderRefuseReasons.length) {
+        showToast('请先配置门店拒单原因');
+        return;
+      }
+
+      modal.show({
+        title: '拒单',
+        confirmText: '确认拒绝',
+        isShowCancleBtn: true,
+        fields: [
+          {
+            type: 'select',
+            name: 'refuse_reason_id',
+            label: '拒绝理由',
+            required: true,
+            options: orderRefuseReasons
+          }
+        ],
+        onConfirm: async (formData) => {
+          const confirmBtn = modal.confirmBtn;
+          const originalText = confirmBtn ? confirmBtn.innerHTML : '';
+          if (confirmBtn) {
+            confirmBtn.disabled = true;
+            confirmBtn.style.opacity = '0.6';
+            confirmBtn.innerHTML = '提交中...';
+          }
+          try {
+            const result = await api.doRefuse({
+              delivery_id,
+              refuse_reason_id: formData.refuse_reason_id
+            });
+            if (result.res === 'succ') {
+              showToast(result.msg || '已拒绝成功');
+              modal.hide();
+              await reloadOrderListFromStart();
+            } else {
+              showToast(result.msg || '门店拒绝失败');
+            }
+          } catch (error) {
+            showToast(error.msg || '网络请求失败，请稍后重试');
+          } finally {
+            if (confirmBtn) {
+              confirmBtn.disabled = false;
+              confirmBtn.style.opacity = '1';
+              confirmBtn.innerHTML = originalText;
+            }
+          }
+        }
+      });
+    }
 
     function showRefuseModal(delivery_id,action) {
       var location_url = '<{$wait_receiver_url}>';
@@ -2742,17 +3639,6 @@
     }
   </script>
   <style>
-    .scan-icon {
-      z-index: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .scan-icon img {
-      width: 20px;
-      height: 20px;
-    }
-
     /* 全选功能样式 */
     .select-all-box {
       background: #f8f9fa;

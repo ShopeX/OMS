@@ -57,6 +57,7 @@ class monitor_event_template
             'store_freeze_abnormal'    => '库存或冻结消费异常报警',
             'inventory_calc_error'     => '库存计算异常报警',
             'order_ship_refund_apply'  => '订单已发货仅退款发起申请',
+            'order_ship_refund_finish' => '订单已发货退款完成校验通过',
             'order_unship_refund_apply'  => '订单未发货退款发起申请',
             'order_refund_apply_reback_fail' => '订单退款发起申请发货单撤销失败',
             'order_part_ship_refund_apply' => '订单部分发货仅退款发起申请',
@@ -69,8 +70,14 @@ class monitor_event_template
             'delivery_cancel_success'  => '发货单取消成功通知',
             'reship_cancel_success'    => '退货单取消成功通知',
             'delivery_cancel_wms'      => '发货单撤销WMS通知',
+            'delivery_cancel_wms_fail' => '发货单撤销WMS失败通知',
+            'delivery_intercept_fail'  => '拦截失败预警',
+            'reship_create_fail_notify' => '退货单推送WMS创建失败预警',
+            'delivery_create_fail_notify' => '发货单推送WMS创建失败预警',
             'sap_sync_error'            => 'SAP同步异常报警',
             'order_lack_notify'         => '订单缺货通知',
+            'financebase_bill_match_fail' => '店铺收支明细匹配失败日报',
+            'lanjie_reship_logi_unaudited' => '拦截入库已录入物流号未审核',
         );
         foreach(kernel::servicelist('monitor.service.event.template.get.after') as $object) {
             if(method_exists($object, 'getEventType')){
@@ -190,20 +197,98 @@ TPL
     >错误信息：<font color="warning">{errmsg}</font>
 TPL
 ,
+            'order_ship_refund_finish' => <<<TPL
+订单[{order_bn}]已发货，退款流程校验已执行。
+    >店铺：<font color="warning">{shop_type}</font> {shop_name}
+    >退款单号：<font color="warning">{refund_apply_bn}</font>
+    >退款金额：<font color="warning">{refund_fee}</font>
+TPL
+,
+            'order_ship_refund_apply' => <<<TPL
+订单[{order_bn}]已发货，不可以退款。
+    >店铺：<font color="warning">{shop_type}</font> {shop_name}
+    >退款单号：<font color="warning">{refund_apply_bn}</font>
+    >退款金额：<font color="warning">{refund_fee}</font>
+TPL
+,
             'delivery_cancel_wms' => <<<TPL
 {shop_type}平台{shop_name}店铺发货单号（{delivery_bn}）已撤销，明细如下，请WMS端及时取消出货，谢谢。
     {detail_list}
 TPL
 ,
+            'delivery_cancel_wms_fail' => <<<TPL
+{shop_type}平台{shop_name}店铺发货单号（{delivery_bn}）撤销WMS失败，请人工核对。
+    >仓库：<font color="warning">{branch_name}</font>
+    >接口返回：<font color="warning">{fail_rsp}</font>
+    >失败原因：<font color="warning">{fail_msg}</font>
+    {detail_list}
+TPL
+,
+            'delivery_intercept_fail' => <<<TPL
+{shop_type}平台{shop_name}店铺发货单（{delivery_bn}）物流拦截失败，请人工跟进。
+    >运单号：<font color="warning">{logi_no}</font>
+    >仓库：<font color="warning">{branch_name}</font>
+    >回传时间：<font color="warning">{operate_time}</font>
+    >备注：<font color="warning">{memo}</font>
+    {detail_list}
+TPL
+,
+            'reship_create_fail_notify' => <<<TPL
+退货单推送WMS创建失败
+    >退货单号：<font color="warning">{reship_bn}</font>
+    >订单号：<font color="warning">{order_bn}</font>
+    >仓库：<font color="warning">{branch_name}</font>（{branch_bn}）
+    >WMS：<font color="warning">{wms_name}</font>
+    >接口返回：<font color="warning">{fail_rsp}</font>
+    >失败原因：<font color="warning">{fail_msg}</font>
+    {detail_list}
+TPL
+,
+            'delivery_create_fail_notify' => <<<TPL
+发货单推送WMS创建失败
+    >发货单号：<font color="warning">{delivery_bn}</font>
+    >订单号：<font color="warning">{order_bn}</font>
+    >仓库：<font color="warning">{branch_name}</font>（{branch_bn}）
+    >WMS：<font color="warning">{wms_name}</font>
+    >店铺：<font color="warning">{shop_type}</font> {shop_name}
+    >接口返回：<font color="warning">{fail_rsp}</font>
+    >失败原因：<font color="warning">{fail_msg}</font>
+TPL
+,
             'order_lack_notify' => <<<TPL
 订单缺货通知
     >订单号：<font color="warning">{order_bn}</font>
+    >店铺：<font color="warning">{shop_type}</font> {shop_name}
     >仓库：<font color="warning">{branch_name}</font>
     >缺货商品数量：<font color="warning">{lack_count}</font>
     >缺货商品详情：
 {lack_products}
 TPL
 ,
+            'financebase_bill_match_fail' => <<<TPL
+以下店铺收支流水未能匹配到收支分类，请维护「收支分类规则」后使用「重新匹配」。
+
+{table_html}
+TPL
+,
+            'lanjie_reship_logi_unaudited' => <<<TPL
+拦截入库退货单已录入物流号未审核，系统将自动审核。
+    >数量：<font color="warning">{total}</font>
+    >退货单号：<font color="warning">{reship_bns}</font>
+    >订单号：<font color="warning">{order_bns}</font>
+    >说明：<font color="warning">{errmsg}</font>
+    {detail_list}
+TPL
+,
         );
+        foreach (kernel::servicelist('monitor.service.event.template.get.after') as $object) {
+            if (method_exists($object, 'getEventDefaultContent')) {
+                $rs = $object->getEventDefaultContent();
+                if (is_array($rs) && $rs) {
+                    $content = array_merge($content, $rs);
+                }
+            }
+        }
+        return $content;
     }
 }

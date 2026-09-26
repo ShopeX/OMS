@@ -1,0 +1,98 @@
+<form
+    class="tableform"
+    id="form-invoice-receipt-repush"
+    method="post"
+    action="index.php?app=invoice&ctl=admin_order&act=doReceiptRepush&finder_id=<{$env.get.finder_id}>"
+>
+    <input type="hidden" name="id" value="<{$invoice_order.id|escape:'html'}>" />
+    <input type="hidden" name="channel" id="invoice-receipt-repush-channel" value="" />
+    <table border="0" cellspacing="0" cellpadding="0" width="100%">
+        <tbody>
+            <tr>
+                <th width="120">收票手机号：</th>
+                <td>
+                    <input
+                        type="text"
+                        name="ship_tel"
+                        sensitive-field="ship_tel"
+                        value="<{$invoice_order.ship_tel|escape:'html'}>"
+                        maxlength="200"
+                        style="width:300px;"
+                    />
+                </td>
+            </tr>
+            <tr>
+                <th>收票邮箱：</th>
+                <td>
+                    <input
+                        type="text"
+                        name="ship_email"
+                        sensitive-field="ship_email"
+                        value="<{$invoice_order.ship_email|escape:'html'}>"
+                        maxlength="150"
+                        style="width:300px;"
+                    />
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <div class="table-action">
+        <{button label="发送短信" type="submit" id="btn-invoice-receipt-repush-sms"}>
+        <{button label="发送邮件" type="submit" id="btn-invoice-receipt-repush-email"}>
+        <{button label="取消" type="button" class="btn-secondary" id="btn-invoice-receipt-repush-cancel"}>
+    </div>
+</form>
+<script>
+(function() {
+    var form = $('form-invoice-receipt-repush');
+    var smsButton = $('btn-invoice-receipt-repush-sms');
+    var emailButton = $('btn-invoice-receipt-repush-email');
+
+    smsButton.addEvent('click', function() {
+        $('invoice-receipt-repush-channel').set('value', 'sms');
+    });
+    emailButton.addEvent('click', function() {
+        $('invoice-receipt-repush-channel').set('value', 'email');
+    });
+
+    form.store('target', {
+        onRequest: function() {
+            smsButton.set('disabled', 'true');
+            emailButton.set('disabled', 'true');
+        },
+        onComplete: function(jsonText) {
+            var json = JSON.decode(jsonText);
+            if (typeof json.error !== 'undefined' && json.error) {
+                alert(json.error);
+                smsButton.set('disabled', '');
+                emailButton.set('disabled', '');
+                return;
+            }
+
+            alert(json.success);
+            if (window.finderGroup && window.finderGroup['<{$env.get.finder_id}>']) {
+                window.finderGroup['<{$env.get.finder_id}>'].refresh.delay(
+                    400,
+                    window.finderGroup['<{$env.get.finder_id}>']
+                );
+            }
+            if (form.getParent('.dialog')) {
+                form.getParent('.dialog').retrieve('instance').close();
+            }
+        }
+    });
+
+    $('btn-invoice-receipt-repush-cancel').addEvent('click', function() {
+        if (form.getParent('.dialog')) {
+            form.getParent('.dialog').retrieve('instance').close();
+        }
+    });
+
+    Ex_Loader('security', function() {
+        new Security({
+            url: 'index.php?app=invoice&ctl=admin_order&act=showSensitiveData&p[0]=<{$invoice_order.id}>&p[1]=invoice',
+            showData: true
+        }).desHtml(form);
+    });
+})();
+</script>

@@ -1,0 +1,137 @@
+<form method="post" id="ecwarehouse-form" action="index.php?app=goldentra&ctl=admin_ecwarehouse&act=save&finder_id=<{$env.get.finder_id}>">
+    <div class="tableform">
+        <div class="division">
+            <table border="0" cellspacing="0" cellpadding="0" class="gridlist">
+                <tr>
+                    <td align="right" nowrap="nowrap">配置对象：</td>
+                    <td>
+                        <{if $row.id}>
+                            <{if $row.owner_type == 'store'}>门店<{else}>仓库<{/if}>
+                            <input type="hidden" name="owner_type" value="<{$row.owner_type}>">
+                        <{else}>
+                            <label><input type="radio" name="owner_type" value="branch" <{if $row.owner_type != 'store'}>checked<{/if}> onclick="ecwhToggleOwner();"> 仓库</label>
+                            <label style="margin-left:12px;"><input type="radio" name="owner_type" value="store" <{if $row.owner_type == 'store'}>checked<{/if}> onclick="ecwhToggleOwner();"> 门店</label>
+                        <{/if}>
+                        <span style="color:red;">*</span>
+                    </td>
+                </tr>
+                <tr id="ecwh-branch-row">
+                    <td align="right" nowrap="nowrap">仓库：</td>
+                    <td>
+                        <{if $row.id && $row.owner_type == 'branch'}>
+                            <{$row.owner_name}>（<{$row.owner_bn}>）
+                            <input type="hidden" name="branch_id" value="<{$row.branch_id}>">
+                        <{elseif !$row.id}>
+                            <{input type='object' object='branch@ome' name='branch_id' value=$row.branch_id filter=array('b_type'=>1,'disabled'=>'false')}>
+                        <{else}>
+                            —
+                        <{/if}>
+                        <span id="ecwh-branch-star" style="color:red;">*</span>
+                    </td>
+                </tr>
+                <tr id="ecwh-store-row">
+                    <td align="right" nowrap="nowrap">门店：</td>
+                    <td>
+                        <{if $row.id && $row.owner_type == 'store'}>
+                            <{$row.owner_name}>（<{$row.owner_bn}>）
+                            <input type="hidden" name="store_id" value="<{$row.store_id}>">
+                        <{elseif !$row.id}>
+                            <{input type='object' object='store@o2o' name='store_id' value=$row.store_id}>
+                        <{else}>
+                            —
+                        <{/if}>
+                        <span id="ecwh-store-star" style="color:red;">*</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="right" nowrap="nowrap">是否电商仓：</td>
+                    <td>
+                        <label><input type="radio" name="is_ec" value="true" <{if $row.is_ec != 'false'}>checked<{/if}>> 是</label>
+                        <label style="margin-left:12px;"><input type="radio" name="is_ec" value="false" <{if $row.is_ec == 'false'}>checked<{/if}>> 否</label>
+                        <span style="color:red;">*</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="right" nowrap="nowrap">状态：</td>
+                    <td>
+                        <label><input type="radio" name="disabled" value="false" <{if $row.disabled != 'true'}>checked<{/if}>> 启用</label>
+                        <label style="margin-left:12px;"><input type="radio" name="disabled" value="true" <{if $row.disabled == 'true'}>checked<{/if}>> 禁用</label>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="right" nowrap="nowrap">备注：</td>
+                    <td><input type="text" name="memo" value="<{$row.memo}>" class="x-input" style="width:320px;"></td>
+                </tr>
+            </table>
+        </div>
+        <div class="table-action">
+            <{button type="button" id="ecwarehouse-save-btn" label="保 存"}>
+            <{button type="button" class="btn-secondary" label="关 闭" isclosedialogbtn="true"}>
+        </div>
+    </div>
+    <input type="hidden" name="id" value="<{$row.id}>">
+    <input type="hidden" name="finder_id" value="<{$env.get.finder_id}>">
+</form>
+<script>
+function ecwhToggleOwner() {
+    var form = $('ecwarehouse-form');
+    if (!form) return;
+    var type = 'branch';
+    form.getElements('input[name=owner_type]').each(function (el) {
+        if (el.checked) type = el.value;
+    });
+    var branchRow = $('ecwh-branch-row');
+    var storeRow = $('ecwh-store-row');
+    if (type === 'store') {
+        if (branchRow) branchRow.setStyle('display', 'none');
+        if (storeRow) storeRow.setStyle('display', '');
+    } else {
+        if (storeRow) storeRow.setStyle('display', 'none');
+        if (branchRow) branchRow.setStyle('display', '');
+    }
+}
+<{if !$row.id}>
+ecwhToggleOwner();
+<{else}>
+(function () {
+    var type = '<{$row.owner_type}>';
+    var branchRow = $('ecwh-branch-row');
+    var storeRow = $('ecwh-store-row');
+    if (type === 'store') {
+        if (branchRow) branchRow.setStyle('display', 'none');
+    } else {
+        if (storeRow) storeRow.setStyle('display', 'none');
+    }
+})();
+<{/if}>
+
+$('ecwarehouse-save-btn').addEvent('click', function (e) {
+    var _this = this;
+    var form = this.getParent('form');
+    form.store('target', {
+        onRequest: function () {
+            _this.disabled = true;
+        },
+        onComplete: function (jsontext) {
+            try {
+                var json = JSON.decode(jsontext);
+                if (typeof (json.error) != 'undefined') {
+                    _this.disabled = false;
+                } else {
+                    _this.disabled = true;
+                    if (finderGroup['<{$env.get.finder_id}>']) {
+                        finderGroup['<{$env.get.finder_id}>'].refresh.delay(400, finderGroup['<{$env.get.finder_id}>']);
+                    }
+                    var dlg = $('ecwarehouse-save-btn').getParent('.dialog');
+                    if (dlg && dlg.retrieve('instance')) {
+                        dlg.retrieve('instance').close();
+                    }
+                }
+            } catch (err) {
+                _this.disabled = false;
+            }
+        }
+    });
+    form.fireEvent('submit', e);
+});
+</script>

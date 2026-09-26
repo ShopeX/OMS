@@ -1,0 +1,90 @@
+<div class="tableform">
+  <h3>店铺收支明细匹配失败通知</h3>
+  <div class="division">
+    <form method="post" action="index.php?app=financebase&ctl=admin_shop_settlement_match_notify&act=save">
+      <table width="100%" cellspacing="0" cellpadding="0" border="0">
+        <tbody>
+          <tr>
+            <th>启用通知：</th>
+            <td>
+              <input type="radio" name="enabled" value="true" <{if $config.enabled == 'true'}>checked="checked"<{/if}> /> 是
+              <input type="radio" name="enabled" value="false" <{if $config.enabled != 'true'}>checked="checked"<{/if}> /> 否
+            </td>
+          </tr>
+          <tr>
+            <th>发送时间：</th>
+            <td>
+              <input type="text" name="cron_time" value="<{$config.cron_time}>" size="10" placeholder="14:00" />
+              <span class="notice">格式 HH:MM，须为<strong>整点</strong>（分钟填 00），如 10:00、14:00；请于该整点<strong>之前</strong>保存配置，每天自动执行一次</span>
+            </td>
+          </tr>
+          <tr>
+            <th>今日执行情况：</th>
+            <td>
+              <div style="line-height:24px;">
+                <span>窗口内失败账单日：<strong><{$today_status.failure_days}></strong> 个</span>
+                <span style="margin-left:14px;">今日日报：
+                  <{if $today_status.daily_sent}>
+                    <strong style="color:green;">已入队</strong>
+                  <{else}>
+                    <strong style="color:#c00;">未入队</strong>
+                  <{/if}>
+                </span>
+              </div>
+              <{if !$today_status.daily_sent && $today_status.pending_count > 0}>
+                <div class="notice" style="margin-top:6px;line-height:22px;">
+                  今日日报将包含以下账单日（下次定时任务入队 1 封邮件）：
+                  <div style="margin-top:4px;">
+                    <{foreach from=$today_status.pending_dates_rows item=date_row}>
+                      <div><{foreach from=$date_row item=bill_date}><span style="display:inline-block;margin-right:8px;"><{$bill_date}></span><{/foreach}></div>
+                    <{/foreach}>
+                  </div>
+                </div>
+              <{elseif $today_status.sent_all}>
+                <div class="notice" style="margin-top:6px;color:green;">今日匹配失败日报已入队。</div>
+              <{/if}>
+              <{if $configured_hour_passed && !$today_status.daily_sent}>
+                <div class="notice" style="margin-top:6px;">今日 <{$config.cron_time}> 整点已过且尚未入队，请确认是否在整点前保存配置；明日将按 <{$config.cron_time}> 自动执行。</div>
+              <{elseif $configured_hour_passed}>
+                <div class="notice" style="margin-top:6px;">今日定时已执行，明日 <{$config.cron_time}> 将再次检查。</div>
+              <{/if}>
+            </td>
+          </tr>
+          <tr>
+            <th>预警配置状态：</th>
+            <td>
+              <{if $monitor_config.ok}>
+                <span style="color:green;">已配置（模板与邮件组就绪）</span>
+              <{else}>
+                <span style="color:red;"><{$monitor_config.msg}></span>
+              <{/if}>
+            </td>
+          </tr>
+          <tr>
+            <th>配置指引：</th>
+            <td>
+              <ol>
+                <li><a href="<{$monitor_links.receiver}>" target="_blank">收件人管理</a>：维护通知邮箱</li>
+                <li><a href="<{$monitor_links.template}>" target="_blank">预警模板</a>：新增模板，类型选「店铺收支明细匹配失败日报」，发送类型选「邮箱」，保存并启用</li>
+                <li><a href="<{$monitor_links.group}>" target="_blank">邮件组配置</a>：关联事件「店铺收支明细匹配失败日报」并选择收件人</li>
+                <li><a href="<{$monitor_links.email}>" target="_blank">邮件设置</a>：配置 SMTP 发件账号</li>
+              </ol>
+              <div class="notice">
+                模板内容示例：保留说明文字，并使用 <code>{table_html}</code> 展示账单日期、店铺、失败条数表格
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <th>通知说明：</th>
+            <td>
+              每天定时检查近 30 个账单日（截止昨日 T-1），如存在匹配失败流水，则发送 1 封日报邮件；邮件表格按「账单日期 + 店铺」汇总失败条数，无失败的日期跳过。
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="table-action">
+        <{button type="submit" label="保存"}>
+      </div>
+    </form>
+  </div>
+</div>

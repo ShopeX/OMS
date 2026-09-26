@@ -35,9 +35,18 @@ class ome_ctl_admin_branchset extends desktop_controller{
 
        $this->pagedata['shopList'] = $shopList;
        $branchMdl = app::get('ome')->model('branch');
-       $branchList = $branchMdl->getlist('branch_id,name',array('check_permission'=>'false','type'=>array('main','aftersale','damaged')));
+       $branchList = $branchMdl->getlist('branch_id,name',array('check_permission'=>'false','type'=>array('main','aftersale','damaged'), 'b_type'=>1));
 
        $this->pagedata['branchList'] = $branchList;
+
+       $this->pagedata['o2o_installed'] = app::get('o2o')->is_installed();
+       if ($this->pagedata['o2o_installed']) {
+           $returnBranchLib = kernel::single('o2o_return_branch');
+           $this->pagedata['return_branch_strategy'] = $returnBranchLib->getStrategy();
+           $this->pagedata['return_branch_strategy_options'] = o2o_return_branch::getStrategyOptions();
+           $this->pagedata['return_branch_strategy_desc'] = o2o_return_branch::getStrategyDescriptions();
+       }
+
        $this->page('admin/branch/branchset.html');
     }
 
@@ -60,6 +69,14 @@ class ome_ctl_admin_branchset extends desktop_controller{
         app::get('ome')->setConf('ome.aftersale.goods.branch.type',$goodsBranchType);
         app::get('ome')->setConf('return.auto_branch', $_POST['set']['return.auto_branch']);
         app::get('ome')->setConf('return.auto_shop_branch', $_POST['set']['return.auto_shop_branch']);
+
+        if (app::get('o2o')->is_installed() && isset($_POST['set']['o2o_return_branch_strategy'])) {
+            $returnBranchLib = kernel::single('o2o_return_branch');
+            if (!$returnBranchLib->setStrategy($_POST['set']['o2o_return_branch_strategy'])) {
+                $this->end(false, '退入仓策略无效');
+            }
+        }
+
         $this->end(true,'保存成功');
     }
      

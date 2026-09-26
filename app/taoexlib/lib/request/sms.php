@@ -367,7 +367,7 @@ class taoexlib_request_sms{
      */
     public function _format_content($content)
     {
-        $find = array('{会员名}','{收货人}','{店铺名称}','{物流公司}','{物流单号}','{发货时间}','{配送费用}','{订单号}','{订单金额}','{付款金额}','{订单优惠}','{发货单号}','{收货人手机号}','{订单时间}','{短信签名}','{提货单}','{校验码}','{门店名称}','{门店地址}','{门店联系电话}','{开票方名称}','{发票号码}','{开票时间}','{验证码}','{分机号}');
+        $find = array('{会员名}','{收货人}','{店铺名称}','{物流公司}','{物流单号}','{发货时间}','{配送费用}','{订单号}','{订单金额}','{付款金额}','{订单优惠}','{发货单号}','{收货人手机号}','{订单时间}','{短信签名}','{提货单}','{校验码}','{门店名称}','{门店地址}','{门店联系电话}','{开票方名称}','{发票号码}','{发票代码}','{价税合计}','{开票时间}','{PDF链接}','{OFD链接}','{XML链接}','{验证码}','{分机号}');
         $replace = $this->_keys_rp();
         
         $messcontent = str_replace($find,$replace,$content);
@@ -379,7 +379,7 @@ class taoexlib_request_sms{
     *
     */
     public function _keys_rp(){
-        $keys = array('{uname}','{ship_name}','{shopname}','{logi_name}','{logi_no}','{delivery_time}','{logi_actual}','{orderstr}','{total_amount}','{payed}','{cheap}','{delivery_bn}','{ship_mobile}','{create_time}','{msgsign}','{pickup_bn}','{pickup_code}','{store_name}','{store_addr}','{store_contact_tel}','{payee_name}','{invoice_no}','{billing_time}','{check_code}','{fenjihao}');
+        $keys = array('{uname}','{ship_name}','{shopname}','{logi_name}','{logi_no}','{delivery_time}','{logi_actual}','{orderstr}','{total_amount}','{payed}','{cheap}','{delivery_bn}','{ship_mobile}','{create_time}','{msgsign}','{pickup_bn}','{pickup_code}','{store_name}','{store_addr}','{store_contact_tel}','{payee_name}','{invoice_no}','{invoice_code}','{amount}','{billing_time}','{invoice_pdf_path}','{invoice_ofd_path}','{invoice_xml_url}','{check_code}','{fenjihao}');
         return $keys;
     }
 
@@ -388,7 +388,7 @@ class taoexlib_request_sms{
     *
     */
     public function _keys(){
-        $keys = array('uname','ship_name','shopname','logi_name','logi_no','delivery_time','logi_actual','orderstr','total_amount','payed','cheap','delivery_bn','ship_mobile','create_time','msgsign','pickup_bn','pickup_code','store_name','store_addr','store_contact_tel','payee_name','invoice_no','billing_time','check_code','fenjihao');
+        $keys = array('uname','ship_name','shopname','logi_name','logi_no','delivery_time','logi_actual','orderstr','total_amount','payed','cheap','delivery_bn','ship_mobile','create_time','msgsign','pickup_bn','pickup_code','store_name','store_addr','store_contact_tel','payee_name','invoice_no','invoice_code','amount','billing_time','invoice_pdf_path','invoice_ofd_path','invoice_xml_url','check_code','fenjihao');
         return $keys;
     }
 

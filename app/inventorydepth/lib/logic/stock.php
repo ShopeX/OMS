@@ -772,6 +772,14 @@ class inventorydepth_logic_stock extends inventorydepth_logic_abstract
         }
         
         $stocks = $this->resetChangeStocks($stocks, $shop, $sales_bn_list, $shop_sku_id_list);
+
+        if ($stocks && ($formatServices = kernel::servicelist('inventorydepth.service.stock.sync_product_stocks.format'))) {
+            foreach ($formatServices as $instance) {
+                if (method_exists($instance, 'format_stocks')) {
+                    $stocks = $instance->format_stocks($stocks, $shop);
+                }
+            }
+        }
         
         //check shop
         if(in_array($shop['node_type'], array('vop'))){

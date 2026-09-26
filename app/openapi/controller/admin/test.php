@@ -1,26 +1,6 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class openapi_ctl_admin_test extends desktop_controller{
     
-    /**
-     * test
-     * @return mixed 返回值
-     */
     public function test(){
         $conf = openapi_conf::getMethods();
         
@@ -42,10 +22,6 @@ class openapi_ctl_admin_test extends desktop_controller{
         $this->page('admin/test/test.html');
     }
     
-    /**
-     * ajaxResult
-     * @return mixed 返回值
-     */
     public function ajaxResult(){
         if(!$_POST['apiName']) return;
         $k = substr($_POST['apiName'], 0, strrpos($_POST['apiName'], '.'));
@@ -68,10 +44,6 @@ class openapi_ctl_admin_test extends desktop_controller{
         $this->display('admin/test/apiForm.html');
     }
     
-    /**
-     * result
-     * @return mixed 返回值
-     */
     public function result(){
         $url =kernel::base_url(1).kernel::url_prefix().'/openapi/rpc/service/';
         $token = $_POST['token'];
@@ -110,23 +82,6 @@ class openapi_ctl_admin_test extends desktop_controller{
     }
     
     private function gen_sign($params,$token){
-    
-        if(!$token){
-            return false;
-        }
-        return strtoupper(md5(strtoupper(md5($this->assemble($params))).$token));
-    }
-    
-    private function assemble($params)
-    {
-        if(!is_array($params))  return null;
-        ksort($params, SORT_STRING);
-        $sign = '';
-        foreach($params AS $key=>$val){
-            if(is_null($val))   continue;
-            if(is_bool($val))   $val = ($val) ? 1 : 0;
-            $sign .= $key . (is_array($val) ? $this->assemble($val) : $val);
-        }
-        return $sign;
+        return openapi_sign::genSign($params, $token);
     }
 }

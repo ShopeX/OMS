@@ -85,6 +85,9 @@ class ome_order_bool_type
 
     const __BOOKING_DELIVERY = 0x0100;
     
+    // 失败订单标签
+    const __ORDER_FAIL_FLAG = 0x800000;
+    
     private $boolStatus = array(
         self::__SERVICE_CODE    => array('identifier' => '服', 'text' => '服务订单', 'color' => 'green'),
         self::__CNAUTO_CODE     => array('identifier' => '菜', 'text' => '菜鸟自动流转订单', 'color' => 'yellow'),
@@ -113,7 +116,8 @@ class ome_order_bool_type
         self::__DEWU_JISU_CODE   => array('identifier' => '急速现货', 'text' => '急速现货', 'color' => '#C481A5', 'search' => 'false'),
         self::__DEWU_BRAND_CODE   => array('identifier' => '品牌直发', 'text' => '品牌直发', 'color' => '#00CCCC', 'search' => 'false'),
         self::__BOOKING_DELIVERY   => array('identifier' => '预约发货', 'text' => '预约发货', 'color' => '#0C7ED9FF', 'search' => 'false'),
-
+        
+        self::__ORDER_FAIL_FLAG => array('identifier'=>'失败标签', 'text'=>'符合设置的失败标签', 'color'=>'#FF4040', 'search'=>'false'),
     );
 
     /**
@@ -153,7 +157,7 @@ class ome_order_bool_type
                 }
 
                 // $str .= sprintf("<span class='tag-label' title='%s' style='background-color:%s;color:#FFFFFF;'>%s</span>", $val['text'], $val['color'], $val['identifier']);
-                $labelStr[] = sprintf("<span title='%s' style='filter: brightness(0.9) contrast(0.9);border:1px solid %s; color:%s;margin: 2px;padding: 0px 2px;border-radius: 5px;white-space: nowrap;'>%s</span>", $val['identifier'], $val['color'], $val['color'], $val['identifier']);
+                $labelStr[] = sprintf("<span title='%s' style='filter: brightness(0.9) contrast(0.9);border:1px solid %s; color:%s;margin: 2px;padding: 0px 2px;border-radius: 5px;white-space: nowrap;'>%s</span>", $val['text'], $val['color'], $val['color'], $val['identifier']);
             }
             
         }

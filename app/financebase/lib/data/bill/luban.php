@@ -22,6 +22,7 @@
  */
 class financebase_data_bill_luban extends financebase_abstract_bill
 {
+    /** 横向拆行列：订单实付应结 → 其他分成（不含免佣金额） */
     public $column_to_row = [
         'yi_jie',
         'ping_tai_bu_tie',
@@ -41,7 +42,6 @@ class financebase_data_bill_luban extends financebase_abstract_bill
         'zhao_shang_fwf',
         'zhan_wai_tui_fei',
         'qi_ta_feng_cheng',
-        'mian_yong_jin_e',
     ];
 
     /**
@@ -52,7 +52,7 @@ class financebase_data_bill_luban extends financebase_abstract_bill
      */
 
     public function batchTransferData($data, $title) {
-        //通过api接口获取到数据格式转换
+        // 1. API 自动拉取：将 shop_id 格式转换为与 Excel 导入一致的表头/行数据
         if(isset($title[0]) && ($title[0] == "\u{FEFF}shop_id" || $title[0] == "shop_id")) {
             list($res, $content) = $this->convertApiFile($data,$title);
             if (!$res) {
@@ -66,6 +66,7 @@ class financebase_data_bill_luban extends financebase_abstract_bill
             $this->ioTitle = $this->getTitle();
         }
 
+        // 2. 建立 Excel 列索引 → 内部字段名 的映射
         $titleKey = array();
         foreach ($title as $k => $t) {
             $titleKey[$k] = array_search($t, $this->getTitle());
@@ -82,6 +83,7 @@ class financebase_data_bill_luban extends financebase_abstract_bill
                     $tmpRow[$titleKey[$k]] = $v;
                 }
             }
+            // 3. 列转行：每个非 0 横向金额列拆成一条流水，业务类型取列名
             foreach($this->column_to_row as $crv) {
                 if($tmpRow[$crv] != 0) {
                     $tmp = $tmpRow;
@@ -90,8 +92,43 @@ class financebase_data_bill_luban extends financebase_abstract_bill
                     $reData[] = $tmp;
                 }
             }
+            // 4. 兜底：横向各列均为 0 且动账金额非 0 时，用动账场景/动账金额/动账方向生成一条流水
+            //    （正负相抵如 yi_jie=100、tui_kuan=-100 不触发，因各列并非全 0）
+            if ($this->isAllHorizontalAmountZero($tmpRow)
+                && round(floatval($tmpRow['jin_e'] ?? 0), 2) != 0) {
+                $tmp = $tmpRow;
+                $tmp['amount'] = $this->resolveLubanAmountByDirection(
+                    $tmpRow['jin_e'],
+                    isset($tmpRow['fang_xian']) ? $tmpRow['fang_xian'] : ''
+                );
+                $changJin = trim((string) (isset($tmpRow['chang_jin']) ? $tmpRow['chang_jin'] : ''));
+                $tmp['trade_type'] = $changJin !== '' ? $changJin : '动账';
+                $reData[] = $tmp;
+            }
         }
         return $reData;
+    }
+
+    /** 横向拆行列是否全部为 0（按列判断，非合计） */
+    private function isAllHorizontalAmountZero(array $row)
+    {
+        foreach ($this->column_to_row as $field) {
+            if (round(floatval(isset($row[$field]) ? $row[$field] : 0), 2) != 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** 兜底行金额：出账为负，入账为正 */
+    private function resolveLubanAmountByDirection($amount, $direction)
+    {
+        $amount = round(abs(floatval($amount)), 2);
+        $direction = trim((string) $direction);
+        if ($direction === '' || strpos($direction, '出账') !== false) {
+            return -$amount;
+        }
+        return $amount;
     }
 
     // 处理数据
@@ -106,11 +143,11 @@ class financebase_data_bill_luban extends financebase_abstract_bill
     {
         $res = array('status'=>true,'data'=>array(),'msg'=>'');
         $tmp = [];
-        //判断参数不能为空
+        //判断参数不能为空（独立动账如权益保险可无订单号，动账流水号仍必填）
         foreach ($row as $k => $v) {
             $tmp[$k] = trim($v, '\'');
 
-            if(in_array($k, array('order_no','trade_no','trade_type')))
+            if(in_array($k, array('trade_no','trade_type')))
             {
                 if(!$v)
                 {
@@ -126,7 +163,7 @@ class financebase_data_bill_luban extends financebase_abstract_bill
                 if ($result['status'] == 'fail') 
                 {
                     $res['status'] = false;
-                    $res['msg'] =  sprintf("%s : %s 时间(%s)格式错误！", $row['order_no'], $this->ioTitle[$k], $v);
+                    $res['msg'] =  sprintf("%s : %s 时间(%s)格式错误！", $row['trade_no'], $this->ioTitle[$k], $v);
                     return $res;
                 }
             }
@@ -137,7 +174,7 @@ class financebase_data_bill_luban extends financebase_abstract_bill
                 if ($result['status'] == 'fail') 
                 {
                     $res['status'] = false;
-                    $res['msg'] =  sprintf("%s : %s 金额(%s)格式错误！", $row['order_no'], $this->ioTitle[$k], $v);
+                    $res['msg'] =  sprintf("%s : %s 金额(%s)格式错误！", $row['trade_no'], $this->ioTitle[$k], $v);
                     return $res;
                 }
             }

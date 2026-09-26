@@ -17,12 +17,112 @@
 
 class erpapi_shop_request_logistics extends erpapi_shop_request_abstract
 {
-    //菜鸟流转订单处理规则同步
+    public function order_report($sdf, $queue = false) {}
+
     /**
-     * syncOrderRule
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
+     * 构建加急发货主动回告请求参数，优先按 order_id 实时聚合状态。
+     *
+     * @param array $sdf
+     * @return array
      */
+    protected function buildUrgentOrderReportRequestParams($sdf)
+    {
+        try {
+            if (!empty($sdf['order_id'])) {
+                $params = kernel::single('ome_order_urgent')->buildUrgentOrderReportParams(
+                    $sdf['order_id'],
+                    $sdf['tid'] ?: ($sdf['trade_order_code'] ?? '')
+                );
+                if (!empty($params['erp_synergy_callback_req_dto'])) {
+                    return $params;
+                }
+            }
+        } catch (Exception $e) {
+        }
+
+        return $this->buildUrgentOrderReportParams($sdf);
+    }
+
+    protected function buildUrgentOrderReportParams($sdf)
+    {
+        $payload = array(
+            'trade_order_code'   => (string)($sdf['trade_order_code'] ?: $sdf['tid']),
+            'order_status'       => (string)$sdf['orderStatus'],
+            'status_update_time' => $sdf['status_update_time'] ?: date('Y-m-d H:i:s'),
+            'tracking_number'    => '',
+            'exception_reason'   => '',
+            'extend_fields'      => '{}',
+            'order_details'      => array(),
+            'is_split'           => $this->resolveUrgentReportIsSplit($sdf),
+        );
+
+        if (!empty($sdf['tracking_number'])) {
+            $payload['tracking_number'] = (string)$sdf['tracking_number'];
+        }
+        if (!empty($sdf['exception_reason'])) {
+            $payload['exception_reason'] = (string)$sdf['exception_reason'];
+        }
+        if (isset($sdf['extend_fields'])) {
+            if (is_string($sdf['extend_fields']) && $sdf['extend_fields'] !== '') {
+                $payload['extend_fields'] = $sdf['extend_fields'];
+            } elseif (is_array($sdf['extend_fields']) || is_object($sdf['extend_fields'])) {
+                $payload['extend_fields'] = json_encode($sdf['extend_fields'], JSON_UNESCAPED_UNICODE);
+            }
+        }
+        if (!empty($sdf['order_details'])) {
+            $payload['order_details'] = is_string($sdf['order_details'])
+                ? json_decode($sdf['order_details'], true) ?: []
+                : array_values((array)$sdf['order_details']);
+        }
+
+        return array(
+            'erp_synergy_callback_req_dto' => $this->encodeUrgentOrderReportDto($payload),
+        );
+    }
+
+    /**
+     * 编码加急回告 DTO，避免 json_encode 失败导致主动请求中断。
+     *
+     * @param array $payload
+     * @return string
+     */
+    protected function encodeUrgentOrderReportDto($payload)
+    {
+        $dtoJson = json_encode($payload, JSON_UNESCAPED_UNICODE);
+        if ($dtoJson !== false) {
+            return $dtoJson;
+        }
+
+        array_walk_recursive($payload, function (&$value) {
+            if (is_string($value)) {
+                $value = iconv('UTF-8', 'UTF-8//IGNORE', $value);
+            }
+        });
+
+        $dtoJson = json_encode($payload, JSON_UNESCAPED_UNICODE);
+        return $dtoJson === false ? '{}' : $dtoJson;
+    }
+
+    /**
+     * 解析主动回告中的 is_split，优先按 order_id 实时计算。
+     *
+     * @param array $sdf
+     * @return bool
+     */
+    protected function resolveUrgentReportIsSplit($sdf)
+    {
+        if (!empty($sdf['order_id'])) {
+            $order = app::get('ome')->model('orders')->dump($sdf['order_id'], 'order_id,ship_status,process_status');
+            if ($order) {
+                return kernel::single('ome_order_urgent')->isSplitOrder($order);
+            }
+        }
+
+        return (bool)($sdf['is_split'] ?? false);
+    }
+
+
+    //菜鸟流转订单处理规则同步
     public function syncOrderRule($sdf){
         $params['shop_code'] = $sdf['shop_code'];
         $params['is_open_cnauto'] =$sdf['is_open_cnauto'];
@@ -41,12 +141,6 @@ class erpapi_shop_request_logistics extends erpapi_shop_request_abstract
         return $rs;
     }
 
-    /**
-     * 搜索Address
-     * @param mixed $search_type search_type
-     * @param mixed $page page
-     * @return mixed 返回值
-     */
     public function searchAddress($search_type='', $page=0)
     {
         $shop_id = $this->__channelObj->channel['shop_id'];
@@ -67,12 +161,6 @@ class erpapi_shop_request_logistics extends erpapi_shop_request_abstract
         return true;
     }
     
-    /**
-     * 搜索Address_callback
-     * @param mixed $response response
-     * @param mixed $callback_params 参数
-     * @return mixed 返回值
-     */
     public function searchAddress_callback($response, $callback_params){
         
         $oAddress = app::get('ome')->model('return_address');
@@ -127,18 +215,8 @@ class erpapi_shop_request_logistics extends erpapi_shop_request_abstract
         return $this->callback($response, $callback_params);    
     }
 
-    /**
-     * 更新ReturnLogistics
-     * @param mixed $reshipinfo reshipinfo
-     * @return mixed 返回值
-     */
     public function updateReturnLogistics($reshipinfo) {}
 
-    /**
-     * 获取CorpServiceCode
-     * @param mixed $sdf sdf
-     * @return mixed 返回结果
-     */
     public function getCorpServiceCode($sdf) {}
 
     /**
@@ -186,10 +264,10 @@ class erpapi_shop_request_logistics extends erpapi_shop_request_abstract
 
     /**
      * 获取物流可不可达
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function getAddressReachable($sdf)
     {
         $params = array();
@@ -210,12 +288,6 @@ class erpapi_shop_request_logistics extends erpapi_shop_request_abstract
         $result = $this->__caller->call(SHOP_WLB_THREEPL_RESOUCE_GET, $param, '', $title, 10);   
         return $this->back_crossbordercorp($result,$param);
     }
-        /**
-     * back_crossbordercorp
-     * @param mixed $response response
-     * @param mixed $callback_params 参数
-     * @return mixed 返回值
-     */
     public function back_crossbordercorp($response, $callback_params){
         $obj_dly_corp = app::get('ome')->model('dly_corp');
         $shop_id = $callback_params['shop_id'];
@@ -270,25 +342,15 @@ class erpapi_shop_request_logistics extends erpapi_shop_request_abstract
         return $rsp;
     } 
 
-    /**
-     * timerule
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function timerule($sdf)
     {
     }
 
-    /**
-     * 获取Recommend
-     * @param mixed $sdf sdf
-     * @return mixed 返回结果
-     */
     public function getRecommend($sdf) {return $this->succ('没有推荐物流');}
     
     /**
      * 同步OMS物流公司给到翱象系统
-     * 
+     *
      * @param array $params
      * @return array
      */
@@ -366,7 +428,7 @@ class erpapi_shop_request_logistics extends erpapi_shop_request_abstract
     
     /**
      * 删除翱象系统里OMS同步的物流公司
-     * 
+     *
      * @param array $params
      * @return array
      */
@@ -440,11 +502,6 @@ class erpapi_shop_request_logistics extends erpapi_shop_request_abstract
         return $result;
     }
     
-    /**
-     * 获取CarrierPlatform
-     * @param mixed $sdf sdf
-     * @return mixed 返回结果
-     */
     public function getCarrierPlatform($sdf){}
 
     /**
@@ -611,5 +668,55 @@ class erpapi_shop_request_logistics extends erpapi_shop_request_abstract
     public function officialPickup($sdf = [])
     {
         return null;
+    }
+    
+    /**
+     * 获取快递单号
+     *
+     * @param array $sdf 获取快递单号参数
+     * @return mixed
+     */
+    public function getWaybillNumber($sdf = [])
+    {
+        $title = '获取补寄单运单号';
+        $original_bn = $sdf['order_bn'];
+        
+        // api接口
+        $api_name = $this->get_waybill_number_apiname();
+        if (empty($api_name)){
+            return $this->error('接口暂不支持获取快递单号!');
+        }
+        
+        // 请求参数
+        $params = $this->get_waybill_number_params($sdf);
+        if (empty($params)){
+            return $this->error('获取快递单号，没有请求参数!');
+        }
+        
+        // request
+        $result = $this->__caller->call($api_name, $params, null, $title, 10, $original_bn);
+        
+        return $result;
+    }
+    
+    /**
+     * 获取请求平台获取运单号接口
+     *
+     * @return null
+     */
+    protected function get_waybill_number_apiname()
+    {
+        return null;
+    }
+    
+    /**
+     * 获取运单号参数
+     *
+     * @param $sdf
+     * @return void
+     */
+    protected function get_waybill_number_params($sdf)
+    {
+        return [];
     }
 }

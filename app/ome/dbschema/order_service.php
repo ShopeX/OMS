@@ -20,7 +20,7 @@ $db['order_service']=array (
   array (
     'id' => 
     array (
-      'type' => 'number',
+      'type' => 'int unsigned',
       'required' => true,
       'pkey' => true,
       'extra' => 'auto_increment',
@@ -28,7 +28,7 @@ $db['order_service']=array (
     ),
     'order_id' =>
     array (
-      'type' => 'number',
+      'type' => 'int unsigned',
       'required' => true,
       'editable' => false,
         'label' => '订单号',

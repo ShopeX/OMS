@@ -32,10 +32,6 @@ class base_kvstore_redis extends base_kvstore_abstract implements base_interface
         $this->prefix = $prefix;
     }//End Function
 
-    /**
-     * connect
-     * @return mixed 返回值
-     */
     public function connect()
     {
         if(!isset(self::$_cacheObj))
@@ -43,7 +39,23 @@ class base_kvstore_redis extends base_kvstore_abstract implements base_interface
             if(defined('KVSTORE_REDIS_CONFIG') && constant('KVSTORE_REDIS_CONFIG')){
                 self::$_cacheObj = new Redis();
                 $config = explode(':', KVSTORE_REDIS_CONFIG);
-                self::$_cacheObj->connect($config[0], $config[1]);
+                $host = $config[0];
+                $port = isset($config[1]) ? (int) $config[1] : 6379;
+
+                $useTls = defined('KVSTORE_REDIS_TLS') && self::_redisTlsEnabled();
+
+                if ($useTls) {
+                    $connectTimeout = defined('KVSTORE_REDIS_CONNECT_TIMEOUT')
+                        ? (float) constant('KVSTORE_REDIS_CONNECT_TIMEOUT') : 2.0;
+                    $readTimeout = defined('KVSTORE_REDIS_READ_TIMEOUT')
+                        ? (float) constant('KVSTORE_REDIS_READ_TIMEOUT') : 2.0;
+                    $context = self::_redisTlsStreamContext();
+                    // $timeout, $persistent_id, $retry_interval, $read_timeout, $context (phpredis 5.3+)
+                    self::$_cacheObj->connect($host, $port, $connectTimeout, null, 0, $readTimeout, $context);
+                } else {
+                    self::$_cacheObj->connect($host, $port);
+                }
+
                 // 密码
                 if(defined('KVSTORE_REDIS_AUTH') && constant('KVSTORE_REDIS_AUTH')){
                     self::$_cacheObj->auth(KVSTORE_REDIS_AUTH);
@@ -62,12 +74,44 @@ class base_kvstore_redis extends base_kvstore_abstract implements base_interface
     }//End Function
 
     /**
-     * fetch
-     * @param mixed $key key
-     * @param mixed $value value
-     * @param mixed $timeout_version timeout_version
-     * @return mixed 返回值
+     * 是否启用 Redis TLS（需 phpredis 支持 connect 第 7 参数 stream context）
+     *
+     * @return bool
      */
+    private static function _redisTlsEnabled()
+    {
+        $v = constant('KVSTORE_REDIS_TLS');
+        if ($v === true || $v === 1) {
+            return true;
+        }
+        if (is_string($v)) {
+            $v = strtolower(trim($v));
+            return $v === '1' || $v === 'true' || $v === 'yes' || $v === 'on';
+        }
+        return false;
+    }
+
+    /**
+     * TLS 连接的 stream context；可通过 KVSTORE_REDIS_STREAM_CONTEXT 完全自定义
+     *
+     * @return array|null
+     */
+    private static function _redisTlsStreamContext()
+    {
+        if (defined('KVSTORE_REDIS_STREAM_CONTEXT')) {
+            $ctx = constant('KVSTORE_REDIS_STREAM_CONTEXT');
+            if (is_array($ctx) && $ctx !== array()) {
+                return $ctx;
+            }
+        }
+        return array(
+            'stream' => array(
+                'verify_peer' => true,
+                'verify_peer_name' => true,
+            ),
+        );
+    }
+
     public function fetch($key, &$value, $timeout_version=null)
     {
         $store = self::$_cacheObj->get($this->create_key($key));
@@ -86,13 +130,6 @@ class base_kvstore_redis extends base_kvstore_abstract implements base_interface
         return false;
     }//End Function
 
-    /**
-     * store
-     * @param mixed $key key
-     * @param mixed $value value
-     * @param mixed $ttl ttl
-     * @return mixed 返回值
-     */
     public function store($key, $value, $ttl=0)
     {
         $store['value'] = $value;
@@ -101,21 +138,11 @@ class base_kvstore_redis extends base_kvstore_abstract implements base_interface
         return self::$_cacheObj->set($this->create_key($key), json_encode($store));
     }//End Function
 
-    /**
-     * 删除
-     * @param mixed $key key
-     * @return mixed 返回值
-     */
     public function delete($key)
     {
         return self::$_cacheObj->delete($this->create_key($key));
     }//End Function
 
-    /**
-     * recovery
-     * @param mixed $record record
-     * @return mixed 返回值
-     */
     public function recovery($record)
     {
         $key = $record['key'];
@@ -151,7 +178,7 @@ class base_kvstore_redis extends base_kvstore_abstract implements base_interface
 
     /**
      * 初始化自增ID值
-     * 
+     *
      * @return void
      * @author 
      */
@@ -161,4 +188,3 @@ class base_kvstore_redis extends base_kvstore_abstract implements base_interface
     }
 
 }//End Class
-

@@ -494,6 +494,12 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
             unset($params['actions']);
         }
 
+        foreach (kernel::servicelist('wms.service.receipts.print') as $service) {
+            if (method_exists($service, 'extendIndexParams')) {
+                $service->extendIndexParams($params, $_GET);
+            }
+        }
+
         $this->finder('wms_mdl_delivery', $params);
     }
 
@@ -632,9 +638,12 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
         if ($_GET['logi_id']) {
             $filter['logi_id'] = urldecode($_GET['logi_id']);
         }
-        /*
-         * 可扩展条件
-         */
+
+        foreach (kernel::servicelist('wms.service.receipts.print') as $service) {
+            if (method_exists($service, 'extendProcessFilter')) {
+                $service->extendProcessFilter($filter, $_GET);
+            }
+        }
 
         return $filter;
     }
@@ -847,6 +856,17 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
         }
         $jsondata = '';
         if ($allItems) {
+            foreach (kernel::servicelist('wms.service.print.newdelivery.after') as $service) {
+                if (!method_exists($service, 'enrichPrintData')) {
+                    continue;
+                }
+
+                $deliveries = isset($format_data['items']) ? (array) $format_data['items'] : array();
+                $extendItems = $service->enrichPrintData($allItems, $deliveries);
+                if (is_array($extendItems)) {
+                    $allItems = $extendItems;
+                }
+            }
             $jsondata = $PrintDlyLib->arrayToJson($allItems);
 
         }
@@ -2855,15 +2875,22 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
     /**
      * 发货流程页：无需打开打印页面，直接获取快递单打印数据（与 toPrintExpre 同源逻辑）
      *
-     * 返回结构用于 app/logisticsmanager/statics/js/printer.js 的 CaiNiaoPrinter：
+     * 返回结构用于 app/logisticsmanager/statics/js/printer.js 的打印器：
      * - data: 由 wms.service.template 组织出的数组（含 json_packet 等字段）
      * - template / custom_template_url / custom_data: 与 template_cainiao_web.html 一致
+     * - all_packages=1 时返回发货单全部现有包裹，默认仍只返回第一份
      */
     public function ajaxGetPrintExpreData()
     {
         @ini_set('memory_limit','1024M');
 
         $req = kernel::single('base_component_request');
+        $allPackagesParam = $req->get_post('all_packages');
+        if ($allPackagesParam === null || $allPackagesParam === '') {
+            $allPackagesParam = $req->get_get('all_packages');
+        }
+        $allPackages = in_array((string) $allPackagesParam, array('1', 'true'), true);
+
         $delivery_id = $req->get_post('delivery_id');
         if ($delivery_id === null || $delivery_id === '') {
             $delivery_id = $req->get_get('delivery_id');
@@ -3007,6 +3034,53 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
             }
         }
 
+        $packageRows = array();
+        if ($allPackages) {
+            $packageRows = $dlyBillObj->getList(
+                'b_id,delivery_id,logi_no,type,print_status,status,package_bn',
+                array('delivery_id' => $delivery_id),
+                0,
+                -1,
+                'type ASC,b_id ASC'
+            );
+            if (!$packageRows) {
+                echo json_encode(array('status' => 'error', 'msg' => '发货单没有包裹数据'));
+                return;
+            }
+
+            $baseDelivery = current($print_data['deliverys']);
+            if (!$baseDelivery) {
+                echo json_encode(array('status' => 'error', 'msg' => '发货单打印数据不存在'));
+                return;
+            }
+
+            $expandedDeliverys = array();
+            foreach ($packageRows as &$packageRow) {
+                if (intval($packageRow['type']) === 1
+                    && empty($packageRow['logi_no'])
+                    && !empty($expressDelivery[$delivery_id]['logi_no'])) {
+                    $packageRow['logi_no'] = $expressDelivery[$delivery_id]['logi_no'];
+                }
+                if (empty($packageRow['logi_no'])) {
+                    $packageTitle = $packageRow['package_bn'] ? $packageRow['package_bn'] : $packageRow['b_id'];
+                    echo json_encode(array(
+                        'status' => 'error',
+                        'msg' => '包裹【' . $packageTitle . '】缺少物流单号',
+                    ));
+                    return;
+                }
+
+                $packageDelivery = $baseDelivery;
+                $packageDelivery['logi_no'] = $packageRow['logi_no'];
+                $packageDelivery['delivery_bill_id'] = intval($packageRow['b_id']);
+                $packageDelivery['delivery_bill_type'] = intval($packageRow['type']);
+                $packageDelivery['package_bn'] = $packageRow['package_bn'];
+                $expandedDeliverys[$delivery_id . '-' . $packageRow['b_id']] = $packageDelivery;
+            }
+            unset($packageRow);
+            $print_data['deliverys'] = $expandedDeliverys;
+        }
+
         $PrintShipLib = kernel::single('wms_delivery_print_ship');
         $format_data = $PrintShipLib->format($print_data, $sku, $_err);
 
@@ -3033,12 +3107,17 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
                     }
                     $data = array_merge($data, $tmp);
                 }
+                if ($allPackages) {
+                    $data['_delivery_bill_id'] = intval($val['delivery_bill_id']);
+                    $data['_delivery_bill_type'] = intval($val['delivery_bill_type']);
+                    $data['_package_bn'] = $val['package_bn'];
+                }
                 $mydata[] = $data;
             }
         }
 
         // 发货流程页只触发打 1 份面单，避免队列里出现多单
-        if (count($mydata) > 1) {
+        if (!$allPackages && count($mydata) > 1) {
             $mydata = array_slice($mydata, 0, 1);
         }
 
@@ -3063,6 +3142,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
             ),
             'express_company_no' => $express_company_no,
             'err' => $_err,
+            'packages' => $allPackages ? $packageRows : array(),
         ));
         return;
     }
@@ -3379,14 +3459,51 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
                         'delivery_cost_actual' => $delivery['delivery_cost_actual'],
                     );
 
-                    //补打运单号
-                    $bill_list = $billObj->getList('*',array('delivery_id'=>$dly_id,'type'=>'2','status'=>'1'));
+                    //补打运单号 + 包裹参数（对齐 consignDelivery / WAP）
+                    $all_bills = $billObj->getList('*', array('delivery_id' => $dly_id, 'status' => '1'));
                     $other_list_0 = array();
-                    if($bill_list){
-                        foreach($bill_list as $bill){
-                            $other_list_0[] = array('logi_no'=>$bill['logi_no'],'weight'=>$bill['weight']/1000);
+                    $packages = array();
+                    $deliveryBillItemMdl = app::get('wms')->model('delivery_bill_items');
+                    foreach ((array) $all_bills as $bill) {
+                        if ((string) $bill['type'] === '2') {
+                            $other_list_0[] = array('logi_no' => $bill['logi_no'], 'weight' => $bill['weight'] / 1000);
                         }
+                        if ((string) $bill['type'] === '1' && !empty($bill['logi_no']) && empty($data['logi_no'])) {
+                            $data['logi_no'] = $bill['logi_no'];
+                        }
+                        $billItemList = $deliveryBillItemMdl->getList('product_id,bn,product_name,number', array('bill_id' => $bill['b_id']));
+                        $packages[] = array(
+                            'package_bn'    => $bill['package_bn'],
+                            'logi_no'       => $bill['logi_no'],
+                            'delivery_time' => $bill['delivery_time'],
+                            'items'         => $billItemList,
+                        );
+                    }
+                    if ($other_list_0) {
                         $data['other_list_0'] = json_encode($other_list_0);
+                    }
+                    if ($packages) {
+                        $data['packages'] = json_encode($packages);
+                    }
+
+                    $wmsDlyInfo = app::get('wms')->model('delivery')->dump($dly_id, 'delivery_id,outer_delivery_bn,logi_id,logi_no,weight');
+                    if (!empty($wmsDlyInfo['logi_id'])) {
+                        $data['logistics'] = $wmsDlyInfo['logi_id'];
+                    }
+                    if (empty($data['logi_no']) && !empty($wmsDlyInfo['logi_no'])) {
+                        $data['logi_no'] = $wmsDlyInfo['logi_no'];
+                    }
+                    $packageBillParams = kernel::single('wms_delivery_process')->buildConsignPackageAndBillParams(
+                        $wmsDlyInfo ? $wmsDlyInfo : array('outer_delivery_bn' => $delivery['outer_delivery_bn']),
+                        $data,
+                        $all_bills,
+                        $packages
+                    );
+                    if (!empty($packageBillParams['package'])) {
+                        $data['package'] = $packageBillParams['package'];
+                    }
+                    if (!empty($packageBillParams['bill_logi_weight'])) {
+                        $data['bill_logi_weight'] = $packageBillParams['bill_logi_weight'];
                     }
 
                     $res = kernel::single('wms_event_trigger_delivery')->consign($wms_id, $data, false);

@@ -1,0 +1,21 @@
+<app>
+    <name>机器中心</name>
+    <description>机器中心</description>
+
+    <author>
+        <name>author name</name>
+        <email>author email</email>
+        <url>http://author.example.com</url>
+    </author>
+
+    <version>0.1</version>
+    <license>Mit license</license>
+    <parent_model_class>dbeav_model</parent_model_class>
+
+    <depends>
+        <app>base</app>
+        <app>ome</app>
+        <app>material</app>
+    </depends>
+
+</app>

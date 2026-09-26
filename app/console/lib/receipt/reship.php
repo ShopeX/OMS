@@ -276,6 +276,11 @@ class console_receipt_reship{
                 }
             }
             kernel::database()->commit($tran);
+
+            //机器中心售后单添加
+            if (app::get('machinecenter')->is_installed()) {
+                $this->machineCenterReshipAdd(['items'=>$items,'reship_info'=>$reship]);
+            }
         }
         
         //[京东一件代发]判断退货数量是否完成
@@ -365,6 +370,10 @@ class console_receipt_reship{
             if($reship['flag_type'] & ome_reship_const::__LANJIE_RUKU){
                 //更新发货单为追回成功(使用问题件时间字段记录追回时间)
                 $oReship->db->exec("UPDATE sdb_ome_delivery SET status='return_back', problem_time=". time() ." WHERE delivery_id=". $reship['delivery_id']);
+                // 入库完成：回写 delivery_package.return_num；delivery_bill 已为已补寄(8) 时不改回追回成功(7)
+                if (isset($data['status']) && $data['status'] === 'FINISH') {
+                    kernel::single('ome_return_reshipping')->updateDeliveryPackageReturnNumFromLanJieReshipReceiptByReshipId($reship_id);
+                }
             }
         }
         
@@ -720,5 +729,85 @@ class console_receipt_reship{
         $operLogObj->write_log('reship@ome', $reshipInfo['reship_id'], '服务单号：'. $sdf['service_bn'] .' 接收成功');
         
         return true;
+    }
+
+    /**
+     * 机器中心退货入库添加
+     * @param array $params
+     */
+    public function machineCenterReshipAdd($params)
+    {
+        $original_id = $params['reship_info']['reship_id'];
+        $original_bn = $params['reship_info']['reship_bn'];
+        $branch_id   = $params['reship_info']['branch_id'];
+        $orderInfo   = app::get('ome')->model('orders')->db_dump($params['reship_info']['order_id'], 'order_bn,member_id,shop_id,platform_order_bn');
+        $snParams    = $this->reshipSnParams($orderInfo['member_id'], $params['reship_info']);
+        $branchInfo  = app::get('ome')->model('branch')->db_dump($branch_id, 'branch_bn');
+        $items       = $params['items'];
+        foreach ($items as $item) {
+            if ($item['sn_list']) {
+                $bnBm = app::get('material')->model('basic_material')->db_dump(array('material_bn' => $item['bn']), 'bm_id,material_name');
+                $barcode = material_codebase::getBarcodeBybn($item['bn']) ?: '';
+                foreach ($item['sn_list'] as $serial) {
+                    $tmpSnParams                      = [];
+                    $tmpSnParams['sn']                = $serial;
+                    $tmpSnParams['bm_id']             = $bnBm['bm_id'];
+                    $tmpSnParams['material_bn']       = $item['bn'];
+                    $tmpSnParams['barcode']           = $barcode;
+                    $tmpSnParams['imei_number']       = $item['imei_number'] ?? '';
+                    $tmpSnParams['order_bn']          = $orderInfo['order_bn'];
+                    $tmpSnParams['branch_id']         = $branch_id;
+                    $tmpSnParams['branch_bn']         = $branchInfo['branch_bn'];
+                    $tmpSnParams['original_id']       = $original_id;
+                    $tmpSnParams['original_bn']       = $original_bn;
+                    $tmpSnParams['bill_bn']           = $original_bn;
+                    $tmpSnParams['original_type']     = 'reship';
+                    $tmpSnParams['status']            = '1';
+                    $tmpSnParams['io_status']         = '1';
+                    $tmpSnParams['io_time']           = $params['reship_info']['t_end'] ?: time();
+                    $tmpSnParams['platform_order_bn'] = $orderInfo['platform_order_bn'] ?: $orderInfo['order_bn'];
+                    $tmpSnParams['qa_expire_item']    = '';
+                    $tmpSnParams['shop_id']           = $orderInfo['shop_id'];
+
+                    kernel::single('machinecenter_event_receive_sn')->add(array_merge($snParams, $tmpSnParams));
+                }
+            }
+        }
+        foreach (kernel::servicelist('ome.service.reship.machinecenteradd.after') as $service) {
+            if (method_exists($service, 'after_reship')) {
+                $service->after_reship($params);
+            }
+        }
+    }
+
+    public function reshipSnParams($memberId, $reshipInfo)
+    {
+        return [
+            'buyer_open_id'  => '',
+            'buyer_nickname' => '',
+            'buyer_name'     => '',
+            'buyer_mobile'   => '',
+            'buyer_email'    => '',
+            'buyer_address'  => '',
+            'ship_oaid'      => '',
+            'ship_name'      => '',
+            'ship_mobile'    => '',
+            'ship_email'     => '',
+            'ship_address'   => '',
+            'ship_province'  => '',
+            'ship_city'      => '',
+            'ship_district'  => '',
+            'ship_town'      => '',
+            'ship_village'   => '',
+            'user_name'      => '',
+            'user_mobile'    => '',
+            'user_email'     => '',
+            'user_address'   => '',
+            'user_province'  => '',
+            'user_city'      => '',
+            'user_district'  => '',
+            'user_town'      => '',
+            'user_village'   => '',
+        ];
     }
 }

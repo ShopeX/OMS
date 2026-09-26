@@ -52,7 +52,11 @@ class invoice_ctl_admin_order extends desktop_controller
                 array(
                     'label' => '批量操作',
                     'group' => array(
-                        array('label' => '批量作废', 'submit'=>'index.php?app=invoice&ctl=admin_order&act=batchCancel','target'=>'dialog::{width:690,height:200,title:\'批量作废\'}')
+                        array(
+                            'label' => '批量作废/冲红',
+                            'submit'=>'index.php?app=invoice&ctl=admin_order&act=batchCancel',
+                            'target'=>'dialog::{width:690,height:300,title:\'批量作废\'}'
+                        )
                     )
                 )
             );
@@ -164,11 +168,28 @@ class invoice_ctl_admin_order extends desktop_controller
             'href'   => $this->url . '&act=execlImportDailog&p[]=memo',
             'target' => 'dialog::{width:760,height:400,title:\'发票备注导入\'}',
         ];
-        $actions[]                    = [
-            'label'  => '合并开票',
-            'submit'   => $this->url . '&act=merge_invoice&finder_vid='.$_GET['finder_vid'],
-//            'target' => 'dialog::{width:1200,height:400,title:\'合并开票\'}',
-        ];
+        
+        // 支持合并开发票
+        $is_is_merge_invoice = true;
+        
+        // 注册Service，判断是否支持合并开发票
+        foreach(kernel::servicelist('ome.service.invoice.index.action') as $object)
+        {
+            if(method_exists($object, 'check_merge_invoice')){
+                $checkResult = $object->check_merge_invoice();
+                if(isset($checkResult['data']['is_merge_invoice']) && $checkResult['data']['is_merge_invoice'] == 'false'){
+                    $is_is_merge_invoice = false;
+                }
+            }
+        }
+        
+        // 合并开票按钮
+        if($is_is_merge_invoice){
+            $actions[]                    = [
+                'label'  => '合并开票',
+                'submit'   => $this->url . '&act=merge_invoice&finder_vid='.$_GET['finder_vid'],
+            ];
+        }
         
         $params['actions'] = $actions;
         
@@ -297,18 +318,49 @@ JS;
         );
 
         $order_id_map = array();
-        $list = $this->app->model('order')->getList('id,order_id', array('id'=>$primary_id));
+        $list = $this->app->model('order')->getList('id,order_id,order_bn', array('id'=>$primary_id));
         foreach($list as $v){
-            $order_id_map[$v['id']] = $v['order_id'];
+            $order_id_map[$v['id']] = $v;
         }
         
         //一单一单处理
         foreach ($primary_id as $id)
         {
-            $param = array('id'=>$id, 'order_id'=>$order_id_map[$id]);
+            $params = array('id'=>$id, 'order_id'=>$order_id_map[$id]['order_id'], 'order_bn'=>$order_id_map[$id]['order_bn']);
             
-            $rs = kernel::single('invoice_process')->billing($param,'man',$error_msg);
-            if($rs){
+            // Set
+            $result = array('rsp'=>'fail', 'error_msg'=>'');
+            $error_msg = '';
+            
+            // 是否定制标识
+            $is_custom_flag = false;
+            
+            // 注册Service，调用定制开发票方法
+            foreach(kernel::servicelist('ome.service.invoice.analysis.prepose') as $object)
+            {
+                if(method_exists($object, 'customInvoiceBilling')){
+                    $customResult = $object->customInvoiceBilling($params);
+                    if(isset($customResult['rsp']) && $customResult['rsp']){
+                        // flag
+                        $is_custom_flag = true;
+                        $result = $customResult;
+                        
+                        if($customResult['rsp'] == 'succ'){
+                            $error_msg = '';
+                        }else{
+                            $error_msg = ($customResult['error_msg'] ? $customResult['error_msg'] : '调用定制开发票失败。');
+                        }
+                    }
+                }
+            }
+            
+            // 默认处理
+            if(!$is_custom_flag){
+                $result = kernel::single('invoice_process')->billing($params,'man',$error_msg);
+            }
+            
+            // result
+            if($result['rsp'] == 'succ'){
                 $retArr['isucc']++;
             }else{
                 $retArr['ifail']++;
@@ -350,12 +402,45 @@ JS;
         //一单一单处理
         foreach ($primary_id as $id) {
             $param = array('id'=>$id,'invoice_action_type'=>$_POST['invoice_action_type']);
-            $rs = kernel::single('invoice_process')->cancel($param,"invoice_list");
+            
+            // 是否定制标识
+            $is_custom_flag = false;
+            $rs = false;
+            $error_msg = '';
+            
+            // 注册Service，调用定制编辑发票方法
+            foreach(kernel::servicelist('ome.service.invoice.analysis.prepose') as $object)
+            {
+                if(method_exists($object, 'customCancelInvoiceOrder')){
+                    $params = $param;
+                    $customResult = $object->customCancelInvoiceOrder($params, 'invoice_list');
+                    if(isset($customResult['rsp']) && $customResult['rsp']){
+                        // flag
+                        $is_custom_flag = true;
+                        if($customResult['rsp'] == 'succ'){
+                            $rs = true;
+                            $error_msg = '';
+                        }else{
+                            $error_msg = '定制作废发票失败：'. $customResult['error_msg'];
+                        }
+                    }
+                }
+            }
+            
+            // 默认处理
+            $result_msg = '';
+            if(!$is_custom_flag){
+                $rs = kernel::single('invoice_process')->cancel($param,"invoice_list", $result_msg);
+            }
+            
+            $error_msg .= ($result_msg ? '，'.$result_msg : '');
+            
+            // result
             if($rs){
                 $retArr['isucc']++;
             }else{
                 $retArr['ifail']++;
-                $retArr['err_msg'][] = '作废发票失败';
+                $retArr['err_msg'][] = '作废发票失败：'. $error_msg;
             }
         }
         
@@ -435,14 +520,42 @@ JS;
             $this->splash('error',$url,'操作出错，不存在此条发票记录，请重新操作。');
         }
         
-        //execute
+        // Set
+        $result = array('rsp'=>'fail', 'error_msg'=>'');
         $error_msg = '';
-        $arr_billing = array(
-            "id" => $id,
-        );
-        $result = kernel::single('invoice_process')->billing($arr_billing, 'man', $error_msg);
-        if(!$result){
-            $this->splash('error', $url, '开票失败：'. $error_msg);
+        
+        // 是否定制标识
+        $is_custom_flag = false;
+        
+        // dump
+        $invoiceInfo = $this->app->model('order')->db_dump(['id'=>$id], '*');
+        
+        // 注册Service，调用定制开发票方法
+        foreach(kernel::servicelist('ome.service.invoice.analysis.prepose') as $object)
+        {
+            if(method_exists($object, 'customInvoiceBilling')){
+                $params = array('id'=>$invoiceInfo['id'], 'order_id'=>$invoiceInfo['order_id'], 'order_bn'=>$invoiceInfo['order_bn']);
+                $customResult = $object->customInvoiceBilling($params);
+                if(isset($customResult['rsp']) && $customResult['rsp']){
+                    // flag
+                    $is_custom_flag = true;
+                    $result = $customResult;
+                    
+                    if($customResult['rsp'] == 'succ'){
+                        $error_msg = '';
+                    }else{
+                        $error_msg = ($customResult['error_msg'] ? $customResult['error_msg'] : '调用定制开发票失败。');
+                    }
+                }
+            }
+        }
+        
+        // 默认处理
+        if(!$is_custom_flag){
+            $arr_billing = array(
+                "id" => $id,
+            );
+            $result = kernel::single('invoice_process')->billing($arr_billing, 'man', $error_msg);
         }
         
         if($result['rsp'] != 'succ'){
@@ -462,9 +575,14 @@ JS;
     //编辑页面展示
     function edit()
     {
+        $url = 'index.php?app=invoice&ctl=admin_order&act=index&finder_vid='. $_GET['finder_vid'] .'&_finder[finder_id]='. $_GET['finder_id'] .'&page='. $_GET['page'];
+        
+        $this->begin($url);
+        
+       // check
        $id = intval($_GET["id"]);
        if(!$id){
-          return false;
+           $this->end(false, '无效的编辑发票操作!');
        }
        
        //获取发票信息
@@ -488,11 +606,37 @@ JS;
        //获取发票内容
        $mdlInContent = app::get('invoice')->model('content');
        $this->pagedata["invoice_content"] = $mdlInContent->getList();
+        
+        // 发票页面相关表单项
+        $displayButtons = [
+            'tax_company' => 'true',
+            'ship_tel' => 'true',
+            'ship_addr' => 'true',
+            'ship_email' => 'false',
+            'other_detail' => 'true',
+        ];
+        
+        // 注册Service，调用定制编辑发票方法
+        foreach(kernel::servicelist('ome.service.invoice.analysis.prepose') as $object)
+        {
+            if(method_exists($object, 'displayEditButtons')){
+                $displayParams = ['action'=>'edit'];
+                $displayResult = $object->displayEditButtons($displayParams);
+                if(isset($displayResult['rsp']) && $displayResult['rsp']){
+                    // flag
+                    if($displayResult['rsp'] == 'succ'){
+                        $displayButtons = $displayResult['data'];
+                    }
+                }
+            }
+        }
+        
+        $this->pagedata['displayButtons'] = $displayButtons;
        
-      
        $this->pagedata["act"] = "doEdit";
        $this->pagedata['title'] = "编辑发票";
-       $this->display('admin/order_editor.html');
+       
+       $this->singlepage('admin/order_editor.html');
     }
     
     //编辑提交操作
@@ -505,12 +649,96 @@ JS;
           return false;
         }
         
+        // 是否自动开票
+        $auto_order_invoice = $_POST['auto_order_invoice'];
+        
+        // 检查开票金额，不能为空，不能为负数，不能为非数字
+        if(is_null($_POST['item']['amount']) || empty($_POST['item']['amount'])){
+            if($_POST['item']['amount'] === 0 || $_POST['item']['amount'] === '0'){
+                $this->end(false, '开票金额不能为0!');
+            }else{
+                $this->end(false, '开票金额不能为空!');
+            }
+        }
+        
+        if(!is_numeric($_POST['item']['amount'])){
+            $this->end(false, '开票金额不能为非数字!');
+        }
+        
+        $_POST['item']['amount'] = floatval($_POST['item']['amount']);
+        if(!$_POST['item']['amount'] || $_POST['item']['amount'] < 0){
+          $this->end(false, '开票金额不能小于等于0!');
+        }
+        
+        // check
         $check_result = kernel::single('invoice_check')->checkEdit($id);
         if(!$check_result){
           $this->end(false, '编辑失败，此发票记录必须是未开票状态。');
         }
         
-        list($result,$msg) = kernel::single('invoice_process')->edit($_POST["item"]);
+        // 是否定制标识
+        $is_custom_flag = false;
+        $result = false;
+        $msg = '';
+        $billingInvoiceId = 0;
+        
+        // 注册Service，调用定制编辑发票方法
+        foreach(kernel::servicelist('ome.service.invoice.analysis.prepose') as $object)
+        {
+            if(method_exists($object, 'customEditInvoiceOrder')){
+                $params = $_POST['item'];
+                $customResult = $object->customEditInvoiceOrder($params);
+                if(isset($customResult['rsp']) && $customResult['rsp']){
+                    // flag
+                    $is_custom_flag = true;
+                    if($customResult['rsp'] == 'succ'){
+                        if(!empty($customResult['data']['billing_invoice_id'])){
+                            $billingInvoiceId = (int) $customResult['data']['billing_invoice_id'];
+                        }
+                        $result = true;
+                        $msg = '';
+                    }else{
+                        $msg = '编辑发票失败：'. $customResult['error_msg'];
+                        $this->end(false, $msg);
+                    }
+                }
+            }
+        }
+        
+        // 默认处理
+        if(!$is_custom_flag){
+            list($result,$msg) = kernel::single('invoice_process')->edit($_POST["item"]);
+        }
+        
+        // 自动进行开票
+        if($auto_order_invoice == 'true'){
+            if($billingInvoiceId > 0){
+                $invoiceInfo = app::get('invoice')->model('order')->db_dump(['id' => $billingInvoiceId], '*');
+            }else{
+                $invoiceInfo = app::get('invoice')->model('order')->db_dump(['id'=>$id], '*');
+            }
+            if($invoiceInfo){
+                // 注册Service，调用定制开发票方法
+                foreach(kernel::servicelist('ome.service.invoice.analysis.prepose') as $object)
+                {
+                    if(method_exists($object, 'customInvoiceBilling')){
+                        $params = array('id'=>$invoiceInfo['id'], 'order_id'=>$invoiceInfo['order_id'], 'order_bn'=>$invoiceInfo['order_bn']);
+                        $customResult = $object->customInvoiceBilling($params);
+                        if(isset($customResult['rsp']) && $customResult['rsp']){
+                            if($customResult['rsp'] == 'succ'){
+                                $log_msg = '编辑并开票，调用成功。';
+                            }else{
+                                $log_msg = '[编辑并开票失败]'. $customResult['error_msg'];
+                            }
+                            
+                            // log
+                            app::get('ome')->model('operation_log')->write_log('invoice_edit@invoice', $invoiceInfo['id'], $log_msg);
+                        }
+                    }
+                }
+            }
+        }
+        
         if($result){
           $this->end(true, '编辑发票信息成功。');
         }else{
@@ -579,11 +807,18 @@ JS;
      */
     function addChangeTicket()
     {
+        $url = 'index.php?app=invoice&ctl=admin_order&act=index&finder_vid='. $_GET['finder_vid'] .'&_finder[finder_id]='. $_GET['finder_id'] .'&page='. $_GET['page'];
+        
+        $this->begin($url);
+        
         $invoiceOrderLib     = kernel::single('invoice_order');
+        
+        // check
         $id = intval($_GET["id"]);
         if(!$id){
-            return false;
+            $this->end(false, '无效的改票操作!');
         }
+        
         //获取发票信息
         $mdlInOrder = app::get('invoice')->model('order');
         $rs_invoice_order = $mdlInOrder->dump(array("id"=>$id),"*");
@@ -618,9 +853,36 @@ JS;
         //获取发票内容
         $mdlInContent = app::get('invoice')->model('content');
         $this->pagedata["invoice_content"] = $mdlInContent->getList();
+        
+        // 发票页面相关表单项
+        $displayButtons = [
+            'tax_company' => 'true',
+            'ship_tel' => 'true',
+            'ship_addr' => 'true',
+            'ship_email' => 'false',
+            'other_detail' => 'true',
+        ];
+        
+        // 注册Service，调用定制编辑发票方法
+        foreach(kernel::servicelist('ome.service.invoice.analysis.prepose') as $object)
+        {
+            if(method_exists($object, 'displayEditButtons')){
+                $displayParams = ['action'=>'edit'];
+                $displayResult = $object->displayEditButtons($displayParams);
+                if(isset($displayResult['rsp']) && $displayResult['rsp']){
+                    // flag
+                    if($displayResult['rsp'] == 'succ'){
+                        $displayButtons = $displayResult['data'];
+                    }
+                }
+            }
+        }
+        
+        $this->pagedata['displayButtons'] = $displayButtons;
+        
         $this->pagedata["title"] = '改票信息';
         
-        $this->display('admin/order_editor.html');
+        $this->singlepage('admin/order_editor.html');
     }
     
     /**
@@ -636,7 +898,53 @@ JS;
         if(!$id){
             return false;
         }
-        list($result,$msg) = kernel::single('invoice_process')->addChangeTicketData($_POST["item"]);
+        
+        // 检查开票金额，不能为空，不能为负数，不能为非数字
+        if(is_null($_POST['item']['amount']) || empty($_POST['item']['amount'])){
+            if($_POST['item']['amount'] === 0 || $_POST['item']['amount'] === '0'){
+                $this->end(false, '开票金额不能为0!');
+            }else{
+                $this->end(false, '开票金额不能为空!');
+            }
+        }
+        
+        if(!is_numeric($_POST['item']['amount'])){
+            $this->end(false, '开票金额不能为非数字!');
+        }
+        
+        $_POST['item']['amount'] = floatval($_POST['item']['amount']);
+        if(!$_POST['item']['amount'] || $_POST['item']['amount'] < 0){
+            $this->end(false, '开票金额不能小于等于0!');
+        }
+        
+        // 是否定制标识
+        $is_custom_flag = false;
+        $result = false;
+        $msg = '';
+        
+        // 注册Service，调用定制改票方法
+        foreach(kernel::servicelist('ome.service.invoice.analysis.prepose') as $object)
+        {
+            if(method_exists($object, 'customChangeTicket')){
+                $params = $_POST['item'];
+                $customResult = $object->customChangeTicket($params);
+                if(isset($customResult['rsp']) && $customResult['rsp']){
+                    // flag
+                    $is_custom_flag = true;
+                    if($customResult['rsp'] == 'succ'){
+                        $result = true;
+                        $msg = '';
+                    }else{
+                        $msg = '定制改票失败：'. $customResult['error_msg'];
+                    }
+                }
+            }
+        }
+        
+        // 默认处理
+        if(!$is_custom_flag){
+            list($result,$msg) = kernel::single('invoice_process')->addChangeTicketData($_POST["item"]);
+        }
         
         if($result){
             $this->end(true, '新建改票信息成功。');
@@ -1014,7 +1322,7 @@ JS;
     {
         $invoice = array();
         if ($id) {
-            $invoice = app::get('invoice')->model('order')->db_dump($id, 'shop_id,shop_type,order_bn,ship_addr,ship_tel,ship_bank_no,ship_bank,ship_tax');
+            $invoice = app::get('invoice')->model('order')->db_dump($id, 'shop_id,shop_type,order_bn,ship_addr,ship_tel,ship_email,ship_bank_no,ship_bank,ship_tax');
             
             // 处理加密
             $invoice['encrypt_body'] = kernel::single('ome_security_router',$invoice['shop_type'])->get_encrypt_body($invoice, $type);
@@ -1112,6 +1420,244 @@ JS;
         $file_path ? readfile($file_path) : '';
     }
     
+    public function sendEinvoiceSms()
+    {
+        $this->begin();
+        if(!kernel::single('base_component_request')->is_post()){
+            $this->end(false, '非法请求');
+        }
+        $id = $_POST['id'];
+        $result = $this->sendEinvoiceSmsById($id);
+        $this->end($result['rsp'] == 'succ', $result['msg']);
+    }
+
+    public function sendEinvoiceSmsById($id)
+    {
+        if(!$id){
+            return array('rsp' => 'fail', 'msg' => '发票ID不能为空');
+        }
+
+        $invoice = app::get('invoice')->model('order')->db_dump($id, '*');
+        if(!$invoice){
+            return array('rsp' => 'fail', 'msg' => '发票不存在');
+        }
+
+        $checkResult = $this->checkEinvoiceSmsInvoice($invoice);
+        if($checkResult['rsp'] == 'fail'){
+            return $checkResult;
+        }
+
+        $shop = app::get('ome')->model('shop')->db_dump($invoice['shop_id'], 'name');
+        if(!$shop || !$shop['name']){
+            return array('rsp' => 'fail', 'msg' => '发票店铺不存在');
+        }
+
+        $invoicePdfPath = '';
+        $invoiceOfdPath = '';
+        $invoiceXmlUrl = '';
+        $electronicItems = app::get('invoice')->model('order_electronic_items')->getList(
+            'file_path',
+            array('id' => $invoice['id'], 'billing_type' => '1'),
+            0,
+            1,
+            'item_id DESC'
+        );
+        if($electronicItems && $electronicItems[0]['file_path']){
+            $fileInfo = json_decode($electronicItems[0]['file_path'], true);
+            if($fileInfo && isset($fileInfo['pdf_url'])){
+                $invoicePdfPath = $fileInfo['pdf_url'];
+            }
+            if($fileInfo && isset($fileInfo['ofd_url'])){
+                $invoiceOfdPath = $fileInfo['ofd_url'];
+            }
+            if($fileInfo && isset($fileInfo['xml_url'])){
+                $invoiceXmlUrl = $fileInfo['xml_url'];
+            }
+        }
+
+        $params = array(
+            'event_type' => 'einvoice',
+            'order_bn' => $invoice['order_bn'],
+            'billing_time' => date('Y-m-d H:i:s', $invoice['dateline']),
+            'invoice_no' => $invoice['invoice_no'],
+            'invoice_code' => $invoice['invoice_code'],
+            'amount' => $invoice['amount'],
+            'payee_name' => $invoice['payee_name'],
+            'store_name' => $shop['name'],
+            'telephone' => $invoice['ship_tel'],
+            'invoice_pdf_path' => $invoicePdfPath,
+            'invoice_ofd_path' => $invoiceOfdPath,
+            'invoice_xml_url' => $invoiceXmlUrl,
+            'direct_send' => true,
+        );
+
+        $errorMsg = '';
+        $result = kernel::single('taoexlib_sms')->sendSms($params, $errorMsg);
+        if($result){
+            $successMemo = '发送电子发票短信成功，订单号：' . $invoice['order_bn'] . '，手机号：' . $invoice['ship_tel'];
+            app::get('ome')->model('operation_log')->write_log('invoice_edit@invoice', $invoice['id'], $successMemo);
+            return array('rsp' => 'succ', 'msg' => '发送成功');
+        }
+
+        $sendSmsMsg = $errorMsg ? $errorMsg : '短信发送失败';
+        $failMemo = '发送电子发票短信失败，订单号：' . $invoice['order_bn'] . '，手机号：' . $invoice['ship_tel'] . '，原因：' . $sendSmsMsg;
+        app::get('ome')->model('operation_log')->write_log('invoice_edit@invoice', $invoice['id'], $failMemo);
+
+        return array('rsp' => 'fail', 'msg' => $sendSmsMsg);
+    }
+
+    public function receiptRepush()
+    {
+        $id = intval($_GET['id']);
+        if(!$id){
+            die('发票ID不能为空');
+        }
+
+        $invoice = app::get('invoice')->model('order')->db_dump($id, '*');
+        if(!$invoice){
+            die('发票不存在');
+        }
+
+        if(!$this->getInvoiceReceiptRepushService($invoice)){
+            die('当前系统不支持收票补推');
+        }
+
+        $checkResult = $this->checkReceiptRepushInvoiceStatus($invoice, '收票补推');
+        if($checkResult['rsp'] == 'fail'){
+            die($checkResult['msg']);
+        }
+
+        $this->pagedata['invoice_order'] = $invoice;
+        echo $this->page('admin/order/receipt_repush.html');
+    }
+
+    public function doReceiptRepush()
+    {
+        $this->begin();
+        if(!kernel::single('base_component_request')->is_post()){
+            $this->end(false, '非法请求');
+        }
+
+        $result = $this->receiptRepushById(
+            intval($_POST['id']),
+            trim((string) $_POST['channel']),
+            trim((string) $_POST['ship_tel']),
+            trim((string) $_POST['ship_email'])
+        );
+        $this->end($result['rsp'] == 'succ', $result['msg']);
+    }
+
+    protected function receiptRepushById($id, $channel, $shipTel, $shipEmail)
+    {
+        if(!$id){
+            return array('rsp' => 'fail', 'msg' => '发票ID不能为空');
+        }
+
+        if(!in_array($channel, array('sms', 'email'), true)){
+            return array('rsp' => 'fail', 'msg' => '补推渠道错误');
+        }
+
+        $invoiceOrderMdl = app::get('invoice')->model('order');
+        $invoice = $invoiceOrderMdl->db_dump($id, '*');
+        if(!$invoice){
+            return array('rsp' => 'fail', 'msg' => '发票不存在');
+        }
+
+        $receiptRepushService = $this->getInvoiceReceiptRepushService($invoice);
+        if(!$receiptRepushService){
+            return array('rsp' => 'fail', 'msg' => '当前系统不支持收票补推');
+        }
+
+        $shipTel = trim((string) $shipTel);
+        $shipEmail = trim((string) $shipEmail);
+        if($channel == 'sms' && $shipTel === ''){
+            return array('rsp' => 'fail', 'msg' => '收票手机号不能为空');
+        }
+        if($channel == 'email' && $shipEmail === ''){
+            return array('rsp' => 'fail', 'msg' => '收票邮箱不能为空');
+        }
+
+        $updateResult = $invoiceOrderMdl->update(array(
+            'ship_tel' => $shipTel,
+            'ship_email' => $shipEmail,
+            'update_time' => time(),
+        ), array('id' => $id));
+        if($updateResult === false){
+            return array('rsp' => 'fail', 'msg' => '收票联系方式保存失败');
+        }
+
+        if($channel == 'sms'){
+            return $this->sendEinvoiceSmsById($id);
+        }
+
+        $invoice = $invoiceOrderMdl->db_dump($id, '*');
+        $checkResult = $this->checkReceiptRepushInvoiceStatus($invoice, '发送邮件');
+        if($checkResult['rsp'] == 'fail'){
+            return $checkResult;
+        }
+
+        if(!method_exists($receiptRepushService, 'send_invoice_receipt_email')){
+            return array('rsp' => 'fail', 'msg' => '当前系统不支持发送发票邮件');
+        }
+
+        return $receiptRepushService->send_invoice_receipt_email($id);
+    }
+
+    private function getInvoiceReceiptRepushService($invoice)
+    {
+        foreach(kernel::servicelist('ome.service.invoice.index.action') as $object)
+        {
+            if(!method_exists($object, 'check_invoice_receipt_repush') || !method_exists($object, 'send_invoice_receipt_email')){
+                continue;
+            }
+
+            $checkResult = $object->check_invoice_receipt_repush($invoice);
+            if(isset($checkResult['data']['is_invoice_receipt_repush']) && $checkResult['data']['is_invoice_receipt_repush'] == 'true'){
+                return $object;
+            }
+        }
+
+        return false;
+    }
+
+    private function checkReceiptRepushInvoiceStatus($invoice, $actionName)
+    {
+        if(intval($invoice['mode']) != 1){
+            return array('rsp' => 'fail', 'msg' => '非电子发票不能' . $actionName);
+        }
+
+        if(intval($invoice['is_status']) != 1 || intval($invoice['sync']) != 3){
+            return array('rsp' => 'fail', 'msg' => '电子发票未开蓝成功，不能' . $actionName);
+        }
+
+        if(!$invoice['invoice_no']){
+            return array('rsp' => 'fail', 'msg' => '发票号码不能为空');
+        }
+
+        return array('rsp' => 'succ', 'msg' => '');
+    }
+
+    private function checkEinvoiceSmsInvoice($invoice)
+    {
+        if(intval($invoice['mode']) != 1){
+            return array('rsp' => 'fail', 'msg' => '非电子发票不能发送短信');
+        }
+
+        if(intval($invoice['is_status']) != 1 || intval($invoice['sync']) != 3){
+            return array('rsp' => 'fail', 'msg' => '电子发票未开蓝成功，不能发送短信');
+        }
+
+        if(!$invoice['invoice_no']){
+            return array('rsp' => 'fail', 'msg' => '发票号码不能为空');
+        }
+
+        if(!$invoice['ship_tel']){
+            return array('rsp' => 'fail', 'msg' => '收票手机号不能为空');
+        }
+
+        return array('rsp' => 'succ', 'msg' => '');
+    }
+
     //合并发票页面展示
     function merge_invoice()
     {
@@ -1123,6 +1669,26 @@ JS;
         if (count($id) <= 1) {
             die('合并发票数据不能少于一条');
         }
+        
+        // 支持合并开发票
+        $is_is_merge_invoice = true;
+        
+        // 注册Service，判断是否支持合并开发票
+        foreach(kernel::servicelist('ome.service.invoice.index.action') as $object)
+        {
+            if(method_exists($object, 'check_merge_invoice')){
+                $checkResult = $object->check_merge_invoice();
+                if(isset($checkResult['data']['is_merge_invoice']) && $checkResult['data']['is_merge_invoice'] == 'false'){
+                    $is_is_merge_invoice = false;
+                }
+            }
+        }
+        
+        // check
+        if(!$is_is_merge_invoice){
+            die('不支持合并开发票!');
+        }
+        
         //获取发票信息
         $mdlInOrder = app::get('invoice')->model('order');
         $rs_invoice_order = $mdlInOrder->getList('*',array("id"=>$id));

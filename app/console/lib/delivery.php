@@ -100,8 +100,8 @@ class console_delivery
             $updateArr['sync_code'] = '';
         }elseif($error_code){
             $error_code = str_replace(array('"', "'"), '', $error_code);
-            
-            $updateArr['sync_code'] = $error_code;
+            // sync_code 为 varchar(32)，超长截断避免 Data too long
+            $updateArr['sync_code'] = substr($error_code, 0, 32);
         }
         
         $dlyObj = app::get('console')->model('delivery');
@@ -110,7 +110,7 @@ class console_delivery
     
     /**
      * [京东一件代发]获取发货单对应所有包裹信息
-     * 
+     *
      * @param int $order_id
      * @param array $skus
      * @param string $error_msg
@@ -225,19 +225,22 @@ class console_delivery
                 '21' => '订单锁定',
                 '9' => '等待发货',
         );
-        
-        if($status || $status === '0'){
-            return $status_list[$status];
+
+        if ($status === null) {
+            return $status_list;
         }
-        
-        return $status_list;
+        $key = (string) $status;
+        if ($key === '') {
+            return '';
+        }
+        return isset($status_list[$key]) ? $status_list[$key] : $key;
     }
     
     /**
-     * 京东包裹状态
-     * 
-     * @param string $status
-     * @return string
+     * 京东包裹状态（delivery_package.status）
+     *
+     * @param string|null $status 传 null 返回完整映射数组（筛选器等）；传具体值返回中文；未知编码原样返回
+     * @return array|string
      */
     public function getPackageStatus($status=null)
     {
@@ -246,13 +249,41 @@ class console_delivery
                 'delivery' => '已发货',
                 'return_back' => '拦截追回',
                 'cancel' => '已取消', //现在没有此状态
+                'intercepting' => '拦截中',
+                'intercept_success' => '拦截成功',
+                'reshipping' => '已补寄',
+                // 与 ome_return_reshipping 落库数字串一致
+                '1' => '拦截中',
+                '2' => '拦截成功',
+                '3' => '已补寄',
+                'sign' => '已签收',
         );
-        
-        if($status){
-            return $status_list[$status];
+
+        if ($status === null) {
+            return $status_list;
         }
-        
-        return $status_list;
+        $key = (string) $status;
+        if ($key === '') {
+            return '';
+        }
+        return isset($status_list[$key]) ? $status_list[$key] : $key;
+    }
+
+    /**
+     * 为列表/弹窗补充包裹状态、配送状态展示字段（不改库里的原始 status）
+     *
+     * @param array $packages delivery_package 行列表
+     * @return array
+     */
+    public function attachPackageStatusLabelsForView(array $packages)
+    {
+        foreach ($packages as $k => $row) {
+            $st = isset($row['status']) ? $row['status'] : '';
+            $packages[$k]['status_display'] = $this->getPackageStatus($st !== null && $st !== '' ? (string) $st : '');
+            $ship = isset($row['shipping_status']) ? $row['shipping_status'] : '';
+            $packages[$k]['shipping_status_display'] = $this->getShippingStatus($ship !== null && $ship !== '' ? (string) $ship : '');
+        }
+        return $packages;
     }
     
     /**
@@ -811,7 +842,7 @@ class console_delivery
     
     /**
      * 按发货单ID进行取消京东订单包裹
-     * 
+     *
      * @param int $cursor_id
      * @param array $params
      * @param string $error_msg
@@ -864,7 +895,7 @@ class console_delivery
     
     /**
      * 物流包裹单状态
-     * 
+     *
      * @param string $status
      * @return bool
      */
@@ -1217,7 +1248,7 @@ class console_delivery
     
     /**
      * 按京东订单纬度,推送给平台发货状态
-     * 
+     *
      * @param string $status
      * @return bool
      */
@@ -1268,7 +1299,7 @@ class console_delivery
     /**
      * 映射WMS仓储物流编码
      * @todo：兼容京东传的物流单号是ID
-     * 
+     *
      * @param string $logi_code
      * @return string
      */
@@ -1521,6 +1552,173 @@ class console_delivery
                 // 发货单通知单推送仓库
                 if ($is_push) {
                     ome_delivery_notice::create($deliveryInfo['delivery_id']);
+                }
+            }
+        }
+        
+        return true;
+    }
+    
+    /**
+     * [失败重试]请求WMS推送失败的发货单
+     *
+     * @return bool
+     */
+    public function retryRequestWmsDelivery()
+    {
+        $apiFailModel = app::get('erpapi')->model('api_fail');
+        $deliveryMdl = app::get('ome')->model('delivery');
+        
+        // 是否开启配置项：发货单推送失败
+        $retryConfig = app::get('ome')->getConf('ome.delivery.retry_push');
+        if($retryConfig != 'on'){
+            // 未开启重新推送配置，则退出
+            return false;
+        }
+        
+        // filter
+        $objType = 'delivery';
+        $retryError = array(
+            '商品无货', //商品无货
+            'timeout', //超时
+            'e00090', //请求超时
+            'ERP00090',//返回信息异常
+            'timed out', //请求超时
+            '缺少系统参数',
+            'Remote service error',
+        );
+        
+        // 截止时间：5分钟之前
+        $endTime = time() - (5 * 60);
+        
+        // 查询1天之内的失败(只查前500条数据)
+        $filter  = array(
+            'last_modify|sthan' => $endTime, // 小于等于5分钟之前
+            'last_modify|than'  => strtotime('-1 days'), // 大于1天之前
+            'obj_type' => $objType,
+            'fail_times|lthan' => 5, // 失败次数
+            'status' => 'fail',
+            'filter_sql' => ' err_msg REGEXP "' . implode('|', $retryError) . '"',
+        );
+        $dataList = $apiFailModel->getList('*', $filter, 0, 500, 'last_modify DESC,fail_times ASC');
+        if(empty($dataList)){
+            return false;
+        }
+        
+        // 发货单列表
+        $deliveryBns = array_column($dataList, 'obj_bn');
+        $deliveryList = $deliveryMdl->getList('delivery_id,delivery_bn,status,pause,process,sync_status', array('delivery_bn'=>$deliveryBns));
+        if(empty($deliveryList)){
+            return false;
+        }
+        
+        $deliveryIds = array_column($deliveryList, 'delivery_id');
+        $deliveryList = array_column($deliveryList, null, 'delivery_bn');
+        
+        // 获取订单ID
+        $orderIdList = app::get('ome')->model('delivery_order')->getList('order_id,delivery_id', ['delivery_id'=>$deliveryIds]);
+        if(empty($orderIdList)){
+            return false;
+        }
+        
+        // order_id
+        $orderIds = array_column($orderIdList,'order_id');
+        
+        $deliveryOrderIds = [];
+        foreach($orderIdList as $val)
+        {
+            $delivery_id = $val['delivery_id'];
+            $deliveryOrderIds[$delivery_id][] = $val['order_id'];
+        }
+        
+        // 获取订单信息
+        $orderList = app::get('ome')->model('orders')->getList('order_id,pay_status,ship_status', ['order_id'=>$orderIds]);
+        $orderList = array_column($orderList, null, 'order_id');
+        
+        // 判断订单状态 已支付 未发货
+        foreach ($dataList as $key => $value)
+        {
+            $id = $value['id'];
+            $obj_bn = $value['obj_bn'];
+            
+            // 发货单信息
+            $deliveryInfo = $deliveryList[$obj_bn];
+            if(empty($deliveryInfo)){
+                // 删除此记录
+                $apiFailModel->delete(array('id'=>$id));
+                
+                continue;
+            }
+            
+            // delivery_id
+            $delivery_id = $deliveryInfo['delivery_id'];
+            
+            // 发货单状态不允许再操作，则跳过
+            if(in_array($deliveryInfo['status'], array('succ','cancel','back','return_back'))){
+                // 删除此记录
+                $apiFailModel->delete(array('id'=>$id));
+                
+                continue;
+            }
+            
+            if(in_array($deliveryInfo['status'], array('progress','ready')) && $deliveryInfo['pause'] == 'false' && $deliveryInfo['process'] == 'false' && in_array($deliveryInfo['sync_status'],['1', '2'])){
+                $orderIds = $deliveryOrderIds[$delivery_id] ?? [];
+                
+                // 没有可操作的订单ID，则跳过
+                if(empty($orderIds)){
+                    // 删除此记录
+                    $apiFailModel->delete(array('id'=>$id));
+                    
+                    continue;
+                }
+                
+                // 检查发货单是否允许推送
+                $is_push = true;
+                foreach ($orderIds as $order_id)
+                {
+                    $orderRow = $orderList[$order_id];
+                    if(empty($orderRow)){
+                        continue;
+                    }
+                    
+                    // 订单已经全额退款、取消
+                    if ($orderRow['status'] == 'dead' || $orderRow['pay_status'] == '5') {
+                        // 删除此记录
+                        $apiFailModel->delete(array('id'=>$id));
+                        
+                        continue;
+                    }
+                    
+                    // 订单已经发货
+                    if ($orderRow['ship_status'] == '1') {
+                        // 删除此记录
+                        $apiFailModel->delete(array('id'=>$id));
+                        
+                        continue;
+                    }
+                    
+                    // 订单支付状态是：退款申请中 or 退款中
+                    if (in_array($orderRow['pay_status'], ['6', '7'])) {
+                        // 失败次数+1
+                        $update_sql = "UPDATE sdb_erpapi_api_fail SET fail_times=fail_times+1, last_modify=". time()." WHERE id=". $id;
+                        $apiFailModel->db->exec($update_sql);
+                        
+                        // flag
+                        $is_push = false;
+                        
+                        continue 2;
+                    }
+                    
+                    // 订单支付状态、发货状态，不允许再操作，则跳过
+                    if ($orderRow['pay_status'] != '1' || $orderRow['ship_status'] != '0') {
+                        // flag
+                        $is_push = false;
+                    }
+                }
+                
+                // 重试发货单通知单推送仓库
+                if ($is_push) {
+                    ome_delivery_notice::create($delivery_id);
                 }
             }
         }

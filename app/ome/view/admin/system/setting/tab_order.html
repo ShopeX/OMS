@@ -1,19 +1,3 @@
-<!--
-  Copyright 2012-2026 ShopeX (https://www.shopex.cn)
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
--->
-
 <style>
 .nt{
     color: red
@@ -114,6 +98,16 @@
                 <input id="ome_delivery_hqepay_off" name="set[ome.delivery.hqepay]" <{if $setData['ome_delivery_hqepay'] == 'true'}><{else}>checked<{/if}> type="radio" value="false">
                 <label for="ome_delivery_hqepay_off" >关闭</label>
             </div>
+        </div>
+        <div class="form-field">
+            <span class="form-field-label">跟踪数据来源：</span>
+            <div class="form-radios">
+                <input id="ome_logistics_track_provider_kdn" name="set[ome.logistics.track.provider]" <{if $setData['ome_logistics_track_provider'] != 'sf'}>checked<{/if}> type="radio" value="kdn">
+                <label for="ome_logistics_track_provider_kdn">快递鸟（默认）</label>
+                <input id="ome_logistics_track_provider_sf" name="set[ome.logistics.track.provider]" <{if $setData['ome_logistics_track_provider'] == 'sf'}>checked<{/if}> type="radio" value="sf">
+                <label for="ome_logistics_track_provider_sf">顺丰</label>
+            </div>
+            <font class="form-remark" style="color:#666;">快递鸟需在「系统集成 → 第三方快递」绑定 kdn；顺丰需绑定 sf（Matrix 查询 + 发货后物流订阅）。</font>
         </div>
     </div>
 </div>

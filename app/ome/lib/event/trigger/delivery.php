@@ -159,4 +159,18 @@ class ome_event_trigger_delivery{
 
         return kernel::single('erpapi_router_request')->set('wms',$wms_id)->delivery_notify($data);
     }
+
+    /**
+     * 发货单签收同步下游
+     *
+     * @param string $channel_type
+     * @param string $channel_id
+     * @param array $data
+     * @param bool $sync
+     * @return array
+     */
+    public function sign($channel_type = 'wms', $channel_id, $data, $sync = false)
+    {
+        return kernel::single('erpapi_router_request')->set($channel_type, $channel_id)->delivery_sign($data);
+    }
 }

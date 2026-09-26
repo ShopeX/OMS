@@ -96,7 +96,7 @@ $db['members'] = array(
             'default_in_list' => true,
         ),
         'addr'          => array(
-            'type'            => 'varchar(255)',
+            'type'            => 'text',
             'label'           => '地址',
             'sdfpath'         => 'contact/addr',
             'width'           => 200,

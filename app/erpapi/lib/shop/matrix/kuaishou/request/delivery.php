@@ -36,7 +36,6 @@ class erpapi_shop_matrix_kuaishou_request_delivery extends erpapi_shop_request_d
         $imei = kernel::single('ome_bill_label')->getBillLabelInfo($sdf['orderinfo']['order_id'], 'order', 'SOMS_IMEI');
         $sn = kernel::single('ome_bill_label')->getBillLabelInfo($sdf['orderinfo']['order_id'], 'order', 'SOMS_SERIALNUMBER');
         $packages = [];
-
         foreach($sdf['delivery_items'] as $item){
             // OMS送赠不请求平台
             if (!$item['oid'] || $item['shop_goods_id'] == '-1' || !$item['logi_no']) {
@@ -51,29 +50,55 @@ class erpapi_shop_matrix_kuaishou_request_delivery extends erpapi_shop_request_d
             ];
             if($imei || $sn) {
                 $serialnumber = [];
+                $imeiList = [];
                 foreach($sdf['orderinfo']['order_objects'][$item['order_obj_id']]['order_items'] as $oi) {
                     if($sdf['serial_number'][$oi['product_id']]) {
                         $num = $oi['nums'] * $item['number'] / $sdf['orderinfo']['order_objects'][$item['order_obj_id']]['quantity'];
                         if($num < 1) {
                             continue;
                         }
-                        foreach($sdf['serial_number'][$oi['product_id']] as $snk => $snv) {
-                            unset($sdf['serial_number'][$oi['product_id']][$snk]);
-                            $serialnumber[] = $snv;
-                            $num--;
-                            if($num < 1) {
-                                break;
+                        $productSerial = $sdf['serial_number'][$oi['product_id']];
+                        
+                        // 处理 SN 数组
+                        if(isset($productSerial['sn']) && is_array($productSerial['sn'])) {
+                            foreach($productSerial['sn'] as $snk => $snv) {
+                                if($num < 1) {
+                                    break;
+                                }
+                                
+                                // 提取 SN
+                                if($sn) {
+                                    $serialnumber[] = $snv;
+                                }
+                                
+                                // 提取 IMEI：从 imei 数组中获取对应 SN 的 IMEI 值
+                                if($imei && isset($productSerial['imei'][$snv])) {
+                                    $imeiValue = $productSerial['imei'][$snv];
+                                    // 如果是逗号分隔的字符串，转换为数组
+                                    if(is_string($imeiValue) && strpos($imeiValue, ',') !== false) {
+                                        $imeiArray = explode(',', $imeiValue);
+                                        $imeiList = array_merge($imeiList, array_filter($imeiArray));
+                                    } else {
+                                        $imeiList[] = $imeiValue;
+                                    }
+                                }
+                                
+                                // 从原数组中移除，避免重复分配
+                                unset($sdf['serial_number'][$oi['product_id']]['sn'][$snk]);
+                                if(isset($sdf['serial_number'][$oi['product_id']]['imei'][$snv])) {
+                                    unset($sdf['serial_number'][$oi['product_id']]['imei'][$snv]);
+                                }
+                                
+                                $num--;
                             }
                         }
                     }
                 }
-                if($serialnumber) {
-                    if($imei) {
-                        $tmpGood['imeiList'] = $serialnumber;
-                    }
-                    if($sn) {
-                        $tmpGood['serialNumberList'] = $serialnumber;
-                    }
+                if($serialnumber && $sn) {
+                    $tmpGood['serialNumberList'] = $serialnumber;
+                }
+                if($imeiList && $imei) {
+                    $tmpGood['imeiList'] = array_values(array_unique($imeiList));
                 }
             }
             $packages[$item['logi_no']]['goods'][] = $tmpGood;

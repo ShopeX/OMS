@@ -183,6 +183,9 @@ input {
   background: #fff;
   border-radius: 0.5rem;
   width: 20.44rem;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-header {
@@ -206,12 +209,17 @@ input {
 }
 
 .modal-content {
-  padding: 0.47rem;
+  padding: 0.75rem 0.94rem 0.94rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-footer {
   padding: 0.9375rem;
   text-align: center;
+  flex-shrink: 0;
 }
 
 .modal-btn {
@@ -227,9 +235,199 @@ input {
   margin-bottom: 0.9375rem;
 }
 
+.modal-form-item:last-child {
+  margin-bottom: 0;
+}
+
+.modal-form-item--select .select-box-vertical {
+  gap: 0.5rem;
+}
+
+.modal-form-item--select .modal-form-label {
+  font-size: 0.88rem;
+  color: #121212;
+  line-height: 1.4;
+}
+
+.modal-form-item--select .required-mark {
+  color: #e53935;
+  margin-left: 0.125rem;
+}
+
+.modal-form-item--select .select-field-wrap {
+  position: relative;
+  border: 0.06rem solid #DFDFDF;
+  border-radius: 0.25rem;
+  padding: 0.75rem 0.875rem;
+  min-height: 3rem;
+  background: #fff;
+}
+
+.modal-form-item--select .select-field-wrap--expanded {
+  padding-bottom: 0.5rem;
+}
+
+#commonModal .modal-container.modal-select-open {
+  max-height: 92vh;
+}
+
+#commonModal .modal-container.modal-select-open .modal-content {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal-form-item--select .custom-select-trigger {
+  min-height: 1.5rem;
+  line-height: 1.5;
+  font-size: 0.9375rem;
+}
+
+.modal-form-item--input .input-box-vertical {
+  gap: 0.5rem;
+}
+
+.modal-form-item--input .input-field-wrap {
+  display: flex;
+  align-items: center;
+  border: 0.06rem solid #DFDFDF;
+  border-radius: 0.25rem;
+  padding: 0 0.5rem 0 0.75rem;
+  min-height: 2.75rem;
+  background: #fff;
+  cursor: text;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.modal-form-item--input .input-field-wrap .modal-input {
+  flex: 1 1 auto;
+  flex-shrink: 1 !important;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+  padding: 0;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.page .modal-form-item--input .input-field-wrap input[type="text"] {
+  width: 100%;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  line-height: 2.75rem;
+}
+
+.modal-form-item--input .input-with-append {
+  justify-content: flex-start;
+  padding-right: 0.25rem;
+}
+
+.modal-form-item--input .input-with-append .modal-input--append {
+  padding-right: 0.25rem;
+}
+
+.modal-form-item--select select {
+  width: 100%;
+  text-align: left;
+  padding: 0;
+  font-size: 0.88rem;
+  color: #121212;
+}
+
 .input-box {
   border: 0.06rem solid #DFDFDF;
-  padding: 0.63rem 0.75rem;
+  padding: 0.5rem 0.75rem;
+  min-height: 2.75rem;
+  border-radius: 0.25rem;
+  cursor: text;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 带扫码/后缀图标的输入框：输入区与图标同组，避免小屏被 justify-between 挤出边框 */
+.modal-field-label {
+  flex-shrink: 0;
+  white-space: nowrap;
+  margin-right: 0.5rem;
+}
+
+.modal-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 2.75rem;
+  height: 2.75rem;
+  line-height: 2.75rem;
+  padding: 0 0.5rem;
+  font-size: 1rem;
+  text-align: right;
+  color: #121212;
+  background-color: #fff;
+  border: none;
+  border-radius: 0.25rem;
+  -webkit-appearance: none;
+}
+
+.input-with-append {
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+.input-with-append .modal-input--append {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  max-width: 100%;
+  padding-right: 0.25rem;
+}
+
+.scan-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  margin-left: 0.125rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.scan-icon img {
+  width: 1.375rem;
+  height: 1.375rem;
+  display: block;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.logi-no-confirm-btn {
+  flex-shrink: 0;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0 0.625rem;
+  margin-left: 0.125rem;
+  border: 0.03rem solid #000;
+  border-radius: 0.25rem;
+  background: #000;
+  color: #d4ca99;
+  font-size: 0.75rem;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.logi-no-confirm-btn:active {
+  opacity: 0.85;
+}
+
+.logi-no-confirm-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .modal-form-item label {
@@ -247,11 +445,18 @@ input {
 .modal-form-item input,.modal-form-item select {
   border: none;
   border-radius: 0.25rem;
-  font-size: 0.875rem;
+  font-size: 1rem;
   text-align: right;
-  font-size: 0.88rem;
   color: #121212;
   background-color: #fff;
+}
+
+.page .modal-form-item input[type="text"],
+.page .modal-form-item input[type="search"],
+.page .modal-form-item .modal-input {
+  height: 2.75rem;
+  min-height: 2.75rem;
+  line-height: 2.75rem;
 }
 
 .modal-form-item input:focus,.modal-form-item select:focus {
@@ -636,4 +841,161 @@ input[type='checkbox']:checked::after {
 
 .arrow-icon.expanded::after {
   transform: translateY(-50%) rotate(45deg);
+}
+
+.serial-scan-modal {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.serial-scan-modal .input-box {
+  min-height: 3rem;
+  padding: 0.625rem 0.75rem;
+}
+
+.serial-scan-modal .input-box-vertical {
+  align-items: stretch;
+  gap: 0.5rem;
+  min-height: auto;
+}
+
+.serial-scan-modal .input-box-vertical .serial-field-label {
+  font-size: 0.88rem;
+  color: #121212;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.serial-scan-modal .input-box-vertical .input-field-wrap {
+  width: 100%;
+  min-height: 2.75rem;
+  cursor: text;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.serial-scan-modal .input-box-vertical .modal-input--append {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  padding-left: 0.5rem;
+}
+
+.serial-scan-modal .modal-form-item input {
+  font-size: 1rem;
+  touch-action: manipulation;
+}
+
+.serial-scan-tip {
+  color: #666;
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+}
+
+.serial-item-list {
+  margin-bottom: 1rem;
+}
+
+.serial-item-row {
+  padding: 0.625rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.serial-item-name {
+  font-size: 0.9375rem;
+  color: #333;
+  margin-bottom: 0.25rem;
+}
+
+.serial-item-meta,
+.serial-item-progress {
+  font-size: 0.8125rem;
+  color: #888;
+}
+
+.serial-item-progress {
+  color: #b8860b;
+  margin-top: 0.125rem;
+}
+
+.serial-scanned-title {
+  font-size: 0.875rem;
+  color: #333;
+  margin: 0.75rem 0 0.5rem;
+}
+
+.serial-scanned-list {
+  max-height: 8rem;
+  overflow-y: auto;
+}
+
+/* 商品图点击预览大图 */
+.image_2.js-img-preview {
+  cursor: zoom-in;
+}
+
+.goods-img-preview-mask {
+  display: none;
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.85);
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.goods-img-preview-box {
+  position: relative;
+  max-width: 92vw;
+  max-height: 86vh;
+}
+
+.goods-img-preview-img {
+  display: block;
+  max-width: 92vw;
+  max-height: 86vh;
+  object-fit: contain;
+  border-radius: 0.25rem;
+  background: #fff;
+}
+
+.goods-img-preview-close {
+  position: absolute;
+  top: -0.75rem;
+  right: -0.75rem;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 1.25rem;
+  line-height: 2rem;
+  text-align: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.serial-scanned-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.375rem 0;
+  font-size: 0.8125rem;
+  border-bottom: 1px dashed #eee;
+}
+
+.serial-scanned-empty {
+  color: #999;
+  font-size: 0.8125rem;
+}
+
+.serial-remove-btn {
+  color: #d9534f;
+  flex-shrink: 0;
+  margin-left: 0.5rem;
 }

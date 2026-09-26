@@ -24,6 +24,7 @@ class invoice_func{
             'chinaums' => array ('code' => 'chinaums', 'name' => '银联金四'),
             'baiwang'  => array ('code' => 'baiwang', 'name' => '百望金四'),
             'huifu'    => array ('code' => 'huifu', 'name' => '汇付发票'),
+            'piaoyitong' => array ('code' => 'piaoyitong', 'name' => '票易通'),
         );
 
         if(!empty($channel_type)) {

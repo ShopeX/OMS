@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>自提订单</title>
+  <link rel="stylesheet" href="<{$env.app.res_url}>/css/common.css?v=20260713">
+  <link rel="stylesheet" href="<{$env.app.res_url}>/css/index.css?v=20260714">
+  <script src="<{$env.app.res_url}>/js/axios.min.js"></script>
+  <{include file="store/wxwork_sdk.html"}>
+</head>
+
+<body>
+  <div class="page flex-col">
+    <div class="section_1 flex-col">
+      <div class="text-wrapper_1 flex-row align-center justify-between">
+        <img src="<{$env.app.res_url}>/img/icon-back.png" class="icon-back">
+        <span class="text_1"><{$title}></span>
+        <img src="<{$env.app.res_url}>/img/icon-refresh.png" class="icon-refresh" onclick="location.reload()">
+      </div>
+    </div>
+
+    <div class="section_2 flex-col">
+      <div class="group_1 flex-col tab-scroll-container">
+        <div class="group_2 flex-row">
+          <{foreach from=$sub_menu item=rs key=rsk}>
+          <div class="group_3 flex-col">
+            <a href="<{$rs.href}>" style="text-decoration:none;" class="text_5 <{if $rs.curr_view}>tab-active<{/if}>">
+              <{$rs.label}>
+            </a>
+            <{if $rsk == 'pending' && $rs.count > 0}>
+            <div class="text-wrapper_3 flex-col">
+              <span class="text_6"><{$rs.count}></span>
+            </div>
+            <{/if}>
+          </div>
+          <{/foreach}>
+        </div>
+      </div>
+
+      <div class="group_6 flex-col justify-between">
+        <div class="date-select-box flex-row">
+          <button class="date-select-item <{if $dateType == 'today'}>active<{/if}>" data-type="today">今天</button>
+          <button class="date-select-item <{if $dateType == 'yesterday'}>active<{/if}>" data-type="yesterday">昨天</button>
+          <button class="date-select-item <{if $dateType == 'month'}>active<{/if}>" data-type="month">本月</button>
+          <button class="date-select-item <{if $dateType == 'custom'}>active<{/if}>" data-type="custom" onclick="showTimeModal()">自定义</button>
+        </div>
+        <div class="flex-row justify-between selfpick-filter-row">
+          <div class="box_1 flex-row justify-between" id="customSelect">
+            <span class="text_9 current-type" data-value="order_bn">订单号</span>
+            <img class="thumbnail_1" referrerpolicy="no-referrer" src="<{$env.app.res_url}>/img/icon-arrow-down.png" />
+          </div>
+          <div class="select-options" id="selectOptions">
+            <div class="option-item" data-value="order_bn">订单号</div>
+            <div class="option-item" data-value="channel">渠道</div>
+            <div class="option-item" data-value="branch_id">门店</div>
+            <div class="option-item" data-value="ship_mobile">收货人手机号</div>
+          </div>
+          <div class="selfpick-list-search-wrap flex-row align-center">
+            <div class="text-wrapper_4 flex-col search-box selfpick-list-search-box search-input-wrap">
+              <input id="listSearchInput" class="text_10 search-input search-text-input" type="text"
+                placeholder="请输入订单号" autocomplete="off" autocorrect="off" autocapitalize="off" enterkeyhint="search">
+              <select class="text_10 search-input channel-select" style="display:none" onchange="handleSearch(this.value)">
+                <option value="">请选择</option>
+                <{foreach from=$channelList key=ckey item=citem}>
+                <option value="<{$ckey}>"><{$citem}></option>
+                <{/foreach}>
+              </select>
+              <select class="text_10 search-input store-select" style="display:none" onchange="handleSearch(this.value)">
+                <option value="">请选择</option>
+                <{foreach from=$store_list item=citem key=ckey}>
+                <option value="<{$ckey}>"><{$citem}></option>
+                <{/foreach}>
+              </select>
+            </div>
+            <button type="button" class="selfpick-list-search-btn" onclick="submitListSearch()">查询</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <{if $menu_type != 'verified'}>
+    <div class="selfpick-pickup-bar">
+      <div class="selfpick-pickup-label">顾客提货</div>
+      <div class="selfpick-pickup-row">
+        <div class="selfpick-pickup-input-wrap flex-row align-center">
+          <input type="text" id="pickupCodeInput" class="selfpick-pickup-input" maxlength="32"
+            placeholder="扫描或输入提货码" autocomplete="off" autocorrect="off" autocapitalize="off" enterkeyhint="search">
+          <img src="<{$env.app.res_url}>/img/icon-scan.png" class="selfpick-pickup-scan" alt="扫码"
+            onclick="scanPickupCode()">
+        </div>
+        <button type="button" class="selfpick-pickup-btn" onclick="submitPickupCode()">查询</button>
+      </div>
+    </div>
+    <{/if}>
+
+    <div class="section_4 flex-col<{if $menu_type == 'verified'}> selfpick-list-no-pickup-bar<{/if}>" id="orderList">
+      <{include file="selfpick/order_list_more.html"}>
+    </div>
+  </div>
+
+  <div class="mask" id="mask"></div>
+  <div class="toast" id="toast"></div>
+  <div class="modal" id="commonModal" style="display: none;">
+    <div class="modal-mask"></div>
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title"></h3>
+        <span class="modal-close">×</span>
+      </div>
+      <div class="modal-content"></div>
+      <div class="modal-footer justify-between">
+        <button class="modal-btn modal-cancle">取消</button>
+        <button class="modal-btn modal-confirm">确定</button>
+      </div>
+    </div>
+  </div>
+  <div class="loading-container" style="display: none;">
+    <div class="loading-spinner"></div>
+    <span class="loading-text">加载中...</span>
+  </div>
+
+  <div class="pickup-verify-modal" id="pickupVerifyModal" style="display: none;">
+    <div class="pickup-verify-mask" onclick="hidePickupVerifyModal()"></div>
+    <div class="pickup-verify-panel">
+      <div class="pickup-verify-header flex-row align-center justify-between">
+        <span class="pickup-verify-title">顾客提货</span>
+        <span class="pickup-verify-close" onclick="hidePickupVerifyModal()">×</span>
+      </div>
+      <div class="pickup-verify-order-hint" id="pickupVerifyOrderHint"></div>
+      <div class="selfpick-pickup-row pickup-verify-row">
+        <div class="selfpick-pickup-input-wrap flex-row align-center">
+          <input type="text" id="pickupVerifyModalInput" class="selfpick-pickup-input" maxlength="32"
+            placeholder="扫描或输入提货码" autocomplete="off" autocorrect="off" autocapitalize="off" enterkeyhint="search">
+          <img src="<{$env.app.res_url}>/img/icon-scan.png" class="selfpick-pickup-scan" alt="扫码"
+            onclick="scanPickupCodeInModal()">
+        </div>
+        <button type="button" class="selfpick-pickup-btn" onclick="submitPickupVerifyModal()">查询</button>
+      </div>
+    </div>
+  </div>
+
+  <{include file="store/footer.html"}>
+  <script src="<{$env.app.res_url}>/js/common.js"></script>
+  <script>
+    const modal = new Modal();
+    const verifyPageUrl = '<{$selfpick_link.verifyPage}>';
+    const checkPickupCodeUrl = '<{$selfpick_link.checkPickupCode}>';
+    const queryPickupOrderUrl = '<{$selfpick_link.queryPickupOrder}>';
+    const api = {
+      getOrders(params) { return request.post('<{$link_url}>', params); }
+    };
+
+    const pageState = {
+      page: 2,
+      pageSize: 10,
+      loading: false,
+      hasMore: true,
+      sel_keywords: '',
+      sel_type: '',
+      dateType: '',
+      start_time: '',
+      end_time: '',
+      menu_type: '<{$menu_type}>'
+    };
+
+    const loading = {
+      show(isBottom = false) {
+        if (isBottom) {
+          const el = document.createElement('div');
+          el.className = 'loading-more';
+          el.innerHTML = '加载中...';
+          document.querySelector('#orderList').appendChild(el);
+        } else {
+          document.querySelector('.loading-container').style.display = 'flex';
+        }
+      },
+      hide() {
+        document.querySelector('.loading-container').style.display = 'none';
+        const el = document.querySelector('.loading-more');
+        if (el) el.remove();
+      }
+    };
+
+    const listContainer = document.querySelector('#orderList');
+
+    function removeNoMoreTip() {
+      const existingNoMore = document.querySelector('.loading-more');
+      if (existingNoMore) existingNoMore.remove();
+    }
+
+    function showNoMoreTip() {
+      const orderItems = listContainer.querySelectorAll('.list-item');
+      const existingNoMore = document.querySelector('.loading-more');
+      if (orderItems.length > 0 && !existingNoMore) {
+        const noMore = document.createElement('div');
+        noMore.className = 'loading-more';
+        noMore.innerHTML = '没有更多数据了';
+        listContainer.appendChild(noMore);
+      }
+    }
+
+    function checkAndShowNoMoreTip() {
+      setTimeout(() => {
+        if (!pageState.hasMore) showNoMoreTip();
+      }, 100);
+    }
+
+    async function loadOrders(isLoadMore = false) {
+      if (pageState.loading || !pageState.hasMore) return;
+      pageState.loading = true;
+      loading.show(isLoadMore);
+      if (!isLoadMore) removeNoMoreTip();
+
+      const params = { flag: 'ajax', page: pageState.page, pageSize: pageState.pageSize, menu_type: pageState.menu_type };
+      if (pageState.sel_keywords !== '') {
+        params.sel_type = pageState.sel_type;
+        params.sel_keywords = pageState.sel_keywords;
+      }
+      if (pageState.dateType) {
+        params.dateType = pageState.dateType;
+        if (pageState.dateType === 'custom') {
+          params.start_time = pageState.start_time;
+          params.end_time = pageState.end_time;
+        }
+      }
+      try {
+        const resultHtml = await api.getOrders(params);
+        if (resultHtml) {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = resultHtml;
+          const orderItems = tempDiv.querySelectorAll('.list-item');
+
+          if (orderItems.length > 0) {
+            pageState.page++;
+            if (isLoadMore) {
+              listContainer.insertAdjacentHTML('beforeend', resultHtml);
+            } else {
+              listContainer.innerHTML = resultHtml;
+              window.scrollTo({ top: 0 });
+            }
+            if (orderItems.length < pageState.pageSize) {
+              pageState.hasMore = false;
+              showNoMoreTip();
+            }
+          } else {
+            pageState.hasMore = false;
+            if (isLoadMore) {
+              showNoMoreTip();
+            } else {
+              listContainer.innerHTML = '';
+            }
+          }
+        } else {
+          pageState.hasMore = false;
+          if (isLoadMore) {
+            showNoMoreTip();
+          } else if (!isLoadMore) {
+            listContainer.innerHTML = '';
+          }
+        }
+      } catch (e) {
+        showToast('加载失败，请重试');
+      } finally {
+        pageState.loading = false;
+        loading.hide();
+        checkAndShowNoMoreTip();
+      }
+    }
+
+    async function handleSearch(value) {
+      pageState.page = 1;
+      pageState.hasMore = true;
+      pageState.sel_keywords = value;
+      pageState.sel_type = document.querySelector('.current-type').getAttribute('data-value');
+      await loadOrders();
+    }
+
+    function submitListSearch() {
+      const type = document.querySelector('.current-type').getAttribute('data-value');
+      if (type === 'channel') {
+        handleSearch(document.querySelector('.channel-select').value);
+        return;
+      }
+      if (type === 'branch_id') {
+        handleSearch(document.querySelector('.store-select').value);
+        return;
+      }
+      const input = document.getElementById('listSearchInput');
+      handleSearch(input ? input.value : '');
+    }
+
+    async function fetchOrdersByDate(dateType) {
+      pageState.dateType = dateType;
+      pageState.page = 1;
+      pageState.hasMore = true;
+      if (dateType !== 'custom') {
+        await loadOrders();
+      }
+    }
+
+    document.querySelectorAll('.date-select-item').forEach(btn => {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('.date-select-item').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        fetchOrdersByDate(this.getAttribute('data-type'));
+      });
+    });
+
+    const selectBox = document.getElementById('customSelect');
+    const options = document.getElementById('selectOptions');
+    const listSearchInput = document.getElementById('listSearchInput');
+    const mask = document.querySelector('.mask');
+    let isOpen = false;
+    function closeSelect() {
+      options.style.display = 'none';
+      mask.style.display = 'none';
+      selectBox.classList.remove('active');
+      isOpen = false;
+    }
+    selectBox.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (!isOpen) {
+        options.style.display = 'block';
+        mask.style.display = 'block';
+        selectBox.classList.add('active');
+        isOpen = true;
+      } else {
+        closeSelect();
+      }
+    });
+    document.querySelectorAll('.option-item').forEach(item => {
+      item.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const value = this.getAttribute('data-value');
+        selectBox.querySelector('.current-type').textContent = this.textContent;
+        selectBox.querySelector('.current-type').setAttribute('data-value', value);
+        if (value === 'channel' || value === 'branch_id') {
+          if (listSearchInput) listSearchInput.style.display = 'none';
+          document.querySelector('.channel-select').style.display = value === 'channel' ? 'block' : 'none';
+          document.querySelector('.store-select').style.display = value === 'branch_id' ? 'block' : 'none';
+        } else {
+          if (listSearchInput) listSearchInput.style.display = 'block';
+          document.querySelector('.channel-select').style.display = 'none';
+          document.querySelector('.store-select').style.display = 'none';
+        }
+        closeSelect();
+      });
+    });
+    mask.addEventListener('click', closeSelect);
+
+    listSearchInput && listSearchInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submitListSearch();
+      }
+    });
+
+    function bindInputWrapFocus(wrap, input, ignoreSelector) {
+      if (!wrap || !input) {
+        return;
+      }
+      wrap.addEventListener('click', function (e) {
+        if (input.style.display === 'none') {
+          return;
+        }
+        if (ignoreSelector && e.target.closest(ignoreSelector)) {
+          return;
+        }
+        if (document.activeElement === input) {
+          return;
+        }
+        input.focus();
+        if (typeof input.setSelectionRange === 'function') {
+          try {
+            const len = input.value.length;
+            input.setSelectionRange(len, len);
+          } catch (err) {}
+        }
+      });
+    }
+
+    bindInputWrapFocus(
+      document.querySelector('.selfpick-list-search-box.search-input-wrap'),
+      listSearchInput
+    );
+    bindInputWrapFocus(
+      document.querySelector('#pickupCodeInput') && document.querySelector('#pickupCodeInput').closest('.selfpick-pickup-input-wrap'),
+      document.getElementById('pickupCodeInput'),
+      '.selfpick-pickup-scan'
+    );
+    bindInputWrapFocus(
+      document.getElementById('pickupVerifyModalInput') && document.getElementById('pickupVerifyModalInput').closest('.selfpick-pickup-input-wrap'),
+      document.getElementById('pickupVerifyModalInput'),
+      '.selfpick-pickup-scan'
+    );
+
+    (function initPaginationState() {
+      const initialItems = listContainer.querySelectorAll('.list-item');
+      if (initialItems.length < pageState.pageSize) {
+        pageState.hasMore = false;
+      }
+    })();
+
+    window.addEventListener('scroll', () => {
+      if (pageState.loading) return;
+      const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+      if (scrollTop < 80) return;
+      const scrollHeight = document.documentElement.scrollHeight;
+      const clientHeight = document.documentElement.clientHeight;
+      if (scrollHeight - scrollTop - clientHeight < 100) {
+        if (pageState.hasMore) {
+          loadOrders(true);
+        } else {
+          showNoMoreTip();
+        }
+      }
+    });
+
+    function showTimeModal() {
+      modal.show({
+        title: '选择日期',
+        fields: [
+          { type: 'date', label: '开始日期', name: 'beginDate', required: true, placeholder: '请选择开始日期' },
+          { type: 'date', label: '结束日期', name: 'endDate', required: true, placeholder: '请选择结束日期' }
+        ],
+        onConfirm: async (formData) => {
+          pageState.dateType = 'custom';
+          pageState.start_time = formData.beginDate;
+          pageState.end_time = formData.endDate;
+          pageState.page = 1;
+          pageState.hasMore = true;
+          await loadOrders();
+          modal.hide();
+        }
+      });
+    }
+
+    function goToVerifyPage(delivery_id) {
+      window.location.href = verifyPageUrl + '?delivery_id=' + encodeURIComponent(delivery_id);
+    }
+
+    function hidePickupVerifyModal() {
+      const el = document.getElementById('pickupVerifyModal');
+      if (el) el.style.display = 'none';
+    }
+
+    function showPickupVerifyModal(delivery_id, order_bn) {
+      const el = document.getElementById('pickupVerifyModal');
+      const hint = document.getElementById('pickupVerifyOrderHint');
+      const input = document.getElementById('pickupVerifyModalInput');
+      if (!el) return;
+      if (hint) {
+        hint.textContent = order_bn ? '订单号：' + order_bn : '';
+        hint.style.display = order_bn ? 'block' : 'none';
+      }
+      if (input) {
+        input.value = '';
+      }
+      el.style.display = 'flex';
+      if (input) {
+        setTimeout(function () { input.focus(); }, 100);
+      }
+    }
+
+    async function proceedWithPickupScan(content) {
+      content = (content || '').trim();
+      if (!content) {
+        showToast('请扫描或输入提货码');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('code', content);
+
+      try {
+        const res = await fetch(queryPickupOrderUrl, { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.rsp !== 'succ') {
+          showToast(data.msg || '订单查询失败');
+          return;
+        }
+
+        const orderBn = (data.order_bn || '').trim();
+        if (!orderBn) {
+          showToast('未返回订单号');
+          return;
+        }
+
+        const checkRes = await fetch(checkPickupCodeUrl, { method: 'POST', body: formData });
+        const checkData = await checkRes.json();
+        if (checkData.rsp !== 'succ') {
+          showToast(checkData.msg || '提货码校验失败');
+          return;
+        }
+
+        hidePickupVerifyModal();
+        if (checkData.delivery_id) {
+          goToVerifyPage(checkData.delivery_id);
+        } else {
+          window.location.href = verifyPageUrl + '?code=' + encodeURIComponent(orderBn);
+        }
+      } catch (e) {
+        showToast('网络错误，请重试');
+      }
+    }
+
+    function submitPickupVerifyModal() {
+      const input = document.getElementById('pickupVerifyModalInput');
+      const code = input ? input.value.trim() : '';
+      if (!code) {
+        showToast('请扫描或输入提货码');
+        if (input) input.focus();
+        return;
+      }
+      proceedWithPickupScan(code);
+    }
+
+    function submitPickupCode() {
+      const input = document.getElementById('pickupCodeInput');
+      const code = input ? input.value.trim() : '';
+      if (!code) {
+        showToast('请扫描或输入提货码');
+        if (input) input.focus();
+        return;
+      }
+      proceedWithPickupScan(code);
+    }
+
+    function scanPickupCodeWithCallback(onResult) {
+      wapWxScan.requestScan('<{$selfpick_link.getWxSign}>', {
+        onSuccess: onResult,
+        onFail: function (msg) {
+          showToast(msg);
+        }
+      });
+    }
+
+    function scanPickupCode() {
+      scanPickupCodeWithCallback(proceedWithPickupScan);
+    }
+
+    function scanPickupCodeInModal() {
+      scanPickupCodeWithCallback(function (code) {
+        const input = document.getElementById('pickupVerifyModalInput');
+        if (input) input.value = code;
+        proceedWithPickupScan(code);
+      });
+    }
+
+    document.getElementById('pickupVerifyModalInput') && document.getElementById('pickupVerifyModalInput').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submitPickupVerifyModal();
+      }
+    });
+
+    document.getElementById('pickupCodeInput') && document.getElementById('pickupCodeInput').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submitPickupCode();
+      }
+    });
+
+    (function () {
+      const container = document.querySelector('.tab-scroll-container');
+      const activeTab = document.querySelector('.tab-active');
+      if (container && activeTab) {
+        const scrollLeft = activeTab.getBoundingClientRect().left - container.getBoundingClientRect().left
+          - (container.offsetWidth / 2) + (activeTab.offsetWidth / 2);
+        container.scrollTo({ left: scrollLeft });
+      }
+    })();
+  </script>
+  <style>
+    .selfpick-filter-row {
+      align-items: center;
+    }
+
+    .selfpick-list-search-wrap {
+      flex: 1;
+      min-width: 0;
+      margin-left: 0.25rem;
+      gap: 0.375rem;
+    }
+
+    .selfpick-list-search-box {
+      flex: 1;
+      min-width: 0;
+      width: auto !important;
+      margin-left: 0;
+      padding: 0.5rem 0.625rem;
+    }
+
+    .selfpick-list-search-box .search-text-input {
+      display: block;
+    }
+
+    .selfpick-pickup-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .selfpick-pickup-input-wrap {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0 0.625rem;
+      border: 1px solid #dfdfdf;
+      border-radius: 0.25rem;
+      background: #f7f7f7;
+      cursor: text;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    .selfpick-pickup-input {
+      flex: 1;
+      min-width: 0;
+      width: 100%;
+      height: 2.25rem;
+      padding: 0;
+      border: none;
+      border-radius: 0;
+      font-size: 1rem;
+      line-height: 2.25rem;
+      background: transparent;
+      color: #121212;
+      -webkit-user-select: text;
+      user-select: text;
+      -webkit-appearance: none;
+    }
+
+    .page .selfpick-pickup-input-wrap .selfpick-pickup-input {
+      width: 100%;
+      height: 2.25rem;
+      min-height: 2.25rem;
+    }
+
+    .selfpick-pickup-scan {
+      width: 1.375rem;
+      height: 1.375rem;
+      flex-shrink: 0;
+      cursor: pointer;
+      pointer-events: auto;
+    }
+
+    .selfpick-list-search-btn {
+      flex-shrink: 0;
+      height: 2.375rem;
+      padding: 0 0.75rem;
+      border: none;
+      border-radius: 0.25rem;
+      background: #000;
+      color: #d4ca99;
+      font-size: 0.8125rem;
+      white-space: nowrap;
+    }
+
+    .selfpick-pickup-bar {
+      width: 21.938rem;
+      align-self: center;
+      margin-top: 12.625rem;
+      padding: 0.75rem;
+      background: #fff;
+      border-radius: 0.5rem;
+      box-sizing: border-box;
+      border-top: 1px solid #e8e8e8;
+    }
+
+    .selfpick-pickup-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #121212;
+      margin-bottom: 0.5rem;
+    }
+
+    .selfpick-pickup-btn {
+      flex-shrink: 0;
+      height: 2.25rem;
+      padding: 0 0.875rem;
+      border: none;
+      border-radius: 0.25rem;
+      background: #000;
+      color: #d4ca99;
+      font-size: 0.8125rem;
+    }
+
+    #orderList.section_4 {
+      margin-top: 0.75rem;
+      width: 21.938rem;
+      align-self: center;
+    }
+
+    #orderList.section_4.selfpick-list-no-pickup-bar {
+      margin-top: 12.625rem;
+    }
+
+    .loading-more {
+      text-align: center;
+      padding: 20px;
+      color: #999;
+      font-size: 14px;
+      border-top: 1px solid #f0f0f0;
+      margin-top: 10px;
+    }
+
+    .pickup-verify-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      box-sizing: border-box;
+    }
+
+    .pickup-verify-mask {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+    }
+
+    .pickup-verify-panel {
+      position: relative;
+      width: 100%;
+      max-width: 21.938rem;
+      background: #fff;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      box-sizing: border-box;
+    }
+
+    .pickup-verify-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #121212;
+    }
+
+    .pickup-verify-close {
+      font-size: 1.5rem;
+      line-height: 1;
+      color: #999;
+      cursor: pointer;
+      padding: 0 0.25rem;
+    }
+
+    .pickup-verify-order-hint {
+      margin: 0.75rem 0 0.5rem;
+      font-size: 0.8125rem;
+      color: #666;
+    }
+
+    .pickup-verify-row {
+      margin-top: 0.5rem;
+    }
+  </style>
+</body>
+</html>

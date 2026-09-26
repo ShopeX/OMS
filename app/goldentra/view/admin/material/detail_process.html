@@ -1,0 +1,7 @@
+<div class="tableform">
+    <table width="100%" cellspacing="0" cellpadding="0" border="0">
+        <tr><th>处理状态</th><td><{$row.process_status}></td></tr>
+        <tr><th>处理时间</th><td><{if $row.process_time}><{$row.process_time|cdate}><{else}>-<{/if}></td></tr>
+        <tr><th>处理信息</th><td><pre style="white-space:pre-wrap;"><{$row.process_msg}></pre></td></tr>
+    </table>
+</div>

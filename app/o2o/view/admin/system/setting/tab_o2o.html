@@ -72,5 +72,10 @@
             </div>
             <span class="form-remark"  style="color:red;">*默认为不开启，优先级高于门店配置(注：当不开启的时候，订单审核到门店、门店履约全流程都不管控供货关系以及门店实际库存)</span>
         </div>
+        <div class="form-field">
+            <span class="form-field-label">自动重路由设置(次)：</span>
+            <input type="text" class="form-input" placeholder="请输入自动重路由次数" name="set[o2o.order.router_num]" value="<{$setData.o2o_order_router_num|default:3}>" size="6" maxlength="3" onkeyup="this.value=this.value.replace(/\D/g,'')" />
+            <span class="form-remark" style="color:red;">*默认3次，自动审单路由失败达到次数后订单暂挂</span>
+        </div>
     </div>
 </div>

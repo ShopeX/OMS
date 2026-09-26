@@ -24,7 +24,6 @@ class material_finder_basic_material{
     // 缓存图片数据，避免重复查询
     private static $imageCache = null;
     
-    // =============== 操作列相关方法 ===============
     var $column_edit = '操作';
     var $column_edit_width = "75";
     function column_edit($row){
@@ -45,6 +44,80 @@ class material_finder_basic_material{
         }else{
             return '-';
         }
+    }
+
+    /**
+     * 物料标记列（复用订单标记 bill_label，bill_type=basic_material）
+     */
+    public $column_material_label = '标记';
+    public $column_material_label_width = 260;
+    public $column_material_label_order = 30;
+
+    public function column_material_label($row, $list)
+    {
+        $bm_id = $row['bm_id'];
+        $labelList = $this->__getMaterialLabel($list);
+        $dataList = !empty($labelList[$bm_id]) ? $labelList[$bm_id] : array();
+        if (empty($dataList)) {
+            return '';
+        }
+
+        $str = array();
+        foreach ($dataList as $val) {
+            $label_desc = $val['label_desc'];
+            if ($label_desc) {
+                $str[] = sprintf(
+                    "<span onmouseover='bindFinderColTip(event)' rel='%s' style='filter: brightness(0.9) contrast(0.9);border:1px solid %s; color:%s;margin: 2px;padding: 0px 2px;border-radius: 5px;white-space: nowrap;'>%s</span>",
+                    $label_desc,
+                    $val['label_color'],
+                    $val['label_color'],
+                    $val['label_name']
+                );
+            } else {
+                $str[] = sprintf(
+                    "<span style='filter: brightness(0.9) contrast(0.9);border:1px solid %s; color:%s;margin: 2px;padding: 0px 2px;border-radius: 5px;white-space: nowrap;'>%s</span>",
+                    $val['label_color'],
+                    $val['label_color'],
+                    $val['label_name']
+                );
+            }
+        }
+
+        return '<div style="overflow: auto;word-break: break-word;white-space: normal;width: 100%;flex-wrap: wrap;display: flex;">' . implode('', $str) . '</div>';
+    }
+
+    private function __getMaterialLabel($list)
+    {
+        static $arrMaterialLabel;
+
+        if (isset($arrMaterialLabel)) {
+            return $arrMaterialLabel;
+        }
+
+        $arrMaterialLabel = array();
+        $bmIds = array();
+        foreach ($list as $val) {
+            if (!empty($val['bm_id'])) {
+                $bmIds[] = $val['bm_id'];
+            }
+        }
+        if (empty($bmIds)) {
+            return $arrMaterialLabel;
+        }
+
+        $billLabelObj = app::get('ome')->model('bill_label');
+        $labelData = $billLabelObj->getBIllLabelList($bmIds, 'basic_material');
+        foreach ((array) $labelData as $val) {
+            $bm_id = $val['bill_id'];
+            $arrMaterialLabel[$bm_id][] = array(
+                'label_id' => $val['label_id'],
+                'label_name' => $val['label_name'],
+                'label_color' => $val['label_color'],
+                'label_desc' => $val['label_desc'],
+            );
+        }
+
+        return $arrMaterialLabel;
     }
 
     var $column_use_expire='保质期监控';
@@ -153,13 +226,10 @@ class material_finder_basic_material{
 
         $render->pagedata['arr_props'] = $arr_props;
 
-        $customcols = kernel::single('material_customcols')->getcols();
-       
-        foreach($customcols as $k=>$v){
-            if($arr_props[$v['col_key']]){
-                $customcols[$k]['col_value'] = $arr_props[$v['col_key']];
-            }
-        }
+        $customcols = kernel::single('material_customcols')->attachPropsValues(
+            kernel::single('material_customcols')->getcols(),
+            $arr_props
+        );
         $render->pagedata['customcols'] = $customcols;
 
 

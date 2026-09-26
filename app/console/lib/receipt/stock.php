@@ -1,20 +1,5 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/**
  * 出入库单据相关处理
  */
 class console_receipt_stock
@@ -34,11 +19,6 @@ class console_receipt_stock
         'CANCEL' => 4,
         'FAILED' => 4,
     );
-
-    /**
-     * __construct
-     * @return mixed 返回值
-     */
 
     public function __construct()
     {
@@ -192,6 +172,10 @@ class console_receipt_stock
             }
         }
 
+        if (app::get('machinecenter')->is_installed()) {
+            $this->machineCenterOtherStockAdd($this->_isoInfo['original_id'], $iostockData);
+        }
+
         //JDL处理
         if(in_array($this->_isoInfo['bill_type'],array('jdlreturn')) && $io_status == 'FINISH'){
 
@@ -211,7 +195,7 @@ class console_receipt_stock
     }
 
     /**
-     * 
+     *
      * 出入库单取消
      * @param $data 出入库单数据
      * @param $io 出 入标识
@@ -262,12 +246,12 @@ class console_receipt_stock
     }
 
     /**
-     * 
+     *
      * 检查出入库单是否有效
      * @param  $iso_bn 出入库单编号
      * @param $status 需要执行状态
      * @msg 返回结果
-     * 
+     *
      */
     public function checkValid($iso_bn, $status, &$msg)
     {
@@ -308,7 +292,7 @@ class console_receipt_stock
 
     /**
      * 释放冻结库存
-     * 
+     *
      * array data 当有明细时,操作对应明细，否则操作所有
      */
     public function clear_stockout_store_freeze($data, $io_status = '')
@@ -393,7 +377,7 @@ class console_receipt_stock
 
     /**
      * 判断出入库明细是否存在
-     * 
+     *
      */
     public function checkExist($io_bn)
     {
@@ -484,7 +468,27 @@ class console_receipt_stock
                 if (($itemdata['normal_num'] + $itemdata['defective_num']) != $this->_items[$item['bn']]['nums']) {
                     $diff_status = '1';
                 }
-                
+
+                $new_sn_array = [];
+                if ($item['sn_list']) {
+                    $old_sn_list = $this->_items[$item['bn']]['sn_list'] ? json_decode($this->_items[$item['bn']]['sn_list'], 1) : [];
+                    $old_sn_array = [];
+                    if (is_array($old_sn_list) && isset($old_sn_list['sn'])) {
+                        $old_sn_array = is_array($old_sn_list['sn']) ? $old_sn_list['sn'] : [$old_sn_list['sn']];
+                    } elseif (is_array($old_sn_list) && !isset($old_sn_list['sn'])) {
+                        $old_sn_array = $old_sn_list;
+                    }
+                    if (is_array($item['sn_list']) && isset($item['sn_list']['sn'])) {
+                        $new_sn_array = is_array($item['sn_list']['sn']) ? $item['sn_list']['sn'] : [$item['sn_list']['sn']];
+                    } elseif (is_array($item['sn_list']) && !isset($item['sn_list']['sn'])) {
+                        $new_sn_array = $item['sn_list'];
+                    }
+                    $merged_sn_array = array_merge($old_sn_array, $new_sn_array);
+                    $merged_sn_array = array_filter($merged_sn_array);
+                    $itemdata['sn'] = !empty($merged_sn_array) ? implode(',', $merged_sn_array) : '';
+                    $new_sn_array = array_filter($new_sn_array);
+                }
+
                 $this->_itemsObj->update($itemdata, array('iso_items_id' => $this->_items[$item['bn']]['iso_items_id'], 'iso_id' => $this->_items[$item['bn']]['iso_id']));
 
                 // 更新ISO DETAIL 明细
@@ -525,6 +529,12 @@ class console_receipt_stock
                 }
 
                 if($num>0){
+                    $return_sn_list = '';
+                    if (!empty($new_sn_array)) {
+                        $return_sn_list = json_encode($new_sn_array, JSON_UNESCAPED_UNICODE);
+                    } elseif (isset($item['sn_list'])) {
+                        $return_sn_list = is_string($item['sn_list']) ? $item['sn_list'] : json_encode($item['sn_list'], JSON_UNESCAPED_UNICODE);
+                    }
 
                     $items[$item['bn']] = array(
                         'bn'            => $item['bn'],
@@ -533,7 +543,7 @@ class console_receipt_stock
                         'iso_items_id'  => $this->_items[$item['bn']]['iso_items_id'],
                         'product_id'    => $this->_items[$item['bn']]['product_id'],
                         'effective_num' => $effective_num,
-
+                        'sn_list'       => $return_sn_list,
                     );
 
                 }
@@ -605,10 +615,10 @@ class console_receipt_stock
 
     /**
      * 扣除在途库存
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     private function reduceArriveStore()
     {
         $iso              = $this->_isoInfo;
@@ -639,11 +649,6 @@ class console_receipt_stock
     }
     
     //判断转仓单据是否存在 并获取数据
-        /**
-     * 检查ExistWarehouse
-     * @param mixed $io_bn io_bn
-     * @return mixed 返回验证结果
-     */
     public function checkExistWarehouse($io_bn){
         $isoObj = app::get('warehouse')->model("iso");
         $itemsObj = app::get('warehouse')->model("iso_items_simple");
@@ -703,7 +708,7 @@ class console_receipt_stock
     }
     
     /**
-     * 
+     *
      * 出入库单取消
      * @param $io_bn 出入库单号
      * @param $io 出 入标识
@@ -896,5 +901,82 @@ class console_receipt_stock
         //
         
 
+    }
+
+    public function machineCenterOtherStockAdd($original_id, $isoInfo)
+    {
+        $io = kernel::single('ome_iostock')->getIoByType($isoInfo['type_id']);
+        $status = strval($io);
+        $iso_id      = $isoInfo['iso_id'];
+        $iso_bn      = $isoInfo['iso_bn'];
+        $branch_id   = $isoInfo['branch_id'];
+        $branchInfo  = app::get('ome')->model('branch')->db_dump($branch_id, 'branch_bn');
+        $items       = $isoInfo['items'];
+        $snParams    = $this->isoSnParams();
+
+        foreach ($items as $item) {
+            $snList = json_decode($item['sn_list']);
+            if ($snList) {
+                foreach ($snList as $serial) {
+                    if (!$serial) {
+                        continue;
+                    }
+                    $bn = $item['bn'];
+                    $bm_id = $item['product_id'];
+                    $barcode = material_codebase::getBarcodeBybn($bn) ?: '';
+
+                    $tmpSnParams = [];
+                    $tmpSnParams['sn']                = $serial;
+                    $tmpSnParams['bm_id']             = $bm_id;
+                    $tmpSnParams['material_bn']       = $bn;
+                    $tmpSnParams['barcode']           = $barcode;
+                    $tmpSnParams['imei_number']       = $item['imei_number'] ?? '';
+                    $tmpSnParams['order_bn']          = '';
+                    $tmpSnParams['branch_id']         = $branch_id;
+                    $tmpSnParams['branch_bn']         = $branchInfo['branch_bn'];
+                    $tmpSnParams['original_id']       = $iso_id;
+                    $tmpSnParams['original_bn']       = $iso_bn;
+                    $tmpSnParams['bill_bn']           = $iso_bn;
+                    $tmpSnParams['original_type']     = 'iso';
+                    $tmpSnParams['status']            = $status;
+                    $tmpSnParams['io_status']         = $status;
+                    $tmpSnParams['io_time']           = $isoInfo['finish_time'] ?: time();
+                    $tmpSnParams['platform_order_bn'] = '';
+                   
+                    kernel::single('machinecenter_event_receive_sn')->add(array_merge($snParams, $tmpSnParams));
+                }
+            }
+        }
+    }
+
+    public function isoSnParams()
+    {
+        return [
+            'buyer_open_id'  => '',
+            'buyer_nickname' => '',
+            'buyer_name'     => '',
+            'buyer_mobile'   => '',
+            'buyer_email'    => '',
+            'buyer_address'  => '',
+            'ship_oaid'      => '',
+            'ship_name'      => '',
+            'ship_mobile'    => '',
+            'ship_email'     => '',
+            'ship_address'   => '',
+            'ship_province'  => '',
+            'ship_city'      => '',
+            'ship_district'  => '',
+            'ship_town'      => '',
+            'ship_village'   => '',
+            'user_name'      => '',
+            'user_mobile'    => '',
+            'user_email'     => '',
+            'user_address'   => '',
+            'user_province'  => '',
+            'user_city'      => '',
+            'user_district'  => '',
+            'user_town'      => '',
+            'user_village'   => '',
+        ];
     }
 }

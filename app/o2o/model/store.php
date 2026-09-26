@@ -635,92 +635,14 @@ class o2o_mdl_store extends dbeav_model
      */
     private function processCoverageArea($coverageArea, &$msg)
     {
-        // 如果是"中国"，直接返回全国标识
-        if (trim($coverageArea) === '中国') {
-            return array('CN');
-        }
-
-        $regions = explode(';', $coverageArea);
-        $result = array();
-        
-        foreach ($regions as $region) {
-            $region = trim($region);
-            if (empty($region)) continue;
-            
-            $regionIds = $this->parseRegionPath($region, $msg);
-            if ($regionIds === false) {
-                return false;
-            }
-            $result[] = implode(',', $regionIds);
-        }
-        
-        return $result;
-    }
-
-    /**
-     * 解析区域路径（省-市-区）
-     * @param string $regionPath 区域路径
-     * @param array &$msg 错误信息
-     * @return array|false 成功返回区域ID数组，失败返回false
-     */
-    private function parseRegionPath($regionPath, &$msg)
-    {
-        $parts = explode('-', $regionPath);
-        if (count($parts) < 1 || count($parts) > 3) {
-            $msg['error'] = "区域格式错误，应为：省-市-区，当前：{$regionPath}";
+        $errmsg = '';
+        $result = kernel::single('o2o_store_coverage')->parseCoverageAreaText($coverageArea, $errmsg);
+        if ($result === false) {
+            $msg['error'] = $errmsg;
             return false;
         }
 
-        $regionIds = array();
-        $parentId = null;
-        
-        foreach ($parts as $index => $regionName) {
-            $regionName = trim($regionName);
-            if (empty($regionName)) {
-                $msg['error'] = "区域名称不能为空，路径：{$regionPath}";
-                return false;
-            }
-
-            // 查询区域信息
-            $regionObj = app::get('eccommon')->model('regions');
-            
-            // 构建查询条件
-            $queryConditions = array(
-                'local_name' => $regionName,
-                'source' => 'systems'
-            );
-            
-            // 根据层级设置查询条件
-            $expectedGrade = $index + 1;
-            $queryConditions['region_grade'] = $expectedGrade;
-            
-            // 如果不是省级（第一级），需要验证父子关系
-            if ($expectedGrade > 1 && $parentId !== null) {
-                $queryConditions['p_region_id'] = $parentId;
-            }
-
-            $region = $regionObj->dump($queryConditions, 'region_id, local_name, p_region_id, region_grade');
-
-            if (empty($region)) {
-                if ($expectedGrade > 1 && $parentId !== null) {
-                    $msg['error'] = "区域[{$regionName}]不存在或与上级区域不匹配，路径：{$regionPath}";
-                } else {
-                    $msg['error'] = "区域[{$regionName}]不存在，路径：{$regionPath}";
-                }
-                return false;
-            }
-
-            // 验证区域层级
-            if ($region['region_grade'] != $expectedGrade) {
-                $msg['error'] = "区域[{$regionName}]层级错误，期望：{$expectedGrade}级，实际：{$region['region_grade']}级，路径：{$regionPath}";
-                return false;
-            }
-
-            $regionIds[] = $region['region_id'];
-            $parentId = $region['region_id'];
-        }
-
-        return $regionIds;
+        return $result;
     }
 
     /**

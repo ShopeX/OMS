@@ -20,6 +20,21 @@ class invoice_order_front {
     //订单变更
     public function insertOrUpdateByOrder($params) {
         $source = 'b2c';
+        
+        // 注册service，分析是否允许创建预开发票信息
+        foreach(kernel::servicelist('ome.service.invoice.analysis.prepose') as $object)
+        {
+            if(method_exists($object, 'check_allowed_invoice')){
+                // check allowed
+                $analysisResult = $object->check_allowed_invoice($params, 'create');
+                if($analysisResult['rsp'] == 'fail'){
+                    $error_msg = ($analysisResult['error_msg'] ? $analysisResult['error_msg'] : '不允许创建发票');
+                    return [false, ['msg'=>$error_msg]];
+                }
+            }
+        }
+        
+        // data
         $objFront = app::get('invoice')->model('order_front');
         $inData = array(
             'source_id'      => $params['order_id'],
@@ -68,6 +83,13 @@ class invoice_order_front {
             $inData['title'] = kernel::single('ome_func')->substrStringSafe($inData['title'], 150);
         }
         
+        // 是否自动开票(1:自动开票, 2:手工开票)
+        if($params['is_auto'] == '2'){
+            $inData['is_auto'] = '2';
+        }else{
+            $inData['is_auto'] = '1';
+        }
+        
         $inData = kernel::single('invoice_order_front_router', $source)->getMain($inData);
         if(empty($inData)) {
             return [false, ['msg'=>'该来源暂不支持：'.$source]];
@@ -82,7 +104,11 @@ class invoice_order_front {
             return [false, $rsData];
         }
         list($rs, $rsData) = $this->eventCreate($inData['id']);
-        return [true, ['msg'=>'处理完成']];
+        return [true, [
+            'msg' => '处理完成',
+            'invoice_front_id' => (int) $inData['id'],
+            'invoice_apply_bn' => (string) $inData['invoice_apply_bn'],
+        ]];
     }
 
     public function updateAmount($filter, $amount) {
@@ -97,6 +123,19 @@ class invoice_order_front {
     }
 
     public function updateOrderItems($main) {
+        // 注册service，分析是否允许处理发票业务
+        foreach(kernel::servicelist('ome.service.invoice.analysis.prepose') as $object)
+        {
+            if(method_exists($object, 'check_allowed_invoice')){
+                // check allowed
+                $analysisResult = $object->check_allowed_invoice($main);
+                if($analysisResult['rsp'] == 'fail'){
+                    $error_msg = ($analysisResult['error_msg'] ? $analysisResult['error_msg'] : '不允许处理发票业务');
+                    return [false, ['msg'=>$error_msg]];
+                }
+            }
+        }
+        
         $sourceItems = kernel::single('invoice_order_front_router', $main['source'])->getItems($main);
         if(empty($sourceItems)) {
             return [false, ['msg'=>'该来源暂不支持：'.$main['source']]];
@@ -167,6 +206,20 @@ class invoice_order_front {
     }
 
     public function updateItemsByOrder($source_id, $source, $deleteShip = false) {
+        // 注册service，分析是否允许处理发票业务
+        $params = [];
+        foreach(kernel::servicelist('ome.service.invoice.analysis.prepose') as $object)
+        {
+            if(method_exists($object, 'check_allowed_invoice')){
+                // check allowed
+                $analysisResult = $object->check_allowed_invoice($params, 'update');
+                if($analysisResult['rsp'] == 'fail'){
+                    $error_msg = ($analysisResult['error_msg'] ? $analysisResult['error_msg'] : '不允许更新发票');
+                    return [false, ['msg'=>$error_msg]];
+                }
+            }
+        }
+        
         $mainObj = app::get('invoice')->model('order_front');
         $mainId = $mainObj->db_dump(['source_id' => $source_id,'source' => $source], 'id')['id'];
         if(!$mainId) {

@@ -217,8 +217,15 @@
 
                 <{foreach from=$customcols  item=customcol}>
                 <div class="form-field">
-                    <span class="form-field-label"><{$customcol.col_name}>：<{$customcol.col_value}></span>
-                    
+                    <span class="form-field-label"><{$customcol.col_name}>：
+                    <{if $customcol.col_type == 'select'}>
+                        <{$customcol.col_display_value}>
+                    <{elseif $customcol.col_type == 'radiobox'}>
+                        <{if $customcol.col_value == '1'}>是<{else}>否<{/if}>
+                    <{else}>
+                        <{$customcol.col_value}>
+                    <{/if}>
+                    </span>
                 </div>
                 <{/foreach}>
                 
@@ -273,6 +280,5 @@
                    
                 </div>
             </div>
-
 
 

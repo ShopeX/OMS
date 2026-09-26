@@ -32,11 +32,10 @@ class erpapi_shop_response_process_order
     
     /**
      * undocumented function
-     * 
+     *
      * @return void
      * @author 
-     * */
-
+     **/
     function __construct()
     {
         $this->_plugin_broker = kernel::single('erpapi_shop_response_plugins_order_broker');
@@ -44,14 +43,12 @@ class erpapi_shop_response_process_order
 
     /**
      * 订单接收
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function add($ordersdf)
     {
-
-        
         if ($ordersdf['order_id']) {
             if ($ordersdf['flag'] == 'close'){
                 
@@ -66,10 +63,10 @@ class erpapi_shop_response_process_order
 
     /**
      * 创建订单
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     private function _createOrder($ordersdf)
     {
         $plugins = $ordersdf['plugins']; unset($ordersdf['plugins']);
@@ -113,7 +110,7 @@ class erpapi_shop_response_process_order
             }
         }
         
-        //[SAP创建]调用service进行SAP创建
+        // [OMS创建订单之后]调用service处理相关业务
         foreach(kernel::servicelist('ome.service.order.create.after') as $object)
         {
             if(method_exists($object, 'after_create')){
@@ -132,12 +129,16 @@ class erpapi_shop_response_process_order
 
     /**
      * 更新订单
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     private function _updateOrder($ordersdf)
     {
+        // 备份传入的订单参数
+        $bakOrderSdf = $ordersdf;
+        
+        // plugins
         $plugins = $ordersdf['plugins']; unset($ordersdf['plugins']);
         $newordersdf = $ordersdf; unset($newordersdf['status'],$newordersdf['order_id']);
 
@@ -183,22 +184,23 @@ class erpapi_shop_response_process_order
             $is_change_order_goods = true;
         }
         
-        //[SAP更新]调用service进行SAP更新
+        // [接收平台订单更新]调用service处理相关业务
         foreach(kernel::servicelist('ome.service.order.update.after') as $object)
         {
             if(method_exists($object, 'afterUpdateOrder')){
-                $object->afterUpdateOrder($ordersdf['order_id'], $is_change_order_goods);
+                $object->afterUpdateOrder($ordersdf['order_id'], $is_change_order_goods, $bakOrderSdf);
             }
         }
+        
         return array('rsp' => 'succ','msg'=>$msg,);
     }
 
     /**
      * 更新后，是否撤回发货单
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     private function _afterUpdate($ordersdf)
     {
         $orderModel = app::get('ome')->model('orders');
@@ -405,9 +407,12 @@ class erpapi_shop_response_process_order
                 return true;
             }
 
-            // 有备注
+            // 商家备注命中配置关键词时暂停订单，未配置关键词则所有商家备注均暂停
             $orderPauseAllow = app::get('ome')->getConf('ome.orderpause.to.syncmarktext');
-            if ($ordersdf['mark_text'] && $orderPauseAllow !== 'false') {
+            $orderPauseMarkText = app::get('ome')->getConf('ome.orderpause.to.syncmarktext.content');
+            if ($ordersdf['mark_text']
+                && ($orderPauseMarkText === '' || strstr($ordersdf['mark_text'], $orderPauseMarkText))
+                && $orderPauseAllow !== 'false') {
                 $orderModel->pauseOrder($tgorder['order_id']);
 
                 return true;
@@ -473,11 +478,6 @@ class erpapi_shop_response_process_order
         $serialObj->update(array('status'=>'0'),array('item_id'=>$itemIds,'status'=>'1'));
     }
 
-        /**
-     * status_update
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function status_update($sdf)
     {
         if (!$sdf['order_id']) return array('rsp'=>'fail','msg'=>'订单ID不存在');
@@ -493,11 +493,6 @@ class erpapi_shop_response_process_order
         return array('rsp'=>'succ','msg'=>'更新成功，影响行数：'.$affect_row);
     }
 
-    /**
-     * pay_status_update
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function pay_status_update($sdf)
     {
         if (!$sdf['order_id']) return array('rsp'=>'fail','msg'=>'订单ID不存在');
@@ -509,11 +504,6 @@ class erpapi_shop_response_process_order
         return array('rsp'=>'succ','msg'=>'更新成功，影响行数：'.$affect_row);
     }
 
-    /**
-     * ship_status_update
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function ship_status_update($sdf)
     {
         if (!$sdf['order_id']) return array('rsp'=>'fail','msg'=>'订单ID不存在');
@@ -525,11 +515,6 @@ class erpapi_shop_response_process_order
         return array('rsp'=>'succ','msg'=>'更新成功，影响行数：'.$affect_row);
     }
 
-    /**
-     * custom_mark_add
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function custom_mark_add($sdf)
     {
         if (!$sdf['order_id']) return array('rsp'=>'fail','msg'=>'订单ID不存在');
@@ -541,11 +526,6 @@ class erpapi_shop_response_process_order
         return array('rsp'=>'succ','msg'=>'更新成功，影响行数：'.$affect_row);
     }
 
-    /**
-     * custom_mark_update
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function custom_mark_update($sdf)
     {
         if (!$sdf['order_id']) return array('rsp'=>'fail','msg'=>'订单ID不存在');
@@ -557,11 +537,6 @@ class erpapi_shop_response_process_order
         return array('rsp'=>'succ','msg'=>'更新成功，影响行数：'.$affect_row);
     }
 
-    /**
-     * memo_add
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function memo_add($sdf)
     {
         if (!$sdf['order_id']) return array('rsp'=>'fail','msg'=>'订单ID不存在');
@@ -573,11 +548,6 @@ class erpapi_shop_response_process_order
         return array('rsp'=>'succ','msg'=>'更新成功，影响行数：'.$affect_row);
     }
 
-    /**
-     * memo_update
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function memo_update($sdf)
     {
         if (!$sdf['order_id']) return array('rsp'=>'fail','msg'=>'订单ID不存在');
@@ -589,11 +559,6 @@ class erpapi_shop_response_process_order
         return array('rsp'=>'succ','msg'=>'更新成功，影响行数：'.$affect_row);
     }
 
-    /**
-     * payment_update
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function payment_update($sdf)
     {
         if (!$sdf['order_id']) return array('rsp'=>'fail','msg'=>'订单ID不存在');

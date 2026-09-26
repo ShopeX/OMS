@@ -19,7 +19,14 @@
 class invoice_finder_extend_filter_order{
     
     function get_extend_colums(){
-        $shopName = array_column(app::get('ome')->model('shop')->getList('name,shop_id'),'name','shop_id');
+        // 线上店铺列表
+        $filter = array(
+            's_type' => '1',
+        );
+        $shopList = app::get('ome')->model('shop')->getList("name,shop_id", $filter);
+        
+        // format
+        $shopName = array_column($shopList, 'name','shop_id');
 
         $db = array(
             'order' => array(

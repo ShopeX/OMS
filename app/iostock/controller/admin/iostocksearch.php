@@ -1,25 +1,5 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class iostock_ctl_admin_iostocksearch extends desktop_controller{
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index(){
         $is_export = kernel::single('desktop_user')->has_permission('iostock_search_export');#增加出入库导出权限
         $this->title = '出入库查询<span class="c-red">（默认查询近1年数据）</span>';
@@ -36,7 +16,7 @@ class iostock_ctl_admin_iostocksearch extends desktop_controller{
 
         $params = array(
             'title'=>$this->title,
-            'finder_cols' => 'column_branch_id,branch_id,iostock_bn,type_id,orginal_bn,column_supplier,bn,column_name,nums,iostock_price,oper,create_time,operator,memo',
+            'finder_cols' => 'column_branch_id,branch_id,iostock_bn,type_id,orginal_bn,column_supplier,bn,column_name,nums,iostock_price,oper,create_time,operator,shop_name,memo',
             'use_buildin_recycle'=>false,
             'use_buildin_export'=>$is_export,
             'use_buildin_import'=>false,

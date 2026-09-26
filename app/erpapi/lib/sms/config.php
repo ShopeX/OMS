@@ -54,7 +54,7 @@ class erpapi_sms_config extends erpapi_config
      * @return String
      * @author 
      **/
-    public function get_url($method, &$params, $realtime){
+    public function get_url($method, $params, $realtime){
         switch($method) {
             case SMS_SERVER_TIME :
                 $url = 'http://webapi.sms.shopex.cn/';
@@ -84,7 +84,7 @@ class erpapi_sms_config extends erpapi_config
      * @return String
      * @author 
      **/
-    public function gen_sign(&$params,$method=''){
+    public function gen_sign($params,$method=''){
         if(in_array($method, $this->otherSign)) {
             return null;
         }

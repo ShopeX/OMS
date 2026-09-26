@@ -32,9 +32,11 @@ class invoice_order
                 $save_path   = sprintf('%s/%s-%s-%s.%s',DATA_DIR,$data['order_bn'],date('Ymd'),$uniqid,$extension);
                 $src         = fopen($url, 'r');
                 $destination = fopen($save_path, 'w');
-                $bytesCopied = stream_copy_to_stream($src, $destination);
-                if ($bytesCopied !== false) {
-                    $data['url'] = $save_path;
+                if ($src && $destination) {
+                    $bytesCopied = stream_copy_to_stream($src, $destination);
+                    if ($bytesCopied !== false) {
+                        $data['url'] = $save_path;
+                    }
                 }
             }
             $file             = [

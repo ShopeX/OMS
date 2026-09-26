@@ -65,9 +65,11 @@ class taskmgr_swprocess_manage
                 list($result, $msg) = (new taskmgr_swtask_worker())->run($taskName, $taskConf);
 
                 if (!$result) {
-                    taskmgr_log::error(sprintf('%s(pid:%s,wid:%s)', $msg?:$taskName.'-任务未返回结果',getmypid(), $workerId), [], 'system');
-
-                    $pool->shutdown();
+                    $errorMsg = sprintf('%s(pid:%s,wid:%s)', $msg?:$taskName.'-任务未返回结果',getmypid(), $workerId);
+                    taskmgr_log::error($errorMsg, [], 'system');
+                    self::notifyConnecterFail($msg ?: $errorMsg);
+                    // 多 worker 同时失败时只由第一个触发 shutdown，避免 kill/waitpid No such process
+                    self::shutdownPoolOnce($pool);
                 }
             },true);
         }
@@ -92,19 +94,20 @@ class taskmgr_swprocess_manage
                     list($result, $msg) = (new taskmgr_swtask_timer())->run($taskName, $taskConf);
 
                     if (!$result) {
-                        taskmgr_log::error(sprintf('%s(pid:%s,wid:%s)', $msg?:$taskName.'-任务未返回结果',getmypid(), $workerId), [], 'system');
-                        
-                        $pool->shutdown();
+                        $errorMsg = sprintf('%s(pid:%s,wid:%s)', $msg?:$taskName.'-任务未返回结果',getmypid(), $workerId);
+                        taskmgr_log::error($errorMsg, [], 'system');
+                        self::notifyConnecterFail($msg ?: $errorMsg);
+                        self::shutdownPoolOnce($pool);
                     }
                     
                 }, $pool, $workerId, $taskName, $taskConf);
 
-                $process->signal(SIGTERM, function ($sig) use ($process, $timerId) {
-
+                $process->signal(SIGTERM, function ($sig) use ($timerId) {
                     if ($timerId !== null) {
                         Swoole\Timer::clear($timerId);
                     }
-
+                    // 协程内不能 Process::exit（会 deadlock），退出事件循环即可
+                    Swoole\Event::exit();
                 });
                 
             },true);
@@ -114,6 +117,76 @@ class taskmgr_swprocess_manage
        $this->cleanupLogs($pm);
 
         $pm->start();
+
+        // pool 全部退出后清理 pid；Swoole 守护进程仅 exit/Event::exit 可能仍空挂，需强制结束
+        self::clearPidFile();
+        taskmgr_log::info('taskmgr 主进程已退出', [], 'system');
+        @Swoole\Event::exit();
+        // 确保进程退出，避免留下 php sw.php worker:start -d 空壳
+        Process::kill(getmypid(), SIGKILL);
+    }
+
+    /**
+     * Redis/队列「服务未启用」「服务中断」时推送企业微信告警
+     *
+     * @param string $msg
+     * @return void
+     */
+    protected static function notifyConnecterFail($msg)
+    {
+        if (!$msg) {
+            return;
+        }
+        // worker: xxx-redis服务未启用 / xxx-redis服务中断: ...
+        // timer:  xxx-redis服务未启用 / xxx-redis服务中断
+        if (false === strpos($msg, '服务未启用') && false === strpos($msg, '服务中断')) {
+            return;
+        }
+        try {
+            taskmgr_notify_workwx::alertConnecterFail($msg);
+        } catch (\Throwable $e) {
+            taskmgr_log::error('企业微信告警调用异常: ' . $e->getMessage(), [], 'system');
+        }
+    }
+
+    /**
+     * 全进程只 shutdown 一次：对 pid file 非阻塞 flock，抢到的只停 pool
+     * 不杀主进程、不删 pid（删 pid 会导致可重复 start，叠出多个主进程）
+     *
+     * @param Pool $pool
+     * @return void
+     */
+    protected static function shutdownPoolOnce(Pool $pool)
+    {
+        $fp = @fopen(self::$pid_file, 'c+');
+        if (!$fp) {
+            try {
+                $pool->shutdown();
+            } catch (\Throwable $e) {
+            }
+            return;
+        }
+
+        if (!flock($fp, LOCK_EX | LOCK_NB)) {
+            fclose($fp);
+            return;
+        }
+
+        try {
+            $pool->shutdown();
+        } catch (\Throwable $e) {
+            // Swoole 底层 kill/waitpid 失败时忽略
+        }
+
+        flock($fp, LOCK_UN);
+        fclose($fp);
+    }
+
+    protected static function clearPidFile()
+    {
+        if (file_exists(self::$pid_file)) {
+            @unlink(self::$pid_file);
+        }
     }
 
     /**
@@ -152,12 +225,14 @@ class taskmgr_swprocess_manage
             });
 
             // 处理进程终止信号
-            $process->signal(SIGTERM, function ($sig) use ($process, $timerId) {
+            $process->signal(SIGTERM, function ($sig) use ($timerId) {
                 if ($timerId !== null) {
                     Swoole\Timer::clear($timerId);
                 }
 
                 taskmgr_log::info('日志清理进程正在停止...', [], 'system');
+                // 协程内不能 Process::exit（会 deadlock），退出事件循环即可
+                Swoole\Event::exit();
             });
 
         }, true);

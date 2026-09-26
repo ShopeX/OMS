@@ -90,12 +90,6 @@ class ome_service_login {
         return false;
     }
 
-    /**
-     * 检查_name
-     * @param mixed $login_name login_name
-     * @param mixed $login_password login_password
-     * @return mixed 返回验证结果
-     */
     public function check_name($login_name=null,$login_password=null) {
 
         $account = app::get('pam')->model('account');
@@ -111,12 +105,6 @@ class ome_service_login {
             return false;
     }
 
-    /**
-     * insert_user
-     * @param mixed $params 参数
-     * @param mixed $type type
-     * @return mixed 返回值
-     */
     public function insert_user($params, $type) {
 
         if (!$params)
@@ -144,28 +132,19 @@ class ome_service_login {
         }
     }
 
-    /**
-     * login
-     * @param mixed $params 参数
-     * @return mixed 返回值
-     */
     public function login($params=null) {
         if (!$params)
             return false;
         
-        // SaaS 功能已禁用，密钥已删除
-        // SAAS 登录功能不再可用
-        if (isset($params['saas_params']) || isset($params['saas_sign']) || isset($params['saas_ts'])) {
-            $this->b2b_login_error('SAAS 登录功能已禁用');
+        // 安全修复：检查必需的参数是否存在
+        if (empty($params['saas_params']) || empty($params['saas_ts']) || empty($params['saas_sign'])) {
             return false;
         }
         
-        // 以下代码已禁用（原 SAAS 登录逻辑）
-        // 由于密钥已删除，SAAS 相关功能无法使用
-        /*
-        $sign = strtoupper(md5(SASS_APP_KEY . $params['saas_params'] . $params['saas_ts'] . SAAS_SECRE_KEY));
-
-        // begin分销王登录
+        // 安全修复：根据登录来源检查并获取对应的密钥常量
+        $appKey = null;
+        $secretKey = null;
+        
         if($params['login_from']=='b2b') {
             // 分销王登录：检查B2B密钥常量是否定义
             if (!defined('B2B_APP_KEY') || !defined('B2B_SECRE_KEY')) {
@@ -256,7 +235,15 @@ class ome_service_login {
             }
             $sParams['login_from']='b2b';
         }
-        */
+        // end
+        
+        // 安全修复：移除默认admin登录逻辑，参数为空时拒绝登录
+        if (empty($sParams['visitor_nick'])) {
+            $this->b2b_login_error('参数错误');
+            return false;
+        }
+        
+        return $this->realLogin($sParams, $params['type']);
     }
 
 }

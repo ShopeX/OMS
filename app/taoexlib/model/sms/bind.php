@@ -44,6 +44,10 @@ class taoexlib_mdl_sms_bind extends dbeav_model
             return false;
         }
         $id = $rows[0]['id'];
+        // 绑定存在但未关联模板时 id 为空，避免拼出 WHERE id= AND ... 语法错误
+        if(!$id){
+            return false;
+        }
         
         $items = $this->db->selectrow('SELECT * FROM sdb_taoexlib_sms_sample_items WHERE id='.$id.' AND approved=\'1\' AND status=\'1\' ORDER BY iid DESC');
 

@@ -38,7 +38,20 @@ class taskmgr_cache_redis extends taskmgr_cache_abstract implements taskmgr_cach
             if (defined('__REDIS_CONFIG') && constant('__REDIS_CONFIG')) {
                 self::$_cacheObj = new Redis;
                 $config          = explode(':', __REDIS_CONFIG);
-                self::$_cacheObj->connect($config[0], $config[1]);
+                $host = $config[0];
+                $port = isset($config[1]) ? (int) $config[1] : 6379;
+
+                $useTls = defined('__REDIS_TLS') && self::_taskmgrRedisTlsEnabled();
+                if ($useTls) {
+                    $connectTimeout = defined('__REDIS_CONNECT_TIMEOUT')
+                        ? (float) constant('__REDIS_CONNECT_TIMEOUT') : 2.0;
+                    $readTimeout = defined('__REDIS_READ_TIMEOUT')
+                        ? (float) constant('__REDIS_READ_TIMEOUT') : 2.0;
+                    $context = self::_taskmgrRedisTlsStreamContext();
+                    self::$_cacheObj->connect($host, $port, $connectTimeout, null, 0, $readTimeout, $context);
+                } else {
+                    self::$_cacheObj->connect($host, $port);
+                }
 
                 // 密码
                 if (defined('__REDIS_AUTH') && constant('__REDIS_AUTH')) {
@@ -117,5 +130,40 @@ class taskmgr_cache_redis extends taskmgr_cache_abstract implements taskmgr_cach
 
         return self::$_cacheObj->incr($key, $offset);
     } //End Function
+
+    /**
+     * @return bool
+     */
+    private static function _taskmgrRedisTlsEnabled()
+    {
+        $v = constant('__REDIS_TLS');
+        if ($v === true || $v === 1) {
+            return true;
+        }
+        if (is_string($v)) {
+            $v = strtolower(trim($v));
+            return $v === '1' || $v === 'true' || $v === 'yes' || $v === 'on';
+        }
+        return false;
+    }
+
+    /**
+     * @return array
+     */
+    private static function _taskmgrRedisTlsStreamContext()
+    {
+        if (defined('__REDIS_STREAM_CONTEXT')) {
+            $ctx = constant('__REDIS_STREAM_CONTEXT');
+            if (is_array($ctx) && $ctx !== array()) {
+                return $ctx;
+            }
+        }
+        return array(
+            'stream' => array(
+                'verify_peer' => true,
+                'verify_peer_name' => true,
+            ),
+        );
+    }
 
 } //End Class

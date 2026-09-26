@@ -18,7 +18,7 @@
 $db['refund_noreturn'] = array(
     'columns' => array(
         'id'                => array(
-            'type'     => 'number',
+            'type'     => 'int unsigned',
             'required' => true,
             'pkey'     => true,
             'extra'    => 'auto_increment',

@@ -37,7 +37,7 @@ class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
 
             // 'finder_aliasname'=>'base',
             // 'object_method'=>array('count'=>'count_order_bill','getlist'=>'getlist_order_bill'),
-            'finder_cols'=>'column_edit,shop_id,trade_no,financial_no,out_trade_no,order_bn,trade_time,member,money,trade_type,remarks,bill_category',
+            'finder_cols'=>'column_edit,shop_id,trade_no,financial_no,out_trade_no,order_bn,trade_time,member,money,trade_type,column_goods_name,column_trade_desc,remarks,bill_category',
             //'base_query_string'=>$base_query_string,
             //'base_filter'=>array('time_from'=>$this->_params['time_from'],'time_to'=>$this->_params['time_to'],'shop_id'=>$this->_params['shop_id']),
             'orderBy'=> 'id desc',
@@ -147,6 +147,15 @@ class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
                 'order' => '1600',
                 'template_file' => 'xhs.xlsx'
             ),
+            'xhs_settlement' => array(
+                'name' => '小红书结算单导入',
+                'icon' => '小红书结算单',
+                'shop_filter' => array('shop_type' => array('xhs')),
+                'order' => '1605',
+                'template_file' => 'xhs_settlement.xlsx',
+                'template_fields' => '工作表「货款明细」；字段：创建时间、交易类型描述、收入（元）、支出（元）、账户余额（元）、业务单号、备注',
+                'file_format' => '.xls、 .xlsx',
+            ),
             'miaosuda' => array(
                 'name' => '喵速达账单导入',
                 'icon' => '喵速达',
@@ -160,6 +169,15 @@ class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
                 'shop_filter' => array('shop_type' => array('taobao'), 'tbbusiness_type' => array('B')),
                 'order' => '1800',
                 'template_file' => 'tianmaoyoupin.xlsx'
+            ),
+            'tmjh' => array(
+                'name' => '天猫聚合支付账单导入',
+                'icon' => '天猫聚合支付',
+                'shop_filter' => array('shop_type' => array('taobao', 'tmall')),
+                'order' => '1810',
+                'template_file' => 'tmjh.xlsx',
+                'template_fields' => '字段：商家昵称、入帐日期、入帐时间、支付流水号、主订单id、子订单id、入帐类型、收入金额(元)、支出金额(元)、业务描述、备注、收/付渠道',
+                'file_format' => '.xls、 .xlsx',
             ),
             'jdecard' => array(
                 'name' => '京东E卡结算单导入',
@@ -178,12 +196,39 @@ class financebase_ctl_admin_shop_settlement_bill extends desktop_controller
             'weimobr' => array(
                 'name' => '微盟零售账单导入',
                 'icon' => '微盟零售',
-                'shop_filter' => array('shop_type' => array('weimobr')),
+                'shop_filter' => array('shop_type' => array('weimob', 'weimobv', 'weimobr')),
                 'order' => '2100',
                 'template_file' => array(
                     '下载正向模版' => 'weimobr/sales.xlsx',
                     '下载逆向模版' => 'weimobr/refunds.xlsx'
                 )
+            ),
+            'weimobr_settlement' => array(
+                'name' => '微盟结算单导入',
+                'icon' => '微盟结算单',
+                'shop_filter' => array('shop_type' => array('weimob', 'weimobv', 'weimobr')),
+                'order' => '2105',
+                'template_file' => 'weimobr_settlement.xlsx',
+                'template_fields' => 'OMS 导入表：账务流水号、业务流水号、商户订单号、商品名称、发生时间、对方账号、收入/支出金额、账户余额、交易渠道、业务类型、备注、分类、平台',
+                'file_format' => '.xls、 .xlsx、 .et',
+            ),
+            'kuaishou' => array(
+                'name' => '快手结算单导入',
+                'icon' => '快手结算单',
+                'shop_filter' => array('shop_type' => array('kuaishou')),
+                'order' => '2200',
+                'template_file' => 'kuaishou.xlsx',
+                'template_fields' => '支持快手商家后台「结算账单」原生导出格式，一行=订单+商品行项目，系统自动按金额列拆流水（不含支付营销回退）',
+                'file_format' => '.xls、 .xlsx',
+            ),
+            'kuaishou_fund' => array(
+                'name' => '快手资金表导入',
+                'icon' => '快手资金表',
+                'shop_filter' => array('shop_type' => array('kuaishou')),
+                'order' => '2210',
+                'template_file' => 'kuaishou_fund.xlsx',
+                'template_fields' => '账务流水号、关联业务单号、入账时间、账务方向、发生额（元）、期末余额（元）、业务类型、描述、备注（与快手后台资金表导出一致）',
+                'file_format' => '.xls、 .xlsx',
             ),
         );
     }

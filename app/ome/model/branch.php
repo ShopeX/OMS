@@ -389,10 +389,12 @@ class ome_mdl_branch extends dbeav_model {
     */
     function sysSortArray($ArrayData,$KeyName1,$SortOrder1 = "SORT_ASC",$SortType1 = "SORT_REGULAR")
     {
-        if(!is_array($ArrayData))
+        if(!is_array($ArrayData) || empty($ArrayData))
         {
               return $ArrayData;
         }
+        $KeyNameList = array();
+        $SortRule = array();
         // Get args number.
         $ArgCount = func_num_args();
         // Get keys to sort by and put them to SortRule array.
@@ -409,12 +411,15 @@ class ome_mdl_branch extends dbeav_model {
                   $SortRule[]    = $Arg;
               }
         }
+        if (empty($KeyNameList)) {
+            return $ArrayData;
+        }
         // Get the values according to the keys and put them to array.
         foreach($ArrayData AS $Key => $Info)
         {
               foreach($KeyNameList AS $KeyName)
               {
-                  ${$KeyName}[$Key] = $Info[$KeyName];
+                  ${$KeyName}[$Key] = isset($Info[$KeyName]) ? $Info[$KeyName] : null;
               }
         }
         // Create the eval string and eval it.

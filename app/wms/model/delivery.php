@@ -174,6 +174,22 @@ class wms_mdl_delivery extends dbeav_model{
         if(isset($filter['product_bn']) && $filter['product_bn']){
             $where .= '  AND bnsContent like \'%'.utils::addslashes_array($filter['product_bn']).'%\'';
             unset($filter['product_bn']);
+        } elseif (array_key_exists('product_bn', $filter) && ($filter['product_bn'] === '' || $filter['product_bn'] === null)) {
+            // 货号留空仍会带 product_bn=''，落入 dbeav_filter 在 PHP8 会报错，列表空白
+            unset($filter['product_bn']);
+        }
+        // 顶部筛「商品种类/商品总数量」留空时仍会带 skuNum='' / itemNum=''，
+        // 生成 `skuNum = ''` 导致列表 0 条，但页签 count 仍按基础条件显示「共N条」
+        if (isset($filter['skuNum']) && ($filter['skuNum'] === '' || $filter['skuNum'] === null)) {
+            unset($filter['skuNum'], $filter['_skuNum_search']);
+        }
+        if (isset($filter['itemNum']) && ($filter['itemNum'] === '' || $filter['itemNum'] === null)) {
+            unset($filter['itemNum'], $filter['_itemNum_search']);
+        }
+        // 「来源店铺是」未选时仍会带 shop_id=''，生成 shop_id=''，把有店铺的发货单全部筛掉
+        // 页签「共N条」只用基础条件，所以会出现「共1条」但列表空
+        if (array_key_exists('shop_id', $filter) && ($filter['shop_id'] === '' || $filter['shop_id'] === null)) {
+            unset($filter['shop_id']);
         }
         if(isset($filter['product_barcode'])){
             $itemsObj = $this->app->model("delivery_items");
@@ -202,13 +218,28 @@ class wms_mdl_delivery extends dbeav_model{
             unset($filter['addonSQL']);
         }
         if (!empty($filter['delivery_label_code'])) {
+            $labelValueWhere = '';
+            if (array_key_exists('delivery_label_value', $filter)) {
+                $labelValueWhere = ' AND bl.label_value = '.intval($filter['delivery_label_value']);
+            }
             $where .= ' AND EXISTS (
                 SELECT 1 FROM sdb_ome_bill_label bl
                 WHERE bl.bill_id = '.$tPre.'delivery_id
                 AND bl.bill_type = "wms_delivery"
                 AND bl.label_code = "'.addslashes($filter['delivery_label_code']).'"
+                '.$labelValueWhere.'
             )';
             unset($filter['delivery_label_code']);
+            unset($filter['delivery_label_value']);
+        }
+        if (!empty($filter['delivery_label_code_not'])) {
+            $where .= ' AND NOT EXISTS (
+                SELECT 1 FROM sdb_ome_bill_label bl
+                WHERE bl.bill_id = '.$tPre.'delivery_id
+                AND bl.bill_type = "wms_delivery"
+                AND bl.label_code = "'.addslashes($filter['delivery_label_code_not']).'"
+            )';
+            unset($filter['delivery_label_code_not']);
         }
         if (isset($filter['urgent_delivery'])) {
             if ($filter['urgent_delivery'] === 'true' || $filter['urgent_delivery'] === true || $filter['urgent_delivery'] == 1) {
@@ -1498,9 +1529,15 @@ class wms_mdl_delivery extends dbeav_model{
     }
 
     function extra_delivery_label($rows){
+        // finder createView 会对每个 extra_* 执行：$list = $this->object->extra_xxx($list)
+        // 必须返回「完整列表行」，不能只返回 delivery_id=>html 的映射，否则会把列表清空，
+        // 出现「共N条」但表格无数据（另一个没有本方法的环境则正常）。
+        if (!$rows) {
+            return $rows;
+        }
         $deliveryIds = array_column((array)$rows, 'delivery_id');
         if (!$deliveryIds) {
-            return array();
+            return $rows;
         }
         $labelRows = app::get('ome')->model('bill_label')->getBIllLabelList($deliveryIds, 'wms_delivery');
         $result = array();
@@ -1512,7 +1549,10 @@ class wms_mdl_delivery extends dbeav_model{
                 $label['label_name']
             );
         }
-        return $result;
+        foreach ($rows as $k => $row) {
+            $rows[$k]['column_delivery_label'] = isset($result[$row['delivery_id']]) ? $result[$row['delivery_id']] : '';
+        }
+        return $rows;
     }
 
     //定义导出明细内容的相关字段

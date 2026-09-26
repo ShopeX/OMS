@@ -388,7 +388,7 @@
             </div>
             <div class="text-wrapper_12 flex-col">
               <span class="text_38" onclick="showTrackingModal()"
-                >补录运单号</span
+                >录入运单号</span
               >
             </div>
           </div>
@@ -809,7 +809,7 @@
       //           handleSearch(formData.channelType)
       //         }
       //       } catch (error) {
-      //         console.error('补录运单号失败:', error);
+      //         console.error('录入运单号失败:', error);
       //       }
       //     }
       //   });
@@ -1225,10 +1225,10 @@
         // diyDatePicker.init('#datePicker');
       }
 
-      // 补录运单号
+      // 录入运单号
       function showTrackingModal(orderId) {
         modal.show({
-          title: '补录运单号',
+          title: '录入运单号',
           fields: [
             {
               type: 'select',
@@ -1266,11 +1266,11 @@
                 // 刷新订单列表
                 showToast('快递单号输入错误，请重新输入');
               } else {
-                showToast('补录运单号成功');
+                showToast('录入运单号成功');
                 modal.hide();
               }
             } catch (error) {
-              console.error('补录运单号失败:', error);
+              console.error('录入运单号失败:', error);
             }
           },
         });

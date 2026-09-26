@@ -42,12 +42,6 @@ class erpapi_shop_matrix_luban_response_aftersalev2 extends erpapi_shop_response
     }
     
     //售后业务
-    /**
-     * 添加
-     * @param mixed $params 参数
-     * @return mixed 返回值
-     */
-
     public function add($params){
         $this->__apilog['title'] = '店铺(' . $this->__channelObj->channel['name'] . ')售后业务处理[订单：' . $params['tid'] . ']';
         $this->__apilog['original_bn'] = $params['tid'];
@@ -269,7 +263,12 @@ class erpapi_shop_matrix_luban_response_aftersalev2 extends erpapi_shop_response
         if (isset($params['platform_discount_return_amount']) && $params['platform_discount_return_amount'] !== '') {
             $sdf['platform_discount_return_amount'] = sprintf('%.2f', $params['platform_discount_return_amount'] / 100);
         }
-        
+
+        //客户实退金额（抖音平台下发单位为分，转为元）
+        if (isset($sdf['real_refund_amount']) && $sdf['real_refund_amount'] !== '' && is_numeric($sdf['real_refund_amount'])) {
+            $sdf['real_refund_amount'] = sprintf('%.2f', $sdf['real_refund_amount'] / 100);
+        }
+
         return $sdf;
     }
 
@@ -298,6 +297,9 @@ class erpapi_shop_matrix_luban_response_aftersalev2 extends erpapi_shop_response
     }
 
     protected function _formatAddItemList($sdf, $convert=array()) {
+        if ($sdf['order']['tran_type'] == 'archive') {
+            return $this->formatArchiveitemlist($sdf, $convert);
+        }
         if($sdf['from_platform'] == 'yjdf'){
             $itemList = $sdf['refund_item_list']['return_item'];
             
@@ -316,6 +318,50 @@ class erpapi_shop_matrix_luban_response_aftersalev2 extends erpapi_shop_response
             
             return parent::_formatAddItemList($sdf, $convert);
         }
+    }
+
+    /**
+     * 归档订单：按 oid 关联 archive.order_objects，返回以 object bn 为键的明细
+     */
+    public function formatArchiveitemlist($sdf, $convert)
+    {
+        $refund_item_list = $sdf['refund_item_list']['return_item'];
+        if (empty($refund_item_list)) {
+            return array();
+        }
+
+        $archiveOrderObjectMdl = app::get('archive')->model('order_objects');
+        $oids = array_column($refund_item_list, 'oid');
+        $filter = array('oid' => $oids);
+        if ($sdf['order']['order_id']) {
+            $filter['order_id'] = $sdf['order']['order_id'];
+        }
+        $object = $archiveOrderObjectMdl->getList('order_id,oid,bn,quantity,obj_id', $filter);
+        $object = array_column($object, null, 'oid');
+
+        $arrItem = array();
+        foreach ($refund_item_list as $item) {
+            if ($object[$item['oid']]['bn']) {
+                $item['bn'] = $object[$item['oid']]['bn'];
+            }
+            if ($arrItem[$item['bn']]) {
+                $arrItem[$item['bn']]['num'] += $item['num'];
+            } else {
+                $arrItem[$item['bn']] = $item;
+            }
+            if ($object[$item['oid']]['obj_id']) {
+                $arrItem[$item['bn']]['obj_id'][] = $object[$item['oid']]['obj_id'];
+            }
+        }
+        return $arrItem;
+    }
+
+    protected function _returnProductAddSdf($sdf)
+    {
+        if ($sdf['order']['tran_type'] == 'archive') {
+            $sdf['archive'] = '1';
+        }
+        return parent::_returnProductAddSdf($sdf);
     }
     
     /**

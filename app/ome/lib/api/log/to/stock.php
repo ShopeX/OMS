@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class ome_api_log_to_stock {
 
     //新发起的同步请求
@@ -22,11 +6,11 @@ class ome_api_log_to_stock {
         if(!$stocks) {
             return false;
         }
-		$oApiStockLog = app::get('ome')->model('api_stock_log');
+        $oApiStockLog = app::get('ome')->model('api_stock_log');
         $task_name = '同步库存';
         if($shop_id){
-			$shop_info = app::get('ome')->model('shop')->dump($shop_id,'name');
-		}
+            $shop_info = app::get('ome')->model('shop')->dump($shop_id,'name');
+        }
 
         $bns = array_column($stocks,'bn');
 
@@ -88,7 +72,7 @@ class ome_api_log_to_stock {
         }
 
         return $stocks;
-	}
+    }
 
     //同步请求返回的数据
     function save_callback($bn,$status,$shop_id,$msg,$log_detail){
@@ -97,6 +81,12 @@ class ome_api_log_to_stock {
         if($status=='success') {
             $msg = '更新成功';
         }
+        
+        // 字符串长度超过1000个字符，直接赋值msg_id
+        if ((function_exists('mb_strlen') && mb_strlen($msg, 'UTF-8') > 1000) || (!function_exists('mb_strlen') && strlen($msg) > 1000)) {
+            $msg = '回写库存失败，当前平台返回错误信息字符过长，请查看msg_id：'.$log_detail['msg_id'];
+        }
+        
         $data['msg_id'] = $log_detail['msg_id'];
         //$data['memo'] = $log_detail['params'];
         $data['msg'] = $msg;

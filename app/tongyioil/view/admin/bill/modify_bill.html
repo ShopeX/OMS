@@ -1,0 +1,256 @@
+<{capture name="header"}>
+  <link href="../app/ome/statics/ome.css" rel="stylesheet" type="text/css">
+<{/capture}>
+
+<div class="tableform" id="modify-bill-form">
+    <h4>账单冲账操作</h4>
+    
+    <!-- 账单基本信息 -->
+    <div class="division">
+        <h5 style="color: #2563EB; margin-bottom: 15px;">账单信息</h5>
+        <table border="0" cellspacing="0" cellpadding="0" style="width: 100%;">
+            <tr>
+                <th style="width: 120px;">结算ID：</th>
+                <td style="width: 200px;"><{$billInfo.zid|default:'-'}></td>
+                <th style="width: 120px;">订单号：</th>
+                <td><{$billInfo.order_bn|default:'-'}></td>
+            </tr>
+            <tr>
+                <th>公司代码：</th>
+                <td><{$billInfo.company_code|default:'-'}></td>
+                <th>凭证类型：</th>
+                <td><{$billInfo.document_type|default:'-'}></td>
+            </tr>
+            <tr>
+                <th>凭证日期：</th>
+                <td><{$billInfo.document_date|default:'-'}></td>
+                <th>当前状态：</th>
+                <td>
+                    <span style="color: #28a745; font-weight: bold; background-color: #d4edda; padding: 2px 8px; border-radius: 4px;">
+                        同步成功
+                    </span>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- 冲账表单 -->
+    <div class="division">
+        <h5 style="color: #dc3545; margin-bottom: 15px;">冲账操作</h5>
+        
+        <form method="post" action="<{$request_url}>" id="modify-form">
+            <input type="hidden" name="bill_id" value="<{$billInfo.id}>">
+            
+            <table border="0" cellspacing="0" cellpadding="0" style="width: 100%;">
+                <tr>
+                    <th style="width: 120px; vertical-align: top; padding-top: 10px;">
+                        <em class="c-red">*</em>冲账原因：
+                    </th>
+                    <td>
+                        <textarea 
+                            name="modify_reason" 
+                            id="modify_reason" 
+                            rows="4" 
+                            cols="60" 
+                            style="width: 100%; max-width: 500px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"
+                            placeholder="请详细说明冲账原因..."
+                            required
+                        ></textarea>
+                        <div style="color: #666; font-size: 12px; margin-top: 5px;">
+                            请详细说明冲账原因，此操作不可撤销
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <th style="vertical-align: top; padding-top: 10px;">操作说明：</th>
+                    <td>
+                        <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 4px; color: #856404;">
+                            <strong>重要提示：</strong><br>
+                            1. 冲账操作将把账单状态从"同步成功"改为"已冲账"<br>
+                            2. 冲账后的账单将不再参与后续的SAP同步<br>
+                            3. 此操作不可撤销，请谨慎操作<br>
+                            4. 冲账原因将记录在系统中，用于审计追踪
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            
+            <div style="text-align: center; margin-top: 20px; padding: 20px;">
+                <button type="button" class="btn btn-danger" id="modifybill" style="margin-right: 10px;">
+                    确认冲账
+                </button>
+                <button type="button" class="btn btn-default" onclick="history.back();">
+                    返回
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 冲账历史（如果有的话） -->
+    <div class="division">
+        <h5 style="color: #6c757d; margin-bottom: 15px;">操作记录</h5>
+        <table border="0" cellspacing="0" cellpadding="0" style="width: 100%;">
+            <tr>
+                <th style="width: 120px;">创建时间：</th>
+                <td><{$billInfo.at_time_formatted|default:'-'}></td>
+                <th style="width: 120px;">最后更新：</th>
+                <td><{$billInfo.up_time_formatted|default:'-'}></td>
+            </tr>
+            <tr>
+                <th>SAP同步时间：</th>
+                <td><{$billInfo.sap_sync_time_formatted|default:'-'}></td>
+                <th>预计推送时间：</th>
+                <td><{$billInfo.plan_push_time_formatted|default:'-'}></td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<script type="text/javascript">
+// 冲账按钮点击事件
+$('modifybill').addEvent('click', function(event) {
+    event.preventDefault();
+    
+    var reason = $('modify_reason').value.trim();
+    
+    // 验证冲账原因
+    if (!reason) {
+        alert('请填写冲账原因');
+        return;
+    }
+    
+    if (reason.length < 10) {
+        alert('冲账原因至少需要10个字符');
+        return;
+    }
+    
+    // 确认对话框
+    if (!confirm('确定要执行冲账操作吗？此操作不可撤销！')) {
+        return;
+    }
+    
+    // 禁用按钮防止重复提交
+    this.set('disabled', 'true').set('text', '处理中...');
+    
+    // 提交表单
+    $('modify-form').fireEvent('submit', {stop: $empty});
+});
+
+// 设置表单提交处理
+$('modify-form').store('target', {
+    onRequest: function() {
+        $('modifybill').set('disabled', 'true');
+    },
+    onComplete: function(resp) {
+        resp = JSON.decode(resp);
+        
+        $('modifybill').set('disabled', '');
+        if (resp.error) {
+            alert(resp.message);
+            return;
+        }
+        
+        // 冲账成功，关闭弹窗并刷新父页面
+       
+        $('modify-form').getParent('.dialog').retrieve('instance').close();
+        finderGroup['<{$env.get.finder_id}>'].refresh();
+    }
+});
+
+// 字符计数
+$('modify_reason').addEvent('input', function() {
+    var length = this.value.length;
+    var remaining = 500 - length;
+    
+    if (remaining < 0) {
+        this.value = this.value.substring(0, 500);
+        remaining = 0;
+    }
+    
+    // 更新字符计数显示
+    var counter = $('char-counter');
+    if (!counter) {
+        counter = new Element('div', {
+            'class': 'char-counter',
+            'style': 'color: #666; font-size: 12px; margin-top: 5px;'
+        });
+        this.getParent().appendChild(counter);
+    }
+    
+    counter.set('text', '已输入 ' + this.value.length + ' 字符，剩余 ' + remaining + ' 字符');
+    
+    if (remaining < 50) {
+        counter.setStyle('color', '#dc3545');
+    } else {
+        counter.setStyle('color', '#666');
+    }
+});
+</script>
+
+<style>
+.tableform h4 {
+    color: #333;
+    border-bottom: 2px solid #2563EB;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.tableform h5 {
+    border-left: 4px solid #2563EB;
+    padding-left: 10px;
+    margin: 20px 0 15px 0;
+}
+
+.division {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    background-color: #f8f9fa;
+}
+
+.division table th {
+    background-color: #f1f3f4;
+    font-weight: bold;
+    color: #495057;
+    padding: 8px 12px;
+    border: 1px solid #dee2e6;
+}
+
+.division table td {
+    padding: 8px 12px;
+    border: 1px solid #dee2e6;
+    background-color: #fff;
+}
+
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    margin: 0 5px;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.btn-default {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-default:hover {
+    background-color: #5a6268;
+}
+
+.c-red {
+    color: #dc3545;
+}
+</style>

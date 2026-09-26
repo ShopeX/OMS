@@ -1,0 +1,105 @@
+<{if $dataList}>
+<{foreach from=$dataList item=item}>
+<div class="list-item">
+  <div class="text-wrapper_5 flex-row justify-between">
+    <span class="text_11">订单号：</span>
+    <span class="text_12"><{$item.order_bn}></span>
+    <{if $item.ziti_status_name}>
+    <span class="status-order"><{$item.ziti_status_name}></span>
+    <{/if}>
+  </div>
+  <div class="text-wrapper_5 flex-row justify-between">
+    <span class="text_11">门店：</span>
+    <span class="text_12"><{$item.store_name}></span>
+  </div>
+  <div class="text-wrapper_5 flex-row justify-between">
+    <span class="text_11">渠道：</span>
+    <span class="text_12"><{$item.shop_type_name}></span>
+  </div>
+  <div class="text-wrapper_5 flex-row justify-between">
+    <span class="text_11">下单时间：</span>
+    <span class="text_12"><{$item.createtime|date:"Y-m-d H:i:s"}></span>
+  </div>
+  <{if $item.ship_mobiel}>
+  <div class="text-wrapper_5 flex-row pr">
+    <span class="text_11">收件人：</span>
+    <span class="text_26 sensitive-text flex-shrink-1" data-decryptAddress="false" data-orderid="<{$item.order_id}>" data-masked-copy="<{$item.ship_name}>（<{$item.ship_mobile}>） <{$item.ship_addr}> " data-raw-copy="<{$item.ship_name}>（<{$item.ship_mobile}>） <{$item.ship_addr}> "  data-raw="<{$item.ship_name}>（<{$item.ship_mobile}>）" data-masked="<{$item.ship_name}>（<{$item.ship_mobile}>）"><{$item.ship_name}>（<{$item.ship_mobile}>）</span>
+    <span class="text_27 copy-btn" data-copy="<{$item.ship_name}>（<{$item.ship_mobile}>） <{$item.ship_addr}>">复制</span>
+    <div class="toggle-visibility label_1">
+      <i class="eye-icon hidden"></i>
+    </div>
+  </div>
+  <{/if}>
+  <{if $item.ship_addr}>
+  <div class="text-wrapper_5 flex-row">
+    <span class="text_11">收货地址：</span>
+    <span class="text_26 sensitive-text flex-shrink-1" data-raw="<{$item.ship_addr}>" data-masked="<{$item.ship_addr}>"><{$item.ship_addr}></span> 
+    <!--
+    <span class="text_27 copy-btn" data-copy="<{$item.ship_addr}>">复制</span>
+    -->
+  </div>
+  <{/if}>
+  <{if $item.custom_remark_text}>
+  <div class="text-wrapper_5 flex-row">
+    <span class="text_11">买家备注：</span>
+    <div class="flex-row align-center justify-between" style="flex: 1;">
+      <span class="remark-content"><{$item.custom_remark_text}></span>
+      <span class="arrow-icon"></span>
+    </div>
+  </div>
+  <{/if}>
+
+  <{if $item.order_remark_text}>
+  <div class="text-wrapper_5 flex-row">
+    <span class="text_11">客服备注：</span>
+    <div class="flex-row align-center justify-between" style="flex: 1;">
+      <span class="remark-content"><{$item.order_remark_text}></span>
+      <span class="arrow-icon"></span>
+    </div>
+  </div>
+  <{/if}>
+  <div class="hr"></div>
+  <!-- goodsInfo -->
+
+  <{if $item.order_items}>
+  <{foreach from=$item.order_items item=dly_item}>
+  <div class="section_6 flex-row">
+    <{if $dly_item.goods_img_url}>
+    <img class="image_2" referrerpolicy="no-referrer"
+      src="<{$dly_item.goods_img_url}>" />
+    <{else}>
+    <img class="image_2" referrerpolicy="no-referrer"
+      src="<{$env.app.res_url}>/img/goods_default.png?v=<{$smarty.now}>" />
+    <{/if}>
+    <div class="text-group_1 flex-col">
+      <div class="status-info"> <span class="text_28 flex-shrink-1"><{$dly_item.product_name}></span> </div>
+      <span class="text_29">商户货号：<{$dly_item.bn}></span>
+      <span class="text_29">子订单号：<{$dly_item.esb_oid}></span>
+      <span class="text_30"><{$dly_item.nums}>件；<{$dly_item.product_attr}></span>
+    </div>
+  </div>
+  <div class="section_6 justify-between flex-wrap">
+        <div class="mrg-side-4">
+          <span class="text_36">买家</span><span class="text_37">￥<{$dly_item.divide_order_fee}></span>
+        </div>
+        <div class="mrg-side-4">
+          <span class="text_36">优惠</span><span class="text_37">￥<{$dly_item.esb_pmt_amount}></span>
+        </div>
+        <div class="mrg-side-4">
+          <span class="text_36">商家</span><span class="text_37">￥<{$dly_item.esb_amount}></span>
+        </div>
+  </div>
+  <{/foreach}>
+  <{/if}>
+  <div class="section_7 flex-row justify-end">
+
+    <{if $item.ziti_verify_status == '1' && $item.pay_status == '1'}>
+    <div class="text-wrapper_12 flex-col">
+      <span class="text_38" onclick="showWriteOffModal('<{$item.order_bn}>')">确认核销</span>
+    </div>
+    <{/if}>
+
+  </div>
+</div>
+<{/foreach}>
+<{/if}>

@@ -68,6 +68,7 @@ class o2o_system_setting{
             'o2o.delivery.confirm.code',
             'o2o.delivery.dly_overtime',
             'o2o.ctrl.supply.relation',
+            'o2o.order.router_num',
         );
         return $all_settings;
     }
@@ -78,6 +79,10 @@ class o2o_system_setting{
      * @return mixed 返回操作结果
      */
     public function saveConf($data){
+        if (isset($data['o2o.order.router_num'])) {
+            $routerNum = (int) $data['o2o.order.router_num'];
+            $data['o2o.order.router_num'] = $routerNum > 0 ? $routerNum : 3;
+        }
         foreach($data as $set=>$value){
             $curSet = app::get('o2o')->getConf($set);
             if(in_array($set,$this->all_settings()) && $curSet!=$data[$set]){
@@ -104,6 +109,10 @@ class o2o_system_setting{
 
         $modes = o2o_autostore::getAutoStoreModes();
         $setData['autostore_modes'] = $modes;
+
+        if (empty($setData['o2o_order_router_num']) || (int) $setData['o2o_order_router_num'] <= 0) {
+            $setData['o2o_order_router_num'] = 3;
+        }
 
         return $setData;
     }

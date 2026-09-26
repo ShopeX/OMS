@@ -1,0 +1,20 @@
+<div class="form-field">
+    <span class="form-field-label"><{$customcol.col_name}>：</span>
+    <{if $customcol.col_type == 'radiobox'}>
+    <div class="form-radios">
+        <input id="props_<{$customcol.col_key}>_1" name="props[<{$customcol.col_key}>]" type="radio" value="1" <{if $customcol.is_radiobox_yes == '1'}>checked="checked"<{/if}>>
+        <label for="props_<{$customcol.col_key}>_1">是</label>
+        <input id="props_<{$customcol.col_key}>_0" name="props[<{$customcol.col_key}>]" type="radio" value="0" <{if $customcol.is_radiobox_no == '1'}>checked="checked"<{/if}>>
+        <label for="props_<{$customcol.col_key}>_0">否</label>
+    </div>
+    <{elseif $customcol.col_type == 'select'}>
+    <select class="form-input" name="props[<{$customcol.col_key}>]" id="props_<{$customcol.col_key}>">
+        <option value="">请选择</option>
+        <{foreach from=$customcol.options item=opt}>
+        <option value="<{$opt.value}>" <{if $customcol.col_value == $opt.value && $customcol.col_value !== '' && $customcol.col_value !== null}>selected<{/if}>><{$opt.label}></option>
+        <{/foreach}>
+    </select>
+    <{else}>
+    <input class="form-input" type="text" name="props[<{$customcol.col_key}>]" value="<{$customcol.col_value|default:''}>" />
+    <{/if}>
+</div>

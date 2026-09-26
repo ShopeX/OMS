@@ -1,0 +1,52 @@
+<desktop>
+    <permissions>
+        <permission id="goldentra_material">SAP主档信息</permission>
+        <permission id="goldentra_mold">模号管理</permission>
+        <permission id="goldentra_mapping">定价/钻石物料Mapping</permission>
+        <permission id="goldentra_daily_goldprice">每日金价</permission>
+        <permission id="goldentra_invest_goldprice">投资金价</permission>
+        <permission id="goldentra_metadata">数据字典</permission>
+        <permission id="goldentra_stock_sync">库存更新</permission>
+        <permission id="goldentra_stock_diff">电商仓库存差异</permission>
+        <permission id="goldentra_stock_ftp">库存FTP配置</permission>
+        <permission id="goldentra_pushsales">SAP销售退货上传</permission>
+        <permission id="goldentra_pushvoucher">SAP财务凭证上传</permission>
+        <permission id="goldentra_push_http">SAP推送HTTP配置</permission>
+        <permission id="goldentra_zahlart">店铺支付方式编码</permission>
+        <permission id="goldentra_ecwarehouse">门店仓库电商仓配置</permission>
+    </permissions>
+
+    <workground name="贵重金属" id="goldentra_center" order="510" icon="icon-shangpin-01">
+        <menugroup name="物料" en="goldentra-material">
+            <menu controller='admin_material' action='index' permission='goldentra_material' display='true' order='1000100'>SAP主档信息</menu>
+            <menu controller='admin_mapping' action='index' permission='goldentra_mapping' display='true' order='1000200'>定价/钻石物料Mapping</menu>
+            <menu controller='admin_mold' action='index' permission='goldentra_mold' display='true' order='1000300'>模号管理</menu>
+        </menugroup>
+
+        <menugroup name="库存" en="goldentra-stock">
+            <menu controller='admin_stock_sync' action='index' permission='goldentra_stock_sync' display='true' order='2000100'>库存同步</menu>
+            <menu controller='admin_stock_diff' action='index' permission='goldentra_stock_diff' display='true' order='2000200'>电商仓库存差异</menu>
+        </menugroup>
+
+        <menugroup name="金价" en="goldentra-goldprice">
+            <menu controller='admin_daily_goldprice' action='index' permission='goldentra_daily_goldprice' display='true' order='3000100'>每日金价</menu>
+            <menu controller='admin_invest_goldprice' action='index' permission='goldentra_invest_goldprice' display='true' order='3000200'>投资金价</menu>
+        </menugroup>
+
+        <menugroup name="上传SAP" en="goldentra-sap-push">
+            <menu controller='admin_pushsales' action='index' permission='goldentra_pushsales' display='true' order='5000100'>销售/退货上传(发货+确认收货)</menu>
+            <menu controller='admin_pushvoucher' action='index' permission='goldentra_pushvoucher' display='true' order='5000300'>财务凭证上传</menu>
+        </menugroup>
+
+        <menugroup name="配置" en="goldentra-config">
+            <menu controller='admin_metadata' action='index' permission='goldentra_metadata' display='true' order='6000100'>数据字典</menu>
+            <menu controller='admin_zahlart' action='index' permission='goldentra_zahlart' display='true' order='6000150'>店铺支付方式编码</menu>
+            <menu controller='admin_ecwarehouse' action='index' permission='goldentra_ecwarehouse' display='true' order='6000160'>门店/仓库电商仓配置</menu>
+            <menu controller='admin_push_http' action='index' permission='goldentra_push_http' display='true' order='6000180'>SAP推送HTTP配置</menu>
+            <menu controller='admin_push_http' action='save' permission='goldentra_push_http' display='false' order='6000181'>保存SAP推送HTTP配置</menu>
+            <menu controller='admin_stock_ftp' action='index' permission='goldentra_stock_ftp' display='true' order='6000200'>库存FTP配置</menu>
+            <menu controller='admin_stock_ftp' action='save' permission='goldentra_stock_ftp' display='false' order='6000201'>保存库存FTP配置</menu>
+            <menu controller='admin_stock_ftp' action='test' permission='goldentra_stock_ftp' display='false' order='6000202'>测试库存FTP连接</menu>
+        </menugroup>
+    </workground>
+</desktop>

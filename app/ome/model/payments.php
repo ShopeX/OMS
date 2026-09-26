@@ -1,19 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 class ome_mdl_payments extends dbeav_model{
     var $has_export_cnf = true;
@@ -21,13 +6,6 @@ class ome_mdl_payments extends dbeav_model{
     var $export_flag = false;
     var $defaultOrder = array('t_begin DESC');
 
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter,$tableAlias=null,$baseWhere=null){
         if (isset($filter['order_bn'])){
             $orderObj = $this->app->model("orders");
@@ -95,6 +73,13 @@ class ome_mdl_payments extends dbeav_model{
                 $kpi_sdf = $objOrder->dump($order_id);
                 if(method_exists($oKpi,'getOrderIncremental')){
                     $oKpi->getOrderIncremental($kpi_sdf);
+                }
+            }
+
+
+            foreach(kernel::servicelist('ome.service.order.payment.after') as $service) {
+                if(method_exists($service,'after_payment')) {
+                    $service->after_payment($sdf);
                 }
             }
             return true;

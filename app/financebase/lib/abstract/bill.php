@@ -405,7 +405,7 @@ abstract class financebase_abstract_bill{
         {
             foreach ($rule['and'] as $v) 
             {
-                if(!$this->_checkData($v['rule_value'], $this->verified_data[$v['rule_type']], $v['rule_filter']))
+                if(!$this->_checkData($v['rule_value'], $this->_getRuleFieldValue($v['rule_type']), $v['rule_filter']))
                 {
                     $is_and_ok = false;
                     break;
@@ -419,7 +419,7 @@ abstract class financebase_abstract_bill{
             foreach ($rule['or'] as $v) 
             {
 
-                if($this->_checkData($v['rule_value'], $this->verified_data[$v['rule_type']], $v['rule_filter']))
+                if($this->_checkData($v['rule_value'], $this->_getRuleFieldValue($v['rule_type']), $v['rule_filter']))
                 {
                     $is_or_ok = true;
                     break;
@@ -434,6 +434,41 @@ abstract class financebase_abstract_bill{
             return false;
         }
          
+    }
+
+    /**
+     * 规则字段取值（兼容各平台字段名差异）
+     * - trade_desc / trade_describe：支付宝 vs 拼多多业务描述列
+     * - remarks：拼多多等平台将部分明细写在备注列，规则仍可能选「业务描述」
+     */
+    protected function _getRuleFieldValue($ruleType)
+    {
+        $aliases = array(
+            'trade_desc' => array('trade_describe', 'remarks'),
+            'trade_describe' => array('trade_desc', 'remarks'),
+            'remarks' => array('trade_desc', 'trade_describe'),
+        );
+
+        $candidates = array($ruleType);
+        if (isset($aliases[$ruleType])) {
+            $candidates = array_merge($candidates, $aliases[$ruleType]);
+        }
+
+        foreach (array_unique($candidates) as $field) {
+            if (isset($this->verified_data[$field]) && !$this->_isRuleFieldEmpty($this->verified_data[$field])) {
+                return $this->verified_data[$field];
+            }
+        }
+
+        return isset($this->verified_data[$ruleType]) ? $this->verified_data[$ruleType] : '';
+    }
+
+    /**
+     * 规则匹配时视为空的字段值（如拼多多备注列占位 "-"）
+     */
+    protected function _isRuleFieldEmpty($value)
+    {
+        return $value === '' || $value === null || $value === '-';
     }
 
     /**

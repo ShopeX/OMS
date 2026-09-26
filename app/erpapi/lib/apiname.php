@@ -61,8 +61,8 @@ define("WMS_LOGISTICS_COMPANIES_GET",'store.wms.logistics.companies.get');
 define("WMS_VENDORS_GET",'store.vendors.get');
 // 向wms请求新建加工单
 define('WMS_STOREPROCESS_CREATE', 'store.wms.storeprocess.create');
-//付尾款通知
 
+//付尾款通知
 define('WMS_PRESALES_PACKAGE_CONSIGN', 'store.wms.presalespackage.consign');
 
 // BMS
@@ -91,7 +91,6 @@ define("WMS_LOGISTICS_CREATE", 'store.wms.carrier.create'); // 向WMS推送创�
 define("WMS_SHOP_UPDATE", 'store.wms.update.shop');
 define("WMS_VENDORS_UPDATE", 'store.wms.modify.supplier');
 
-
 // 单句取消
 define("WMS_ORDER_CANCEL",'store.wms.order.cancel');
 define("WMS_SHOP_CREATE",'store.wms.add.shop');                                            // 向WMS推送创建店铺
@@ -101,6 +100,7 @@ define('SHOP_PRINT_THIRD_BILL', 'store.print.invoice');                         
 define('SHOP_GET_DLY_INFO', 'store.get.delivery.info');                                 //唯品会获取发货单信息
 define('SHOP_REFUND_CHECK', 'store.refund.check');                                      //退款审核接口
 define('SHOP_OUT_BRANCH', 'store.dropship.dps.outbound');                               //货品出库接口
+
 //短信平台接口
 define('SMS_SERVER_TIME', 'erp.sms.server.time');                                       //获取短信平台时间
 define('SMS_USER_INFO', 'erp.sms.user.info');                                           //获取短信平台用户信息
@@ -353,7 +353,7 @@ define('SHOP_VOP_INVENTORY', 'store.get.inventoryoccupiedorders');              
 define('SHOP_VOP_FEEFBACK', 'store.get.occupiedorderfeedback');                  //唯品会JIT时效订单结果反馈
 define('SHOP_BRANCH_FEEDBACK', 'store.jitx.delivery.result.feedback');     
 define('SHOP_JITX_WAREHOUSES_GET', 'store.jitx.warehouses.get');                 //唯品会获取可用JITX仓库配置
-define('SHOP_GET_COOPERATIONNOLIST', 'store.get.cooperationnolist');			 //获取合作编码信息接口
+define('SHOP_GET_COOPERATIONNOLIST', 'store.get.cooperationnolist');             //获取合作编码信息接口
 
 define('SHOP_COMMONS_VOP_BILL','store.commons.send');
 define('SHOP_BILL_LIST_GET', 'store.bill.list.get');
@@ -507,6 +507,8 @@ define('SHOP_ASC_AUDIT_REASON_GET', 'store.asc.audit.reason.get');              
 // 支付宝/JD钱包账单
 define('SHOP_QIANBAO_BILL_DETAIL_QUERY', 'store.qianbao.bill.detail.query');
 define('SHOP_ALIPAY_BILL_GET','store.alipay.bill.get');
+
+define('SHOP_JD_TRADE_STATEMENT_GET', 'store.trade.statement.get');
 
 //抖音账单
 define('STORE_DOWNLOAD_SHOP_ACCOUNT_ITEM', 'store.download.shop.account.item');
@@ -675,3 +677,6 @@ define('STORE_LOGISTICS_PACKAGE_EXCEPTION_CONFIG_QUERY', 'store.logistics.packag
 
 // 隐私号G组更新(700虚拟号)
 define('STORE_VIRTUAL_NUMBER_GROUP_UPDATE', 'store.virtual.number.group.update');
+
+// 获取平台运单号
+define('STORE_WAYBILL_RESHIPPING_GET', 'store.waybill.reshipping.get');

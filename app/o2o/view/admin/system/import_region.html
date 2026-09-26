@@ -1,0 +1,35 @@
+<form class="tableform" id="import_region_form" enctype="multipart/form-data" method="post" action="index.php?app=o2o&ctl=admin_store&act=toImportRegion&finder_id=<{$env.get.finder_id}>&finder_vid=<{$env.get.finder_vid}>">
+    <div class="division">
+        <table border="0" cellpadding="0" cellspacing="0">
+            <tr>
+                <th>下载模板：</th>
+                <td style="text-align:left;">
+                    <a target="_blank" href="index.php?app=o2o&ctl=admin_store&act=exportRegionTemplate&finder_id=<{$env.get.finder_id}>&finder_vid=<{$env.get.finder_vid}>">点击下载</a>
+                </td>
+            </tr>
+            <tr>
+                <th>填写说明：</th>
+                <td style="text-align:left;color:#666;">
+                    按门店编码维度覆盖更新覆盖区域；多个区域用英文分号分隔，如：上海;安徽-合肥市；全国填写「中国」。<br>
+                    请上传真正的 CSV 文件；若用 Excel/WPS 编辑，需「另存为」→「CSV（逗号分隔）」，不要直接保存为 xlsx 后改扩展名。
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <h4>上传.CSV文件</h4>
+    <div class="division">
+        <div style="padding: 1px 0; margin-left: 30px;">
+            <input type="file" id="ImportRegionCSV" name="import_file">
+        </div>
+    </div>
+    <div class="table-action">
+        <button class="btn btn-primary" type="submit" id="ImportRegionBtn"><span><span>导入</span></span></button>
+    </div>
+</form>
+
+<script>
+$('import_region_form').addEvent('submit', function() {
+    $('ImportRegionBtn').set('disabled', true).getElement('span span').set('html', '正在导入');
+});
+</script>

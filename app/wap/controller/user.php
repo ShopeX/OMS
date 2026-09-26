@@ -43,13 +43,11 @@ class wap_ctl_user extends wap_controller
         #授权门店
         $is_super = kernel::single('desktop_user')->is_super();
         if(!$is_super){
-            $branchObj     = kernel::single('o2o_store_branch');
-            $branch_ids    = $branchObj->getO2OBranchByUser(true);
-        
-            $storeObj    = app::get('o2o')->model('store');
-            $storeInfo   = $storeObj->dump(array('branch_id'=>$branch_ids), 'store_id, store_bn, name, addr');
-        
-            $userInfo    = array_merge($userInfo, $storeInfo);
+            $branchObj  = kernel::single('o2o_store_branch');
+            $branch_ids = $branchObj->getO2OBranchByUser(true);
+            $storeLib   = kernel::single('wap_store_user');
+            $storeInfo  = $storeLib->getCurrentStore($branch_ids);
+            $userInfo   = $storeLib->mergeUserStoreInfo($userInfo, $storeInfo);
         }
         
         $this->pagedata['userInfo']    = $userInfo;

@@ -133,7 +133,7 @@ class erpapi_shop_matrix_pinduoduo_request_delivery extends erpapi_shop_request_
         if ($sdf['serial_number']) {
             $order_id = $sdf['orderinfo']['order_id'];
             $isGuobu  = kernel::single('ome_bill_label')->getBillLabelInfo($order_id, 'order', 'SOMS_GB');
-            if ($isGuobu) {
+            
                 $param['feature'] = $feature = [];
                 foreach ($sdf['serial_number'] as $_v) {
                     if (!$feature['deviceSn']) {
@@ -160,7 +160,7 @@ class erpapi_shop_matrix_pinduoduo_request_delivery extends erpapi_shop_request_
                 } else {
                     unset($param['feature']);
                 }
-            }
+            
         }
 
         return $param;

@@ -180,7 +180,7 @@ class ome_print_tmpl_express{
             $printTmpl['template_select'] = json_encode(unserialize($printTmpl['template_select']));
         }
         $this->printTpl = $printTmpl;
-        if(in_array($printTmpl['template_type'], array('cainiao', 'cainiao_standard', 'cainiao_user','pdd_standard','pdd_user','jd_standard','jd_user', 'douyin_standard', 'douyin_user','kuaishou_standard','kuaishou_user','sf','xhs_standard','xhs_user','aikucun_standard','aikucun_user','meituan4bulkpurchasing_user','youzan_standard'))) {
+        if(in_array($printTmpl['template_type'], array('cainiao', 'cainiao_standard', 'cainiao_user','pdd_standard','pdd_user','jd_standard','jd_user', 'douyin_standard', 'douyin_user','kuaishou_standard','kuaishou_user','sf','xhs_standard','xhs_user','aikucun_standard','aikucun_user','wxshipin_standard','wxshipin_user','meituan4bulkpurchasing_user','youzan_standard'))) {
             $rs = $this->_dealUnShopexWidgetField($corp['channel_id']);
             if(!$rs) {
                 return false;
@@ -355,8 +355,89 @@ class ome_print_tmpl_express{
                 $this->printField = array('batch_logi_no','logi_no','print_config','channel_id','delivery_id','json_packet','user_id');
                 $this->_xhs_custom();
                 break;
+            case 'wxshipin_standard':
+                $this->printField = array('batch_logi_no','logi_no','print_config','channel_id','delivery_id','json_packet','user_id');
+                if (!$this->_wxshipinCustom()) {
+                    return false;
+                }
+                break;
+            case 'wxshipin_user':
+                $this->printField = array('batch_logi_no','logi_no','print_config','channel_id','delivery_id','json_packet','user_id');
+                break;
             default : break;
         }
+        return true;
+    }
+
+    private function _wxshipinCustom()
+    {
+        $templateSelect = @json_decode($this->printTpl['template_select'], true);
+        $customTplId = isset($templateSelect['wxshipin_custom_tpl_id']) ? intval($templateSelect['wxshipin_custom_tpl_id']) : 0;
+        if (!$customTplId) {
+            return true;
+        }
+
+        $templateObj = app::get('logisticsmanager')->model('express_template');
+        $customConfig = $templateObj->getWxshipinCustomConfig($this->printTpl['template_data']);
+        if (!$customConfig) {
+            $this->msg = '微信视频号标准模板缺少 custom_config，请重新同步模板后再打印';
+            return false;
+        }
+
+        $customTpl = $templateObj->db_dump(
+            array('template_id' => $customTplId),
+            'template_id,template_type,control_type,template_data,status'
+        );
+        if (!$customTpl || $customTpl['template_type'] != 'electron' || $customTpl['control_type'] != 'lodop' || $customTpl['status'] != 'true') {
+            $this->msg = '关联的微信视频号 Lodop 自定义区模板已失效，请重新关联';
+            return false;
+        }
+
+        $unsupported = $templateObj->getWxshipinUnsupportedPlugins($customTpl['template_data']);
+        if ($unsupported) {
+            $this->msg = '关联的 Lodop 模板包含暂不支持的控件：' . implode('、', $unsupported);
+            return false;
+        }
+
+        $plugins = @unserialize($customTpl['template_data']);
+        $customData = array(
+            'fields' => array(),
+            'barcode_field' => '',
+            'qrcode_field' => '',
+            'has_product_info' => false,
+        );
+        foreach ((array)$plugins as $plugin) {
+            if (!is_array($plugin) || empty($plugin['plugin'])) {
+                continue;
+            }
+            $field = isset($plugin['type']['value']) ? $plugin['type']['value'] : '';
+            if ($plugin['plugin'] == 'sp-input' && $field && $field != 'empty' && $field != 'custom') {
+                $customData['fields'][] = $field;
+                $this->printField[] = $field;
+            } elseif ($plugin['plugin'] == 'sp-barcode' && $field && $field != 'empty' && $field != 'custom') {
+                $customData['barcode_field'] = $field;
+                $this->printField[] = $field;
+            } elseif ($plugin['plugin'] == 'sp-qrcode' && $field && $field != 'empty' && $field != 'custom') {
+                $customData['qrcode_field'] = $field;
+                $this->printField[] = $field;
+            } elseif ($plugin['plugin'] == 'sp-table') {
+                $customData['has_product_info'] = true;
+                $this->printField[] = 'wxshipin_product_info';
+            }
+        }
+
+        $this->printField[] = 'shop_name';
+        $customData['fields'] = array_values(array_unique($customData['fields']));
+        $this->printField = array_values(array_unique($this->printField));
+        $templateVersion = substr(md5(
+            'wxshipin-renderer-v2|' . $customTpl['template_data']
+            . '|' . $customConfig['width'] . 'x' . $customConfig['height']
+        ), 0, 12);
+        $this->printTpl['custom_area_url'] = kernel::base_url(1) . '/index.php/openapi/template/getToWxshipinTpl?tpl_id=' . $customTplId
+            . '&width=' . rawurlencode($customConfig['width'])
+            . '&height=' . rawurlencode($customConfig['height'])
+            . '&v=' . $templateVersion;
+        $this->printTpl['template_select'] = json_encode($customData);
         return true;
     }
 

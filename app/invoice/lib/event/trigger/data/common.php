@@ -50,7 +50,7 @@ class invoice_event_trigger_data_common
         //==
     }
     
-    public function getEinvoiceInvoiceItems($order_params,$einvoice_type='blue',$source='')
+    public function getEinvoiceInvoiceItems($order_params,$einvoice_type='blue',$source='', &$error_msg=null)
     {
         if(isset($order_params['hsbz'])){
             $hsbz = $order_params['hsbz'];
@@ -104,6 +104,8 @@ class invoice_event_trigger_data_common
         $salesMaterialInfo = invoice_func::getSalesMaterialInfo($all_sales_material_bns);
 
         $fpmxxh = 0;
+        $isCheckTaxCode = true;
+        
         foreach($sale_data['sales_items'] as $k => $v)
         {
             if($v['sales_amount'] <= 0) continue; //金额为0的,过滤掉，不开票
@@ -121,10 +123,14 @@ class invoice_event_trigger_data_common
             if ($v['tax_rate'] > 0) $product_tax_rate = $v['tax_rate']/100;
 
             //只要有一个明细没有商品编码，则整单跳过，不开票
-            if(!$tax_code){
+            if(!$tax_code && $isCheckTaxCode){
                 $msg = "开票失败,发票明细".$v['bn']."无分类编码";
                 $opObj = app::get('ome')->model('operation_log');
                 $opObj->write_log('invoice_billing@invoice', $order_params['id'], $msg);
+                
+                // error_msg
+                $error_msg = '发票明细货号：'. $v['bn'] .'未设置分类编码';
+                
                 return false;
             }
             

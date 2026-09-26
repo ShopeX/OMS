@@ -25,7 +25,7 @@ $db['organization_ops'] = array(
             'label'    => '操作员ID',
         ),
         'org_ids' => array(
-            'type'            => 'varchar(255)',
+            'type'            => 'text',
             'label'           => '门店组织架构ID',
             'in_list'         => false,
             'default_in_list' => false,

@@ -379,6 +379,7 @@ class erpapi_shop_response_components_order_items extends erpapi_shop_response_c
                 'addon'             => $object_addon, //扩展信息
                 'customization' => $object['customization'], //商品定制信息
                 'is_sales_material_setmapping' => $is_setmapping, // 是否SET商品映射
+                'custom_object_extends' => ($object['custom_object_extends'] ? $object['custom_object_extends'] : ''), // 本地定制扩展信息
             );
             
             unset($order_items);

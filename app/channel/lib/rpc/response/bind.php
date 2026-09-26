@@ -124,6 +124,10 @@ class channel_rpc_response_bind
                     // $channel_mode = $channelModes[$channel['shipper']];
                     $apply['kdn_type'] = $channel['shipper'];
                 }
+            } elseif ($channel['node_type'] == 'sf') {
+                // 顺丰仅支持自有key：show_type=kuaidi&sf_type=self
+                $apply['show_type'] = 'kuaidi';
+                $apply['sf_type']   = 'self';
             }
         }
 
@@ -131,19 +135,32 @@ class channel_rpc_response_bind
     }
     
     /**
-     * 获取绑定快递的模式
+     * 获取绑定快递的接入方式
+     * @param string|null $type 指定 key 时返回文案；为空返回可选列表
+     * @param string|null $node_type 节点类型：sf 仅自有key；其它（如快递鸟）保留商派Key+自有key
      */
-    public function getBindKdMode($type=null)
+    public function getBindKdMode($type=null, $node_type=null)
     {
-        $channelModes = array(
-                'default'=>'商派Key对接',
-                'self'=>'自有key对接',
-        );
-        
-        if($type){
-            return $channelModes[$type];
+        if ($node_type === 'sf') {
+            $channelModes = array(
+                'self' => '自有key对接',
+            );
+        } else {
+            $channelModes = array(
+                'default' => '商派Key对接',
+                'self'    => '自有key对接',
+            );
         }
-        
+
+        if ($type) {
+            // 文案回退：历史数据可能仍是 default
+            $all = array(
+                'default' => '商派Key对接',
+                'self'    => '自有key对接',
+            );
+            return isset($channelModes[$type]) ? $channelModes[$type] : ($all[$type] ?? '');
+        }
+
         return $channelModes;
     }
 }

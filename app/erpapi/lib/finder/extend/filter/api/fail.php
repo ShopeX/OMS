@@ -33,6 +33,7 @@ class erpapi_finder_extend_filter_api_fail{
             'jddelivery'=>'京东发货回传',
             'deliveryship'=>'发货单发货回传',
             'deliveryBack'=>'运单号回传',
+            'upload_invoice'=>'发票回传',
         );
         $db['api_fail']=array (
             'columns' => array (

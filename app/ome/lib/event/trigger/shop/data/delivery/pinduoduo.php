@@ -68,6 +68,35 @@ class ome_event_trigger_shop_data_delivery_pinduoduo extends ome_event_trigger_s
                 }
             }
             
+            // 检查订单是否打标[含赠品]标签
+            $order_id = $order['order_id'];
+            $error_msg = '';
+            $labelInfo = kernel::single('ome_bill_label')->getBillLabelInfo($order_id, 'order', 'SOMS_GIFT_ORDER_STATUS', $error_msg);
+            if($labelInfo && $this->__sdf['is_first_delivery'] == false && $this->__sdf['is_last_delivery'] == false){
+                $is_gift_order = false;
+                foreach ((array)$this->__sdf['delivery_items'] as $itemKey => $itemVal)
+                {
+                    if($itemVal['item_type'] != 'gift'){
+                        continue;
+                    }
+                    
+                    if(empty($itemVal['main_oid'])){
+                        continue;
+                    }
+                    
+                    if(empty($itemVal['oid'])){
+                        continue;
+                    }
+                    
+                    $is_gift_order = true;
+                }
+                
+                // 包含拼多多赠品类型的子订单，允许本次回传平台发货状态
+                if($is_gift_order){
+                    $this->__sdf['is_last_delivery'] = true;
+                }
+            }
+            
             //只回写第一张和最后一张
             if (!$this->__sdf['is_first_delivery'] && !$this->__sdf['is_last_delivery']) {
                 return [];

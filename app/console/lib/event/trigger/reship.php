@@ -34,6 +34,104 @@ class console_event_trigger_reship{
             $this->update_out_bn($data['reship_bn'],$result['data']['wms_order_code']);
             
         }
+        if ($result['rsp'] == 'fail') {
+            $this->_sendReshipCreateFailNotify($wms_id, $data, $result);
+        }
+    }
+
+    /**
+     * 推送 WMS 退货单创建失败预警（事件码 reship_create_fail_notify）
+     *
+     * @param string|int $wms_id WMS channel
+     * @param array      $data   reship_create 入参（含 reship_bn、order_bn、branch_id、items 等）
+     * @param array      $result erpapi 返回，含 rsp、msg / err_msg
+     */
+    protected function _sendReshipCreateFailNotify($wms_id, $data, $result)
+    {
+        try {
+            $fail_msg = '';
+            if (!empty($result['msg'])) {
+                $fail_msg = (string) $result['msg'];
+            } elseif (!empty($result['err_msg'])) {
+                $fail_msg = (string) $result['err_msg'];
+            }
+            $fail_rsp = isset($result['rsp']) ? (string) $result['rsp'] : '';
+
+            $reship_bn = isset($data['reship_bn']) ? (string) $data['reship_bn'] : '';
+            $order_bn = isset($data['order_bn']) ? (string) $data['order_bn'] : '';
+            $branch_bn = isset($data['branch_bn']) ? (string) $data['branch_bn'] : '';
+            $branch_id = isset($data['branch_id']) ? (int) $data['branch_id'] : 0;
+            if (!$branch_id && !empty($data['items'][0]['branch_id'])) {
+                $branch_id = (int) $data['items'][0]['branch_id'];
+            }
+
+            $shop_type_label = '';
+            if (!empty($data['shop_type']) && class_exists('ome_shop_type')) {
+                $shop_type_label = ome_shop_type::shop_name($data['shop_type']);
+            } elseif (!empty($data['shop_type'])) {
+                $shop_type_label = (string) $data['shop_type'];
+            }
+            $shop_name = isset($data['shop_code']) ? (string) $data['shop_code'] : (isset($data['shop_bn']) ? (string) $data['shop_bn'] : '');
+
+            $detail_list = '';
+            if (!empty($data['items']) && is_array($data['items'])) {
+                foreach ($data['items'] as $index => $item) {
+                    if (!is_array($item)) {
+                        continue;
+                    }
+                    $seq = $index + 1;
+                    $bn = isset($item['bn']) ? (string) $item['bn'] : '';
+                    $pname = isset($item['product_name']) ? (string) $item['product_name'] : (isset($item['name']) ? (string) $item['name'] : '');
+                    $num = isset($item['num']) ? (string) $item['num'] : '';
+                    $detail_list .= "\r\n<br/>序号：<font color=\"warning\">{$seq}</font>，物料号：<font color=\"warning\">{$bn}</font>，名称：<font color=\"warning\">{$pname}</font>，数量：<font color=\"warning\">{$num}</font>";
+                }
+            }
+            if ($detail_list === '') {
+                $detail_list = "\r\n<br/>（无明细）";
+            }
+
+            $branch_name = $branch_bn;
+            $receiver = array();
+            if ($branch_id) {
+                $branchRow = app::get('ome')->model('branch')->db_dump(['branch_id' => $branch_id], 'name,email');
+                if (!empty($branchRow['name'])) {
+                    $branch_name = (string) $branchRow['name'];
+                }
+                if (!empty($branchRow['email'])) {
+                    $receiver = explode(',', $branchRow['email']);
+                }
+            }
+
+            $wms_name = '';
+            if ($wms_id) {
+                $wmsRow = app::get('wmsmgr')->model('wms')->db_dump(['channel_id' => $wms_id], 'channel_name');
+                if (!empty($wmsRow['channel_name'])) {
+                    $wms_name = (string) $wmsRow['channel_name'];
+                }
+            }
+
+            $notifyParams = array(
+                'reship_bn' => $reship_bn,
+                'order_bn' => $order_bn,
+                'branch_bn' => $branch_bn,
+                'branch_name' => $branch_name,
+                'branch_id' => (string) $branch_id,
+                'wms_id' => (string) $wms_id,
+                'wms_name' => $wms_name,
+                'shop_type' => $shop_type_label,
+                'shop_name' => $shop_name,
+                'fail_rsp' => $fail_rsp,
+                'fail_msg' => $fail_msg,
+                'detail_list' => $detail_list,
+            );
+            if (!empty($receiver)) {
+                $notifyParams['receiver'] = $receiver;
+            }
+
+            kernel::single('monitor_event_notify')->addNotify('reship_create_fail_notify', $notifyParams, true);
+        } catch (Exception $e) {
+            // 不影响主流程
+        }
     }
 
     /**

@@ -137,6 +137,12 @@ class invoice_ctl_admin_channel extends desktop_controller
         $this->begin('index.php?app=invoice&ctl=admin_channel&act=index');
         $channelMdl = app::get('invoice')->model('channel');
         
+        // 获取已经存在的渠道信息
+        $channelInfo = [];
+        if($_POST['channel_id']){
+            $channelInfo = $channelMdl->db_dump($_POST['channel_id']);
+        }
+        
         $data = array();
         $data['channel_id']   = $_POST['channel_id'];
         $data['name']         = $_POST['name'];
@@ -158,7 +164,15 @@ class invoice_ctl_admin_channel extends desktop_controller
                 $data['node_type'] = $shopInfo['node_type'];
             }
         }
-
+        
+        // 票易通
+        if ($data['channel_type'] == 'piaoyitong' || $channelInfo['channel_type'] == 'piaoyitong') {
+            $data['golden_tax_version'] = 1;
+            $data['node_type'] = ($data['channel_type'] ? $data['channel_type'] : $channelInfo['channel_type']);
+            $data['node_id'] = date('Ymd');
+        }
+        
+        // save
         if (!$channelMdl->save($data)) {
            $this->end(false,'保存失败');
         }
@@ -182,6 +196,14 @@ class invoice_ctl_admin_channel extends desktop_controller
                 if (!$rs) {
                     $this->end(false, '绑定失败:' . $errmsg);
                 }
+            }
+        } else {
+            if ($channel['channel_type'] == 'piaoyitong' && $channelMdl->dump(array(
+                'channel_type' => 'piaoyitong',
+                'channel_id|noequal' => $channel['channel_id'],
+                'node_id|noequal' => '',
+            ))) {
+                $this->end(false, '票易通渠道已存在，不能重复添加');
             }
         }
         
@@ -222,8 +244,10 @@ class invoice_ctl_admin_channel extends desktop_controller
         if (!$channel['node_id']) {
             $this->splash('error', $this->url, '渠道未绑定');
         }
+        if ($channel['channel_type'] == 'piaoyitong') {
+            $result = true;
         //不是淘宝开票渠道的才需要请求解绑
-        if ($channel['channel_type'] != 'taobao') {
+        } elseif ($channel['channel_type'] != 'taobao') {
             $result = kernel::single('erpapi_router_request')
                 ->set('bind', $channel['channel_type'])
                 ->bind_unbind([
@@ -236,7 +260,7 @@ class invoice_ctl_admin_channel extends desktop_controller
         }
 
         if ($result){
-            $channelMdl->update(['node_id'=>''], ['channel_id'=>$channel['channel_id']]);
+            $channelMdl->update(['node_id'=>'', 'status'=>'false'], ['channel_id'=>$channel['channel_id']]);
             $this->splash('success', $this->url, '解绑成功');
         } else {
             $this->splash('error', $this->url, '解绑失败');

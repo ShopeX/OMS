@@ -48,6 +48,7 @@ class desktop_ctl_rpcnotify extends desktop_controller{
                             array('label'=>app::get('desktop')->_('标记为未读'), 'id'=>'id-rpcynotify-submit', 'submit'=>'index.php?ctl=rpcnotify&act=unread'),
                             array('label'=>app::get('desktop')->_('标记为已读'), 'id'=>'id-rpcynotify-submit', 'submit'=>'index.php?ctl=rpcnotify&act=read'),
                         ),
+            'use_buildin_filter'  => true,
             'use_buildin_recycle' => false,
             #'use_buildin_setcol' => false,
             #'use_buildin_tagedit' => false,

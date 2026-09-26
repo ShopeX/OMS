@@ -77,10 +77,21 @@ $db['customcols']=array (
       'label' => '字段键',
       'required' => true,
     ),
+    'col_type' => array(
+      'type' => 'varchar(20)',
+      'label' => '列类型',
+      'default' => 'input',
+    ),
     'memo' => 
     array (
       'type' => 'varchar(50)',
       'label' => '字段描述',
+    ),
+    'filter_data' => array(
+      'type' => 'text',
+      'label' => '查询条件',
+      'in_list' => false,
+      'default_in_list' => false,
     ),
   ),
   'index'   => array(

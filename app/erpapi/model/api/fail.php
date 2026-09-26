@@ -407,7 +407,17 @@ class erpapi_mdl_api_fail extends dbeav_model{
             if($log['retry_params'] == 'trigger_request') {
                 if($property['method']) {
                     list($objectName, $method) = explode(':', $property['method']);
-                    return kernel::single($objectName)->$method($row[$primaryKey]);
+                    $result = kernel::single($objectName)->$method($row[$primaryKey]);
+                    // trigger_request 本路径不会走 updateFail，成功/失败都刷信息和时间
+                    if (is_array($result)) {
+                        $errMsg = $result['msg'] ? $result['msg'] : $result['err_msg'];
+                        $this->update(array(
+                            'err_msg'     => $errMsg,
+                            'status'      => ($result['rsp'] == 'succ') ? 'succ' : 'fail',
+                            'last_modify' => time(),
+                        ), array('id' => $log['id']));
+                    }
+                    return $result;
                 } else {
                     $this->delete(array('id'=>$log['id']));
                     return array('rsp'=>'fail');
@@ -432,9 +442,11 @@ class erpapi_mdl_api_fail extends dbeav_model{
                 }
                 break;
             case 'upload_invoice':
-                if (false !== strpos($log['err_msg'], '订单无开票记录')) {
+                // 无开票记录 / 不允许开票（如开票状态已关闭）不再重试
+                if (false !== strpos($log['err_msg'], '订单无开票记录')
+                    || false !== strpos($log['err_msg'], '不允许开票')) {
                     $this->delete(array('id'=>$log['id']));
-                    return array('rsp'=>'fail');
+                    return array('rsp'=>'fail', 'error_msg'=>$log['err_msg']);
                 }
                 break;
         }

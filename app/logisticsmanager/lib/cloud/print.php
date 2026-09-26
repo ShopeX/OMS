@@ -107,9 +107,9 @@ class logisticsmanager_cloud_print extends logisticsmanager_cloud_abstract
                 'nums' => $item['number']
             ];
             # 获取基础物料货号
-            $basicInfo = $basicMdl->dump(array('bm_id' => $item['product_id']), 'bm_id,busness_material_bn');
-            if (!empty($basicInfo['busness_material_bn'])) {
-                $orderItem['bn'] = $basicInfo['busness_material_bn'];
+            $basicInfo = $basicMdl->dump(array('bm_id' => $item['product_id']), 'bm_id,material_bn');
+            if (!empty($basicInfo['material_bn'])) {
+                $orderItem['bn'] = $basicInfo['material_bn'];
             }
             $sdf['order_items'][] = $orderItem;
         }

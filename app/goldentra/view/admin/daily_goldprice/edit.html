@@ -1,0 +1,90 @@
+<{capture name="header"}>
+  <link href="../apps/ome/statics/ome.css" rel="stylesheet" type="text/css">
+<{/capture}>
+
+<form method="post" id="fm1" action="index.php?app=goldentra&ctl=admin_daily_goldprice&act=save">
+    <input type="hidden" name="goldprice_id" value="<{$goldprice_detail.goldprice_id}>">
+    <div class="tableform">
+        <div class="division">
+            <table border="0" cellspacing="0" cellpadding="0" class="gridlist">
+                <tr>
+                    <td align="right" nowrap="nowrap">金价单历史：</td>
+                    <td >
+                      <{$goldprice_detail.fcode}>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="right" nowrap="nowrap">店铺编码：</td>
+                    <td >
+                      <{$goldprice_detail.shop_bn}>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="right" nowrap="nowrap">金价日期：</td>
+                    <td >
+                    <{input type="date" vtype="date" name="gold_date" style="width:66px; font-family:arial;" value=$goldprice_detail.price_date}>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="right" nowrap="nowrap">定价维度名称：</td>
+                    <td >
+                      <{$goldprice_detail.pricedimension_name}>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="right" nowrap="nowrap">定价维度编码：</td>
+                    <td >
+                      <{$goldprice_detail.pricedimension_code}>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="right" nowrap="nowrap">金价：</td>
+                    <td >
+                      <input type="text"  name="gold_price" size=10 vtype="required" value="<{$goldprice_detail.gold_price}>"/>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</form>
+
+<{area inject=".mainFoot"}>
+<div class="table-action">
+  <table width="100%" cellspacing="0" cellpadding="0">
+    <tbody>
+      <tr>
+        <td><button class="btn btn-primary" id='submit_btn'><span><span><{t}>确定<{/t}></span></span></button></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<{/area}>
+<script>
+(function(){
+    var _form = $('fm1');//表单ID 
+    var btn   = $('submit_btn');//按钮ID
+
+    var finder = finderGroup['<{$env.get.finder_id}>'];
+    _form.store('target',{
+        onComplete:function(){
+        },
+        onSuccess:function(response){
+            var hash_res_obj = JSON.decode(response);
+            if (hash_res_obj.success != undefined && hash_res_obj.success != ""){
+                try{
+                    var _dialogIns = btn.getParent('.dialog').retrieve('instance');
+                }catch(e){}
+
+                if(_dialogIns){
+                    setTimeout(finder.refresh(),30000);
+                    _dialogIns.close();
+                }
+            }
+        }
+    });
+
+    btn.addEvent('click',function(){
+      _form.fireEvent('submit',{stop:$empty});
+    });
+})();
+</script>

@@ -1046,13 +1046,21 @@ class omeauto_auto_group_item
             foreach ($orderIds as $order_id) {
                 kernel::single('ome_bill_label')->markBillLabel($order_id, '', 'SOMS_COMBINE_ORDER', 'order', $err, 0);
             }
+            
             // 发货单创建完成后的service扩展点
+            $is_notice_wms_create = true; // 是否通知WMS创建发货单
             $serviceStart = microtime(true);
             foreach(kernel::servicelist('omeauto.service.group.item.confirm.after') as $serviceName => $object) {
                 $individualServiceStart = microtime(true);
                 if(method_exists($object, 'afterCreateDelivery')) {
-                    $object->afterCreateDelivery($newdly_id);
+                    $afterResult = $object->afterCreateDelivery($newdly_id);
+                    
+                    // 是否禁止发货单通知WMS创建
+                    if(isset($afterResult['rsp']) && $afterResult['rsp'] == 'fail'  && $afterResult['error_code'] == 'forbid_notice_wms_create'){
+                        $is_notice_wms_create = false;
+                    }
                 }
+                
                 $serviceTime = microtime(true) - $individualServiceStart;
                 
                 // 记录每个service的性能数据
@@ -1072,15 +1080,28 @@ class omeauto_auto_group_item
             if ($waybillCode) {
                 $deliveryObj->db->exec("UPDATE sdb_ome_delivery SET logi_no='" . $waybillCode . "' WHERE delivery_id=" . $newdly_id);
             }
-            ome_delivery_notice::create($newdly_id);
+            
+            // 发货通知单推送WMS仓库
+            if($is_notice_wms_create === false){
+                // 更新发货单同步状态为失败，并记录失败原因
+                $deliveryObj->db->exec("UPDATE sdb_ome_delivery SET sync_status='2', sync_msg='数据参数不正确，无需推送给WMS!' WHERE delivery_id=" . $newdly_id);
+            }else{
+                ome_delivery_notice::create($newdly_id);
+            }
         } else {
             //发货单通知单推送仓库
             foreach ($ids as $newdly_id) {
                 // 发货单创建完成后的service扩展点
+                $is_notice_wms_create = true; // 是否通知WMS创建发货单
                 foreach(kernel::servicelist('omeauto.service.group.item.confirm.after') as $serviceName => $object) {
                     $individualServiceStart = microtime(true);
                     if(method_exists($object, 'afterCreateDelivery')) {
-                        $object->afterCreateDelivery($newdly_id);
+                        $afterResult = $object->afterCreateDelivery($newdly_id);
+                        
+                        // 是否禁止发货单通知WMS创建
+                        if(isset($afterResult['rsp']) && $afterResult['rsp'] == 'fail'  && $afterResult['error_code'] == 'forbid_notice_wms_create'){
+                            $is_notice_wms_create = false;
+                        }
                     }
                     $serviceTime = microtime(true) - $individualServiceStart;
                     
@@ -1100,7 +1121,14 @@ class omeauto_auto_group_item
                 if ($waybillCode) {
                     $deliveryObj->db->exec("UPDATE sdb_ome_delivery SET logi_no='" . $waybillCode . "' WHERE delivery_id=" . $newdly_id);
                 }
-                ome_delivery_notice::create($newdly_id);
+                
+                // 发货通知单推送WMS仓库
+                if($is_notice_wms_create === false){
+                    // 更新发货单同步状态为失败，并记录失败原因
+                    $deliveryObj->db->exec("UPDATE sdb_ome_delivery SET sync_status='2', sync_msg='数据参数不正确，无需推送给WMS。' WHERE delivery_id=" . $newdly_id);
+                }else{
+                    ome_delivery_notice::create($newdly_id);
+                }
             }
         }
         // todo maxiaochen 得物品牌直发 请求接单接口，如果检测到有取消的发货单，则先调用发货仓修改接口
@@ -1614,11 +1642,17 @@ class omeauto_auto_group_item
                 kernel::single('ome_bill_label')->markBillLabel($order_id, '', 'SOMS_COMBINE_ORDER', 'order', $err, 0);
             }
             // 发货单创建完成后的service扩展点
+            $is_notice_wms_create = true; // 是否通知WMS创建发货单
             $serviceStart = microtime(true);
             foreach(kernel::servicelist('omeauto.service.group.item.confirm.after') as $serviceName => $object) {
                 $individualServiceStart = microtime(true);
                 if(method_exists($object, 'afterCreateDelivery')) {
-                    $object->afterCreateDelivery($newdly_id);
+                    $afterResult = $object->afterCreateDelivery($newdly_id);
+                    
+                    // 是否禁止发货单通知WMS创建
+                    if(isset($afterResult['rsp']) && $afterResult['rsp'] == 'fail'  && $afterResult['error_code'] == 'forbid_notice_wms_create'){
+                        $is_notice_wms_create = false;
+                    }
                 }
                 $serviceTime = microtime(true) - $individualServiceStart;
                 
@@ -1629,7 +1663,13 @@ class omeauto_auto_group_item
             }
             //发货单通知单推送仓库
             $wmsStart = microtime(true);
-            ome_delivery_notice::create($newdly_id);
+            // 发货通知单推送WMS仓库
+            if($is_notice_wms_create === false){
+                // 更新发货单同步状态为失败，并记录失败原因
+                $deliveryObj->db->exec("UPDATE sdb_ome_delivery SET sync_status='2', sync_msg='数据参数不正确，无需推送给WMS；' WHERE delivery_id=" . $newdly_id);
+            }else{
+                ome_delivery_notice::create($newdly_id);
+            }
             $wmsTime = microtime(true) - $wmsStart;
             
             // 记录WMS通知性能数据
@@ -1646,10 +1686,16 @@ class omeauto_auto_group_item
                 }
                 
                 // 发货单创建完成后的service扩展点
+                $is_notice_wms_create = true; // 是否通知WMS创建发货单
                 foreach(kernel::servicelist('omeauto.service.group.item.confirm.after') as $serviceName => $object) {
                     $individualServiceStart = microtime(true);
                     if(method_exists($object, 'afterCreateDelivery')) {
-                        $object->afterCreateDelivery($newdly_id);
+                        $afterResult = $object->afterCreateDelivery($newdly_id);
+                        
+                        // 是否禁止发货单通知WMS创建
+                        if(isset($afterResult['rsp']) && $afterResult['rsp'] == 'fail'  && $afterResult['error_code'] == 'forbid_notice_wms_create'){
+                            $is_notice_wms_create = false;
+                        }
                     }
                     $serviceTime = microtime(true) - $individualServiceStart;
                     
@@ -1659,7 +1705,13 @@ class omeauto_auto_group_item
                     ));
                 }
                 $wmsStart = microtime(true);
-                ome_delivery_notice::create($newdly_id);
+                // 发货通知单推送WMS仓库
+                if($is_notice_wms_create === false){
+                    // 更新发货单同步状态为失败，并记录失败原因
+                    $deliveryObj->db->exec("UPDATE sdb_ome_delivery SET sync_status='2', sync_msg='数据参数不正确，无需推送给WMS' WHERE delivery_id=" . $newdly_id);
+                }else{
+                    ome_delivery_notice::create($newdly_id);
+                }
                 $wmsTime = microtime(true) - $wmsStart;
                 
                 // 记录WMS通知性能数据

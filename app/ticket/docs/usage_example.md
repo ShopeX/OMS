@@ -220,7 +220,7 @@ public function edit($order_id) {
         <div class="approval-item">
             <p><strong>审批号：</strong>{$approval.case_bn}</p>
             <p><strong>状态：</strong>{$approval.status}</p>
-            <p><strong>提交人：</strong>{$approval.submitter_name}</p>
+            <p><strong>提交人：</strong>{$approval.bpm_approver}</p>
             <p><strong>当前审批人：</strong>{$approval.assignee_name}</p>
             
             {if $approval.records}
@@ -307,7 +307,7 @@ public function edit($order_id) {
             "case_id": 1001,
             "case_bn": "WF202507100001",
             "status": "approved",
-            "submitter_name": "张三",
+            "bpm_approver": "张三",
             "assignee_name": "李四",
             "start_time": 1640995200,
             "end_time": 1640998800,

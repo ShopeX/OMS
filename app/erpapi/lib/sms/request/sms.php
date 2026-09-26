@@ -32,7 +32,7 @@ class erpapi_sms_request_sms extends erpapi_sms_request_abstract
     public function sendOne($sdf,$queue=false)
     {
         $args = func_get_args();array_pop($args);
-        $channel_id = serialize($this->__channelObj->channel['account']);
+        $channel_id = $this->__channelObj->channel['channel_id'];
         $_in_mq = $this->__caller->caller_into_mq('sms_sendOne','sms',$channel_id,$args,$queue);
         if ($_in_mq) {
             return $this->succ('成功放入队列');

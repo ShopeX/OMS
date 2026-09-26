@@ -1,19 +1,3 @@
-<!--
-  Copyright 2012-2026 ShopeX (https://www.shopex.cn)
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
--->
-
 <script>
 var mixed_array = JSON.decode('<{$mixed_array}>');
 var checkBnNum = Array();
@@ -251,10 +235,13 @@ function do_scan(obj_type,_bn,bn,typename,msg,_expire_bn){
             msg.set('html','已超出数量,请检查');
             return false;
         }
-        var item_id = $('id_'+_bn+checkBnNum[pbn]).value;   
+        // 真实 reship_item_id；同一明细 num>1 时用唯一 slot_id，避免表单字段互相覆盖
+        var item_id = $('id_'+_bn+checkBnNum[pbn]).value;
+        var slot_id = item_id + '_' + checkBnNum[pbn];
         var ruku_type = '';
         var test_bn = "'"+_bn+"'";
         var string_bn = "'"+_bn+"'";
+        var string_slot = "'"+slot_id+"'";
         var process_num = parseInt($E('input[name=count_num['+_bn+']]').value);
         if(all<=process_num){
             $ES('.test-'+_bn).each(function(e){
@@ -263,8 +250,10 @@ function do_scan(obj_type,_bn,bn,typename,msg,_expire_bn){
             msg.set('html',typename+'为'+bn+'的商品已扫描完成！如果确认未扫描过，请刷新重新进行操作，否则请继续');                    
             return false;
         }
-        var input  = new Element('input', {type:'hidden',name:'process_id['+$('id_'+_bn+checkBnNum[pbn]).value+']',value:_bn});
+        var input  = new Element('input', {type:'hidden',name:'process_id['+slot_id+']',value:_bn});
         input.inject('form-process');
+        var mapInput = new Element('input', {type:'hidden',name:'process_reship_item['+slot_id+']',value:item_id});
+        mapInput.inject('form-process');
         var online_branch = false;
         <{if $goods_branch_type == 0}>
             online_branch = true;
@@ -272,11 +261,11 @@ function do_scan(obj_type,_bn,bn,typename,msg,_expire_bn){
             online_branch = false;
         <{/if}>
         <{foreach from=$pro_detail.StockType item=StockType key=key name=stocktype}>
-            ruku_type += '<input type="radio" <{if $key == $goods_branch_type}>checked="checked"<{/if}> name="store_type['+_bn+item_id+']" value="<{$key}>" <{if $key == 0}>onclick="showOnlineBranch(this,'+string_bn+','+item_id+')"<{else}>onclick="showOfflineBranch(this,'+string_bn+','+item_id+')"<{/if}> vtype="requiredradio"><{$StockType}>';
+            ruku_type += '<input type="radio" <{if $key == $goods_branch_type}>checked="checked"<{/if}> name="store_type['+_bn+slot_id+']" value="<{$key}>" <{if $key == 0}>onclick="showOnlineBranch(this,'+string_bn+','+string_slot+')"<{else}>onclick="showOfflineBranch(this,'+string_bn+','+string_slot+')"<{/if}> vtype="requiredradio"><{$StockType}>';
         <{/foreach}>               
-        ruku_type += '<div id="instock_branch_el_'+item_id+'"></div>';
+        ruku_type += '<div id="instock_branch_el_'+slot_id+'"></div>';
         if(obj_type == 'serial_number'){
-			var serial_input  = new Element('input', {type:'hidden',name:'serial_id['+item_id+']['+_bn+']',value:bn});
+			var serial_input  = new Element('input', {type:'hidden',name:'serial_id['+slot_id+']['+_bn+']',value:bn});
 			serial_input.inject('form-process');
 			//记录已扫描入的唯一码 用来验证不能重复扫
 			var already_check_serial_number = $("already_check_serial_number").value;
@@ -287,14 +276,14 @@ function do_scan(obj_type,_bn,bn,typename,msg,_expire_bn){
 			}
 			arr_already_check_serial_number.push(bn);
 			$("already_check_serial_number").value = JSON.encode(arr_already_check_serial_number);
-            var add_product = new Element('tr',{'html':'<td>'+add_bn+'</td><td>'+add_barcode+'</td><td>'+bn+'</td><td>'+name+'</td><td>'+spec_info+'</td><td><input name="check_num['+_bn+item_id+']" onblur="add_process('+test_bn+','+item_id+','+num+','+all+',this,'+string_bn+');" vtype="unsigned&amp;&amp;required" type="hidden" value="1" class="test-'+_bn+'">1<span style="color:red" id="error_msg_'+item_id+'"></span></td><td style="text-align:left;">'+ruku_type+'</td><td><textarea name="memo['+_bn+item_id+']" style="width:200px;"></textarea></td>'});
+            var add_product = new Element('tr',{'html':'<td>'+add_bn+'</td><td>'+add_barcode+'</td><td>'+bn+'</td><td>'+name+'</td><td>'+spec_info+'</td><td><input name="check_num['+_bn+slot_id+']" onblur="add_process('+test_bn+',\''+slot_id+'\','+num+','+all+',this,'+string_bn+');" vtype="unsigned&amp;&amp;required" type="hidden" value="1" class="test-'+_bn+'">1<span style="color:red" id="error_msg_'+slot_id+'"></span></td><td style="text-align:left;">'+ruku_type+'</td><td><textarea name="memo['+_bn+slot_id+']" style="width:200px;"></textarea></td>'});
         }else{
-            var add_product = new Element('tr',{'html':'<td>'+add_bn+'</td><td>'+add_barcode+'</td><td>-</td><td>'+name+'</td><td>'+spec_info+'</td><td><input name="check_num['+_bn+item_id+']" onblur="add_process('+test_bn+','+item_id+','+num+','+all+',this,'+string_bn+');" vtype="unsigned&amp;&amp;required" type="text" value="1" class="test-'+_bn+'"><span style="color:red" id="error_msg_'+item_id+'"></span><input type="hidden" name="expire_bn['+_bn+item_id+']" value="'+ _expire_bn +'" /></td><td style="text-align:left;">'+ruku_type+'</td><td><textarea name="memo['+_bn+item_id+']" style="width:200px;"></textarea></td>'});
+            var add_product = new Element('tr',{'html':'<td>'+add_bn+'</td><td>'+add_barcode+'</td><td>-</td><td>'+name+'</td><td>'+spec_info+'</td><td><input name="check_num['+_bn+slot_id+']" onblur="add_process('+test_bn+',\''+slot_id+'\','+num+','+all+',this,'+string_bn+');" vtype="unsigned&amp;&amp;required" type="text" value="1" class="test-'+_bn+'"><span style="color:red" id="error_msg_'+slot_id+'"></span><input type="hidden" name="expire_bn['+_bn+slot_id+']" value="'+ _expire_bn +'" /></td><td style="text-align:left;">'+ruku_type+'</td><td><textarea name="memo['+_bn+slot_id+']" style="width:200px;"></textarea></td>'});
         }
         if(online_branch){
-            showOnlineBranch(this,_bn,item_id);
+            showOnlineBranch(this,_bn,slot_id);
         }else{
-            showOfflineBranch(this,_bn,item_id);
+            showOfflineBranch(this,_bn,slot_id);
         }
         add_product.inject($('sv_product'));
 
@@ -385,10 +374,12 @@ function check(obj,obj_type,typename,msg){
                                 msg.set('html','已超出数量,请检查');
                                 return false;
                             }
-                            var item_id = $('id_'+_bn+checkBnNum[pbn]).value;   
+                            var item_id = $('id_'+_bn+checkBnNum[pbn]).value;
+                            var slot_id = item_id + '_' + checkBnNum[pbn];
                             var ruku_type = '';
                             var test_bn = "'"+_bn+"'";
                             var string_bn = "'"+_bn+"'";
+                            var string_slot = "'"+slot_id+"'";
                             var process_num = parseInt($E('input[name=count_num['+_bn+']]').value);
                             if(all<=process_num){
                                 $ES('.test-'+_bn).each(function(e){
@@ -397,27 +388,29 @@ function check(obj,obj_type,typename,msg){
                                 msg.set('html',typename+'为'+bn+'的商品已扫描完成！如果确认未扫描过，请刷新重新进行操作，否则请继续');                    
                                 return false;
                             }
-                            var input  = new Element('input', {type:'hidden',name:'process_id['+$('id_'+_bn+checkBnNum[pbn]).value+']',value:_bn});
+                            var input  = new Element('input', {type:'hidden',name:'process_id['+slot_id+']',value:_bn});
                             input.inject('form-process');
+                            var mapInput = new Element('input', {type:'hidden',name:'process_reship_item['+slot_id+']',value:item_id});
+                            mapInput.inject('form-process');
                             var online_branch = false;
                             <{foreach from=$pro_detail.StockType item=StockType key=key name=stocktype}>
                                 <{if $key == 0}>
                                     online_branch = true;
                                 <{/if}>
-                                ruku_type += '<input type="radio" <{if $env.foreach.stocktype.first}>checked="checked"<{/if}> name="store_type['+_bn+item_id+']" value="<{$key}>" <{if $key == 0}>onclick="showOnlineBranch(this,'+string_bn+','+item_id+')"<{else}>onclick="showOfflineBranch(this,'+string_bn+','+item_id+')"<{/if}> vtype="requiredradio"><{$StockType}>';
+                                ruku_type += '<input type="radio" <{if $env.foreach.stocktype.first}>checked="checked"<{/if}> name="store_type['+_bn+slot_id+']" value="<{$key}>" <{if $key == 0}>onclick="showOnlineBranch(this,'+string_bn+','+string_slot+')"<{else}>onclick="showOfflineBranch(this,'+string_bn+','+string_slot+')"<{/if}> vtype="requiredradio"><{$StockType}>';
                             <{/foreach}>               
-                            ruku_type += '<div id="instock_branch_el_'+item_id+'"></div>';
+                            ruku_type += '<div id="instock_branch_el_'+slot_id+'"></div>';
                             if(obj_type == 'serial_number'){
-                               var serial_input  = new Element('input', {type:'hidden',name:'serial_id['+item_id+']['+_bn+']',value:bn});
+                               var serial_input  = new Element('input', {type:'hidden',name:'serial_id['+slot_id+']['+_bn+']',value:bn});
                                serial_input.inject('form-process');
-                                var add_product = new Element('tr',{'html':'<td>'+add_bn+'</td><td>'+add_barcode+'</td><td>'+bn+'</td><td>'+name+'</td><td>'+spec_info+'</td><td><input name="check_num['+_bn+item_id+']" onblur="add_process('+test_bn+','+item_id+','+num+','+all+',this,'+string_bn+');" vtype="unsigned&amp;&amp;required" type="hidden" value="1" class="test-'+_bn+'">1<span style="color:red" id="error_msg_'+item_id+'"></span></td><td style="text-align:left;">'+ruku_type+'</td><td><textarea name="memo['+_bn+item_id+']" style="width:200px;"></textarea></td>'});
+                                var add_product = new Element('tr',{'html':'<td>'+add_bn+'</td><td>'+add_barcode+'</td><td>'+bn+'</td><td>'+name+'</td><td>'+spec_info+'</td><td><input name="check_num['+_bn+slot_id+']" onblur="add_process('+test_bn+',\''+slot_id+'\','+num+','+all+',this,'+string_bn+');" vtype="unsigned&amp;&amp;required" type="hidden" value="1" class="test-'+_bn+'">1<span style="color:red" id="error_msg_'+slot_id+'"></span></td><td style="text-align:left;">'+ruku_type+'</td><td><textarea name="memo['+_bn+slot_id+']" style="width:200px;"></textarea></td>'});
                             }else{
-                                var add_product = new Element('tr',{'html':'<td>'+add_bn+'</td><td>'+add_barcode+'</td><td>-</td><td>'+name+'</td><td>'+spec_info+'</td><td><input name="check_num['+_bn+item_id+']" onblur="add_process('+test_bn+','+item_id+','+num+','+all+',this,'+string_bn+');" vtype="unsigned&amp;&amp;required" type="text" value="1" class="test-'+_bn+'"><span style="color:red" id="error_msg_'+item_id+'"></span><input type="hidden" name="expire_bn['+_bn+item_id+']" value="'+ _expire_bn +'" /></td><td style="text-align:left;">'+ruku_type+'</td><td><textarea name="memo['+_bn+item_id+']" style="width:200px;"></textarea></td>'});
+                                var add_product = new Element('tr',{'html':'<td>'+add_bn+'</td><td>'+add_barcode+'</td><td>-</td><td>'+name+'</td><td>'+spec_info+'</td><td><input name="check_num['+_bn+slot_id+']" onblur="add_process('+test_bn+',\''+slot_id+'\','+num+','+all+',this,'+string_bn+');" vtype="unsigned&amp;&amp;required" type="text" value="1" class="test-'+_bn+'"><span style="color:red" id="error_msg_'+slot_id+'"></span><input type="hidden" name="expire_bn['+_bn+slot_id+']" value="'+ _expire_bn +'" /></td><td style="text-align:left;">'+ruku_type+'</td><td><textarea name="memo['+_bn+slot_id+']" style="width:200px;"></textarea></td>'});
                             }
                             if(online_branch){
-                                showOnlineBranch(this,_bn,item_id);
+                                showOnlineBranch(this,_bn,slot_id);
                             }else{
-                                showOfflineBranch(this,_bn,item_id);
+                                showOfflineBranch(this,_bn,slot_id);
                             }
                             add_product.inject($('sv_product'));
                         }else{

@@ -1,24 +1,10 @@
-<!--
-  Copyright 2012-2026 ShopeX (https://www.shopex.cn)
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
--->
 <desktop>
     <permissions>
         <!-- <permission id="order_monitor">订单作业状况</permission> -->
         <permission id="alarm_template">预警模板</permission>
         <permission id="alarm_receiver">收件人配置</permission>
         <permission id="alarm_group">邮件组配置</permission>
+        <permission id="alarm_workwx_rule">企微通知规则</permission>
         <permission id="alarm_notify">通知日志</permission>
         <permission id="performance">端口配置</permission>
         <permission id="monitor_alarm_queue">队列监控</permission>
@@ -34,6 +20,7 @@
         <menugroup name="监控日志" en="iptables">
             <menu controller='admin_alarm_template' action='index' permission='alarm_template' display='true' order='10000200'>预警模板</menu>
             <menu controller='admin_alarm_group' action='index' permission='alarm_group' display='true' order='10000201'>邮件组配置</menu>
+            <menu controller='admin_alarm_workwx_rule' action='index' permission='alarm_workwx_rule' display='true' order='100002016'>企微通知规则</menu>
             <menu controller='admin_alarm_receiver' action='index' permission='alarm_receiver' display='true' order='10000201'>收件人配置</menu>
             <menu controller='admin_alarm_notify' action='index' permission='alarm_notify' display='true' order='10000202'>通知日志</menu>
             <menu controller="admin_setting" action="index" permission="performance" display='true'  order='10000203'>端口配置</menu>

@@ -517,19 +517,31 @@ class erpapi_shop_matrix_tmall_response_aftersalev2 extends erpapi_shop_response
     public function formatArchiveitemlist($sdf, $convert){
 
         $refund_item_list = $sdf['refund_item_list']['return_item'];
+        if (empty($refund_item_list)) {
+            return array();
+        }
         $archiveOrderObjectMdl = app::get('archive')->model('order_objects');
     
         $oids   = array_column($refund_item_list, 'oid');
-        $object = $archiveOrderObjectMdl->getList('order_id,oid,bn,quantity', ['oid' => $oids]);
+        $filter = array('oid' => $oids);
+        if ($sdf['order']['order_id']) {
+            $filter['order_id'] = $sdf['order']['order_id'];
+        }
+        $object = $archiveOrderObjectMdl->getList('order_id,oid,bn,quantity,obj_id', $filter);
         $object = array_column($object, null, 'oid');
     
         $arrItem = [];
         foreach ($refund_item_list as $item) {
-            $item['bn'] = $object[$item['oid']]['bn'];
+            if ($object[$item['oid']]['bn']) {
+                $item['bn'] = $object[$item['oid']]['bn'];
+            }
             if ($arrItem[$item['bn']]) {
                 $arrItem[$item['bn']]['num'] += $item['num'];
             } else {
                 $arrItem[$item['bn']] = $item;
+            }
+            if ($object[$item['oid']]['obj_id']) {
+                $arrItem[$item['bn']]['obj_id'][] = $object[$item['oid']]['obj_id'];
             }
         }
         return $arrItem;

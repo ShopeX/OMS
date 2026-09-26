@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
  *
@@ -89,7 +90,59 @@ class ome_mdl_orders extends dbeav_model{
         'ship_mobile' => 'phone',
         'ship_addr'     => 'simple',
     );
+    
+    /**
+     * 是否需要真实 count。
+     * 高级筛选/快捷搜索会把条件写入 finder.filter.value，并在 refresh 时拼进 POST；
+     * 普通 Tab 浏览、翻页通常只有 _finder、items 等系统字段。
+     *
+     * @param mixed $filter
+     * @return bool
+     */
+    private function _needRealFinderCount($filter)
+    {
+        if (is_array($filter) && !empty($filter['advance'])) {
+            return true;
+        }
+        if (isset($_REQUEST['filter']) && is_array($_REQUEST['filter']) && !empty($_REQUEST['filter']['advance'])) {
+            return true;
+        }
 
+        $skip = array(
+            '_finder' => 1,
+            'items' => 1,
+            'page' => 1,
+            'plimit' => 1,
+            'finder_plimit' => 1,
+            'action' => 1,
+            '_token' => 1,
+        );
+
+        foreach ((array) $_POST as $key => $value) {
+            if (isset($skip[$key]) || strpos($key, '_finder') === 0) {
+                continue;
+            }
+            if ($value === '' || $value === null) {
+                continue;
+            }
+            if (is_array($value)) {
+                $hasValue = false;
+                foreach ($value as $v) {
+                    if ($v !== '' && $v !== null) {
+                        $hasValue = true;
+                        break;
+                    }
+                }
+                if (!$hasValue) {
+                    continue;
+                }
+            }
+            return true;
+        }
+
+        return false;
+    }
+    
     function _filter($filter,$tableAlias=null,$baseWhere=null)
     {
         $tPre      = ($tableAlias ? $tableAlias : '`' . $this->table_name(true) . '`') . '.';
@@ -2651,6 +2704,22 @@ class ome_mdl_orders extends dbeav_model{
      */
     function create_order(&$sdf, &$msg = '')
     {
+        // 订单创建之前，调用service进行数据转换
+        foreach(kernel::servicelist('ome.service.order.create.before') as $object)
+        {
+            if(method_exists($object, 'before_create')){
+                // analysis
+                $beforeResult = $object->before_create($sdf);
+                
+                //merge
+                if($beforeResult['rsp'] == 'succ'){
+                    if(isset($beforeResult['data']) && $beforeResult['data']){
+                        $sdf = array_merge($sdf, $beforeResult['data']);
+                    }
+                }
+            }
+        }
+        
         //订单创建基础处理Lib
         $res = kernel::single('ome_order')->create_order($sdf, $msg);
         if(!$res){
@@ -2836,7 +2905,26 @@ class ome_mdl_orders extends dbeav_model{
                     'order_id'=>$order_id,
                     'source_status' => 'TRADE_CLOSED'
                 );
-                kernel::single('invoice_order_front_router', 'b2c')->operateTax($arr_create_invoice);
+                
+                // 发票来源
+                $invoice_source = 'b2c';
+                
+                // 注册service，获取发票来源
+                foreach(kernel::servicelist('ome.service.invoice.analysis.prepose') as $object)
+                {
+                    if(method_exists($object, 'get_invoice_source')){
+                        // 获取项目上定制的发票来源
+                        $custom_invoice_source = $object->get_invoice_source();
+                        if($custom_invoice_source){
+                            $invoice_source = $custom_invoice_source;
+                        }
+                    }
+                }
+                
+                // 发票来源
+                $arr_create_invoice['invoice_source'] = $invoice_source;
+                
+                kernel::single('invoice_order_front_router', $invoice_source)->operateTax($arr_create_invoice);
                 
                 // [更新]预约订单的取消状态
                 $error_msg = '';
@@ -3334,18 +3422,16 @@ class ome_mdl_orders extends dbeav_model{
         $page = 0;
         $orderSdfs = array();
         foreach( $data as $ordre_id => $aOrder ){
-            $orderSdf = array();
             $orderSdf = $this->ioObj->csv2sdf( $aOrder['order']['contents'][0] ,$orderTitle,$orderSchema  );
             $lucky_falg = false;
             
             $orderSdf['platform_order_bn'] = $orderSdf['order_bn'];
 
             //补发订单
-            if($orderSdf['order_source'] == '补发订单'){
+            if(in_array($orderSdf['order_source'], ['补发订单', '零元订单补发单'])){
                 $orderSdf['order_type'] = 'bufa';
                 
                 //获取原订单信息
-                $relateOrderInfo = array();
                 if($orderSdf['relate_order_bn']){
                     $relateOrderInfo = $this->app->model('orders')->dump(array('order_bn'=>$orderSdf['relate_order_bn']), '*');
                     
@@ -3371,6 +3457,15 @@ class ome_mdl_orders extends dbeav_model{
                     $orderSdf['consignee']['name'] = $relateOrderInfo['consignee']['name'];
                 }
                 
+                // 补发原因
+                if(trim($orderSdf['order_source']) == '零元订单补发单' || trim($orderSdf['order_source']) == '零元订单补发'){
+                    if($orderSdf['bufa_reason']){
+                        $orderSdf['bufa_reason'] = '零元订单补发：'. $orderSdf['bufa_reason'];
+                    }else{
+                        $orderSdf['bufa_reason'] = '零元订单补发';
+                    }
+                }
+                
                 unset($orderSdf['order_source']);
             }
             
@@ -3379,8 +3474,6 @@ class ome_mdl_orders extends dbeav_model{
             if(!$shop) continue;
 
             $orderObjectItem = 0;
-            $salesMLib = kernel::single('material_sales_material');
-            $lib_ome_order = kernel::single('ome_order');
             $tostr = [];
             foreach( $aOrder['obj']['contents'] as $k => $v ){
                 $salesMInfo = $salesMLib->getSalesMByBn($shop['shop_id'],$v[$objTitle['*:商品货号']]);
@@ -3680,10 +3773,19 @@ class ome_mdl_orders extends dbeav_model{
                     if ($product_status==false) $this->not_exist_product_bn = isset($this->not_exist_product_bn)?array_merge($this->not_exist_product_bn,array($row[1])):array($row[1]);
 
 
-                    if(!is_numeric($row[5]) || $row[5] < 1){
+                    $qty_raw = trim((string)$row[5]);
+                    if ($qty_raw === '' || !is_numeric($qty_raw) || $qty_raw <= 0) {
+                        $this->not_num_zero = isset($this->not_num_zero)
+                            ? array_merge($this->not_num_zero, array($row[1]))
+                            : array($row[1]);
+                    }
 
-                        $this->not_num_zero = isset($this->not_num_zero)?array_merge($this->not_num_zero,array($row[1])):array($row[1]);
-
+                    $price_raw = trim((string)$row[6]);
+                    $sale_raw  = trim((string)$row[7]);
+                    if ($price_raw === '' || !is_numeric($price_raw) || $sale_raw === '' || !is_numeric($sale_raw)) {
+                        $this->not_valid_price_bn = isset($this->not_valid_price_bn)
+                            ? array_merge($this->not_valid_price_bn, array($row[1]))
+                            : array($row[1]);
                     }
 
                     //说明商品明细有过值，并非为空(2011_12_21_luolongjie)
@@ -3824,7 +3926,19 @@ class ome_mdl_orders extends dbeav_model{
                 $not_num_zero = $this->not_num_zero;
                 $more = '';
             }
-            $error_msg[] = "购买数量小于0：".implode(",",$not_num_zero).$more;
+            $error_msg[] = "购买数量不是合法数字或必须大于0：".implode(",",$not_num_zero).$more;
+        }elseif($this->not_valid_price_bn){
+            if(count($this->not_valid_price_bn) > 10){
+                for($i=0;$i<10;$i++){
+                    $not_valid_price_bn[] = current($this->not_valid_price_bn);
+                    next($this->not_valid_price_bn);
+                }
+                $more = "...";
+            }else{
+                $not_valid_price_bn = $this->not_valid_price_bn;
+                $more = '';
+            }
+            $error_msg[] = "商品原价或销售价不是合法数字：".implode(",",$not_valid_price_bn).$more;
         }
     
         if(isset($this->duplicate_order_bn_in_file)){
@@ -5226,6 +5340,10 @@ HTML;
             '平台商品ID'   => 'shop_goods_id',
             '平台SkuID'   => 'shop_product_id',
         );
+        // 原价权限判断：无权限时隐藏"详情商品原价"列
+        if (!kernel::single('desktop_user')->has_permission('original_price')) {
+            unset($items_title['详情商品原价']);
+        }
         return $items_title;
     }
     
@@ -5297,6 +5415,9 @@ HTML;
             $colArray[$_v['col']] = ['label' => $_v['label']];
         }
 
+        // 原价权限判断：无权限时不导出原价
+        $showOriginalPrice = kernel::single('desktop_user')->has_permission('original_price');
+
         $list = array_column($list, null, 'order_id');
 
         $orderItemsMdl = app::get('ome')->model('order_items');
@@ -5346,7 +5467,7 @@ HTML;
                 'e_brand_name'          =>  $brandList[$iv['product_id']],
                 'e_spec_info'           =>  $spec_info?implode('||', $spec_info):'-',
                 'e_unit'                =>  $iv['unit'],
-                'e_price'               =>  $iv['price'],
+                'e_price'               =>  $showOriginalPrice ? $iv['price'] : '-',
                 'e_sale_price'          =>  $iv['sale_price'] / $iv['nums'],
                 'e_pmt_price'           =>  $iv['pmt_price'],
                 'e_divide_order_fee'    =>  $iv['divide_order_fee']? $iv['divide_order_fee'] : 0,
@@ -5361,7 +5482,7 @@ HTML;
                 'e_oid'                 =>  mb_convert_encoding("\t".$objects[$iv['order_id']][$iv['obj_id']]['oid'], 'GBK', 'UTF-8'),
                 'e_main_oid'            =>  str_replace(',', '', $objects[$iv['order_id']][$iv['obj_id']]['main_oid']),
                 'e_shop_goods_id'       =>  mb_convert_encoding("\t".$objects[$iv['order_id']][$iv['obj_id']]['shop_goods_id'], 'GBK', 'UTF-8'),
-                'e_shop_product_id'     =>  mb_convert_encoding("\t".$objects[$iv['order_id']][$iv['obj_id']]['shop_product_id'], 'GBK', 'UTF-8'),
+                'e_shop_product_id'     =>  mb_convert_encoding("\t". $iv['shop_product_id'], 'GBK', 'UTF-8'),
                 'e_author_id'           =>  $objects[$iv['order_id']][$iv['obj_id']]['author_id'],
                 'e_author_name'         =>  $objects[$iv['order_id']][$iv['obj_id']]['author_name'],
                 'e_room_id'             =>  $objects[$iv['order_id']][$iv['obj_id']]['room_id'],

@@ -23,5 +23,6 @@ $setting = array(
 'o2o.delivery.confirm.code'=>array('type'=>SET_T_BOOL,'default'=>'false','desc'=>'是否开启销单校验码'),
 'o2o.delivery.dly_overtime'=>array('type'=>SET_T_INT,'default'=>'0','desc'=>'发货超时时间设置(分钟)'),
 'o2o.ctrl.supply.relation'=>array('type'=>SET_T_BOOL,'default'=>'false','desc'=>'是否管控门店供货关系'),
+'o2o.order.router_num'=>array('type'=>SET_T_INT,'default'=>'3','desc'=>'自动重路由设置(次)'),
 );
 ?>

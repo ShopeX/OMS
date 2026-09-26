@@ -25,6 +25,7 @@ class channel_ctl_admin_channel extends desktop_controller
     private $_node_type = [
         'kuaidi' => [
             'kdn'   => '快递鸟',
+            'sf'    => '顺丰',
             'other' => '其他',
         ],
         'cloudprint' => [
@@ -34,14 +35,14 @@ class channel_ctl_admin_channel extends desktop_controller
         'ticket' => [
             'feisuo' => '飞梭',
         ],
+        'sms' => [
+            'shopex' => '商派短信',
+            'soap' => 'WSDL短信',
+        ],
     ];
 
   
 
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index()
     {
         $channel_type = $_GET['channel_type'];
@@ -75,14 +76,10 @@ class channel_ctl_admin_channel extends desktop_controller
     }
 
     #查看绑定关系
-    /**
-     * view_bindrelation
-     * @param mixed $channel_type channel_type
-     * @return mixed 返回值
-     */
     public function view_bindrelation($channel_type)
     {
-        $params = kernel::single('channel_rpc_response_bind')->get_params(0, $channel_type, '', 'accept');
+        $params           = kernel::single('channel_rpc_response_bind')->get_params(0, $channel_type, '');
+        $params['source'] = 'accept';
 
         echo sprintf('<title>查看绑定关系</title><iframe width="100%%" height="95%%" frameborder="0" src="%s" ></iframe>', MATRIX_RELATION_URL . '?' . http_build_query($params));
     }
@@ -120,24 +117,21 @@ class channel_ctl_admin_channel extends desktop_controller
         $this->display('admin/channel/qimen_bindrelation.html');
     }
 
-    /**
-     * apply_bindrelation
-     * @param mixed $channel_id ID
-     * @return mixed 返回值
-     */
     public function apply_bindrelation($channel_id)
     {
         $params = kernel::single('channel_rpc_response_bind')->get_params($channel_id, '', '', 'apply');
         $this->pagedata['license_iframe_url'] = MATRIX_RELATION_URL . '?' . http_build_query($params);
+
+
         $this->display('admin/channel/bindrelation.html');
     }
 
     /**
      * undocumented function
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     public function save()
     {
         $channel = $_POST['channel'];
@@ -158,15 +152,21 @@ class channel_ctl_admin_channel extends desktop_controller
         }
 
         $rs = $channelMdl->save($channel);
+        if($rs && $channel['channel_type'] == 'sms'){
+            if(isset($_POST['config']) && !empty($_POST['config'])){
+                $rs = kernel::single('channel_sms_config')->saveAdapterConfig($_POST['config'], $channel);
+            } elseif($channel['node_type'] == 'shopex'){
+                base_kvstore::instance('taoexlib')->fetch('account', $account);
+                $account = unserialize($account);
+                if($account){
+                    $rs = kernel::single('channel_sms_config')->saveAdapterConfig($account, $channel);
+                }
+            }
+        }
 
         $this->end($rs);
     }
 
-        /**
-     * edit
-     * @param mixed $channel_id ID
-     * @return mixed 返回值
-     */
     public function edit($channel_id)
     {
         $channelMdl = app::get('channel')->model('channel');
@@ -180,7 +180,7 @@ class channel_ctl_admin_channel extends desktop_controller
         $this->pagedata['channel_type_name'] = $typemap[$channel['channel_type']];
 
         //[快递]接入方式
-        $channelModes = kernel::single('channel_rpc_response_bind')->getBindKdMode();
+        $channelModes = kernel::single('channel_rpc_response_bind')->getBindKdMode(null, $channel['node_type']);
         $this->pagedata['channel_modes'] = $channelModes;
         
         if($channel['shipper']){
@@ -199,11 +199,6 @@ class channel_ctl_admin_channel extends desktop_controller
         $this->display('admin/channel/add.html');
     }
 
-    /**
-     * 添加
-     * @param mixed $channel_type channel_type
-     * @return mixed 返回值
-     */
     public function add($channel_type)
     {
         $schema  = app::get('channel')->model('channel')->_columns();
@@ -231,7 +226,7 @@ class channel_ctl_admin_channel extends desktop_controller
         if($channel_id){
             $channelMdl = $this->app->model('channel');
             $channel = $channelMdl->db_dump($channel_id, '*');
-            $channel['config'] = @unserialize($channel['config']);
+            $channel['config'] = $this->__getChannelConfig($channel);
             $this->pagedata['channel'] = $channel;
         }
 
@@ -246,17 +241,9 @@ class channel_ctl_admin_channel extends desktop_controller
         $this->display($viewPath);
     }
 
-    /**
-     * platformconfig
-     * @param mixed $channel_type channel_type
-     * @param mixed $adapter adapter
-     * @param mixed $node_type node_type
-     * @param mixed $channel_id ID
-     * @return mixed 返回值
-     */
     public function platformconfig($channel_type, $adapter, $node_type,$channel_id = null)
     {
-    
+
         if(!$channel_type || !$adapter || !$node_type){
             return '';
         }
@@ -265,7 +252,7 @@ class channel_ctl_admin_channel extends desktop_controller
             $channel = $channelMdl->db_dump($channel_id, '*');
             // 判断当前平台是否一致
             if($node_type == $channel['node_type']){
-                $channel['config'] = @unserialize($channel['config']);
+                $channel['config'] = $this->__getChannelConfig($channel);
                 $this->pagedata['channel'] = $channel;
             }
         }
@@ -275,13 +262,82 @@ class channel_ctl_admin_channel extends desktop_controller
         $this->pagedata['platform_params'] = $platform_params;
         $this->pagedata['platform'] = $node_type;
 
-        // 接入方式
-        $channelModes = kernel::single('channel_rpc_response_bind')->getBindKdMode();
+        // 接入方式：顺丰仅自有key；快递鸟保留商派Key/自有key
+        $channelModes = kernel::single('channel_rpc_response_bind')->getBindKdMode(null, $node_type);
         $this->pagedata['channel_modes'] = $channelModes;
    
         $viewPath = sprintf('admin/channel/%s/%s/platformconfig.html', $channel_type, $adapter);
-    
+
         $this->display($viewPath);
+    }
+
+    public function shopex_sms_account($channel_id)
+    {
+        $adapter = app::get('channel')->model('adapter')->dump(array('channel_id' => $channel_id), 'config');
+        $account = array();
+        if($adapter && $adapter['config']){
+            $account = unserialize($adapter['config']);
+        }
+
+        $this->pagedata['channel_id'] = $channel_id;
+        $this->pagedata['finder_id'] = $_GET['finder_id'];
+        if($account){
+            $this->pagedata['frameurl'] = taoexlib_utils::get_book_url($account);
+            $this->pagedata['account'] = $account;
+            $this->pagedata['info'] = (array)taoexlib_utils::get_user_info($account);
+            $this->pagedata['warningnumber'] = app::get('taoexlib')->getConf('taoexlib.message.warningnumber');
+            $this->display('admin/channel/sms/openapi/account_info.html');
+            return;
+        }
+
+        $this->pagedata['regEmail'] = taoexlib_utils::regEmail();
+        $this->display('admin/channel/sms/openapi/account_bind.html');
+    }
+
+    public function shopex_sms_bind()
+    {
+        $channel_id = $_POST['channel_id'];
+        $finder_id = $_POST['finder_id'];
+        $this->begin('');
+
+        if (!trim(trim($_POST['bindemail']))) {
+            $this->end(false, 'email不能为空！');
+        }
+
+        if (!trim($_POST['bindpassword'])) {
+            $this->end(false, '密码不能为空！');
+        }
+
+        $param = array();
+        $param['identifier'] = trim($_POST['bindemail']);
+        $param['password'] = trim($_POST['bindpassword']);
+        $result = taoexlib_utils::login($param);
+        if ('succ' == $result->res) {
+            $data = array(
+                'entid' => $result->info->entid,
+                'password' => trim($_POST['bindpassword']),
+                'email' => $result->info->email,
+                'status' => 1,
+            );
+            base_kvstore::instance('taoexlib')->store('account', serialize($data));
+
+            $channel = app::get('channel')->model('channel')->dump($channel_id, '*');
+            kernel::single('channel_sms_config')->saveAdapterConfig($data, $channel);
+            $this->end(true, $result->res);
+        }
+
+        $this->end(false, '帐号或密码错误！');
+    }
+
+    public function shopex_sms_unbind()
+    {
+        $channel_id = $_POST['channel_id'];
+        $finder_id = $_POST['finder_id'];
+        $this->begin('');
+
+        app::get('channel')->model('adapter')->delete(array('channel_id' => $channel_id));
+        base_kvstore::instance('taoexlib')->store('account', serialize(array()));
+        $this->end(true, '操作成功！');
     }
 
     /**
@@ -342,5 +398,16 @@ class channel_ctl_admin_channel extends desktop_controller
         }
      
         return $channel;
+    }
+
+    private function __getChannelConfig($channel)
+    {
+        if($channel['channel_type'] == 'sms'){
+            $adapterMdl = app::get('channel')->model('adapter');
+            $adapter = $adapterMdl->dump(array('channel_id' => $channel['channel_id']), 'config');
+            return @unserialize($adapter['config']);
+        }
+
+        return @unserialize($channel['config']);
     }
 }

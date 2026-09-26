@@ -164,15 +164,12 @@ class erpapi_shop_matrix_pinduoduo_response_order extends erpapi_shop_response_o
 
 
         }
-
-
+        
         //is_delivery
         if($this->_ordersdf['is_risk'] && in_array($this->_ordersdf['is_risk'],array('true','false')) ){
             if($this->_ordersdf['is_risk'] == 'true'){
                 $this->_ordersdf['is_delivery']= 'N';
             }
-            
-
         }
 
         // 拼多多平台优惠金额
@@ -180,8 +177,95 @@ class erpapi_shop_matrix_pinduoduo_response_order extends erpapi_shop_response_o
             $this->_ordersdf['platform_cost_amount'] = $this->_ordersdf['platform_discount'];
         }
         
+        // 拼多多sku维度实付金额与平台优惠金额
+        if (isset($this->_ordersdf['coupon_field']) && $this->_ordersdf['coupon_field']) {
+            $oidCouponList = [];
+            foreach ($this->_ordersdf['coupon_field'] as $couponKey => $couponInfo)
+            {
+                $oid = $couponInfo['oid'];
+                
+                // check
+                if(empty($oid)){
+                    continue;
+                }
+                
+                // 获取子单层级的平台优惠
+                $obj_platform_discount_fee = 0;
+                if (isset($couponInfo['pmt_info']) && $couponInfo['pmt_info']) {
+                    foreach ($couponInfo['pmt_info'] as $pmtKey => $pmtInfo)
+                    {
+                        if($pmtInfo['coupon_type'] == '1' && $pmtInfo['pmt_amount']){
+                            $obj_platform_discount_fee += $pmtInfo['pmt_amount'];
+                        }
+                    }
+                }
+                
+                $oidCouponList[$oid] = [
+                    'calcActuallyPay' => $couponInfo['calcActuallyPay'], // 子单商品的客户实付金额
+                    'obj_platform_discount_fee' => $obj_platform_discount_fee, // 子单商品的平台优惠金额
+                ];
+            }
+            
+            // 格式化子单相关金额
+            if($oidCouponList){
+                $sum_obj_platform_discount_fee  = 0;
+                foreach ($this->_ordersdf['order_objects'] as $objectKey => $objectInfo)
+                {
+                    $oid = $objectInfo['oid'];
+                    
+                    // check
+                    if(empty($oid)){
+                        continue;
+                    }
+                    
+                    if(isset($oidCouponList[$oid]) && $oidCouponList[$oid]){
+                        // 子单商品的客户实付金额
+                        if(isset($oidCouponList[$oid]['calcActuallyPay']) && $oidCouponList[$oid]['calcActuallyPay']){
+                            $this->_ordersdf['order_objects'][$objectKey]['actually_amount'] = $oidCouponList[$oid]['calcActuallyPay'];
+                        }
+                        
+                        // 子单商品的结算金额
+                        if(isset($oidCouponList[$oid]['obj_platform_discount_fee']) && $oidCouponList[$oid]['obj_platform_discount_fee']){
+                            $this->_ordersdf['order_objects'][$objectKey]['settlement_amount'] = $objectInfo['divide_order_fee'] + $oidCouponList[$oid]['obj_platform_discount_fee'];
+                            
+//                            // 子单优惠分摊金额 = 子单优惠金额 + 子单平台优惠金额
+//                            $this->_ordersdf['order_objects'][$objectKey]['part_mjz_discount'] += $oidCouponList[$oid]['obj_platform_discount_fee'];
+                            
+//                            // sum平台优惠金额
+//                            $sum_obj_platform_discount_fee += $oidCouponList[$oid]['obj_platform_discount_fee'];
+                        }
+                    }
+                    
+                    // order_items
+                    foreach ((array)$objectInfo['order_items'] as $itemKey => $itemInfo)
+                    {
+                        if(isset($oidCouponList[$oid]) && $oidCouponList[$oid]){
+                            // 子单商品的客户实付金额
+                            if(isset($oidCouponList[$oid]['calcActuallyPay']) && $oidCouponList[$oid]['calcActuallyPay']){
+                                $this->_ordersdf['order_objects'][$objectKey]['order_items'][$itemKey]['actually_amount'] = $oidCouponList[$oid]['calcActuallyPay'];
+                            }
+                            
+                            // 子单商品的结算金额
+                            if(isset($oidCouponList[$oid]['obj_platform_discount_fee']) && $oidCouponList[$oid]['obj_platform_discount_fee']){
+                                $this->_ordersdf['order_objects'][$objectKey]['order_items'][$itemKey]['settlement_amount'] = $itemInfo['divide_order_fee'] + $oidCouponList[$oid]['obj_platform_discount_fee'];
+                                
+//                                // 子单优惠分摊金额 = 子单优惠金额 + 子单平台优惠金额
+//                                $this->_ordersdf['order_objects'][$objectKey]['order_items'][$itemKey]['part_mjz_discount'] += $oidCouponList[$oid]['obj_platform_discount_fee'];
+                            }
+                        }
+                    }
+                }
+                
+//                // 商品总优惠金额 = 订单优惠金额 + 所有子单优惠金额
+//                if($sum_obj_platform_discount_fee){
+//                    $this->_ordersdf['pmt_goods'] += $sum_obj_platform_discount_fee;
+//                }
+            }
+        }
+        
         // 通过平台cn_info.express_memos：获取买家拒用的快递 → buyer_black_delivery_cps
         $this->_parseBuyerRejectExpressMemos();
+        
     }
 
     /**

@@ -25,8 +25,8 @@
   <link rel="stylesheet" type="text/css" href="<{$env.app.res_url}>/css/new_checkorder.css" />
   <script src="<{$env.app.res_url}>/js/axios.min.js"></script>
   <script src="<{$env.app.res_url}>/js/flexible.js"></script>
+  <{include file="store/wxwork_sdk.html"}>
   <style>
-    /* 数量输入框样式 */
     .quantity-input {
       width: 60px;
       height: 24px;
@@ -45,26 +45,18 @@
       box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
     }
 
-    .quantity-input:invalid {
-      border-color: #dc3545;
-      background-color: #fff5f5;
+    .quantity-input:read-only {
+      background: #f5f5f5;
+      color: #666;
     }
 
-    /* 输入框容器样式 */
     .text_30 {
       display: flex;
       align-items: center;
       gap: 8px;
+      flex-wrap: wrap;
     }
 
-    /* 错误提示样式 */
-    .quantity-error {
-      color: #dc3545;
-      font-size: 10px;
-      margin-top: 2px;
-    }
-
-    /* 去除复选框后的布局优化 */
     .goods-item {
       padding: 12px 16px;
       border-bottom: 1px solid #f0f0f0;
@@ -94,53 +86,211 @@
       transition: all 0.2s ease;
     }
 
-    .footer-btn:hover {
-      background: #333;
+    .footer-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
     }
 
-    .footer-btn:active {
-      transform: scale(0.98);
+    .serial-tag {
+      display: inline-block;
+      font-size: 10px;
+      color: #b8860b;
+      border: 1px solid #d4ca99;
+      border-radius: 10px;
+      padding: 0 6px;
+      margin-left: 6px;
+    }
+
+    .serial-progress {
+      font-size: 12px;
+      color: #b8860b;
+      margin-top: 4px;
+    }
+
+    .serial-scan-card {
+      margin: 12px 16px 0;
+      padding: 12px;
+      background: #fffbf0;
+      border: 1px solid #e8dfc0;
+      border-radius: 8px;
+    }
+
+    .serial-scan-card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .serial-scan-tip {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 8px;
+    }
+
+    .serial-active-product {
+      font-size: 13px;
+      color: #b8860b;
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+
+    .serial-global-scan-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .serial-global-scan-input {
+      flex: 1;
+      height: 44px;
+      min-height: 44px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 0 10px;
+      font-size: 14px;
+      line-height: 44px;
+      min-width: 0;
+    }
+
+    .page .serial-global-scan-input {
+      height: 44px;
+      min-height: 44px;
+    }
+
+    .serial-confirm-btn {
+      flex-shrink: 0;
+      height: 44px;
+      padding: 0 14px;
+      border: none;
+      border-radius: 4px;
+      background: #000;
+      color: #d4ca99;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .serial-confirm-btn:disabled {
+      opacity: 0.45;
+    }
+
+    .quantity-text {
+      font-size: 12px;
+      color: #333;
+    }
+
+    .goods-item.serial-active {
+      background: #fffbf0;
+      box-shadow: inset 3px 0 0 #b8860b;
+    }
+
+    .serial-scan-icon {
+      width: 44px;
+      height: 44px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .serial-scan-icon img {
+      width: 24px;
+      height: 24px;
+    }
+
+    .serial-scanned-list {
+      margin-top: 10px;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+
+    .goods-item.serial-complete {
+      opacity: 0.65;
+    }
+
+    .serial-scanned-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      padding: 4px 0;
+      border-bottom: 1px dashed #f0f0f0;
+    }
+
+    .serial-remove-btn {
+      color: #d9534f;
+      flex-shrink: 0;
+      margin-left: 8px;
     }
   </style>
 </head>
 
 <body>
   <div class="page flex-col">
-    <!-- heder -->
     <div class="section_1">
       <div class="text-wrapper_1 flex-row align-center justify-between">
-        <img src="<{$env.app.res_url}>/img/icon-back.png" class="icon-back">
+        <img src="<{$env.app.res_url}>/img/icon-back.png" class="icon-back" onclick="history.back()">
         <span class="text_1">退货入库</span>
-        <img src="<{$env.app.res_url}>/img/icon-refresh.png" class="icon-refresh">
+        <img src="<{$env.app.res_url}>/img/icon-refresh.png" class="icon-refresh" onclick="location.reload()">
         <input type="hidden" name="return_id" value="<{$returns.return_id}>">
       </div>
     </div>
     <div class="main flex-col">
+      <div class="serial-scan-card" id="serialScanCard" style="display:none;">
+        <div class="serial-scan-card-title">唯一码扫描</div>
+        <div class="serial-scan-tip">请按商品顺序扫描，输入后点「确认」或键盘搜索键校验</div>
+        <div class="serial-active-product" id="serialActiveProduct"></div>
+        <form class="serial-global-scan-row" id="serialScanForm" action="javascript:void(0);" onsubmit="submitSerialScan(); return false;">
+          <input type="search" class="serial-global-scan-input" id="returnSerialScanInput"
+            enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off"
+            placeholder="请扫描或输入唯一码">
+          <button type="button" class="serial-confirm-btn" id="serialConfirmBtn">确认</button>
+          <div class="serial-scan-icon" id="returnSerialScanIcon" role="button" tabindex="-1">
+            <img src="<{$env.app.res_url}>/img/icon-scan.png" alt="扫码">
+          </div>
+        </form>
+        <div class="serial-scanned-list" id="globalSerialScannedList"></div>
+      </div>
       <{foreach from=$items item=reship_item}>
-        <div class="goods-item flex-row align-center">
-          <div class="section_6 flex-row flex-shrink-1 align-center">
+        <div class="goods-item flex-row align-center" data-bn="<{$reship_item.bn}>"
+          data-need-serial="<{$reship_item.need_serial}>" data-max="<{$reship_item.num}>">
+          <div class="section_6 flex-row flex-shrink-1 align-center" style="width:100%;">
             <img class="image_2" referrerpolicy="no-referrer"
-              src="<{$reship_item.goods_img_url}>" />
-            <div class="text-group_1 flex-col">
-              <div class="status-info"> <span class="text_28 flex-shrink-1"><{$reship_item.name}></span>
+              src="<{if $reship_item.goods_img_url}><{$reship_item.goods_img_url}><{else}><{$env.app.res_url}>/img/goods_default.png?v=<{$smarty.now}><{/if}>" />
+            <div class="text-group_1 flex-col" style="flex:1;">
+              <div class="status-info">
+                <span class="text_28 flex-shrink-1"><{$reship_item.name}></span>
+                <{if $reship_item.need_serial == 'true'}><span class="serial-tag">唯一码</span><{/if}>
               </div>
               <span class="text_29">商品货号：<{$reship_item.bn}></span>
-              <span class="text_30">退货数量:<input type="number" class="quantity-input" name="quantity_<{$reship_item.bn}>" value="<{$reship_item.num}>" min="1" max="<{$reship_item.num}>" data-max="<{$reship_item.num}>" data-bn="<{$reship_item.bn}>" onchange="validateQuantity(this)" oninput="validateQuantity(this)"></span>
+              <{include file="common/item_display_lines.html" display_item=$reship_item}>
+              <span class="text_30">
+                退货数量:
+                <{if $reship_item.need_serial == 'true'}>
+                  <span class="quantity-text"><{$reship_item.num}></span>
+                  <input type="hidden" class="quantity-value" value="<{$reship_item.num}>"
+                    data-bn="<{$reship_item.bn}>" data-max="<{$reship_item.num}>">
+                <{else}>
+                  <input type="number" class="quantity-input" name="quantity_<{$reship_item.bn}>"
+                    value="<{$reship_item.num}>" min="1" max="<{$reship_item.num}>" data-max="<{$reship_item.num}>"
+                    data-bn="<{$reship_item.bn}>" data-need-serial="false"
+                    onchange="validateQuantity(this)" oninput="validateQuantity(this)">
+                <{/if}>
+              </span>
+              <{if $reship_item.need_serial == 'true'}>
+                <div class="serial-progress">已扫 <span class="serial-count">0</span> / <{$reship_item.num}></div>
+              <{/if}>
             </div>
           </div>
         </div>
       <{/foreach}>
-
-
     </div>
     <div class="footer justify-center">
-      <button class="footer-btn" onclick="submitAccept()">退货入库</button>
+      <button class="footer-btn" id="submitReshipBtn" onclick="submitAccept()">退货入库</button>
     </div>
   </div>
   <div class="mask" id="mask"></div>
   <div class="toast" id="toast"></div>
-  <!-- 弹窗组件 -->
-  <!-- 弹窗组件模板 -->
   <div class="modal" id="commonModal" style="display: none;">
     <div class="modal-mask"></div>
     <div class="modal-container">
@@ -148,310 +298,439 @@
         <h3 class="modal-title"></h3>
         <span class="modal-close">×</span>
       </div>
-      <div class="modal-content">
-        <!-- 动态内容区域 -->
-      </div>
+      <div class="modal-content"></div>
       <div class="modal-footer justify-between">
         <button class="modal-btn modal-cancle">取消</button>
         <button class="modal-btn modal-confirm">确定</button>
       </div>
     </div>
   </div>
-  <!-- 引入共用的js -->
   <script src="<{$env.app.res_url}>/js/common.js"></script>
   <script>
-    // 初始化弹窗实例
     const modal = new Modal();
+    const returnId = document.querySelector('[name="return_id"]').value;
+    const scanUrl = '<{$scan_return_serial_url}>';
+    const wxSignUrl = '<{$wx_sign_url}>';
+    const waitReturnUrl = '<{$wait_return_url}>';
+    const scannedMap = {};
+    let serialScanning = false;
+    let serialScanInput = null;
 
-    // 数量验证函数
+    function initScannedMap() {
+      document.querySelectorAll('.goods-item[data-need-serial="true"]').forEach(function (item) {
+        scannedMap[item.getAttribute('data-bn')] = [];
+      });
+    }
+
+    function hasSerialItems() {
+      return document.querySelectorAll('.goods-item[data-need-serial="true"]').length > 0;
+    }
+
+    function getSerialNeedCount(bn) {
+      const itemEl = document.querySelector('.goods-item[data-bn="' + bn + '"]');
+      return itemEl ? parseInt(itemEl.getAttribute('data-max'), 10) : 0;
+    }
+
+    function isItemSerialComplete(bn) {
+      const need = getSerialNeedCount(bn);
+      return need > 0 && (scannedMap[bn] || []).length >= need;
+    }
+
+    function getActiveSerialBn() {
+      const items = document.querySelectorAll('.goods-item[data-need-serial="true"]');
+      for (let i = 0; i < items.length; i++) {
+        const bn = items[i].getAttribute('data-bn');
+        if (!isItemSerialComplete(bn)) {
+          return bn;
+        }
+      }
+      return null;
+    }
+
+    function getActiveSerialItemEl() {
+      const bn = getActiveSerialBn();
+      return bn ? document.querySelector('.goods-item[data-bn="' + bn + '"]') : null;
+    }
+
+    function refreshSerialUi() {
+      const card = document.getElementById('serialScanCard');
+      if (card) {
+        card.style.display = hasSerialItems() ? '' : 'none';
+      }
+
+      const activeBn = getActiveSerialBn();
+      const activeEl = getActiveSerialItemEl();
+      const hintEl = document.getElementById('serialActiveProduct');
+      if (hintEl) {
+        if (!activeBn || !activeEl) {
+          hintEl.textContent = '全部唯一码已扫描完成';
+        } else {
+          const nameEl = activeEl.querySelector('.text_28');
+          const name = nameEl ? nameEl.textContent.trim() : activeBn;
+          const scanned = (scannedMap[activeBn] || []).length;
+          const need = getSerialNeedCount(activeBn);
+          hintEl.textContent = '当前扫描：' + name + '（' + scanned + '/' + need + '）';
+        }
+      }
+
+      document.querySelectorAll('.goods-item[data-need-serial="true"]').forEach(function (item) {
+        const bn = item.getAttribute('data-bn');
+        const isActive = bn === activeBn;
+        item.classList.toggle('serial-complete', isItemSerialComplete(bn));
+        item.classList.toggle('serial-active', isActive && !!activeBn);
+      });
+
+      const confirmBtn = document.getElementById('serialConfirmBtn');
+      if (confirmBtn) {
+        confirmBtn.disabled = !activeBn;
+      }
+
+      if (serialScanInput) {
+        const allDone = !activeBn;
+        serialScanInput.disabled = allDone;
+        serialScanInput.placeholder = allDone ? '已全部扫满' : '请扫描或输入唯一码';
+      }
+
+      if (activeEl && activeBn) {
+        activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+
+      updateSubmitBtn();
+    }
+
+    function focusSerialInput() {
+      if (serialScanInput && !serialScanInput.disabled) {
+        serialScanInput.focus();
+      }
+    }
+
     function validateQuantity(input) {
-      const value = parseInt(input.value);
-      const max = parseInt(input.getAttribute('data-max'));
-      const bn = input.getAttribute('data-bn');
-      
-      // 检查是否为有效数字
+      if (input.getAttribute('data-need-serial') === 'true') {
+        return true;
+      }
+      const value = parseInt(input.value, 10);
+      const max = parseInt(input.getAttribute('data-max'), 10);
       if (isNaN(value) || value < 1) {
         input.value = 1;
         showToast('退货数量不能小于1');
         return false;
       }
-      
-      // 检查是否超过最大数量
       if (value > max) {
         input.value = max;
-        showToast(`退货数量不能大于${max}`);
+        showToast('退货数量不能大于' + max);
         return false;
       }
-      
-      // 检查是否为整数
-      if (!Number.isInteger(value)) {
-        input.value = Math.floor(value);
-        showToast('退货数量必须为整数');
-        return false;
-      }
-      
       return true;
     }
 
-    // 获取所有数量输入框的值
-    function getAllQuantities() {
-      const quantities = {};
-      document.querySelectorAll('.quantity-input').forEach(input => {
-        const bn = input.getAttribute('data-bn');
-        const value = parseInt(input.value) || 0;
-        quantities[bn] = value;
-      });
-      return quantities;
-    }
-
-    // 请求配置和方法封装
-    const request2 = axios.create({
-      baseURL: '/index.php/wap/aftersale_returnproduct', // 设置基础URL
-      timeout: 10000,  // 设置超时时间
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
+    function updateSerialProgress(bn) {
+      const itemEl = document.querySelector('.goods-item[data-bn="' + bn + '"]');
+      if (!itemEl) return;
+      const countEl = itemEl.querySelector('.serial-count');
+      if (countEl) {
+        countEl.textContent = (scannedMap[bn] || []).length;
       }
-    });
-
-    // API 方法封装
-    const api = {
-      // 发货
-      doReship(params) {
-        return request2.post('/doReship', params, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        });
-      },
-    };
-
-
-
-    // 页面加载时初始化数量输入框
-    document.addEventListener('DOMContentLoaded', function() {
-      // 初始化所有数量输入框
-      document.querySelectorAll('.quantity-input').forEach(input => {
-        // 确保初始值有效
-        validateQuantity(input);
-        
-        // 添加键盘事件监听
-        input.addEventListener('keydown', function(e) {
-          // 只允许数字、退格键、删除键、方向键
-          if (!/[0-9]/.test(e.key) && 
-              !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
-            e.preventDefault();
-          }
-        });
-        
-        // 添加粘贴事件监听
-        input.addEventListener('paste', function(e) {
-          e.preventDefault();
-          const pastedText = (e.clipboardData || window.clipboardData).getData('text');
-          const numericValue = pastedText.replace(/[^0-9]/g, '');
-          if (numericValue) {
-            this.value = numericValue;
-            validateQuantity(this);
-          }
-        });
-      });
-    });
-
-    // 获取所有商品数据
-    function getAllOrders() {
-      const orders = [];
-      document.querySelectorAll('.goods-item').forEach(item => {
-        const quantityInput = item.querySelector('.quantity-input');
-          const goodsInfo = {
-            goodsNo: item.querySelector('.text_29').textContent.split('：')[1],
-          quantity: parseInt(quantityInput.value) || 0
-          };
-        orders.push(goodsInfo);
-      });
-      return orders;
+      refreshSerialUi();
     }
 
-    // 同意
-    function submitAccept() {
-      var location_url = '<{$wait_return_url}>';
+    function renderGlobalScannedList() {
+      const listEl = document.getElementById('globalSerialScannedList');
+      if (!listEl) return;
 
-      // 验证所有数量输入
-      const quantityInputs = document.querySelectorAll('.quantity-input');
-      let isValid = true;
-      quantityInputs.forEach(input => {
-        if (!validateQuantity(input)) {
-          isValid = false;
-        }
+      const rows = [];
+      Object.keys(scannedMap).forEach(function (bn) {
+        (scannedMap[bn] || []).forEach(function (row, idx) {
+          rows.push({ bn: bn, sn: row.sn, index: idx });
+        });
       });
 
-      if (!isValid) {
+      if (!rows.length) {
+        listEl.innerHTML = '';
         return;
       }
 
-      // 收集所有商品的数量信息
-      const itemsData = [];
-      document.querySelectorAll('.goods-item').forEach(item => {
-        const quantityInput = item.querySelector('.quantity-input');
-        const bn = item.querySelector('.text_29').textContent.split('：')[1];
-        
-        itemsData.push({
-          bn: bn,
-          num: parseInt(quantityInput.value) || 0
+      listEl.innerHTML = rows.map(function (row) {
+        return '<div class="serial-scanned-row">' +
+          '<span>' + row.sn + '</span>' +
+          '<span class="serial-remove-btn" data-bn="' + row.bn + '" data-index="' + row.index + '">删除</span>' +
+          '</div>';
+      }).join('');
+    }
+
+    function isSerialScanComplete() {
+      let complete = true;
+      document.querySelectorAll('.goods-item[data-need-serial="true"]').forEach(function (item) {
+        const bn = item.getAttribute('data-bn');
+        const need = parseInt(item.getAttribute('data-max'), 10);
+        const scanned = (scannedMap[bn] || []).length;
+        if (scanned < need) {
+          complete = false;
+        }
+      });
+      return complete;
+    }
+
+    function updateSubmitBtn() {
+      const btn = document.getElementById('submitReshipBtn');
+      const hasSerial = document.querySelector('.goods-item[data-need-serial="true"]');
+      if (!hasSerial) {
+        btn.disabled = false;
+        return;
+      }
+      btn.disabled = !isSerialScanComplete();
+    }
+
+    function submitSerialScan() {
+      if (!serialScanInput || serialScanInput.disabled || serialScanning) {
+        return;
+      }
+
+      const activeBn = getActiveSerialBn();
+      if (!activeBn) {
+        showToast('全部唯一码已扫描完成');
+        return;
+      }
+
+      let sn = (serialScanInput.value || '').replace(/[\r\n]+/g, '').trim();
+      serialScanInput.value = sn;
+      doScanSerial(activeBn, sn);
+    }
+
+    function doScanSerial(bn, sn) {
+      if (serialScanning) {
+        return;
+      }
+      sn = (sn || '').trim();
+      if (!sn) {
+        showToast('请输入唯一码');
+        focusSerialInput();
+        return;
+      }
+      if (isItemSerialComplete(bn)) {
+        showToast('该商品唯一码已扫满');
+        refreshSerialUi();
+        focusSerialInput();
+        return;
+      }
+
+      const scannedList = [];
+      Object.keys(scannedMap).forEach(function (key) {
+        (scannedMap[key] || []).forEach(function (row) {
+          scannedList.push({ bn: key, sn: row.sn });
         });
       });
 
-      // 显示加载状态
-      showLoading('正在处理退货入库...');
-
-      // 创建FormData对象
       const formData = new FormData();
-      formData.append('return_id', document.querySelector(`[name="return_id"]`).value);
+      formData.append('return_id', returnId);
+      formData.append('bn', bn);
+      formData.append('sn', sn);
+      formData.append('scanned_list', JSON.stringify(scannedList));
+
+      serialScanning = true;
+      serialScanInput.disabled = true;
+
+      fetch(scanUrl, { method: 'POST', body: formData })
+        .then(function (res) { return res.json(); })
+        .then(function (json) {
+          serialScanning = false;
+          if (json.res !== 'succ') {
+            showToast(json.msg || '扫描失败');
+            serialScanInput.disabled = false;
+            serialScanInput.focus();
+            serialScanInput.select();
+            refreshSerialUi();
+            return;
+          }
+          const targetBn = json.bn || bn;
+          if (!scannedMap[targetBn]) {
+            scannedMap[targetBn] = [];
+          }
+          scannedMap[targetBn].push({ sn: json.sn });
+          serialScanInput.value = '';
+          renderGlobalScannedList();
+          updateSerialProgress(targetBn);
+          focusSerialInput();
+        })
+        .catch(function () {
+          serialScanning = false;
+          showToast('扫描失败，请重试');
+          serialScanInput.disabled = false;
+          serialScanInput.focus();
+          refreshSerialUi();
+        });
+    }
+
+    function scanQRCodeForReturn(callback) {
+      if (typeof wx === 'undefined') {
+        showToast('当前环境不支持扫码，请手动输入唯一码');
+        focusSerialInput();
+        return;
+      }
+      wapWxScan.requestScan(wxSignUrl, {
+        onSuccess: callback,
+        onFail: function (msg) {
+          showToast(msg);
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      initScannedMap();
+      serialScanInput = document.getElementById('returnSerialScanInput');
+      refreshSerialUi();
+      focusSerialInput();
+
+      if (serialScanInput) {
+        serialScanInput.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.keyCode === 13 || e.keyCode === 66) {
+            e.preventDefault();
+            e.stopPropagation();
+            submitSerialScan();
+            return;
+          }
+          if (e.key === 'Tab' || e.keyCode === 9) {
+            e.preventDefault();
+            submitSerialScan();
+          }
+        });
+        serialScanInput.addEventListener('keypress', function (e) {
+          if (e.key === 'Enter' || e.keyCode === 13) {
+            e.preventDefault();
+            e.stopPropagation();
+            submitSerialScan();
+          }
+        });
+        serialScanInput.addEventListener('input', function () {
+          const val = serialScanInput.value || '';
+          if (val.indexOf('\n') >= 0 || val.indexOf('\r') >= 0) {
+            serialScanInput.value = val.replace(/[\r\n]+/g, '');
+            submitSerialScan();
+          }
+        });
+        serialScanInput.addEventListener('blur', function () {
+          const pending = (serialScanInput.value || '').trim();
+          if (!pending || serialScanning) {
+            return;
+          }
+          submitSerialScan();
+          setTimeout(function () {
+            if (!serialScanning && serialScanInput && !serialScanInput.disabled) {
+              serialScanInput.focus();
+            }
+          }, 50);
+        });
+      }
+
+      const confirmBtn = document.getElementById('serialConfirmBtn');
+      if (confirmBtn) {
+        confirmBtn.addEventListener('click', function (e) {
+          e.preventDefault();
+          submitSerialScan();
+        });
+      }
+
+      const scanForm = document.getElementById('serialScanForm');
+      if (scanForm) {
+        scanForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          submitSerialScan();
+        });
+      }
+
+      const scanIcon = document.getElementById('returnSerialScanIcon');
+      if (scanIcon) {
+        scanIcon.addEventListener('click', function (e) {
+          e.preventDefault();
+          if (serialScanInput && serialScanInput.disabled) {
+            return;
+          }
+          scanQRCodeForReturn(function (code) {
+            if (serialScanInput) {
+              serialScanInput.value = code;
+            }
+            submitSerialScan();
+          });
+        });
+      }
+
+      const globalListEl = document.getElementById('globalSerialScannedList');
+      if (globalListEl) {
+        globalListEl.addEventListener('click', function (e) {
+        if (!e.target.classList.contains('serial-remove-btn')) return;
+        const bn = e.target.getAttribute('data-bn');
+        const index = parseInt(e.target.getAttribute('data-index'), 10);
+        if (scannedMap[bn] && scannedMap[bn][index]) {
+          scannedMap[bn].splice(index, 1);
+          renderGlobalScannedList();
+          updateSerialProgress(bn);
+          focusSerialInput();
+        }
+      });
+      }
+    });
+
+    function submitAccept() {
+      const quantityInputs = document.querySelectorAll('.quantity-input');
+      let isValid = true;
+      quantityInputs.forEach(function (input) {
+        if (!validateQuantity(input)) isValid = false;
+      });
+      if (!isValid) return;
+
+      if (document.querySelector('.goods-item[data-need-serial="true"]') && !isSerialScanComplete()) {
+        showToast('请先扫描全部唯一码');
+        return;
+      }
+
+      const itemsData = [];
+      document.querySelectorAll('.goods-item').forEach(function (item) {
+        const bn = item.getAttribute('data-bn');
+        const quantityInput = item.querySelector('.quantity-input');
+        const quantityHidden = item.querySelector('.quantity-value');
+        let num = 0;
+        if (quantityInput) {
+          num = parseInt(quantityInput.value, 10) || 0;
+        } else if (quantityHidden) {
+          num = parseInt(quantityHidden.value, 10) || 0;
+        }
+        itemsData.push({ bn: bn, num: num });
+      });
+
+      const serialPayload = {};
+      Object.keys(scannedMap).forEach(function (bn) {
+        if ((scannedMap[bn] || []).length) {
+          serialPayload[bn] = scannedMap[bn].map(function (row) { return row.sn; });
+        }
+      });
+
+      showLoading('正在处理退货入库...');
+      const formData = new FormData();
+      formData.append('return_id', returnId);
       formData.append('action', 'accept');
-      
-      // 添加商品数据
-      itemsData.forEach((item, index) => {
-        formData.append(`items[${index}][bn]`, item.bn);
-        formData.append(`items[${index}][num]`, item.num);
+      itemsData.forEach(function (item, index) {
+        formData.append('items[' + index + '][bn]', item.bn);
+        formData.append('items[' + index + '][num]', item.num);
       });
+      if (Object.keys(serialPayload).length) {
+        formData.append('serial_items', JSON.stringify(serialPayload));
+      }
 
-      api.doReship(formData).then(res => {
-        hideLoading();
-        if (res.data.res === 'succ') {
-          showToast('退货入库成功');
-          // 可以根据需要添加其他操作，比如跳转页面
-          window.location.href = location_url;
-        } else {
-          showToast(res.data.msg || '退货入库失败');
-        }
-      }).catch(err => {
-        hideLoading();
-        console.error('退货入库失败:', err);
-        showToast('退货入库失败，请重试');
-      });
+      fetch('<{$do_reship_url}>', { method: 'POST', body: formData })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          hideLoading();
+          if (data.res === 'succ') {
+            showToast('退货入库成功');
+            window.location.href = waitReturnUrl;
+          } else {
+            showToast(data.msg || '退货入库失败');
+          }
+        })
+        .catch(function () {
+          hideLoading();
+          showToast('退货入库失败，请重试');
+        });
     }
-
-
-    function submitRefuse() {
-      showRefuseModal()
-    }
-
-    // 日期选择
-    function showRefuseModal() {
-      var location_url = '<{$wait_return_url}>';
-      modal.show({
-        title: '验货退款',
-        confirmText: '拒绝',
-        fields: [
-          {
-            type: 'textarea',
-            name: 'refuse_reason',
-            label: '拒绝理由',
-            placeholder: '请填写拒绝原因',
-            required: true
-          },
-          {
-            type: 'image',
-            name: 'refuseImage',
-            label: '拒绝理由图片',
-            required: true
-          },
-        ],
-        onConfirm: async (formData) => {
-          // 创建FormData对象
-          const formDataObj = new FormData();
-          var reship_id = document.querySelector(`[name="reship_id"]`).value;
-          // 添加拒绝理由
-          formDataObj.append('reship_id', reship_id);
-          formDataObj.append('action', 'refuse');
-          formDataObj.append('refuse_reason', formData.refuse_reason);
-
-          // 添加图片数据
-          formData.refuseImage.forEach((base64, index) => {
-            // 将base64转换为blob
-            const byteString = atob(base64.split(',')[1]);
-            const mimeString = base64.split(',')[0].split(':')[1].split(';')[0];
-            const ab = new ArrayBuffer(byteString.length);
-            const ia = new Uint8Array(ab);
-            for (let i = 0; i < byteString.length; i++) {
-              ia[i] = byteString.charCodeAt(i);
-            }
-            const blob = new Blob([ab], { type: mimeString });
-
-            // 验证Blob是否有效
-            if (blob.size === 0) {
-              console.error('Blob无效，无法创建URL');
-              return; // 如果Blob无效，终止当前循环
-            }
-
-            // 创建Object URL并验证
-            const objectUrl = URL.createObjectURL(blob);
-            const img = new Image();
-            img.onload = () => {
-              console.log(`Blob验证成功: ${objectUrl}`);
-              // 在页面中显示图像
-              URL.revokeObjectURL(objectUrl); // 释放URL对象
-            };
-            img.onerror = () => {
-              console.error('Blob验证失败，无法加载图像');
-            };
-            img.src = objectUrl; // 尝试加载Blob
-
-            // 添加到FormData
-            formDataObj.append(`refuseImage[${index}]`, blob);
-
-          });
-
-          // 替换原formData
-          formData = formDataObj;
-          console.log("~ onConfirm: ~ formData2:", formData)
-          showLoading("正在请求中...");
-          var refuse_url = "<{$do_reship_url}>";
-          const result = request({
-            url: refuse_url, // 提交售后申请审核api
-            method: 'post',
-            data: formData,
-            headers: {
-              'Content-Type': 'multipart/form-data'
-            },
-          }).then(result=>{
-            if (result.res === 'succ') {
-              showToast('提交成功');
-              // 可以根据需要添加其他操作，比如跳转页面
-              window.location.href = location_url;
-            } else {
-              showToast(result.msg || '提交失败');
-            }
-            hideLoading();
-          }).catch(e=>{
-            console.log(e)
-            hideLoading();
-            showToast('网络请求失败，请稍后重试');
-          });
-
-          // 拒绝
-          // const params = {
-          //   reship_id: document.querySelector(`[name="reship_id"]`).value,
-          //   action: 'refuse',
-          //   refuse_reason: formData.refuse_reason,
-          //   refuseImage: formData.refuseImage
-          // }
-
-          // api.doReship(params).then(res => {
-          //   if (res.data.res === 'succ') {
-          //     showToast('提交成功');
-          //     // 可以根据需要添加其他操作，比如跳转页面
-          //     window.location.href = location_url;
-          //   } else {
-          //     showToast(res.data.msg || '提交失败');
-          //   }
-          // }).catch(err => {
-          //   showToast('提交失败');
-          // });
-
-          modal.hide();
-        }
-      });
-    }
-
   </script>
 </body>
 

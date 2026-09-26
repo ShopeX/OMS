@@ -183,6 +183,19 @@ class ome_autotask_export_dataquerybysheet
                         return false;
                     }
                 }
+
+                if(isset($data['content']['snlists']) && is_array($data['content']['snlists'])){
+                    $snlists_content = '';
+                    foreach($data['content']['snlists'] as $v) {
+                        $snlists_content .= $v."\n";
+                    }
+
+                    $ss_res = $cacheLib->store('exp_body_snlists_'.self::$__task_id.'_'.self::$__curr_sheet,$snlists_content,self::$__ttl);
+                    if(!$ss_res){
+                        $error_msg = 'No '.self::$__curr_sheet.' sheet save snlists data fail';
+                        return false;
+                    }
+                }
                 
                 break;
             //单层数据结构

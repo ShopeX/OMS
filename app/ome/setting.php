@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 $setting = array(
     'ome.order.failtime'                 => array('type' => SET_T_INT, 'default' => 43200, 'desc' => app::get('base')->_('订单失效时间设置(分钟)')), //一个月
     'ome.order.unconfirmtime'            => array('type' => SET_T_INT, 'default' => 1440, 'desc' => app::get('base')->_('订单未确认的时间设置(分钟)')), //一天
@@ -41,6 +25,7 @@ $setting = array(
     'ome.getOrder.intervalTime'          => array('type' => SET_T_INT, 'default' => 2, 'desc' => app::get('base')->_('订单获取时间间隔设置(分钟)')),
     'ome.delivery.method'                => array('type' => SET_T_ENUM, 'default' => 'off', 'options' => array('on' => app::get('base')->_('启用'), 'off' => app::get('base')->_('不启用')), 'desc' => app::get('base')->_('优先启用【在线下单】方式执行发货操作 (如果不勾选，默认使用【自己联系物流】方式执行发货操作)')),
     'ome.order.mark'                     => array('type' => SET_T_ENUM, 'default' => 'all', 'options' => array('all' => app::get('base')->_('显示全部'), 'last' => app::get('base')->_('显示最新')), 'desc' => app::get('base')->_('订单备注显示方式')),
+    'ome.orderpause.to.syncmarktext.content' => array('type' => SET_T_STR, 'default' => '', 'desc' => app::get('base')->_('商家备注暂停关键字')),
     'ome.combine.member_id'              => array('type' => SET_T_ENUM, 'default' => '1'),
     'ome.combine.shop_id'                => array('type' => SET_T_ENUM, 'default' => '1'),
     'ome.logi.arrived'                   => array('type' => SET_T_INT, 'default' => '0'),
@@ -54,6 +39,7 @@ $setting = array(
     'ome.order.presale'                  => array('type' => SET_T_INT, 'default' => '0'),
     'ome.order.presalemoney'             => array('type' => SET_T_INT, 'default' => '0'),
     'ome.order.presale.combine'          => array('type' => SET_T_BOOL, 'default' => '0'),
+    'ome.order.timing.auto'              => array('type' => SET_T_STR, 'default' => 'On'),
     'ome.codorder.autopay'               => array('type' => SET_T_BOOL, 'default' => 'true'),
     'ome.saas.apifail_mq'                => array('type' => SET_T_BOOL, 'default' => 'false'),
     'ome.order.split'                    => array('type' => SET_T_INT, 'default' => '0'),

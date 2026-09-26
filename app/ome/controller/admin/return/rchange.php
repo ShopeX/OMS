@@ -369,7 +369,14 @@ class ome_ctl_admin_return_rchange extends desktop_controller
     //新增或者编辑 退换货单ome_reship
     public function add_rchange()
     {
-        $this->begin('index.php?app=ome&ctl=admin_return_rchange&act=index&finder_vid=378969');
+        $redirect = 'index.php?app=ome&ctl=admin_return_rchange&act=index';
+        if (!empty($_GET['finder_vid'])) {
+            $redirect .= '&finder_vid=' . urlencode($_GET['finder_vid']);
+        }
+        if (isset($_GET['view']) && $_GET['view'] !== '') {
+            $redirect .= '&view=' . urlencode($_GET['view']);
+        }
+        $this->begin($redirect);
         
         //获取所有传递参数
         $post = kernel::single('base_component_request')->get_params(true);
@@ -454,22 +461,25 @@ class ome_ctl_admin_return_rchange extends desktop_controller
                 }
             }else{
                 //根据物流单号查询发货单信息
-                $deliveryInfo = $deliveryMdl->getList('delivery_id,delivery_bn', array('logi_no'=>$post['logi_no']));
-                if(empty($deliveryInfo)){
+                $deliveryInfo = $deliveryMdl->db_dump(array('logi_no' => $post['logi_no']), 'delivery_id,delivery_bn');
+                if (empty($deliveryInfo)) {
                     $error_msg = '物流单号：'. $post['logi_no'] .'不是选择订单对应的发货物流单，请检查！';
                     $this->end(false, $error_msg);
                 }
-                
+
                 //通过发货单ID+订单ID查询发货单信息
                 $sql = "SELECT dord.* FROM sdb_ome_delivery_order AS dord LEFT JOIN sdb_ome_delivery AS d ON(dord.delivery_id=d.delivery_id) ";
-                $sql .= " WHERE d.delivery_id in (". implode(',', array_column($deliveryInfo, 'delivery_id')) .") AND dord.order_id=". $rs_current_order['order_id'] ." AND d.status IN ('succ', 'return_back')";
+                $sql .= " WHERE d.delivery_id=". (int) $deliveryInfo['delivery_id'] ." AND dord.order_id=". $rs_current_order['order_id'] ." AND d.status IN ('succ', 'return_back')";
                 $dlyOrderInfo = $deliveryMdl->db->selectrow($sql);
-                if(empty($dlyOrderInfo)){
+                if (empty($dlyOrderInfo)) {
                     $error_msg = '物流单号：'. $post['logi_no'] .'不属于选择的订单号，请检查！';
                     $this->end(false, $error_msg);
                 }
+                $post['delivery_id'] = $deliveryInfo['delivery_id'];
             }
-            $post['delivery_id'] = $deliveryInfo['delivery_id'];
+            if (strtolower($post['logi_no']) == 'none') {
+                $post['delivery_id'] = $dlyOrderInfo['delivery_id'];
+            }
         }
         if($post['flag_type_text'] == 'ydt') {
             $post['flag_type'] = $post['flag_type'] | ome_reship_const::__LANJIE_RUKU;
@@ -479,18 +489,38 @@ class ome_ctl_admin_return_rchange extends desktop_controller
     
         $shop_id  = $post['shop_id'] ?: 0;
         $shopInfo = app::get('ome')->model('shop')->db_dump(['shop_id' => $shop_id]);
-        if ($shopInfo && $shopInfo['delivery_mode'] != 'jingxiao' && empty($post['brnach_id'])) {
-            //取默认退货仓
-            $return_auto_branch = app::get('ome')->getConf('return.auto_branch');
-            if ($return_auto_branch) {
-                $post['brnach_id'] = $return_auto_branch;
+        if ($shopInfo && $shopInfo['delivery_mode'] != 'jingxiao' && empty($post['branch_id'])) {
+            $deliveryRow = array();
+            if (!empty($post['delivery_id'])) {
+                $deliveryRow = app::get('ome')->model('delivery')->db_dump($post['delivery_id'], 'branch_id,shop_id,logi_id');
+            } elseif (!empty($post['order_id'])) {
+                $deliveryList = app::get('ome')->model('delivery')->getDeliveryByOrder('branch_id,shop_id,logi_id', $post['order_id']);
+                $deliveryRow  = $deliveryList ? $deliveryList[0] : array();
             }
-            $return_auto_shop_branch = app::get('ome')->getConf('return.auto_shop_branch');
-            if ($return_auto_shop_branch[$shop_id]) {
-                $post['branch_id'] = $return_auto_shop_branch[$shop_id];
+            $returnBranchCtx = $this->buildReturnBranchContext($deliveryRow, array(
+                'order_id'    => $post['order_id'],
+                'shop_id'     => $shop_id,
+                'return_type' => $post['return_type'],
+                'flag_type'   => (int) $post['flag_type'],
+                'source'      => 'local',
+            ));
+            $resolved = kernel::single('o2o_return')->resolve_return_branch($returnBranchCtx);
+            if ($resolved['branch_id'] > 0) {
+                $post['branch_id'] = $resolved['branch_id'];
             }
         }
         
+        // 退换货单提交前扩展：有实现则调用，无实现不影响现有业务
+        foreach (kernel::servicelist('ome.service.reship.submit.before') as $object) {
+            if (!method_exists($object, 'before_submit')) {
+                continue;
+            }
+            $error_msg = '';
+            if ($object->before_submit($post, $error_msg) === false) {
+                $this->end(false, $error_msg ?: '退换货单提交校验失败');
+            }
+        }
+
         //新增生成退换货单
         $msg = '';
         $reship_bn = $Oreship->create_treship($post, $msg);
@@ -635,32 +665,22 @@ class ome_ctl_admin_return_rchange extends desktop_controller
             }
             unset($delivery[0]['shop_id']);
             $order = array_merge($order, (array)$delivery[0]);
-            //加入了订单门店仓履约售后 判断是否是门店仓
-            $branchLib = kernel::single('ome_branch');
-            $store_id  = $branchLib->isStoreBranch($order["branch_id"]);
-            if ($store_id) {
-                //是门店仓
-                $order["branch_list"] = kernel::single('o2o_return')->get_aftersale_o2o_branch($order["branch_id"]);
-                //售后设置->退货仓库设置 类型选择：发货仓库的
-                $branchtype = app::get('wms')->getConf('wms.branchset.type');
-                if ($branchtype == "delivery") {
-                    //如果当前门店仓不支持售后的
-                    $support_aftersale = false;
-                    foreach ($order["branch_list"] as $var_ob) {
-                        if ($order["branch_id"] == $var_ob["branch_id"]) {
-                            $support_aftersale = true;
-                            break;
-                        }
-                    }
-                    if (!$support_aftersale) {
-                        $order["branch_id"]   = "-1";
-                        $order["branch_name"] = "门店发货仓不支持售后";
-                    }
-                }
-            } else {
-                //是电商仓
-                $order["branch_list"] = app::get('ome')->model('branch')->getlist('branch_id,name', array('disabled' => 'false', 'b_type' => 1));
-            }
+
+            $returnBranchCtx = $this->buildReturnBranchContext(
+                $order,
+                array(
+                    'order_id'    => $order['order_id'],
+                    'shop_id'     => $order['shop_id'],
+                    'return_type' => 'return',
+                    'flag_type'   => ($post['flag_type_text'] == 'ydt' ? ome_reship_const::__LANJIE_RUKU : 0),
+                    'source'      => 'local',
+                )
+            );
+            $resolved = kernel::single('o2o_return')->resolve_return_branch($returnBranchCtx);
+            $order['branch_list'] = $resolved['branch_list'];
+            $order['branch_id']   = $resolved['branch_id'];
+            $order['branch_name'] = $resolved['branch_name'];
+
             $order['member_uname']       = $member['account']['uname'];
             $order['createtime']         = date('Y-m-d H:i:s', $order['createtime']);
             $this->pagedata['ship_area'] = $order['ship_area'];
@@ -1201,16 +1221,18 @@ class ome_ctl_admin_return_rchange extends desktop_controller
         $this->pagedata['branchtype'] = $branchtype;
 
         $delivery = $oDelivery->getDeliveryByOrder('*', $reship_data['order_id']);
-        //加入了订单门店仓履约售后 判断是否是门店仓 显示branch_list
-        $branchLib = kernel::single('ome_branch');
-        $store_id  = $branchLib->isStoreBranch($delivery[0]["branch_id"]);
-        if ($store_id) {
-//是门店仓
-            $this->pagedata["branch_list"] = kernel::single('o2o_return')->get_aftersale_o2o_branch($delivery[0]["branch_id"]);
-        } else {
-//是电商仓
-            $this->pagedata["branch_list"] = app::get('ome')->model('branch')->getlist('branch_id,name', array('disabled' => 'false', 'b_type' => 1));
-        }
+        $returnBranchCtx = $this->buildReturnBranchContext(
+            $delivery ? $delivery[0] : array(),
+            array(
+                'order_id'    => $reship_data['order_id'],
+                'shop_id'     => $reship_data['shop_id'],
+                'return_type' => $reship_data['return_type'],
+                'flag_type'   => (int) $reship_data['flag_type'],
+                'source'      => $reship_data['source'],
+            )
+        );
+        $resolved = kernel::single('o2o_return')->resolve_return_branch($returnBranchCtx);
+        $this->pagedata['branch_list'] = $resolved['branch_list'];
 
         $this->pagedata['source'] = $reship_data['source'];
 
@@ -4204,5 +4226,31 @@ class ome_ctl_admin_return_rchange extends desktop_controller
                 $this->end(false, "{$fieldName} 不能为空");
             }
         }
+    }
+
+    /**
+     * 组装退入仓策略上下文
+     *
+     * @param array $delivery
+     * @param array $extra
+     * @return array
+     */
+    private function buildReturnBranchContext($delivery, array $extra = array())
+    {
+        if (app::get('o2o')->is_installed()) {
+            return kernel::single('o2o_return_branch')->buildContext((array) $delivery, $extra);
+        }
+
+        $ctx = array(
+            'delivery_branch_id' => isset($delivery['branch_id']) ? (int) $delivery['branch_id'] : 0,
+            'shop_id'            => isset($extra['shop_id']) ? $extra['shop_id'] : (isset($delivery['shop_id']) ? $delivery['shop_id'] : 0),
+            'logi_id'            => isset($delivery['logi_id']) ? (int) $delivery['logi_id'] : 0,
+            'order_id'           => isset($extra['order_id']) ? (int) $extra['order_id'] : 0,
+            'return_type'        => isset($extra['return_type']) ? $extra['return_type'] : 'return',
+            'flag_type'          => isset($extra['flag_type']) ? (int) $extra['flag_type'] : 0,
+            'source'             => isset($extra['source']) ? $extra['source'] : '',
+        );
+
+        return array_merge($ctx, $extra);
     }
 }

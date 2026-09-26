@@ -222,6 +222,8 @@ class financebase_func
                 'website' => 'wechatpay',
                 'pinduoduo' => 'pinduoduo',
                 'vop' => 'vop',
+                'kuaishou' => 'kuaishou',
+                'xhs' => 'xhs',
 
             ),
             'page_size' => 500,
@@ -243,7 +245,11 @@ class financebase_func
             'wx'    => '微信小店',
             'vop'    => '唯品会',
             'miaosuda' => '喵速达', // shop_type='taobao' and business_type='maochao'
+            'weimob' => '微盟旺铺',
+            'weimobv' => '微盟微商城',
             'weimobr' => '微盟零售',
+            'kuaishou' => '快手',
+            'xhs' => '小红书',
         );
         if (!$column_platform){
             $data = array_merge($data, array(
@@ -251,13 +257,14 @@ class financebase_func
                 'jdecard' => '京东E卡',
                 'jdguobu' => '京东国补',
                 'tmyp' => '天猫优品',
+                'tmjh' => '天猫聚合支付',
             ));
         }
         return $data;
     }
     public static function getShopType()
     {
-        $data = array ('taobao','360buy','luban','youzan','pinduoduo','wx','weixinshop','wxshipin','website','vop','xhs','miaosuda','weimobr');
+        $data = array ('taobao','360buy','luban','youzan','pinduoduo','wx','weixinshop','wxshipin','website','vop','xhs','miaosuda','weimob','weimobv','weimobr','kuaishou');
         return $data;
     }
 

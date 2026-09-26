@@ -38,7 +38,7 @@ $db['order'] = array(
             'default_in_list' => false,
         ),
         'order_bn'          => array(
-            'type'            => 'text',
+            'type'            => 'varchar(255)',
             'label'           => '订单号',
             'searchtype'      => 'nequal',
             'filterdefault'   => true,
@@ -50,19 +50,20 @@ $db['order'] = array(
         ),
         'type_id'           => array(
             'type'            => array(
-                0 => '普通发票',
-                1 => '专用发票',
+                0 => '普通发票', // 数电增值税电子普通发票
+                1 => '专用发票', // 数电增值税电子专用发票
             ),
             'default'         => '0',
             'label'           => '发票类型',
             'in_list'         => true,
             'default_in_list' => false,
-            'width'           => 100,
+            'width'           => 130,
+            'order'           => 28,
         ),
         'mode'              => array(
             'type'            => array(
-                0 => '纸质发票',
-                1 => '电子发票',
+                0 => '普通发票',
+                1 => '电子发票', // 数电发票
             ),
             'default'         => '0',
             'required'        => true,
@@ -71,8 +72,8 @@ $db['order'] = array(
             'default_in_list' => true,
             'filtertype'      => 'normal',
             'filterdefault'   => true,
-            'order'           => 3,
-            'width'           => 70,
+            'order'           => 26,
+            'width'           => 110,
         ),
         'amount'            => array(
             'type'            => 'money',
@@ -94,7 +95,7 @@ $db['order'] = array(
             'in_list'         => true,
             'default_in_list' => true,
             'order'           => 50,
-            'width'           => 60,
+            'width'           => 80,
         ),
         'tax_rate'          => array(
             'type'            => 'tinyint(2)',
@@ -147,7 +148,22 @@ $db['order'] = array(
             'filtertype'      => 'normal',
             'filterdefault'   => true,
             'order'           => 5,
-            'width'           => 70,
+            'width'           => 110,
+        ),
+        'is_auto' => array(
+            'type' => array(
+                1 => '自动开票',
+                2 => '手工开票',
+            ),
+            'default'         => '2',
+            'required'        => true,
+            'label'           => '是否自动开票',
+            'in_list'         => true,
+            'default_in_list' => true,
+            'filtertype'      => 'normal',
+            'filterdefault'   => true,
+            'order'           => 20,
+            'width'           => 130,
         ),
         'sync'              => array(
             'type'    => array(
@@ -169,7 +185,7 @@ $db['order'] = array(
             'default_in_list' => true,
             'filtertype'      => 'normal',
             'filterdefault'   => true,
-            'width'=>80,
+            'width' => 110,
         ),
         'is_print'          => array(
             'type'    => array(
@@ -186,16 +202,17 @@ $db['order'] = array(
             'default_in_list' => false,
             'filtertype'      => 'normal',
             'filterdefault'   => true,
-            'width'           => 70,
+            'width'           => 180,
         ),
         'invoice_no'        => array(
             'type'            => 'varchar(32)',
             'label'           => '发票号码',
             'in_list'         => true,
             'default_in_list' => false,
+            'searchtype'      => 'nequal',
             'filtertype'      => 'normal',
             'filterdefault'   => true,
-            'width'           => 80,
+            'width'           => 180,
         ),
         'content'           => array(
             'type'    => 'text',
@@ -346,7 +363,7 @@ $db['order'] = array(
         'shop_type'         => array(
             'type'     => 'varchar(50)',
             'label'    => '店铺类型',
-            'width'    => 75,
+            'width'    => 90,
             'editable' => false,
         ),
         'payee_name'        => array(
@@ -354,28 +371,28 @@ $db['order'] = array(
             'label'           => '开票方名称',
             'in_list'         => true,
             'default_in_list' => false,
-            'width'           => 90,
+            'width'           => 120,
         ),
         'tax_no'            => array(
             'type'            => 'varchar(255)',
             'label'           => '开票方税号',
             'in_list'         => true,
             'default_in_list' => false,
-            'width'           => 90,
+            'width'           => 120,
         ),
         'address'           => array(
             'type'            => 'varchar(255)',
             'label'           => '开票方地址',
             'in_list'         => true,
             'default_in_list' => false,
-            'width'           => 90,
+            'width'           => 160,
         ),
         'telephone'         => array(
             'type'            => 'char(32)',
             'label'           => '开票方电话',
             'in_list'         => true,
             'default_in_list' => false,
-            'width'           => 90,
+            'width'           => 120,
         ),
         'payee_operator'    => array(
             'type'            => 'varchar(50)',
@@ -454,6 +471,15 @@ $db['order'] = array(
             'label'   => '改票状态',
             'comment' => '改票状态',
         ),
+        'source' => array(
+            'type' => 'varchar(50)',
+            'default' => 'b2c',
+            'editable' => false,
+            'in_list' => true,
+            'default_in_list' => false,
+            'label'   => '发票来源',
+            'comment' => '发票来源,默认值:b2c(默认值)',
+        ),
         'source_status'      => array(
             'type'            => 'varchar(64)',
             'label'           => '平台状态',
@@ -467,8 +493,13 @@ $db['order'] = array(
                 1 => '可操作',
                 2=>'待红冲',
             ),
-            'default' => '0',
-            'label'   => '开票操作',
+            'default'         => '0',
+            'label'           => '开票操作',
+            'in_list'         => true,
+            'default_in_list' => true,
+            'filtertype'      => 'normal',
+            'filterdefault'   => true,
+            'width'           => 70,
         ),
         'action_type' => array(
             'type' => array(
@@ -546,6 +577,7 @@ $db['order'] = array(
             'filtertype' => 'normal',
             'filterdefault' => true,
             'searchtype' => 'nequal',
+            'width' => 200,
         ),
         'golden_tax_version' => array(
             'type' => array(
@@ -558,7 +590,7 @@ $db['order'] = array(
             'in_list' => true,
             'default_in_list' => true,
             'order' => 3,
-            'width' => 70,
+            'width' => 90,
         ),
         'org_id' => array (
             'type' => 'table:operation_organization@ome',
@@ -583,6 +615,30 @@ $db['order'] = array(
         'ind_is_make_invoice' => array('columns' => array('is_make_invoice',),),
         'ind_invoice_apply_bn' => array('columns' => array('invoice_apply_bn',),),
         'idx_order_id' => array('columns' => array('order_id',),),
+        'ind_status_make_source' => array(
+            'columns' => array(
+                0 => 'is_status',
+                1 => 'is_make_invoice',
+                2 => 'source',
+                3 => 'create_time',
+            ),
+        ),
+        'ind_order_bn' => array (
+            'columns' => array (
+                0 => 'order_bn',
+            ),
+        ),
+        'ind_invoice_no' => array (
+            'columns' => array (
+                0 => 'invoice_no',
+            ),
+        ),
+        'ind_date_shop' => array (
+            'columns' => array (
+                0 => 'dateline',
+                1 => 'shop_id',
+            ),
+        ),
     ),
     'comment' => '订单发票表',
     'engine'  => 'innodb',

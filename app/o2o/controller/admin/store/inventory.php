@@ -43,6 +43,20 @@ class o2o_ctl_admin_store_inventory extends desktop_controller{
             unset($_POST['visibility']);
         }
         
+        // 多选时「全部」空选项会一起提交，需去掉空值，避免 SQL：IN (,2)
+        $posted_branch_ids = array();
+        if (isset($_POST['branch_id'])) {
+            $posted_branch_ids = array_values(array_filter((array) $_POST['branch_id'], function ($v) {
+                return $v !== '' && $v !== null && $v !== '_NULL_';
+            }));
+            // 同步清洗 $_POST，防止 finder 再次把空值合并进 filter
+            if (!empty($posted_branch_ids)) {
+                $_POST['branch_id'] = $posted_branch_ids;
+            } else {
+                unset($_POST['branch_id']);
+            }
+        }
+
         $is_super = kernel::single('desktop_user')->is_super();
         if (!$is_super) {
             // 普通管理员：先设置默认无权限
@@ -58,18 +72,19 @@ class o2o_ctl_admin_store_inventory extends desktop_controller{
             if (!empty($branchList)) {
                 $user_branch_ids = array_column($branchList, 'branch_id');
                 
-                // 如果用户选择了门店，验证权限
-                if (!empty($_POST['branch_id'])) {
-                    $base_filter['branch_id'] = in_array($_POST['branch_id'], $user_branch_ids) ? $_POST['branch_id'] : array('false');
+                // 如果用户选择了门店，验证权限（兼容单选 / 多选 branch_id[]）
+                if (!empty($posted_branch_ids)) {
+                    $selected = array_values(array_intersect($posted_branch_ids, $user_branch_ids));
+                    $base_filter['branch_id'] = !empty($selected) ? $selected : array('false');
                 } else {
                     // 没选择门店，显示所有有权限的门店
                     $base_filter['branch_id'] = $user_branch_ids;
                 }
             }
         } else {
-            // 超管：如果选择了门店就显示选择的，否则显示所有
-            if (!empty($_POST['branch_id'])) {
-                $base_filter['branch_id'] = $_POST['branch_id'];
+            // 超管：如果选择了门店就显示选择的，否则显示所有（兼容多选）
+            if (!empty($posted_branch_ids)) {
+                $base_filter['branch_id'] = $posted_branch_ids;
             }
         }
         
@@ -90,6 +105,10 @@ class o2o_ctl_admin_store_inventory extends desktop_controller{
             'use_buildin_set_tag' => false,
             'use_buildin_recycle' => false,
             'use_buildin_filter' => true,
+            'finder_cols' => material_basic_material_master::mergeFinderCols(
+                'column_branch_name,column_bn,column_product_name,column_barcode,column_spec_info,column_material_spu,column_weight,column_unit,store,store_freeze,column_available_store,arrive_store,column_vop_sku_stock',
+                'column_bn'
+            ),
             'object_method'=>array('count'=>'countlist','getlist'=>'getlists')
         ));
     }

@@ -95,6 +95,9 @@ class ome_autotask_export_createfile
                 for($i=1;$i<=self::$__sheet_sum;$i++) {
                     $cacheLib->delete('exp_body_pair_'.self::$__task_id.'_'.$i);
                 }
+                for($i=1;$i<=self::$__sheet_sum;$i++) {
+                    $cacheLib->delete('exp_body_snlists_'.self::$__task_id.'_'.$i);
+                }
             }
 
             //删除导出内容在本地生成的临时文件
@@ -150,6 +153,15 @@ class ome_autotask_export_createfile
                     fclose($handle);
                     @unlink($filename);
                     return false;
+                }
+            }
+
+        }
+
+        if(self::$__has_detail == 1 && method_exists($mdl, 'getexportsnlists')){
+            for($i=1;$i<=self::$__sheet_sum;$i++) {
+                if($cacheLib->fetch('exp_body_snlists_'.self::$__task_id.'_'.$i,$snlists_content)){
+                    fwrite($handle,$snlists_content);
                 }
             }
         }
@@ -233,6 +245,36 @@ class ome_autotask_export_createfile
                     $ietaskMdl->update(['status' => 'fail', 'msg' => $error_msg], ['task_id' => self::$__task_id]);
 
                     return false;
+                }
+            }
+
+        }
+
+        if(self::$__has_detail == 1 && method_exists($mdl, 'getexportsnlists')){
+            $fileObject = $fileObject->addSheet('snlists');
+            for($i=1;$i<=self::$__sheet_sum;$i++) {
+                if($cacheLib->fetch('exp_body_snlists_'.self::$__task_id.'_'.$i,$snlists_content)){
+                    $arrData = explode("\n", $snlists_content);
+                    foreach ($arrData as $k => $v) {
+                        if(empty($v)) {
+                            unset($arrData[$k]);
+                            continue;
+                        }
+                        $arrData[$k] = explode(',', $v);
+                        foreach ($arrData[$k] as $kk => $vv) {
+                            $arrData[$k][$kk] = mb_convert_encoding($vv, 'UTF-8', 'GBK');
+                        }
+                    }
+                    if($i == 1) {
+                        $title = array_shift($arrData);
+                        $title = $title ? : [];
+                        if (!empty($title)) {
+                            $fileObject = $fileObject->header($title);
+                        }
+                    }
+                    if (!empty($arrData)) {
+                        $fileObject->data($arrData);
+                    }
                 }
             }
         }

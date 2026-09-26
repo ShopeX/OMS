@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class ome_ctl_admin_return_sv extends desktop_controller {
 
     var $name = "退换货服务";
@@ -191,7 +175,13 @@ class ome_ctl_admin_return_sv extends desktop_controller {
                 $oProduct_pro_detail['items'][$key]['checknum'] = $val['num'];
             }
 
-            $product_process['items'][$val['bn']]['itemIds'][] = $val['reship_item_id'] ? : $val['item_id'];
+            // 按明细数量展开槽位，保证可质检数量与 id_{bn}{n} 一一对应
+            // （同一行 num>1 时，每个件数一个槽位，供唯一码逐个扫描）
+            $itemId = $val['reship_item_id'] ? : $val['item_id'];
+            $slotQty = max(1, intval($val['num']));
+            for ($slot = 0; $slot < $slotQty; $slot++) {
+                $product_process['items'][$val['bn']]['itemIds'][] = $itemId;
+            }
 
             if($val['is_check'] == 'false'){
                 /* 退货数量 */
@@ -353,7 +343,10 @@ class ome_ctl_admin_return_sv extends desktop_controller {
                 # 验证可质检数
                 $checknum = $noscan = array();
                 foreach ($scans as $key=>$pbn) {
-                    if($key<=0) continue;
+                    // 兼容旧的数字 item_id，以及新的 slot_id（如 123_1）
+                    if ($key === '' || $key === null || (is_numeric($key) && $key <= 0)) {
+                        continue;
+                    }
                     # 可质检数
                     if (!$noscan[$pbn]) {
                         $filter  = array(
@@ -401,10 +394,15 @@ class ome_ctl_admin_return_sv extends desktop_controller {
                 #将数据以货号+仓库+备注方式重新组合
                 $arrItemUpData = array();
                 foreach ( $scans as  $sk=>$sbn) {
-                    if($sk<=0) continue;
+                    if ($sk === '' || $sk === null || (is_numeric($sk) && $sk <= 0)) {
+                        continue;
+                    }
                     $checkKey = $sbn.$sk;
+                    // slot_id 映射回真实 reship_item_id；旧数据无映射时 slot key 本身即 item_id
+                    $realReshipItemId = isset($_POST['process_reship_item'][$sk]) && $_POST['process_reship_item'][$sk] !== ''
+                        ? $_POST['process_reship_item'][$sk]
+                        : $sk;
                     $tmp_branch = intval($_POST['instock_branch'][$checkKey]);
-                    $probn = md5($sbn.$tmp_branch.$_POST['memo'][$checkKey]);
                     $bnBmIdName = app::get('material')->model('basic_material')->db_dump(array('material_bn'=>$sbn), 'bm_id,material_name');
                     $productId = $bnBmIdName['bm_id'];
                     $num = $_POST['check_num'][$checkKey];
@@ -415,7 +413,7 @@ class ome_ctl_admin_return_sv extends desktop_controller {
                             'store_type' => $_POST['store_type'][$checkKey],
                             'branch_id' => $tmp_branch,
                             'num' => $num,
-                            'reship_item_id' => $sk,
+                            'reship_item_id' => $realReshipItemId,
                         );
                     } else {
                         $arrItemUpData[$productId]['check_num'] = $num;
@@ -424,7 +422,7 @@ class ome_ctl_admin_return_sv extends desktop_controller {
                             'store_type' => $_POST['store_type'][$checkKey],
                             'branch_id' => $tmp_branch,
                             'num' => $num,
-                            'reship_item_id' => $sk,
+                            'reship_item_id' => $realReshipItemId,
                         );
                     }
                 }
@@ -469,7 +467,37 @@ class ome_ctl_admin_return_sv extends desktop_controller {
                     //write history serial
                     kernel::single('ome_receipt_dlyitemsserial')->returnProduct($history_serial, $msg);
 
-
+                    // OME 质检路径原仅写 OME/WMS 表；机器中心入库需与 WMS 回传一致，否则 material_sn_flow 无 reship 流水、权益回退等埋点不执行
+                    if (app::get('machinecenter')->is_installed() && app::get('console')->is_installed()) {
+                        $mcItems = array();
+                        foreach ($_POST['serial_id'] as $item_id => $item) {
+                            if (!is_array($item)) {
+                                continue;
+                            }
+                            foreach ($item as $bn => $serial_number) {
+                                $serial_number = trim((string) $serial_number);
+                                if ($serial_number === '') {
+                                    continue;
+                                }
+                                if (!isset($mcItems[$bn])) {
+                                    $mcItems[$bn] = array('bn' => $bn, 'sn_list' => array());
+                                }
+                                $mcItems[$bn]['sn_list'][] = $serial_number;
+                            }
+                        }
+                        if ($mcItems) {
+                            kernel::single('console_receipt_reship')->machineCenterReshipAdd(array(
+                                'items' => array_values($mcItems),
+                                'reship_info' => array(
+                                    'reship_id' => (int) $_POST['reship_id'],
+                                    'reship_bn' => $reship_bn,
+                                    'branch_id' => $branch_id,
+                                    'order_id' => $order_id,
+                                    't_end' => time(),
+                                ),
+                            ));
+                        }
+                    }
                 }
 
                 //storagelife return process

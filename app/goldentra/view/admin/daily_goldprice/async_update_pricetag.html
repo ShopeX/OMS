@@ -1,0 +1,130 @@
+<style>
+    .processBarBg {border:1px solid #999999; width:98%; margin:5px; height:25px;line-height:25px;padding:1px; background:#EEEEEE;}
+    .processBar {background:#3366cc; width:0px; padding-bottom:1px;overflow:hidden;}
+</style>
+<div class="tableform">
+    <div class="division">
+        <table width="100%" cellspacing="0" cellpadding="0" border="0" align="center" >
+        <tbody>
+            <tr>
+                <td align="left">
+                    <div class="division" style="display:none;" id="information">
+                        本次处理 <span id="iTotal" style="color:#083E96"></span> 个商品，
+                        <span id="iSucc" style="color:green"></span> 个成功，
+                        <span id="iFail" style="color:red"></span> 个失败，<span id="title">请稍候……</span>
+                    </div>
+
+                    <div id="processBarBg" class="processBarBg">
+                        <div id="processBar" class="processBar">
+                            &nbsp;
+                        </div>
+                    </div>
+                </td>
+            </tr>
+
+            <tr>
+                <td align="center">
+                    <{button label="开始更新店铺商品价格" type="button" class="btn-primary" id="sync"}>
+                </td>
+            </tr>
+        </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+var shop_id = '<{$shop_id}>';
+var price = '<{$price}>';
+var material_list = <{$material_list_json}>;
+var doTotal = 0;
+var doSucc = 0;
+var doFail = 0;
+
+function ajaxget(idx) {
+    if (doTotal >= getTotal()){
+        $('processBar').setStyle('width', '100%');
+        $('title').set('html', '处理完成。');
+        $('sync').hide();
+        return false;
+    }
+
+    new Request({
+        url: "index.php?app=goldentra&ctl=admin_daily_goldprice&act=updatePricetag",
+        method: "post",
+        data: {
+            shop_id: shop_id,
+            price: price,
+            material_rows: JSON.encode(material_list.slice(doTotal, doTotal + 100)),
+        },
+        onComplete: function (result) {
+            if (!result) return;
+            var ret = JSON.decode(result);
+            if (ret['dealResult']) {
+                doSucc += ret['doSucc'];
+                doFail += ret['doFail'];
+                doTotal += ret['doSucc'] + ret['doFail'];
+                if (ret['succ']) {
+                    var iLenghth = ret['succ'].length;
+                    for (var i = 0; i < iLenghth; i++) {
+                        addDeliveryElement(ret['succ'][i]['delivery_id']);
+                    }
+                }
+            } else {
+                if (ret['rsp'] == 'succ') {
+                    doSucc++;
+                    addDeliveryElement(ret['delivery_id']);
+                } else {
+                    doFail++;
+                }
+                doTotal++;
+            }
+            displayProcessInfo();
+            $('processBar').setStyle('width', (doTotal * 100 / (getTotal())) + '%');
+            ajaxget(idx + 1);
+        }
+    }).send();
+}
+
+function doRun() {
+    //禁用开始按钮
+    doTotal = 0;
+    doSucc = 0;
+    doFail = 0;
+    displayProcessInfo();
+    $('information').style.display ='';
+    $('processBarBg').style.display ='';
+    $('sync').disabled = true;
+    $('sync').set('html', '<span><span>数据处理中，请稍候！</span></span>');
+    ajaxget(0);
+}
+
+function getTotal() {
+    var total = material_list.length;
+    return total;
+}
+
+function addDeliveryElement(delivery_id) {
+    element = new Element('input', {
+        'id' : 'delivery_id_' + delivery_id,
+        'name' : 'delivery_id[]',
+        'value' : delivery_id,
+        'type' : 'hidden'
+    });
+    element.inject('relate-delivery-form', 'top');
+}
+
+/* 显示信息进度 */
+function displayProcessInfo() {
+    $('iTotal').set('html', getTotal());
+    $('iSucc').set('html', doSucc);
+    $('iFail').set('html', doFail);
+}
+
+/* 表单提交打印 */
+function formSubmit() {
+    var _form = $('relate-delivery-form');
+    _form.submit();
+}
+
+$('sync').addEvent('click', function(){doRun();});
+</script>

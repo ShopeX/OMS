@@ -1,0 +1,102 @@
+<services>
+    <service id="openapi.conf">
+        <class>goldentra_openapi_conf</class>
+    </service>
+    <service id="desktop_finder.goldentra_mdl_material">
+        <class>goldentra_finder_material</class>
+    </service>
+    <service id="extend_filter_goldentra_mdl_material">
+        <class>goldentra_finder_extend_filter_material</class>
+    </service>
+    <service id="desktop_finder.goldentra_mdl_mapping">
+        <class>goldentra_finder_mapping</class>
+    </service>
+    <service id="desktop_finder.goldentra_mdl_daily_goldprice">
+        <class>goldentra_finder_daily_goldprice</class>
+    </service>
+    <service id="desktop_finder.goldentra_mdl_invest_goldprice">
+        <class>goldentra_finder_invest_goldprice</class>
+    </service>
+    <service id="desktop_finder.goldentra_mdl_metadata">
+        <class>goldentra_finder_metadata</class>
+    </service>
+    <service id="desktop_finder.goldentra_mdl_metadata_item">
+        <class>goldentra_finder_metadata_item</class>
+    </service>
+    <service id="desktop_finder.goldentra_mdl_stock">
+        <class>goldentra_finder_stock</class>
+    </service>
+    <service id="desktop_finder.goldentra_mdl_stock_diff">
+        <class>goldentra_finder_stock_diff</class>
+    </service>
+    <service id="desktop_finder.goldentra_mdl_mold">
+        <class>goldentra_finder_mold</class>
+    </service>
+    <service id="desktop_finder.goldentra_mdl_zahlart">
+        <class>goldentra_finder_zahlart</class>
+    </service>
+    <service id="desktop_finder.goldentra_mdl_ecwarehouse">
+        <class>goldentra_finder_ecwarehouse</class>
+    </service>
+    <service id="desktop_finder.goldentra_mdl_sap_push_sales">
+        <class>goldentra_finder_sap_push_sales</class>
+    </service>
+    <service id="desktop_finder.goldentra_mdl_sap_push_receipt">
+        <class>goldentra_finder_sap_push_receipt</class>
+    </service>
+    <service id="desktop_finder.goldentra_mdl_sap_push_voucher">
+        <class>goldentra_finder_sap_push_voucher</class>
+    </service>
+    <service id="operation_log">
+        <class>goldentra_operation_log</class>
+    </service>
+    <service id="wap.service.delivery.items.display">
+        <class>goldentra_service_wap_material</class>
+    </service>
+    <service id="material.service.basic.master">
+        <class>goldentra_service_basic_material</class>
+    </service>
+    <service id="machinecenter.service.material.master">
+        <class>goldentra_service_machinecenter_material</class>
+    </service>
+    <service id="machinecenter.service.material.sn.props">
+        <class>goldentra_service_machinecenter_sn_props</class>
+    </service>
+    <service id="console.service.adjust.serial">
+        <class>goldentra_service_adjust_serial</class>
+    </service>
+
+    <!-- 发货完成后：SD003发货落库并推送（确认收货见定时任务） -->
+    <service id="ome.service.delivery.after.consign">
+        <class>goldentra_service_pushsales</class>
+    </service>
+    <!-- 售后单生成后：SD003退货发货上传（本期不做确认收货定时任务） -->
+    <service id="sales.service.aftersale.after.generate">
+        <class>goldentra_service_pushsales</class>
+    </service>
+
+    <service id="extend_filter_material_mdl_basic_material">
+        <class>goldentra_finder_extend_filter_basic_material</class>
+    </service>
+    <service id="extend_filter_console_mdl_basic_material">
+        <class>goldentra_finder_extend_filter_basic_material</class>
+    </service>
+    <service id="extend_filter_console_mdl_branch_product">
+        <class>goldentra_finder_extend_filter_branch_product</class>
+    </service>
+    <service id="extend_filter_wms_mdl_basic_material">
+        <class>goldentra_finder_extend_filter_basic_material</class>
+    </service>
+    <service id="extend_filter_wms_mdl_branch_product">
+        <class>goldentra_finder_extend_filter_branch_product</class>
+    </service>
+    <service id="extend_filter_o2o_mdl_branch_products">
+        <class>goldentra_finder_extend_filter_branch_products</class>
+    </service>
+    <service id="extend_filter_machinecenter_mdl_material_sn">
+        <class>goldentra_finder_extend_filter_material_sn</class>
+    </service>
+    <service id="extend_filter_machinecenter_mdl_material_sn_delivery_op">
+        <class>goldentra_finder_extend_filter_material_sn_delivery_op</class>
+    </service>
+</services>

@@ -18,11 +18,11 @@
     <h2><strong>订单创建成功</strong></h2>
     <h2>订单号: <{$order_bn}></h2>
     <div style="display: flex; justify-content: center; gap: 20px;">
-        <a href="index.php?app=ome&ctl=admin_order&act=addNormalOrder"
+        <a href="<{$continue_create_url}>"
            style="padding: 10px 20px; background-color: #157FE3; color: white; text-decoration: none; border-radius: 5px;">
             继续创建订单
         </a>
-        <a href="index.php?app=ome&ctl=admin_order&act=active"
+        <a href="<{$return_list_url}>"
            style="padding: 10px 20px; background-color: #157FE3; color: white; text-decoration: none; border-radius: 5px;">
             返回订单列表
         </a>

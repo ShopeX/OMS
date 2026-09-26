@@ -24,6 +24,7 @@ class logisticsmanager_print_data_deliveryItems  {
         'delivery_id',
         'product_id',
         'number',
+        'bn',
         'shop_product_id',
     );
     private $type;
@@ -61,7 +62,7 @@ class logisticsmanager_print_data_deliveryItems  {
 
             $middle[$item['delivery_id']][] = $item['item_id'];
             $this->deliveryItems[$item['item_id']] = $item;
-            if(!in_array($item['product_id'], $this->productBn)) {
+            if(!in_array($item['product_id'], $this->productIds)) {
                 $this->productIds[] = $item['product_id'];
             }
         }
@@ -93,6 +94,22 @@ class logisticsmanager_print_data_deliveryItems  {
             $num += $this->deliveryItems[$itemId]['number'];
         }
         return $num;
+    }
+
+    private function wxshipin_product_info($itemIds) {
+        $productInfo = array();
+        foreach ($itemIds as $itemId) {
+            $item = $this->deliveryItems[$itemId];
+            $productData = $this->getProductData($item['delivery_id']);
+            $product = $productData[$item['product_id']];
+            $productInfo[] = array(
+                'name' => isset($product['name']) ? $product['name'] : '',
+                'count' => intval($item['number']),
+                'code' => isset($item['bn']) ? $item['bn'] : '',
+                'description' => isset($product['spec_info']) ? $product['spec_info'] : '',
+            );
+        }
+        return $productInfo;
     }
 
     private function lastField_count($itemIds) {

@@ -29,10 +29,10 @@ class erpapi_shop_response_process_bookingrefund{
     public function ordermsg($params){
         $order_bn = $params['tid'];
         $orderModel = app::get('ome')->model('orders');
-        $orderInfo = $orderModel->dump(array('order_bn' => $order_bn, 'shop_id'=>$params['shop_id']), 'order_id,order_bn,shop_id,status,ship_status,order_bool_type,payed,org_id');
+        $orderInfo = $orderModel->dump(array('order_bn' => $order_bn, 'shop_id'=>$params['shop_id']), 'order_id,order_bn,shop_id,status,ship_status,order_bool_type,payed,org_id,shop_type');
         if(!$orderInfo || !$orderInfo['order_id']){
             kernel::single('erpapi_router_request')->set('shop',$params['shop_id'])->order_get_order_detial($order_bn);
-            $orderInfo = $orderModel->dump(array('order_bn' => $order_bn), 'order_id,shop_id,status,ship_status,order_bool_type');
+            $orderInfo = $orderModel->dump(array('order_bn' => $order_bn), 'order_id,shop_id,status,ship_status,order_bool_type,shop_type');
             if(empty($orderInfo)){
                 return array('rsp'=>'succ', 'msg'=>'订单暂停成功');
             }
@@ -121,6 +121,11 @@ class erpapi_shop_response_process_bookingrefund{
     }
     
     protected function _dealRefund($sdf) {
+        // 抖音(luban)不在此落退款单；refund_apply 不会推进，配置 OMS退款才生成售后单 时会卡住
+        if($sdf['shop_type'] == 'luban'){
+            return [true];
+        }
+        
         $data = array(
             'refund_bn'     => $sdf['order_bn'],
             'shop_id'       => $sdf['shop_id'],

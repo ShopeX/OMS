@@ -31,8 +31,11 @@ class erpapi_shop_response_process_remark {
         $remark[] = $params['new_mark'];
         app::get('ome')->model('orders')->update(array('mark_text'=>serialize($remark)),array('order_id'=>$params['order_id']));
         $orderPauseAllow = app::get('ome')->getConf('ome.orderpause.to.syncmarktext');#同步订单备注是否暂停订单配置
+        $orderPauseMarkText = app::get('ome')->getConf('ome.orderpause.to.syncmarktext.content');
         #备注发生变更，已审核订单暂停
-        if (in_array($params['process_status'], array('splited', 'splitting')) && $orderPauseAllow == 'true') {
+        if (in_array($params['process_status'], array('splited', 'splitting'))
+            && $orderPauseAllow == 'true'
+            && ($orderPauseMarkText === '' || strstr($params['new_mark']['op_content'], $orderPauseMarkText))) {
             app::get('ome')->model('orders')->pauseOrder($params['order_id']);
         }
         $memo ='更新商家备注';

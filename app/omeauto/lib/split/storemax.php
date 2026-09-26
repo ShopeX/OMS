@@ -166,6 +166,16 @@ class omeauto_split_storemax extends omeauto_split_abstract
 
         if (!is_array($arrBranchId)) {
             //手工批量审单 固定仓库
+            if (app::get('o2o')->is_installed()) {
+                $refuseFiltered = kernel::single('o2o_store')->filterBranchIdsByOrderRefuse(
+                    array($arrBranchId),
+                    array_column($arrOrder, 'order_id')
+                );
+                if (empty($refuseFiltered)) {
+                    return array(false, '本订单已拒单的门店仓不可再预占');
+                }
+                $arrBranchId = $refuseFiltered[0];
+            }
             $bi = app::get('ome')->model('branch')->db_dump($arrBranchId, 'b_type,b_status');
             $arrBranchId = array($arrBranchId);
             if ($bi['b_type'] == '2') {
@@ -324,76 +334,134 @@ class omeauto_split_storemax extends omeauto_split_abstract
         return $return;
     }
 
-    #根据订单库存拆分销售物料
+    /**
+     * 按销售物料维度拆单（按套齐套）
+     *
+     * 规则：
+     * 1. 组套以订单明细为准（可能编辑过，如主数据A+C、订单实际B+C），不读主数据BOM
+     * 2. 买了N套就按套审：一套内所有组件库存都够，才能审这一套
+     * 3. 某一套缺件，则本套及后续套都不审，已审套数正常出库
+     *
+     * 例：买10套，每套 B×1 + C×2；库存只够3套 → 审出 B×3、C×6，剩余7套待下次
+     */
     protected function dealStoreOrderObject($arrOrder, $branchInfo) {
-        $return = ['branchInfo'=>[], 'order'=>[], 'sku_num'=>[], 'is_split'=>[]];
-        foreach ($arrOrder as $order) {
-            foreach ($order['objects'] as $object) {
-                $smIds[$object['goods_id']] = $object['goods_id'];
-            }
-        }
-        $smBc = app::get('material')->model('sales_basic_material')->getList('sm_id, bm_id, number', array('sm_id'=>$smIds));
-        $smBmNumber = array();
-        foreach ($smBc as $v) {
-            $smBmNumber[$v['sm_id']][$v['bm_id']] = $v['number'];
-        }
-        foreach ($branchInfo as $branch_id => $value) {
-            $tmpBI = ['branch_id'=>$branch_id, 'store'=>[]];
-            $tmpSN = 0;
-            $is_split = false;
-            $tmpOrder = $arrOrder;
-            foreach ($tmpOrder as $k => $order) {
-                foreach ($order['objects'] as $ok => $object) {
-                    $objNumber = null;
-                    foreach ($object['items'] as $ik => $item) {
-                        $unitNumber = $smBmNumber[$object['goods_id']][$item['product_id']] ? : 1;
-                        if($value['store'][$item['product_id']] < $item['nums']) {
-                            $num = $value['store'][$item['product_id']];
-                        } else {
-                            $num = $item['nums'];
+        $return = array(
+            'branchInfo' => array(),
+            'order'      => array(),
+            'sku_num'    => array(),
+            'is_split'   => array(),
+        );
+
+        foreach ($branchInfo as $branch_id => $branchStore) {
+            $resultBranch = array('branch_id' => $branch_id, 'store' => array());
+            $skuNum = 0;
+            $isSplit = false;
+            $orders = $arrOrder;
+
+            foreach ($orders as $orderKey => $order) {
+                foreach ($order['objects'] as $objectKey => $object) {
+                    $buySets = isset($object['quantity']) ? (int) $object['quantity'] : 0;
+                    if ($buySets < 1 || empty($object['items'])) {
+                        unset($orders[$orderKey]['objects'][$objectKey]);
+                        continue;
+                    }
+
+                    // ---------- 步骤1：算出「单套用量」和「还剩几套待审」 ----------
+                    // 单套用量 = 明细购买总量 / 销售物料购买套数（以订单实际组套为准）
+                    // 待审套数 = 各明细剩余数量能支撑的套数，取最小（齐套）
+                    $unitPerSet = array();
+                    $remainSets = null;
+                    foreach ($object['items'] as $item) {
+                        $productId = $item['product_id'];
+                        $totalNum = isset($item['original_num'])
+                            ? (int) $item['original_num']
+                            : ((int) $item['nums'] + (int) $item['split_num']);
+                        $unit = (int) floor($totalNum / $buySets);
+                        if ($unit < 1) {
+                            $unit = 1;
                         }
-                        $objTmpNum = floor($num / $unitNumber);
-                        if($objTmpNum < 1) {
-                            $objNumber = 0;
+                        $unitPerSet[$productId] = $unit;
+
+                        $itemRemainSets = (int) floor((int) $item['nums'] / $unit);
+                        $remainSets = ($remainSets === null) ? $itemRemainSets : min($remainSets, $itemRemainSets);
+                    }
+                    if ($remainSets < 1) {
+                        unset($orders[$orderKey]['objects'][$objectKey]);
+                        continue;
+                    }
+
+                    // ---------- 步骤2：一套一套扣库存，缺件则停止 ----------
+                    $shipSets = 0;
+                    for ($set = 0; $set < $remainSets; $set++) {
+                        // 先检查本套是否齐套（所有组件库存都够）
+                        $canShip = true;
+                        foreach ($object['items'] as $item) {
+                            $productId = $item['product_id'];
+                            $need = $unitPerSet[$productId];
+                            $store = isset($branchStore['store'][$productId]) ? (int) $branchStore['store'][$productId] : 0;
+                            if ($store < $need) {
+                                $canShip = false;
+                                break;
+                            }
+                        }
+                        // 本套不齐：后面的套也不再审
+                        if (!$canShip) {
                             break;
                         }
-                        if(!isset($objNumber) || $objNumber > $objTmpNum) {
-                            $objNumber = $objTmpNum;
+                        // 扣减本套库存
+                        foreach ($object['items'] as $item) {
+                            $productId = $item['product_id'];
+                            $branchStore['store'][$productId] -= $unitPerSet[$productId];
                         }
+                        $shipSets++;
                     }
-                    if($objNumber) {
-                        foreach ($object['items'] as $ik => $item) {
-                            $unitNumber = $smBmNumber[$object['goods_id']][$item['product_id']] ? : 1;
-                            $num = intval($objNumber * $unitNumber);
-                            if($num < $item['nums']) {
-                                $is_split = true;
-                            }
-                            $tmpOrder[$k]['objects'][$ok]['items'][$ik]['nums'] = $num;
-                            $value['store'][$item['product_id']] -= $num;
-                            $tmpBI['store'][$item['product_id']] += $num;
-                            $tmpSN += $num;
+
+                    // 一套都审不出来
+                    if ($shipSets < 1) {
+                        unset($orders[$orderKey]['objects'][$objectKey]);
+                        $isSplit = true;
+                        continue;
+                    }
+                    // 只审出部分套数，标记拆单未完成
+                    if ($shipSets < $remainSets) {
+                        $isSplit = true;
+                    }
+
+                    // ---------- 步骤3：回写本次审出数量 = 可发套数 × 单套用量 ----------
+                    foreach ($object['items'] as $itemKey => $item) {
+                        $productId = $item['product_id'];
+                        $shipNum = $shipSets * $unitPerSet[$productId];
+                        if ($shipNum < $item['nums']) {
+                            $isSplit = true;
                         }
-                    } else {
-                        unset($tmpOrder[$k]['objects'][$ok]);
-                        $is_split = true;
+                        $orders[$orderKey]['objects'][$objectKey]['items'][$itemKey]['nums'] = $shipNum;
+                        $resultBranch['store'][$productId] += $shipNum;
+                        $skuNum += $shipNum;
                     }
                 }
-                if(empty($tmpOrder[$k]['objects'])) {
-                    unset($tmpOrder[$k]);
+
+                if (empty($orders[$orderKey]['objects'])) {
+                    unset($orders[$orderKey]);
                 }
             }
-            if($tmpOrder) {
-                $return['branchInfo'][$branch_id] = $tmpBI;
-                $return['order'][$branch_id] = $tmpOrder;
-                $return['sku_num'][$branch_id] = $tmpSN;
-                $return['is_split'][$branch_id] = $is_split;
+
+            if ($orders) {
+                $return['branchInfo'][$branch_id] = $resultBranch;
+                $return['order'][$branch_id] = $orders;
+                $return['sku_num'][$branch_id] = $skuNum;
+                $return['is_split'][$branch_id] = $isSplit;
             }
         }
+
         return $return;
     }
 
     protected function getStoreRows($arrBranchId, $bmIds, $splitConfig, $arrOrder)
     {
+        if (app::get('o2o')->is_installed() && !empty($arrOrder) && !empty($arrBranchId)) {
+            $orderIds    = array_column($arrOrder, 'order_id');
+            $arrBranchId = kernel::single('o2o_store')->filterBranchIdsByOrderRefuse((array) $arrBranchId, $orderIds);
+        }
         switch ($splitConfig['s_type']) {
             case '1': #先电商仓再门店仓
                 $storeRows = $this->getBranchStoreRows($arrBranchId, $bmIds);

@@ -510,8 +510,8 @@ class base_rpc_service
         $sign = $request['sign'];
         unset($request['sign']);
 
-        //注销多余的垃圾参数
-        unset($request['_FROM_MQ_QUEUE'], $request['task_id'], $request['rpc_id'], $request['task_type'], $request['taskmgr_sign']);
+        //注销多余的垃圾参数（fails 为 taskmgr 重试计数，不能参与业务验签）
+        unset($request['_FROM_MQ_QUEUE'], $request['task_id'], $request['rpc_id'], $request['task_type'], $request['taskmgr_sign'], $request['fails']);
 
         $app_id = $request['app_id'];
 
@@ -609,7 +609,7 @@ class base_rpc_service
     private function process_rpc()
     {
 
-        ignore_user_abort();
+        ignore_user_abort(true);
         set_time_limit(0);
         $this->process_id = $this->gen_uniq_process_id();
         header('Process-id: ' . $this->process_id);
@@ -961,37 +961,43 @@ class erpapi_rpc_service
         $this->begin(__FUNCTION__);
         $rpc_id = $_REQUEST['task'] ? md5($_REQUEST['task'] . $_REQUEST['method'] . $_SERVER['HTTP_HOST']) : md5($_REQUEST['task'] . $_REQUEST['sign'] . $_SERVER['HTTP_HOST']);
 
-        $push_data = array(
+        // 关键字段放后面，避免被 $_REQUEST 覆盖（尤其是 task_type）
+        $push_data = array_merge($_REQUEST, array(
             'rpc_id'         => $rpc_id,
             '_FROM_MQ_QUEUE' => 'true',
             'task_type'      => 'wmsrpc',
-        );
-        $push_data = array_merge($push_data, $_REQUEST);
+        ));
 
         $uniqid = $_REQUEST['msg_id'] ? $_REQUEST['msg_id'] : $_REQUEST['LogisticCode'];
+        // SAAS 路由用 node_id；兼容 from_node_id，兜底本节点
+        $nodeId = $_REQUEST['node_id'] ? $_REQUEST['node_id'] : ($_REQUEST['from_node_id'] ? $_REQUEST['from_node_id'] : base_shopnode::node_id('ome'));
 
-        taskmgr_func::publishMsg($push_data, 'api', $uniqid, [
-            'SAAS_MQ'           => defined('SAAS_API_MQ') ? constant('SAAS_API_MQ') : '',
-            'queue_config'      => $GLOBALS['_MQ_API_CONFIG'],
-            'queue_exchange'    => 'TG_API_EXCHANGE',
-            'queue_name'        => 'TG_API_QUEUE',
-            'routerKey'         => 'tg.sys.api.'.$data['nodeId'],
-        ]);
-
-        //callback请求进队列
-        // $push_params = array(
-        //     'data' => $push_data,
-        //     'url'  => kernel::openapi_url('openapi.autotask', 'service'),
-        // );
-        // kernel::single('taskmgr_interface_connecter')->push($push_params);
+        // SAAS_API_MQ=true → RabbitMQ TG_API_QUEUE；否则 → Redis wmsrpc（sw.php 消费）
+        $error_msg = '';
+        $pushed = taskmgr_func::publishMsg($push_data, 'api', $uniqid, array(
+            'SAAS_MQ'        => defined('SAAS_API_MQ') ? constant('SAAS_API_MQ') : '',
+            'queue_config'   => $GLOBALS['_MQ_API_CONFIG'],
+            'queue_exchange' => 'TG_API_EXCHANGE',
+            'queue_name'     => 'TG_API_QUEUE',
+            'routerKey'      => 'tg.sys.api.' . $nodeId,
+        ), $error_msg);
 
         $this->end();
 
-        if (!$return) {
+        if ($pushed) {
             $return = array(
                 'rsp'  => 'succ',
                 'data' => array('msg' => 'the wms rpc is into mq now !!!'),
                 'res'  => '',
+            );
+        } else {
+            $return = array(
+                'rsp'  => 'fail',
+                'data' => array(
+                    'msg'   => 'the wms rpc push to mq failed',
+                    'error' => $error_msg ? $error_msg : 'unknown push error',
+                ),
+                'res'  => 'push_mq_failed',
             );
         }
 
@@ -1022,6 +1028,7 @@ class erpapi_rpc_service
                 $_REQUEST = array_merge($_GET, $post);
             }
         }
+
         
         // 如果content_type为application/json，则将body内容转换为json
         if (stripos($_SERVER['CONTENT_TYPE'], 'application/json') !== false) {
@@ -1049,7 +1056,9 @@ class erpapi_rpc_service
         ) {
             return $this->_mq_handle();
         }
-        unset($_REQUEST['_FROM_MQ_QUEUE'], $_REQUEST['rpc_id'], $_REQUEST['task_type'], $_REQUEST['taskmgr_sign']);
+        // fails 为 taskmgr worker 重试计数，不能参与业务验签
+        unset($_REQUEST['_FROM_MQ_QUEUE'], $_REQUEST['rpc_id'], $_REQUEST['task_type'], $_REQUEST['taskmgr_sign'], $_REQUEST['fails']);
+        unset($_POST['_FROM_MQ_QUEUE'], $_POST['rpc_id'], $_POST['task_type'], $_POST['taskmgr_sign'], $_POST['fails']);
 
         // 如果是前后单分离申请，后面有可能需要去掉
         if ('front.' == substr($_REQUEST['method'], 0, 6)) {
@@ -1276,8 +1285,8 @@ class erpapi_rpc_service
             if(!is_object($configObj)) {
                 trigger_error('config class is not object!', E_USER_ERROR);
             }
-            //注销多余的垃圾参数
-            unset($_POST['_FROM_MQ_QUEUE'], $_POST['rpc_id'], $_POST['task_type'], $_POST['taskmgr_sign'], $_POST['pathinfo']);
+            //注销多余的垃圾参数（fails 为 taskmgr 重试计数，不能参与业务验签）
+            unset($_POST['_FROM_MQ_QUEUE'], $_POST['rpc_id'], $_POST['task_type'], $_POST['taskmgr_sign'], $_POST['pathinfo'], $_POST['fails']);
             // 签名
             $sign       = $_POST['sign'];unset($_POST['sign']);
             $sign_check = $configObj->gen_sign($_POST);
@@ -1501,7 +1510,7 @@ class base_render
             }
             $last_modified = filemtime($tmpl_file);
         }
-        $min = strtotime('2024-03-06');
+        $min = strtotime('2024-03-14 11:00');
         if ($last_modified < $min) {
             $last_modified = $min;
         }
@@ -1726,7 +1735,6 @@ class base_certificate
     static $certi = null;
 
 
-
     //设置对外发布版本
     public static function set_release_version($release_version = null)
     {
@@ -1900,7 +1908,7 @@ class ome_rpc_request
      * @param String $http_method HTTP请求方式,POST或GET
      * @return boolean
      */
-    public function request($method, $params, $callback = array(), $title, $shop_id = null, $time_out = 10, $queue = false, $addon = '', $write_log = array(), $center = false, $http_method = 'POST')
+    public function request($method, $params, $callback = array(), $title = '', $shop_id = null, $time_out = 10, $queue = false, $addon = '', $write_log = array(), $center = false, $http_method = 'POST')
     {
         $return_value = array('rsp' => 'fail', 'res' => '', 'data' => '');
         //过滤此次同步前端店铺

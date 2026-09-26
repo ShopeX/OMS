@@ -17,6 +17,9 @@
 /**
  * @author chenping 2016/8/22
  * @describe alipay/JD钱包
+ *
+ * __adapter 固定 matrix（矩阵、config/result 解析依赖）；请求类物理路径由路由单独拼为 lib/ipay/{node_type}/request/*.php
+ * node_type → __platform；biz_type → __platform_business（路由插入 biz 段）
  */
 class erpapi_channel_ipay extends erpapi_channel_abstract
 {
@@ -38,7 +41,8 @@ class erpapi_channel_ipay extends erpapi_channel_abstract
         if (!$channel || $channel['channel_type'] != 'ipay') return false;
 
         $this->__platform = $channel['node_type'];
-        $this->__adapter  = 'matrix';
+        $this->__adapter  = '';
+        $this->__platform_business = isset($channel['biz_type']) ? (string) $channel['biz_type'] : '';
 
         $this->channel = $channel;
 

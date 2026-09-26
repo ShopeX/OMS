@@ -25,7 +25,7 @@
       <{else}>
         <select name="channel[channel_mode]" class="x-input">
           <{foreach from=$channel_modes item=value key=key}>
-            <option value="<{$key}>"><{$value}></option>
+            <option value="<{$key}>" <{if $channel.shipper == $key}>selected<{/if}>><{$value}></option>
           <{/foreach}>
         </select>
       <{/if}>

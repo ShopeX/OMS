@@ -126,7 +126,41 @@ class erpapi_shop_matrix_vop_response_order extends erpapi_shop_response_order
         if($this->_ordersdf['consignee'] && isset($this->_ordersdf['consignee']['r_time']) && is_array($this->_ordersdf['consignee']['r_time'])) {
             $this->_ordersdf['consignee']['r_time'] = !empty($this->_ordersdf['consignee']['r_time']) ? $this->_ordersdf['consignee']['r_time'][0] : '';
         }
-
+        
+        // 唯品会JITX补寄订单
+        $getBufaResult = kernel::single('ome_order_platform_vop_bufa')->validateBufaOrder($this->_ordersdf, $this->__channelObj->channel);
+        if($getBufaResult['rsp'] == 'succ'){
+            // flag
+            $this->_ordersdf['is_bufa_order'] = 'true';
+            
+            // 补发订单类型
+            $this->_ordersdf['order_type'] = 'bufa';
+            
+            // 关联订单号（原主订单号）
+            if(isset($getBufaResult['data']['relate_order_bn']) && $getBufaResult['data']['relate_order_bn']){
+                $this->_ordersdf['relate_order_bn'] = $getBufaResult['data']['relate_order_bn'];
+            }
+            
+//            // 平台单号
+//            if(isset($getBufaResult['data']['platform_order_bn']) && $getBufaResult['data']['platform_order_bn']){
+//                $this->_ordersdf['platform_order_bn'] = $getBufaResult['data']['platform_order_bn'];
+//            }
+            
+            // 商家备注
+            if(isset($getBufaResult['data']['mark_text']) && $getBufaResult['data']['mark_text']){
+                $this->_ordersdf['mark_text'] = $getBufaResult['data']['mark_text'];
+            }
+            
+            // OMS物流公司ID
+            if(isset($getBufaResult['data']['logi_id']) && $getBufaResult['data']['logi_id']){
+                $this->_ordersdf['shipping']['logi_id'] = $getBufaResult['data']['logi_id'];
+            }
+            
+            // OMS物流公司编码
+            if(isset($getBufaResult['data']['logi_code']) && $getBufaResult['data']['logi_code']){
+                $this->_ordersdf['shipping']['logi_code'] = $getBufaResult['data']['logi_code'];
+            }
+        }
     }
 
     protected function get_create_plugins()

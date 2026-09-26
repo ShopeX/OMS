@@ -1,19 +1,5 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+
 /**
  * ============================
  * @Author:   yaokangming
@@ -23,12 +9,6 @@
  * ============================
  */
 class console_adjust {
-
-    /**
-     * dealSave
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
 
     public function dealSave($data) {
         if(empty($data['branch_id'])) {
@@ -120,7 +100,7 @@ class console_adjust {
                 return [false, ['msg'=>'商品:'.$tmp['bm_bn'].'调整后数量不能为负数 调整后数量为:'.$tmp['final_number'].' 调整前数量为:'.$tmp['origin_number'].' 调整数量为:'.$tmp['number']]];
             }
             if($data['sn'][$bmId]) {
-                if(count($data['sn'][$bmId]) != $tmp['number']) {
+                if(count($data['sn'][$bmId]) != abs($tmp['number'])) {
                     kernel::database()->rollBack();
                     return [false, ['msg'=>'商品:'.$tmp['bm_bn'].' SN数量不对']];
                 }
@@ -147,39 +127,56 @@ class console_adjust {
         app::get('ome')->model('operation_log')->write_log('adjust@console',$main['id'],"新建成功，来源：".($data['source']?:'新建操作'));
         kernel::database()->commit();
      
-        if($data['is_check'] == '0') {
-            $this->confirmBill($main);
+        if ($data['is_check'] == '0') {
+            list($confirmRs, $confirmData) = $this->confirmBill($main);
+            if (!$confirmRs && !empty($confirmData['msg'])) {
+                return [true, ['msg' => '保存成功，自动确认失败：' . $confirmData['msg']]];
+            }
         }
-        return [true, ['msg'=>'操作成功']];
+        return [true, ['msg'=>'操作成功', 'adjust_id'=>$main['id'], 'adjust_bn'=>$main['adjust_bn']]];
     }
 
    
-    /**
-     * confirmBill
-     * @param mixed $main main
-     * @return mixed 返回值
-     */
     public function confirmBill($main) {
-        $items = app::get('console')->model('adjust_items')->getList('id', ['adjust_id'=>$main['id'], 'adjust_status'=>'0']);
-        
-        $itemIds = array_column($items, 'id');
-        foreach (array_chunk($itemIds, 100000) as $val) {
-            $this->confirmItems($val,$main);
+        if (empty($main['id'])) {
+            return [false, ['msg' => '调整单主键缺失']];
         }
+        $main = app::get('console')->model('adjust')->db_dump($main['id']);
+        if (empty($main)) {
+            return [false, ['msg' => '调整单不存在']];
+        }
+
+        $items = app::get('console')->model('adjust_items')->getList('id', ['adjust_id' => $main['id'], 'adjust_status' => '0']);
+        $itemIds = array_column($items, 'id');
+        if (empty($itemIds)) {
+            return [true, ['msg' => '明细已经调整完']];
+        }
+
+        $lastResult = [true, ['msg' => '操作成功']];
+        foreach (array_chunk($itemIds, 100000) as $val) {
+            $lastResult = $this->confirmItems($val, $main);
+            if (!$lastResult[0]) {
+                return $lastResult;
+            }
+        }
+        return $lastResult;
     }
 
-    /**
-     * confirmItems
-     * @param mixed $itemIds ID
-     * @param mixed $main main
-     * @return mixed 返回值
-     */
     public function confirmItems($itemIds, $main) {
         $adjustItemsMdl = app::get('console')->model('adjust_items');
         
+        $itemIds = array_values(array_filter(array_map('intval', (array) $itemIds)));
+        if (empty($itemIds) || empty($main['id'])) {
+            return [false, ['msg' => '缺少有效的调整单或明细', 'fail_num' => count((array) $itemIds)]];
+        }
+
         $items = $adjustItemsMdl->getList('id,bm_id,bm_bn,number,sn,batch', ['id'=>$itemIds, 'adjust_id'=>$main['id'], 'adjust_status'=>'0']);
-     
+
         if(empty($items)) {
+            $pending = $adjustItemsMdl->count(['adjust_id' => $main['id'], 'adjust_status' => '0']);
+            if ($pending > 0) {
+                return [false, ['msg' => '未找到匹配的待确认明细，请刷新页面后重试', 'fail_num' => count($itemIds)]];
+            }
             return [true, ['msg'=>'明细已经调整完']];
         }
         $adjust_channel = $main['adjust_channel'].($main['adjust_bill_type'] == '库存初始化' ? '_init' : '');
@@ -241,14 +238,14 @@ class console_adjust {
         if($addData['items']) {
             list($rs, $rsData)  =$this->_dealInItems($addData);
             if(!$rs) {
-                $msg .= '入库失败：' . $rsData['msg'];
+                $msg .= '入库失败：' . $this->_formatIostockMsg(isset($rsData['msg']) ? $rsData['msg'] : '');
                 $failNum += count($addData['items']);
             }
         }
         if($subData['items']) {
             list($rs, $rsData) = $this->_dealOutItems($subData);
             if(!$rs) {
-                $msg .= '出库失败：' . $rsData['msg'];
+                $msg .= '出库失败：' . $this->_formatIostockMsg(isset($rsData['msg']) ? $rsData['msg'] : '');
                 $failNum += count($subData['items']);
             }
         }
@@ -314,6 +311,9 @@ class console_adjust {
         $iostockorder_instance = kernel::single('console_iostockorder');
         $rs = $iostockorder_instance->save_iostockorder($data, $msg);
         if($rs) {
+            if ($addData['iso_status'] == 'confirm') {
+                $this->machineCenterAdjustSnAdd($rs);
+            }
             $adjustItemsMdl = app::get('console')->model('adjust_items');
             $adjustItemsMdl->update(['adjust_status'=>'1'], ['id'=>$addData['item_id']]);
             kernel::database()->commit();
@@ -321,7 +321,53 @@ class console_adjust {
             kernel::database()->rollBack();
 
         }
-        return [$rs, ['msg'=>$msg]];
+        return [$rs, ['msg'=>$this->_formatIostockMsg($msg)]];
+    }
+
+    /**
+     * save_iostockorder / confirm_iostockorder 失败时 $msg 可能是 string 或 array，统一转成可读文本。
+     *
+     * @param mixed $msg
+     * @return string
+     */
+    private function _formatIostockMsg($msg)
+    {
+        if ($msg === null || $msg === '') {
+            return '';
+        }
+        if (is_string($msg) || is_numeric($msg)) {
+            return (string) $msg;
+        }
+        if (!is_array($msg)) {
+            return (string) $msg;
+        }
+        if (isset($msg['iostock_msg'])) {
+            $inner = $msg['iostock_msg'];
+            if (is_array($inner)) {
+                return implode('; ', array_map('strval', array_filter($inner, function ($v) {
+                    return $v !== '' && $v !== null;
+                })));
+            }
+            return (string) $inner;
+        }
+        if (isset($msg['msg'])) {
+            return $this->_formatIostockMsg($msg['msg']);
+        }
+        $parts = array();
+        foreach ($msg as $k => $v) {
+            if ($v === '' || $v === null) {
+                continue;
+            }
+            if (is_array($v)) {
+                $text = $this->_formatIostockMsg($v);
+            } else {
+                $text = (string) $v;
+            }
+            if ($text !== '') {
+                $parts[] = $text;
+            }
+        }
+        return implode('; ', $parts);
     }
 
     private function _dealOutItems($subData){
@@ -371,8 +417,7 @@ class console_adjust {
                 $products[$bm_id] = [
                     'bn' => $arrBmBn[$bm_id],
                     'name' => '',
-                  
-                    'sn' => $arrSn[$bm_id],
+                    'sn_list' => $arrSn[$bm_id],
                     'nums' => $n,
                     'unit' => '',
                     'price' => 0,
@@ -404,6 +449,9 @@ class console_adjust {
             $iostockorder_instance = kernel::single('console_iostockorder');
             $rs = $iostockorder_instance->save_iostockorder($data, $msg);
             if($rs) {
+                if ($subData['iso_status'] == 'confirm') {
+                    $this->machineCenterAdjustSnAdd($rs);
+                }
                 $adjustItemsMdl = app::get('console')->model('adjust_items');
                 $adjustItemsMdl->update(['adjust_status'=>'1'], ['id'=>$itemIds]);
                 kernel::database()->commit();
@@ -411,7 +459,7 @@ class console_adjust {
 
                 $rsbool = false;
                 $failBranchId[] = $branch_id;
-                $rsMsg .= '仓库ID:'.$branch_id.','.$msg.'</br>';
+                $rsMsg .= '仓库ID:'.$branch_id.','.$this->_formatIostockMsg($msg).'</br>';
 
                 kernel::database()->rollBack();
             }
@@ -419,11 +467,24 @@ class console_adjust {
         return [$rsbool, ['msg'=>$rsMsg, 'branch_id'=>$failBranchId]];
     }
 
-    /**
-     * 创建AdjustDiff
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
+    private function machineCenterAdjustSnAdd($iso_id)
+    {
+        if (!app::get('machinecenter')->is_installed()) {
+            return;
+        }
+
+        $isoMdl = app::get('taoguaniostockorder')->model('iso');
+        $itemsMdl = app::get('taoguaniostockorder')->model('iso_items');
+        $isoInfo = $isoMdl->db_dump($iso_id, 'iso_id,iso_bn,type_id,branch_id,complete_time');
+        if (empty($isoInfo)) {
+            return;
+        }
+
+        $isoInfo['finish_time'] = $isoInfo['complete_time'];
+        $isoInfo['items'] = $itemsMdl->getList('product_id,bn,sn_list', array('iso_id' => $iso_id));
+        kernel::single('console_receipt_stock')->machineCenterOtherStockAdd($isoInfo['iso_id'], $isoInfo);
+    }
+
     public function createAdjustDiff($data)
     {
         $adjsutMdl      = app::get('console')->model('adjust');

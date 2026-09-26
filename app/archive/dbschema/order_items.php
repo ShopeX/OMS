@@ -105,6 +105,13 @@ $db['order_items']=array (
       'editable' => false,
       'comment' => '合计',
     ),
+    'refund_money' => array(
+        'type' => 'money',
+        'editable' => false,
+        'label' => '退款费用',
+        'default'=>0,
+        'comment' => '订单行明细退款金额',
+    ),
     'weight' =>
     array (
       'type' => 'money',
@@ -166,6 +173,34 @@ $db['order_items']=array (
         'type' => 'money',
         'editable' => false,
         'label' => '优惠分摊',
+    ),
+    'platform_amount' =>
+    array (
+        'type' => 'money',
+        'default' => '0',
+        'editable' => false,
+        'label' => '平台承担金额（不包含支付优惠）',
+    ),
+    'settlement_amount' =>
+    array (
+        'type' => 'money',
+        'default' => '0',
+        'editable' => false,
+        'label' => '结算金额',
+    ),
+    'actually_amount' =>
+    array (
+        'type' => 'money',
+        'default' => '0',
+        'editable' => false,
+        'label' => '客户实付',
+    ),
+    'platform_pay_amount' =>
+    array (
+        'type' => 'money',
+        'default' => '0',
+        'editable' => false,
+        'label' => '支付优惠金额',
     ),
     'score' =>
         array (

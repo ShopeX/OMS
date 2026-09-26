@@ -30,6 +30,12 @@ class material_sales_material_import
     
     //导入的销售物料编码列表
     protected $_saleMasterBns = [];
+
+    /** @var string|null 扩展列「调色号」表头（如 *:调色号） */
+    protected $_colorCodeColumnTitle = null;
+
+    /** @var array|null 色号 options（与编辑/新增销售物料下拉一致） */
+    protected $_colorCodeOptions = null;
     
     const IMPORT_TITLE = [
         '*:销售物料编码',
@@ -44,6 +50,17 @@ class material_sales_material_import
         '*:组合价格贡献占比',
         '*:组合贡献价',
     ];
+
+    /**
+     * 表头 = 固定列 + 扩展列（sdb_material_basic_material_props，与导出一致）
+     * @return array
+     */
+    protected function _getFullImportTitle()
+    {
+        $extended = kernel::single('material_customcols')->getcolstemplateForBmProps();
+        $extendedTitles = array_keys($extended);
+        return array_merge(self::IMPORT_TITLE, $extendedTitles);
+    }
     
     /**
      * 获取ExcelTitle
@@ -51,8 +68,10 @@ class material_sales_material_import
      */
     public function getExcelTitle()
     {
-        return ['销售物料导入模板.xlsx',[
-            self::IMPORT_TITLE,
+        $fullTitle = $this->_getFullImportTitle();
+        $extendedCount = count($fullTitle) - count(self::IMPORT_TITLE);
+        $pad = $extendedCount > 0 ? array_fill(0, $extendedCount, '') : [];
+        $samples = [
             ['material_001','样例1：普通销售物料','普通','全部店铺','件','125','1','product_001','1','100','125'],
             ['material_002','样例2：组合销售物料','组合','全部店铺','',  '1000','1','product_001','1','20','200'],
             ['','','','','','1000','2','product_002','5','30','300'],
@@ -61,7 +80,12 @@ class material_sales_material_import
             ['material_004','样例4：福袋组合销售物料','福袋组合','全部店铺','','1000','1','product_001','1','10','100'],
             ['','','','','','1000','2','product_002','1','30','300'],
             ['','','','','','1000','3','product_003','1','60','600'],
-        ]];
+        ];
+        foreach ($samples as &$row) {
+            $row = array_merge($row, $pad);
+        }
+        unset($row);
+        return ['销售物料导入模板.xlsx', array_merge([$fullTitle], $samples)];
     }
 
     /**
@@ -114,28 +138,25 @@ class material_sales_material_import
             //title
             if ($line == 1) {
                 $title = $buffer;
-                
-                // 验证模板是否正确
-                if (array_filter($title) != self::IMPORT_TITLE) {
-                    //flag
+                // 验证模板是否正确：前若干列必须与 IMPORT_TITLE 一致，后面可有扩展列
+                $requiredTitle = array_slice(array_values(array_filter($title)), 0, count(self::IMPORT_TITLE));
+                if ($requiredTitle != self::IMPORT_TITLE) {
                     $this->_isCheckFail = true;
-                    
                     return [false, '导入模板不正确'];
                 }
-                
                 return [true, ''];
             }
             
             //检查导入的销售物料列信息
-            if(count($buffer) < count(self::IMPORT_TITLE)) {
-                //flag
+            if (count($buffer) < count(self::IMPORT_TITLE)) {
                 $this->_isCheckFail = true;
-                
                 return [false, '导入数据列不正确'];
             }
             
-            //格式化销售物料列信息key=value,例如：('*:销售物料编码' => '10007008')
-            $buffer = array_combine(self::IMPORT_TITLE, array_slice($buffer, 0, count(self::IMPORT_TITLE)));
+            // 格式化：按实际表头与当前行组合，支持扩展列
+            $titleRow = isset($title) ? $title : self::IMPORT_TITLE;
+            $len = min(count($titleRow), count($buffer));
+            $buffer = array_combine(array_slice($titleRow, 0, $len), array_slice($buffer, 0, $len));
             
             //check sales_material_bn
             if(in_array($buffer['*:销售物料编码'], $this->_saleMasterBns)){
@@ -363,8 +384,149 @@ class material_sales_material_import
         if($salesMaterialInfo) {
             return [false, ['msg'=>'已经存在,不允许重复导入']];
         }
+
+        list($colorOk, $colorMsg) = $this->_validateImportColorCodes($salesMaterial);
+        if (!$colorOk) {
+            return [false, ['msg' => $colorMsg]];
+        }
         
         return [true, ['msg'=>'检测成功']];
+    }
+
+    /**
+     * 扩展列「调色号」表头（custom_color_code）
+     *
+     * @return string
+     */
+    protected function _getColorCodeImportColumnTitle()
+    {
+        if ($this->_colorCodeColumnTitle !== null) {
+            return $this->_colorCodeColumnTitle;
+        }
+        $this->_colorCodeColumnTitle = '';
+        $extended = kernel::single('material_customcols')->getcolstemplateForBmProps();
+        foreach ($extended as $colTitle => $path) {
+            if ($path === 'sales_bm_props/custom_color_code') {
+                $this->_colorCodeColumnTitle = $colTitle;
+                break;
+            }
+        }
+        return $this->_colorCodeColumnTitle;
+    }
+
+    /**
+     * 色号下拉 options（与 material_sales_extended_cols / 编辑页一致）
+     *
+     * @return array
+     */
+    protected function _getColorCodeOptions()
+    {
+        if ($this->_colorCodeOptions !== null) {
+            return $this->_colorCodeOptions;
+        }
+        $options = array();
+        
+        if (!$options) {
+            $extendedCols = kernel::single('material_sales_extended_cols')->getExtendedColsWithParams();
+            foreach ($extendedCols as $col) {
+                if (isset($col['col_key']) && $col['col_key'] === 'custom_color_code' && !empty($col['options']) && is_array($col['options'])) {
+                    $options = $col['options'];
+                    break;
+                }
+            }
+        }
+        $this->_colorCodeOptions = is_array($options) ? $options : array();
+        return $this->_colorCodeOptions;
+    }
+
+    /**
+     * 将 Excel 填写的调色号规范为 color_code；空串表示未填
+     *
+     * @param string $input
+     * @return string|false
+     */
+    protected function _normalizeImportColorCode($input)
+    {
+        $input = trim((string) $input);
+        if ($input === '') {
+            return '';
+        }
+        foreach ($this->_getColorCodeOptions() as $opt) {
+            if (!is_array($opt)) {
+                continue;
+            }
+            $code = isset($opt['color_code']) ? trim((string) $opt['color_code']) : '';
+            if ($code !== '' && $code === $input) {
+                return $code;
+            }
+            $name = isset($opt['color_name']) ? trim((string) $opt['color_name']) : '';
+            if ($name !== '' && $name === $input) {
+                return $code;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 校验导入行中的调色号是否在色号主数据列表内（与新增/编辑销售物料下拉一致）
+     *
+     * @param array $salesMaterial
+     * @return array [bool ok, string msg]
+     */
+    protected function _validateImportColorCodes($salesMaterial)
+    {
+        $colTitle = $this->_getColorCodeImportColumnTitle();
+        if ($colTitle === '') {
+            return array(true, '');
+        }
+        if ((string) $salesMaterial['sales_material_type'] === '7') {
+            return array(true, '');
+        }
+        $options = $this->_getColorCodeOptions();
+        $propsMdl = app::get('material')->model('basic_material_props');
+        $bmIdByBn = array();
+        $salesBn = isset($salesMaterial['*:销售物料编码']) ? $salesMaterial['*:销售物料编码'] : '';
+
+        foreach ($salesMaterial['items'] as $val) {
+            $raw = isset($val[$colTitle]) ? trim((string) $val[$colTitle]) : '';
+            if ($raw === '') {
+                continue;
+            }
+            if (empty($options)) {
+                return array(false, sprintf('%s：已填写调色号「%s」，但系统未配置可用色号列表', $salesBn, $raw));
+            }
+            $normalized = $this->_normalizeImportColorCode($raw);
+            if ($normalized === false) {
+                return array(false, sprintf(
+                    '%s 基础物料 %s 的调色号「%s」不在色号列表内，请填写与【新增/编辑销售物料】下拉一致的色号编码（如 pink）',
+                    $salesBn,
+                    $val['*:基础物料编码/福袋组合编码'],
+                    $raw
+                ));
+            }
+            $productBn = $val['*:基础物料编码/福袋组合编码'];
+            if (!isset($bmIdByBn[$productBn])) {
+                $bm = $this->_basicMaterialObj->db_dump(array('material_bn' => $productBn), 'bm_id');
+                $bmIdByBn[$productBn] = $bm ? (int) $bm['bm_id'] : 0;
+            }
+            $bmId = $bmIdByBn[$productBn];
+            if ($bmId > 0) {
+                $isCustom = $propsMdl->db_dump(array(
+                    'bm_id'      => $bmId,
+                    'props_col'  => 'is_custom_color',
+                    'props_value'=> '1',
+                ), 'id');
+                if (!$isCustom) {
+                    return array(false, sprintf(
+                        '%s 基础物料 %s 未开启「是否调色」，不能填写调色号「%s」',
+                        $salesBn,
+                        $productBn,
+                        $raw
+                    ));
+                }
+            }
+        }
+        return array(true, '');
     }
     
     /**
@@ -386,28 +548,22 @@ class material_sales_material_import
             //title
             if ($line == 1) {
                 $title = $buffer;
-                
-                // 验证模板是否正确
-                if (array_filter($title) != self::IMPORT_TITLE) {
-                    //flag
+                $requiredTitle = array_slice(array_values(array_filter($title)), 0, count(self::IMPORT_TITLE));
+                if ($requiredTitle != self::IMPORT_TITLE) {
                     $this->_isSaveFail = true;
-                    
                     return [false, '导入的模板不正确'];
                 }
-                
                 return [true, ''];
             }
             
-            //检查导入的销售物料列信息
-            if(count($buffer) < count(self::IMPORT_TITLE)) {
-                //flag
+            if (count($buffer) < count(self::IMPORT_TITLE)) {
                 $this->_isSaveFail = true;
-                
                 return [false, '导入的数据列不正确'];
             }
             
-            //格式化销售物料列信息key=value,例如：('*:销售物料编码' => '10007008')
-            $buffer = array_combine(self::IMPORT_TITLE, array_slice($buffer, 0, count(self::IMPORT_TITLE)));
+            $titleRow = isset($title) ? $title : self::IMPORT_TITLE;
+            $len = min(count($titleRow), count($buffer));
+            $buffer = array_combine(array_slice($titleRow, 0, $len), array_slice($buffer, 0, $len));
             
             $msg = '';
             if($buffer['*:销售物料编码']) {
@@ -468,7 +624,6 @@ class material_sales_material_import
             '*:基础物料编码/福袋组合编码',
             '*:基础物料数量',
         ];
-        
         //check fields
         foreach ($required as $v)
         {
@@ -580,6 +735,8 @@ class material_sales_material_import
         $saleFukuMdl                = app::get('material')->model('sales_material_fukubukuro');
         $luckybagLib                = kernel::single('material_luckybag');
         $salesBasicMaterialObj      = app::get('material')->model('sales_basic_material');
+        $salesBmPropsMdl            = app::get('material')->model('sales_basic_material_props');
+        $extendedTemplate           = kernel::single('material_customcols')->getcolstemplateForBmProps();
         
         $items = [];
         foreach ($salesMaterial['items'] as $v)
@@ -700,6 +857,28 @@ class material_sales_material_import
                         'rate'   => $v['rate']
                     );
                     $salesBasicMaterialObj->insert($addBindData);
+                    // 扩展列：路径为 sales_bm_props/ 的，保存到 sales_basic_material_props（与 add 一致）
+                    $row = isset($salesMaterial['items'][$k]) ? $salesMaterial['items'][$k] : array();
+                    foreach ($extendedTemplate as $colTitle => $path) {
+                        if (strpos((string) $path, 'sales_bm_props/') !== 0) {
+                            continue;
+                        }
+                        $colKey = substr($path, strlen('sales_bm_props/'));
+                        $val = isset($row[$colTitle]) ? trim((string) $row[$colTitle]) : '';
+                        if ($colKey === 'custom_color_code' && $val !== '') {
+                            $normalized = $this->_normalizeImportColorCode($val);
+                            $val = ($normalized !== false && $normalized !== '') ? $normalized : $val;
+                        }
+                        if ($val !== '') {
+                            $propsdata=array(
+                                'sm_id'       => $addData['sm_id'],
+                                'bm_id'       => (int) $v['bm_id'],
+                                'props_col'   => $colKey,
+                                'props_value' => $val,
+                            );
+                            $salesBmPropsMdl->insert($propsdata);
+                        }
+                    }
                 }
             }
             

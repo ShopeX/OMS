@@ -1,49 +1,147 @@
-<!--
-  Copyright 2012-2026 ShopeX (https://www.shopex.cn)
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
--->
-
+<style>
+#customcols-form .customcols-grid,
+#customcols-form .customcol-main {
+  table-layout: fixed;
+  width: 100%;
+}
+#customcols-form .customcol-block {
+  margin-bottom: 8px;
+  border: 1px solid #e5e5e5;
+  background: #fff;
+}
+#customcols-form .customcol-main {
+  margin: 0;
+}
+#customcols-form .col-type-cell {
+  width: 90px;
+  overflow: hidden;
+}
+#customcols-form .col-type-select {
+  width: 84px !important;
+  max-width: 84px !important;
+  min-width: 84px;
+  box-sizing: border-box;
+}
+#customcols-form .col-options-panel {
+  display: none;
+  padding: 10px 12px 12px;
+  background: #f7f8fa;
+  border-top: 1px solid #e5e5e5;
+}
+#customcols-form .col-options-panel.is-open {
+  display: block;
+}
+#customcols-form .col-options-toolbar {
+  margin-bottom: 8px;
+  line-height: 24px;
+}
+#customcols-form .col-options-toolbar .opt-title {
+  font-weight: bold;
+  margin-right: 12px;
+}
+#customcols-form .col-options-toolbar .add-opt {
+  cursor: pointer;
+  color: #3366cc;
+}
+#customcols-form .col-options-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  background: #fff;
+}
+#customcols-form .col-options-table th,
+#customcols-form .col-options-table td {
+  padding: 6px 8px;
+  border: 1px solid #e0e0e0;
+  text-align: left;
+}
+#customcols-form .col-options-table th {
+  background: #f0f0f0;
+  font-weight: normal;
+}
+#customcols-form .col-options-table input {
+  width: 100%;
+  box-sizing: border-box;
+}
+#customcols-form .col-options-table .opt-del {
+  cursor: pointer;
+  color: #c00;
+}
+</style>
 <form id="customcols-form" action="index.php?<{$env.SERVER.QUERY_STRING}>" method="POST">
+  <input type="hidden" name="customcols_save" value="1" />
   <div class="tableform">
     <div id="add-errorinfo" class="error" style="display:none;"></div>
     <div class="division">
       <div>
         <{button label="添加字段" class="addspec" id="addspec" icon="btn_add.gif" app="desktop"}>
-        <span class="notice-inline"></span>
+        <span class="notice-inline">类型选「下拉」后，在下方整行配置「值 / 显示名」；显示名可留空，将与值相同</span>
       </div>
 
-      <table border="0" cellspacing="0" cellpadding="0" class="gridlist  text-spec-value-table">
+      <table border="0" cellspacing="0" cellpadding="0" class="gridlist text-spec-value-table customcols-grid">
         <caption>↓拖动可以排序</caption>
         <thead>
           <tr>
             <th style="width:30px" title="拖动可以排序">拖动</th>
-            <th><{t}>字段名称<{/t}></th>
-            <th><{t}>字段描述<{/t}></th>
-            <th style="width:30px;"><{t}>操作<{/t}></th>
+            <th style="width:160px;"><{t}>字段键<{/t}></th>
+            <th style="width:160px;"><{t}>字段名称<{/t}></th>
+            <th style="width:90px;"><{t}>类型<{/t}></th>
+            <th style="width:40px;"><{t}>操作<{/t}></th>
           </tr>
         </thead>
       </table>
       <div class="sepc_value_table text-spec-value-table" id="spec_body">
 
             <{foreach from=$cols item=col}>
-            <table class="gridlist" border="0" cellpadding="0" cellspacing="0">
+            <div class="customcol-block">
+              <table class="gridlist customcol-main" border="0" cellpadding="0" cellspacing="0">
                 <tbody><tr>
                     <td style="width:30px" class="move-handler" title="拖动可以排序"><{img src="bundle/grippy.gif" app="desktop"}></td>
-                    <td><{input type="text" name="cols[{$col.id}][col_key]" value="{$col.col_key}" size="40" maxlength="40" vtype="required"}></td>
-                    <td><{input type="text" name="cols[{$col.id}][col_name]" value="{$col.col_name}" size="40" maxlength="40"}></td>
-                    <td style="width:30px"><input class="col-id" type="hidden" name="cols[<{$col.id}>][id]" value="<{$col.id}>"/><{img app="desktop" src="bundle/delete.gif" class="delete" title="删除" style="cursor:pointer;" }></td></tr></tbody>
-            </table>
+                    <td style="width:160px;"><{input type="text" name="cols[{$col.id}][col_key]" value="{$col.col_key}" size="18" maxlength="40" vtype="required"}></td>
+                    <td style="width:160px;"><{input type="text" name="cols[{$col.id}][col_name]" value="{$col.col_name}" size="18" maxlength="40"}></td>
+                    <td class="col-type-cell">
+                      <select name="cols[<{$col.id}>][col_type]" class="col-type-select">
+                        <option value="input" <{if !$col.col_type || $col.col_type == 'input'}>selected<{/if}>>文本</option>
+                        <option value="radiobox" <{if $col.col_type == 'radiobox'}>selected<{/if}>>是/否</option>
+                        <option value="select" <{if $col.col_type == 'select'}>selected<{/if}>>下拉</option>
+                      </select>
+                    </td>
+                    <td style="width:40px"><input class="col-id" type="hidden" name="cols[<{$col.id}>][id]" value="<{$col.id}>"/><{img app="desktop" src="bundle/delete.gif" class="delete" title="删除" style="cursor:pointer;" }></td>
+                </tr></tbody>
+              </table>
+              <div class="col-options-panel<{if $col.col_type == 'select'}> is-open<{/if}>" data-col-prefix="cols[<{$col.id}>]">
+                <div class="col-options-toolbar">
+                  <span class="opt-title">下拉选项</span>
+                  <a href="javascript:void(0);" class="add-opt">+ 添加选项</a>
+                </div>
+                <table class="col-options-table">
+                  <thead>
+                    <tr>
+                      <th style="width:40%;">值（入库）</th>
+                      <th>显示名</th>
+                      <th style="width:50px;">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody class="opt-body">
+                    <{if $col.options}>
+                      <{foreach from=$col.options item=opt key=optidx}>
+                      <tr>
+                        <td><input type="text" name="cols[<{$col.id}>][options][<{$optidx}>][value]" value="<{$opt.value}>" maxlength="50" /></td>
+                        <td><input type="text" name="cols[<{$col.id}>][options][<{$optidx}>][label]" value="<{$opt.label}>" maxlength="50" /></td>
+                        <td><a href="javascript:void(0);" class="opt-del">删除</a></td>
+                      </tr>
+                      <{/foreach}>
+                    <{else}>
+                      <tr>
+                        <td><input type="text" name="cols[<{$col.id}>][options][0][value]" value="" maxlength="50" /></td>
+                        <td><input type="text" name="cols[<{$col.id}>][options][0][label]" value="" maxlength="50" /></td>
+                        <td><a href="javascript:void(0);" class="opt-del">删除</a></td>
+                      </tr>
+                    <{/if}>
+                  </tbody>
+                </table>
+              </div>
+            </div>
             <{/foreach}>
       </div>
     </div>
@@ -61,40 +159,160 @@
 <script>
 (function(){
     var new_spec_item = 0;
-    var getTemp = function(i){
-      return '<tbody><tr><td style="width:30px" class="move-handler" title="拖动可以排序"><{img src="bundle/grippy.gif" app="desktop"}></td>'+
-      '<td><{input type="text" name="cols[new_'+i+'][col_key]" value="" maxlength="40" vtype="required"}></td>'+
-      '<td><{input type="text" name="cols[new_'+i+'][col_name]" value=""}></td>'+
-      '<td style="width:40px"><input type="hidden" name="cols[new_'+i+'][col_id]" value=""/><{img app="desktop" src="bundle/delete.gif" class="delete" title="删除" style="cursor:pointer;" }></td></tr></tbody>';
+
+    var getOptPropName = function(prefix, index, field){
+      return prefix + '[options][' + index + '][' + field + ']';
     };
 
-    $('addspec').addEvent('click',function(e){
-        var newRow=new Element('table.gridlist[border=0][cellpadding=0][cellspacing=0]',{
-            html:getTemp(new_spec_item++)}).inject($('spec_body'),'top');
+    var buildOptRowHtml = function(prefix, index){
+      return '<tr>'+
+        '<td><input type="text" name="'+getOptPropName(prefix, index, 'value')+'" value="" maxlength="50" /></td>'+
+        '<td><input type="text" name="'+getOptPropName(prefix, index, 'label')+'" value="" maxlength="50" /></td>'+
+        '<td><a href="javascript:void(0);" class="opt-del">删除</a></td>'+
+        '</tr>';
+    };
 
-        new Sortables($('spec_body'),{clone:true,opacity:.5,handle:'.move-handler',onStart:function(){
+    var getColPrefix = function(panel){
+      return panel.getAttribute('data-col-prefix') || '';
+    };
+
+    var getBlockTemp = function(i){
+      var prefix = 'cols[new_'+i+']';
+      return '<table class="gridlist customcol-main" border="0" cellpadding="0" cellspacing="0">'+
+        '<tbody><tr>'+
+        '<td style="width:30px" class="move-handler" title="拖动可以排序"><{img src="bundle/grippy.gif" app="desktop"}></td>'+
+        '<td style="width:160px;"><{input type="text" name="cols[new_'+i+'][col_key]" value="" size="18" maxlength="40" vtype="required"}></td>'+
+        '<td style="width:160px;"><{input type="text" name="cols[new_'+i+'][col_name]" value="" size="18" maxlength="40"}></td>'+
+        '<td class="col-type-cell"><select name="cols[new_'+i+'][col_type]" class="col-type-select"><option value="input" selected>文本</option><option value="radiobox">是/否</option><option value="select">下拉</option></select></td>'+
+        '<td style="width:40px"><input type="hidden" name="cols[new_'+i+'][col_id]" value=""/><{img app="desktop" src="bundle/delete.gif" class="delete" title="删除" style="cursor:pointer;" }></td>'+
+        '</tr></tbody></table>'+
+        '<div class="col-options-panel" data-col-prefix="'+prefix+'">'+
+        '<div class="col-options-toolbar"><span class="opt-title">下拉选项</span><a href="javascript:void(0);" class="add-opt">+ 添加选项</a></div>'+
+        '<table class="col-options-table"><thead><tr><th style="width:40%;">值（入库）</th><th>显示名</th><th style="width:50px;">操作</th></tr></thead>'+
+        '<tbody class="opt-body">'+buildOptRowHtml(prefix, 0)+'</tbody></table></div>';
+    };
+
+    var nextOptIndex = function(panel){
+      var max = -1;
+      panel.getElements('.opt-body input').each(function(inp){
+        var name = inp.getAttribute('name') || '';
+        var m = name.match(/\[options\]\[(\d+)\]/);
+        if (m) {
+          var n = parseInt(m[1], 10);
+          if (n > max) max = n;
+        }
+      });
+      return max + 1;
+    };
+
+    var createOptTr = function(prefix, index){
+      var holder = document.createElement('div');
+      holder.innerHTML = '<table><tbody>' + buildOptRowHtml(prefix, index) + '</tbody></table>';
+      var tr = holder.getElementsByTagName('tr')[0];
+      return tr || null;
+    };
+
+    var appendOptRow = function(panel){
+      var body = panel.getElement('.opt-body');
+      if (!body) return false;
+      var prefix = getColPrefix(panel);
+      if (!prefix) return false;
+      var tr = createOptTr(prefix, nextOptIndex(panel));
+      if (!tr) return false;
+      body.appendChild(tr);
+      return true;
+    };
+
+    var ensureOptionRow = function(panel){
+      var body = panel.getElement('.opt-body');
+      if (!body) return;
+      if (!body.getElementsByTagName('tr').length) {
+        var prefix = getColPrefix(panel);
+        var tr = createOptTr(prefix, 0);
+        if (tr) body.appendChild(tr);
+      }
+    };
+
+    var toggleOptions = function(block){
+      var typeSel = block.getElement('.col-type-select');
+      var panel = block.getElement('.col-options-panel');
+      if (!typeSel || !panel) return;
+      if (typeSel.value === 'select') {
+        panel.addClass('is-open');
+        ensureOptionRow(panel);
+      } else {
+        panel.removeClass('is-open');
+      }
+    };
+
+    var bindEditEvent=function(block){
+      var typeSel = block.getElement('.col-type-select');
+      if (typeSel) {
+        typeSel.addEvent('change', function(){ toggleOptions(block); });
+        toggleOptions(block);
+      }
+    };
+
+    var initSortables = function(){
+      new Sortables($('spec_body'),{
+        clone:true,
+        opacity:.5,
+        handle:'.move-handler',
+        onStart:function(){
           $('spec_body').addClass('move-active');
-        },onComplete:function(){
+        },
+        onComplete:function(){
           $('spec_body').removeClass('move-active');
         }
-        });
-
-        bindEditEvent(newRow);
-    })
-    var bindEditEvent=function(row){
-
-
-      var del=row.getElement('img.delete');
-      if(del) del.addEvent('click',function(){
-        if(!this.getParent('td').getElement('.col-id')){
-          if(confirm('删除后不可恢复，确认删除本行吗？')){
-            row.remove();
-          }
-          return;
-        };
       });
-
     };
+
+    // 事件委托：添加/删除选项、删除字段
+    $('spec_body').addEvent('click', function(e){
+      var t = $(e.target);
+      if (!t) return;
+
+      // 删除整条自定义字段
+      if (t.hasClass('delete') || (t.get('tag') === 'img' && t.hasClass('delete'))) {
+        if (e && e.stop) e.stop();
+        var block = t.getParent('.customcol-block');
+        if (!block) return;
+        if (confirm('删除后不可恢复，确认删除本字段吗？')) {
+          block.destroy();
+        }
+        return;
+      }
+
+      if (t.hasClass('add-opt')) {
+        if (e && e.stop) e.stop();
+        var panel = t.getParent('.col-options-panel');
+        if (panel) appendOptRow(panel);
+        return;
+      }
+      if (t.hasClass('opt-del')) {
+        if (e && e.stop) e.stop();
+        var panelDel = t.getParent('.col-options-panel');
+        var tr = t.getParent('tr');
+        if (tr) {
+          if (tr.parentNode) tr.parentNode.removeChild(tr);
+        }
+        if (panelDel) ensureOptionRow(panelDel);
+      }
+    });
+
+    $('addspec').addEvent('click',function(e){
+        var block = new Element('div.customcol-block', {
+            html: getBlockTemp(new_spec_item++)
+        }).inject($('spec_body'),'top');
+        initSortables();
+        bindEditEvent(block);
+    });
+
+    $$('#spec_body .customcol-block').each(function(block){
+      bindEditEvent(block);
+    });
+    initSortables();
+
     $('customcols-submit').addEvent('click',function(){
         $('customcols-form').fireEvent('submit',{stop:function(){}});
     })

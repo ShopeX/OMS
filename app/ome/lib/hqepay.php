@@ -58,7 +58,9 @@ class ome_hqepay{
             }
         }
         $html .='</ul>';
-        $html .= "<div  style='font-weight:700;font-color:#000000;margin-bottom:10px;'>快递鸟提供数据支持(<font>以上信息由物流公司提供，如无跟踪信息或有疑问，请咨询对应物流公司</font>)<div>";
+        $provider = $this->getTrackProvider();
+        $providerName = ($provider == 'sf') ? '顺丰' : '快递鸟';
+        $html .= "<div  style='font-weight:700;font-color:#000000;margin-bottom:10px;'>".$providerName."提供数据支持(<font>以上信息由物流公司提供，如无跟踪信息或有疑问，请咨询对应物流公司</font>)<div>";
         
         return array('html'=>$html,'rsp'=>$rpc_result['rsp']);
     }
@@ -86,11 +88,22 @@ class ome_hqepay{
     #ERP与华强宝快递对接，查看物流状态
     function get_dly_info($rpc_data = false){
         $return = array();
-        $rs = kernel::single('erpapi_router_request')->set('hqepay','1227722633')->hqepay_query($rpc_data);
-        if ($rs['rsp'] == 'succ') {
-            $data = @json_decode($rs['data'],true);
+        $provider = $this->getTrackProvider();
 
-            $traces = $data['Traces']; krsort($traces);
+        if ($provider == 'sf') {
+            $rs = kernel::single('erpapi_router_request')->set('hqepay', 'sf')->sf_query($rpc_data);
+        } else {
+            // 默认仍走快递鸟
+            $rs = kernel::single('erpapi_router_request')->set('hqepay','1227722633')->hqepay_query($rpc_data);
+        }
+
+        if ($rs['rsp'] == 'succ') {
+            $data = is_array($rs['data']) ? $rs['data'] : @json_decode($rs['data'],true);
+
+            $traces = isset($data['Traces']) ? $data['Traces'] : (is_array($data) ? $data : array());
+            if ($traces) {
+                krsort($traces);
+            }
 
             $return['data'] = $traces;
         }
@@ -99,6 +112,93 @@ class ome_hqepay{
         $return['err_msg'] = $rs['msg'];
 
         return $return;
+    }
+
+    /**
+     * 物流跟踪来源：kdn（默认）| sf
+     */
+    public function getTrackProvider()
+    {
+        $provider = app::get('ome')->getConf('ome.logistics.track.provider');
+        return $provider ?: 'kdn';
+    }
+    
+    public function rpc_logistics_hqepay($rpc_data){
+        #检测是否已经绑定华强宝物流
+        base_kvstore::instance('ome/bind/hqepay')->fetch('ome_bind_hqepay', $is_ome_bind_hqepay);
+        if(!$is_ome_bind_hqepay){
+            $rs = $this->bind();
+            if(!$rs){
+                $return_data['rsp'] = 'fail';
+                $return_data['err_msg'] = '没有绑定!';
+                return  $return_data;
+            }
+        }
+        $Ofunc = kernel::single('ome_rpc_func');
+        $app_xml = $Ofunc->app_xml();
+        $params['to_node_id'] = '1227722633';#写死node_id
+        
+       
+        $params['tid'] = $rpc_data['order_bn']; #订单号
+        $params['company_code'] = $rpc_data['logi_code'];
+        $params['company_name'] = $rpc_data['company_name'];
+        $params['logistic_code'] = $rpc_data['logi_no'];
+        
+        
+        $time_out = 5;
+        $res = &app::get('ome')->matrix()->set_realtime(true)->set_timeout($time_out)->call('logistics.trace.detail.get', $params);
+        $return_data = null;
+        if($res->rsp == 'fail'){
+            $return_data['rsp'] = 'fail';
+            $return_data['err_msg'] = $res->err_msg;
+        }else{
+            $return_data['rsp'] = 'succ';
+            $_data = json_decode($res->data,true);
+            $return_data['data'] =  $_data['Traces'];           
+        }
+        return $return_data;
+    }
+    #绑定华强宝物流
+    public function bind() {
+        $token = base_certificate::token();
+        $params = array(
+                'app' => 'app.applyNodeBind',
+                'node_id' => base_shopnode::node_id('ome'),
+                'from_certi_id' => base_certificate::certi_id(),
+                'callback' => '',
+                'sess_callback' => '',
+                'api_url' => kernel::base_url(1).kernel::url_prefix().'/api',
+                'node_type' => 'hqepay',
+                'to_node' => '1227722633',#写死的
+                'shop_name' => '物流跟踪',
+                "api_key"=> "1236217",#写死的
+                "api_secret"=> "cf98e49d-9ebe-43cb-a690-ad96295b3457",#写死的
+               // "api_url"=>"http://port.hqepay.com/Ebusiness/EbusinessOrderHandle.aspx", #写死的
+        );
+        
+        $params['certi_ac']=$this->genSign($params,$token);
+        //$api_url = 'http://sws.ex-sandbox.com/api.php';
+        $api_url = MATRIX_RELATION_URL . 'api.php';
+        $headers = array('Connection' => 5);
+        $core_http = kernel::single('base_httpclient');
+        $response = $core_http->set_timeout(10)->post($api_url, $params, $headers);
+        $response = json_decode($response,true);
+        if($response['res'] == 'succ' || $response['msg']['errorDescription'] == '绑定关系已存在,不需要重复绑定') {
+            base_kvstore::instance('ome/bind/hqepay')->store('ome_bind_hqepay', true);
+            return true;
+        }
+        return false;
+    }   
+    public function genSign($params, $token) {
+        ksort($params);
+        $str = '';
+        foreach ($params as $key =>$value) {
+            if ($key != 'certi_ac') {
+                $str .= $value;
+            }
+        }
+        $signString = md5($str.$token);
+        return $signString;
     }
 
     function getReturnInfo($logi_no = false){
@@ -130,14 +230,9 @@ class ome_hqepay{
         return $data;
     }
 
-    /**
-     * 获取Shipping
-     * @param mixed $order_bn order_bn
-     * @return mixed 返回结果
-     */
     public function getShipping($order_bn) {
         $order = app::get('ome')->model('orders')->db_dump(['order_bn'=>$order_bn], 'shipping,shop_type');
         return kernel::single('ome_hqepay_shipping')->getLogiNameType($order['shipping'], $order['shop_type']);
     }
 }
-
+

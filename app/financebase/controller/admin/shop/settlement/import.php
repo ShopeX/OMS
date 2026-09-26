@@ -38,7 +38,11 @@ class financebase_ctl_admin_shop_settlement_import extends desktop_controller
         if( $_FILES['import_file']['name'] && $_FILES['import_file']['error'] == 0 ){
             $file_type = substr($_FILES['import_file']['name'],strrpos($_FILES['import_file']['name'],'.')+1);
             $file_type = strtolower($file_type);
-            if(in_array($file_type, array('csv','xls','xlsx'))){
+            if(in_array($file_type, array('csv','xls','xlsx','et'))){
+
+                if ($file_type === 'et') {
+                    $file_type = 'xls';
+                }
 
                 $oProcess = kernel::single('financebase_data_bill_'.$type);
                 $oFunc = kernel::single('financebase_func');

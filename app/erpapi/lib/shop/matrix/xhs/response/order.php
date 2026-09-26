@@ -232,13 +232,71 @@ class erpapi_shop_matrix_xhs_response_order extends erpapi_shop_response_order
             }
         }
         $this->_ordersdf['coupon_data'] = $coupon;
+        
+        // 小红书平台优惠金额
+        $oidCouponList = [];
+        if (isset($this->_ordersdf['coupon_field']) && $this->_ordersdf['coupon_field']) {
+            if (isset($this->_ordersdf['coupon_field']['items']) && $this->_ordersdf['coupon_field']['items']) {
+                // 获取子单层级的平台优惠
+                $objPlatformDiscountFee = [];
+                foreach ($this->_ordersdf['coupon_field']['items'] as $itemKey => $itemInfo)
+                {
+                    $oid = $itemInfo['oid'];
+                    
+                    // check
+                    if(empty($oid)){
+                        continue;
+                    }
+                    
+                    // 初始化（按oid纬度）
+                    if(!isset($objPlatformDiscountFee[$oid])){
+                        $objPlatformDiscountFee[$oid] = 0;
+                    }
+                    
+                    // 平台优惠金额
+                    if(isset($itemInfo['platform_discount_detail']['total_amount']) && $itemInfo['platform_discount_detail']['total_amount']){
+                        $objPlatformDiscountFee[$oid] += $itemInfo['platform_discount_detail']['total_amount'];
+                    }
+                    
+                    $oidCouponList[$oid] = [
+                        'obj_platform_discount_fee' => $objPlatformDiscountFee[$oid], // 子单商品的平台优惠金额
+                    ];
+                }
+            }
+        }
+        
+        // 格式化子单相关金额
+        if($oidCouponList){
+            foreach ($this->_ordersdf['order_objects'] as $objectKey => $objectInfo)
+            {
+                $oid = $objectInfo['oid'];
+                
+                // check
+                if(empty($oid)){
+                    continue;
+                }
+                
+                if(isset($oidCouponList[$oid]) && $oidCouponList[$oid]){
+                    // 子单商品的结算金额
+                    if(isset($oidCouponList[$oid]['obj_platform_discount_fee']) && $oidCouponList[$oid]['obj_platform_discount_fee']){
+                        $this->_ordersdf['order_objects'][$objectKey]['settlement_amount'] = $objectInfo['divide_order_fee'] + $oidCouponList[$oid]['obj_platform_discount_fee'];
+                    }
+                }
+                
+                // order_items
+                foreach ((array)$objectInfo['order_items'] as $itemKey => $itemInfo)
+                {
+                    if(isset($oidCouponList[$oid]) && $oidCouponList[$oid]){
+                        // 子单商品的结算金额
+                        if(isset($oidCouponList[$oid]['obj_platform_discount_fee']) && $oidCouponList[$oid]['obj_platform_discount_fee']){
+                            $this->_ordersdf['order_objects'][$objectKey]['order_items'][$itemKey]['settlement_amount'] = $itemInfo['divide_order_fee'] + $oidCouponList[$oid]['obj_platform_discount_fee'];
+                        }
+                    }
+                }
+            }
+        }
     }
     
-    /**
-     * _canAccept
-     * @return mixed 返回值
-     */
-
     public function _canAccept()
     {
         

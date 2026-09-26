@@ -228,6 +228,39 @@ body {
   width: 14.5rem;
 }
 
+.text-wrapper_4.search-input-wrap {
+  flex: 1;
+  min-width: 0;
+  cursor: text;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  display: flex;
+  align-items: center;
+  padding: 0.657rem 0.75rem 0.688rem;
+  box-sizing: border-box;
+}
+
+.page .text-wrapper_4 .search-input {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  line-height: 1.157rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  color: #121212;
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-appearance: none;
+}
+
+.page .text-wrapper_4 .search-input::placeholder {
+  color: rgba(153, 153, 153, 1);
+  font-size: 1rem;
+}
+
 .text_10 {
   word-break: break-all;
   color: rgba(153, 153, 153, 1);
@@ -653,7 +686,8 @@ body {
   transition: all 0.3s ease;
 } */
 
-/* 拦截登记 */
+/* 拦截登记 / 核销弹窗 */
+.intercept-modal-content,
 .intercept-modal-content__html {
   font-weight: 500;
   font-size: 0.88rem;

@@ -1,19 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 class openapi_data_original_basicmaterial
 {
@@ -31,13 +16,6 @@ class openapi_data_original_basicmaterial
     // 允许绑定明细物料属性, 1 成品 4 礼盒
     public $allowBindItemTypes = [1, 4];
 
-    /**
-     * 获取List
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $limit limit
-     * @return mixed 返回结果
-     */
     public function getList($filter, $offset = 0, $limit = 40)
     {
 
@@ -91,6 +69,33 @@ class openapi_data_original_basicmaterial
             //物料属性
             $materialTypes = $materialLib->get_material_types();
             $objM = kernel::single('openapi_api_function_v1_basicmaterial');
+
+            // 自定义字段定义 + 批量取值
+            $customcols = kernel::single('material_customcols')->getcols();
+            $customKeys = array();
+            foreach ($customcols as $cv) {
+                if (!empty($cv['col_key']) && preg_match('/^[a-zA-Z0-9_]+$/', $cv['col_key'])) {
+                    $customKeys[] = $cv['col_key'];
+                }
+            }
+            $propsMap = array(); // bm_id => [col_key => props_value]
+            if ($arr_bm_id && $customKeys) {
+                $propsList = app::get('material')->model('basic_material_props')->getList(
+                    'bm_id,props_col,props_value',
+                    array(
+                        'bm_id|in'     => $arr_bm_id,
+                        'props_col|in' => $customKeys,
+                    ),
+                    0,
+                    -1
+                );
+                if (is_array($propsList)) {
+                    foreach ($propsList as $p) {
+                        $propsMap[$p['bm_id']][$p['props_col']] = $p['props_value'];
+                    }
+                }
+            }
+
             $lists = array();
             foreach ($basicMaterialList as $basicMaterial) {
                 $basicMExtInfo = $arr_basic_materiaExt[$basicMaterial['bm_id']];
@@ -123,6 +128,18 @@ class openapi_data_original_basicmaterial
                 $lists[$basicMaterial['bm_id']]['specifications']   = $objM->charFilter($basicMExtInfo['specifications']);
                 $lists[$basicMaterial['bm_id']]['barcode']          = empty($basicMBarcode['code']) ? '' : $basicMBarcode['code'];
 
+                // 自定义字段（与桌面自定义列配置一致）
+                $bmProps = isset($propsMap[$basicMaterial['bm_id']]) ? $propsMap[$basicMaterial['bm_id']] : array();
+                $customProps  = array();
+                foreach ($customcols as $cv) {
+                    $ck = isset($cv['col_key']) ? $cv['col_key'] : '';
+                    if ($ck === '' || !preg_match('/^[a-zA-Z0-9_]+$/', $ck)) {
+                        continue;
+                    }
+                    $customProps[$ck] = array_key_exists($ck, $bmProps) ? $bmProps[$ck] : '';
+                }
+                $lists[$basicMaterial['bm_id']]['props'] = $customProps;
+
                 if (in_array($basicMaterial['type'], ['1','4'])) {
                     $seMiBasicMInfos = $basicMaterialCombinationItemsObj->getList('bm_id,material_name,material_bn,material_num', array('pbm_id' => $basicMaterial['bm_id']), 0, -1);
                     if ($seMiBasicMInfos) {
@@ -154,7 +171,7 @@ class openapi_data_original_basicmaterial
 
     /**
      * 基础物料新增时的参数检查方法
-     * 
+     *
      * @param Array $params
      * @param String $err_msg
      * @return Boolean
@@ -259,13 +276,6 @@ class openapi_data_original_basicmaterial
         return true;
     }
 
-    /**
-     * 添加
-     * @param mixed $data 数据
-     * @param mixed $code code
-     * @param mixed $sub_msg sub_msg
-     * @return mixed 返回值
-     */
     public function add($data, &$code, &$sub_msg)
     {
         $result = array('rsp' => 'succ');
@@ -490,7 +500,7 @@ class openapi_data_original_basicmaterial
 
     /**
      * 基础物料编辑时的参数检查方法
-     * 
+     *
      * @param Array $params
      * @param String $err_msg
      * @return Boolean
@@ -602,7 +612,7 @@ class openapi_data_original_basicmaterial
 
     /**
      * 检查基础物料个别参数是否可编辑
-     * 
+     *
      * @param Int $bm_id
      * @return Array
      */
@@ -667,13 +677,6 @@ class openapi_data_original_basicmaterial
         return $readonly;
     }
 
-    /**
-     * edit
-     * @param mixed $data 数据
-     * @param mixed $code code
-     * @param mixed $sub_msg sub_msg
-     * @return mixed 返回值
-     */
     public function edit($data, &$code, &$sub_msg)
     {
         $result = array('rsp' => 'succ');
@@ -935,12 +938,6 @@ class openapi_data_original_basicmaterial
     }
 
 
-    /**
-     * 获取Brand
-     * @param mixed $brand_code brand_code
-     * @param mixed $brand_name brand_name
-     * @return mixed 返回结果
-     */
     public function getBrand($brand_code,$brand_name){
 
         $brandMdl = app::get('ome')->model('brand');
@@ -961,11 +958,6 @@ class openapi_data_original_basicmaterial
         }
     }
 
-    /**
-     * 获取MaterialType
-     * @param mixed $type_name type_name
-     * @return mixed 返回结果
-     */
     public function getMaterialType($type_name){
 
         $typeMdl = app::get('ome')->model('goods_type');

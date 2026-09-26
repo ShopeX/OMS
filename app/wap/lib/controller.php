@@ -112,12 +112,14 @@ class wap_controller extends base_controller{
         $this->delivery_link['mine']       = app::get('wap')->router()->gen_url(array('ctl'=>'user','act'=>'mine'), true);
         
         $this->delivery_link['order_index']      = app::get('wap')->router()->gen_url(array('ctl'=>'order','act'=>'index'), true);
+        $this->delivery_link['order_wait_delivery'] = app::get('wap')->router()->gen_url(array('ctl'=>'order','act'=>'index','view'=>'wait_delivery'), true);
         $this->delivery_link['order_confirm']    = app::get('wap')->router()->gen_url(array('ctl'=>'order','act'=>'confirm'), true);
         $this->delivery_link['order_consign']    = app::get('wap')->router()->gen_url(array('ctl'=>'order','act'=>'consign'), true);
         $this->delivery_link['order_sign']       = app::get('wap')->router()->gen_url(array('ctl'=>'order','act'=>'sign'), true);
         $this->delivery_link['overtimeOrders']   = app::get('wap')->router()->gen_url(array('ctl'=>'order','act'=>'overtimeOrders'), true);
         $this->delivery_link['aftersale_returnproduct']   = app::get('wap')->router()->gen_url(array('ctl'=>'aftersale_returnproduct','act'=>'pending'), true);
         $this->delivery_link['aftersale_changeproduct']   = app::get('wap')->router()->gen_url(array('ctl'=>'aftersale_changeproduct','act'=>'pending'), true);
+        $this->delivery_link['store_selfpick'] = app::get('wap')->router()->gen_url(array('ctl'=>'store_selfpick','act'=>'index'), true);
         
         $this->delivery_link['setting']        = app::get('wap')->router()->gen_url(array('ctl'=>'store','act'=>'setting'), true);
         

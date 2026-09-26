@@ -50,17 +50,36 @@ class erpapi_shop_response_plugins_order_confirmreceipt extends erpapi_shop_resp
 
         if ($extendinfo['end_time']) {
             $orderObj->update(array('end_time' => $extendinfo['end_time']), array('order_id' => $order_id));
-
-            // 自动开票
-            $einvoice = app::get('invoice')->model('order')->getList('*', array('order_id' => $order_id, 'is_status' => '0'), 0, 1, 'id DESC');
-            if ($einvoice) {
-                $billing = array(
-                    "id"       => $einvoice[0]['id'],
-                    "order_id" => $order_id,
-                );
-                kernel::single('invoice_process')->billing($billing, 'sign');
+            
+            // 否允许开蓝票
+            $is_check_blue_invoice = true;
+            $params = [];
+            
+            // 注册service，分析是否允许开蓝票
+            foreach(kernel::servicelist('ome.service.invoice.analysis.prepose') as $object)
+            {
+                if(method_exists($object, 'check_blue_invoice')){
+                    // check
+                    $analysisResult = $object->check_blue_invoice($params);
+                    if(isset($analysisResult['rsp']) && $analysisResult['rsp'] == 'fail'){
+                        $is_check_blue_invoice = false;
+                    }
+                }
             }
-
+            
+            // 允许开蓝票
+            if($is_check_blue_invoice){
+                // 自动开票
+                $einvoice = app::get('invoice')->model('order')->getList('*', array('order_id' => $order_id, 'is_status' => '0'), 0, 1, 'id DESC');
+                if ($einvoice) {
+                    $billing = array(
+                        "id"       => $einvoice[0]['id'],
+                        "order_id" => $order_id,
+                    );
+                    kernel::single('invoice_process')->billing($billing, 'sign');
+                }
+            }
+            
             // 订单签收后触发服务
             foreach(kernel::servicelist('ome.service.order.sign.after') as $service) {
                 if(method_exists($service,'after_sign')) {
@@ -71,6 +90,13 @@ class erpapi_shop_response_plugins_order_confirmreceipt extends erpapi_shop_resp
                     $service->after_sign($order_id, $payload);
                 }
             }
+
+            // 平台确认收货后，回写 OME 发货单签收并同步下游 WMS/门店
+            kernel::single('ome_delivery_sign')->signOrderDeliveries(
+                $order_id,
+                $extendinfo['end_time'],
+                '平台确认收货同步签收'
+            );
         }
     }
 }

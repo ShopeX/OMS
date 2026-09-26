@@ -238,6 +238,16 @@ class omeauto_ctl_autoconfirm extends omeauto_controller {
             unset($data['config']['excludeStartTime'], $data['config']['excludeEndTime']);
         }
         
+        $data['config']['member_remark'] = isset($data['config']['member_remark']) ? trim($data['config']['member_remark']) : '';
+        $data['config']['order_remark'] = isset($data['config']['order_remark']) ? trim($data['config']['order_remark']) : '';
+        if ((!isset($data['config']['memo'])) || $data['config']['memo'] != '1') {
+            unset($data['config']['member_remark']);
+        }
+        
+        if ((!isset($data['config']['mark'])) || $data['config']['mark'] != '1') {
+            unset($data['config']['order_remark']);
+        }
+        
         unset($data['confirmStartTime'], $data['confirmEndTime'], $data['excludeStartTime'], $data['excludeEndTime'], $data['_DTIME_'], $data['_DTYPE_TIME']);
         
         return true;

@@ -1,20 +1,5 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/**
  * 标准finder列表数据导出处理类
  *
  * @author kamisama.xia@gmail.com
@@ -27,12 +12,11 @@ class desktop_finder_export
 
     /**
      * 导出取数据入口方法
-     * 
+     *
      * @param string $full_object_name 导出对象model
      * @param array $params 导出所需的参数
      * @return array $data
      */
-
     public function work($full_object_name, $params)
     {
         //初始化当前对象属性
@@ -50,7 +34,7 @@ class desktop_finder_export
 
     /**
      * 获取导出对象相应的导出字段
-     * 
+     *
      * @param string $full_object_name 导出对象model
      * @return array $return 导出的可使用字段
      */
@@ -64,7 +48,7 @@ class desktop_finder_export
 
     /**
      * 根据引入的导出对象，初始化相关字段参数等
-     * 
+     *
      * @param string $full_object_name 导出对象model
      * @return null
      */
@@ -116,7 +100,7 @@ class desktop_finder_export
 
     /**
      * finder数据处理的核心方法
-     * 
+     *
      * @param null
      * @return array $export_data 导出的格式化数据
      */
@@ -224,13 +208,18 @@ class desktop_finder_export
             $export_data['content']['pair'] = $this->object->getexportdetail('*', $this->filter, 0, -1, $this->first_sheet);
         }
 
+        //取唯一码平铺明细（如调整单 snlists）
+        if (method_exists($this->object, 'getexportsnlists') && $this->has_detail) {
+            $export_data['content']['snlists'] = $this->object->getexportsnlists('*', $this->filter, 0, -1, $this->first_sheet);
+        }
+
         //返回数据
         return $export_data;
     }
 
     /**
      * finder列表原始数据格式化方法
-     * 
+     *
      * @param array $list 查询出来的原始数据
      * @param array $colArray 导出数据的字段名数组
      * @param array $key_modifier 字段在model中有定义modifier_字段的处理方法的数据

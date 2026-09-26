@@ -21,6 +21,7 @@ class ticket_mdl_workflow_case extends dbeav_model {
             'approved' => '同意',
             'rejected' => '拒绝',
             'cancelled' => '取消',
+            'source_cancelled' => '原单据已取消',
         );
     }
     
@@ -133,5 +134,18 @@ class ticket_mdl_workflow_case extends dbeav_model {
         $typeList = $this->getBillTypeList();
         
         return isset($typeList[$col]) ? $typeList[$col]['bill_name'] : $col;
+    }
+    
+    /**
+     * 审批原因
+     *
+     * @param $col
+     * @return mixed|string
+     */
+    public function modifier_reason($col)
+    {
+        $reason = str_replace('零元订单补发：', '', $col);
+        
+        return $reason;
     }
 } 

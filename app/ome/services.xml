@@ -179,6 +179,7 @@
         <class>ome_desktop_widgets_greenchannel</class>
         <class>ome_desktop_widgets_productinfo</class>
         <class>ome_desktop_widgets_consultandpatch</class>
+        <class>ome_desktop_widgets_platformnotify</class>
     </service>
     <service id="service.order">
         <class>ome_service_order</class>
@@ -308,6 +309,9 @@
     </service>
     <service id="extend_filter_ome_mdl_delivery">
         <class>ome_finder_extend_filter_delivery</class>
+    </service>
+    <service id="extend_filter_ome_mdl_delivery_bill">
+        <class>ome_finder_extend_filter_delivery_bill</class>
     </service>
     <service id="extend_filter_ome_mdl_reship">
         <class>ome_finder_extend_filter_reship</class>

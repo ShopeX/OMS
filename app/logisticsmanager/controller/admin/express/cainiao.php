@@ -146,6 +146,18 @@ class logisticsmanager_ctl_admin_express_cainiao extends desktop_controller {
                 foreach($dealData as $dVal) {
                     $dVal['control_type'] = $templateCfg['control_type'];
 
+                    if ($dVal['template_id'] && $dVal['template_type'] == 'wxshipin_standard') {
+                        $oldTpl = $modelTpl->db_dump(array('template_id' => $dVal['template_id']), 'template_select');
+                        $oldSelect = @unserialize($oldTpl['template_select']);
+                        $oldSelect = is_array($oldSelect) ? $oldSelect : array();
+                        if ($oldSelect) {
+                            $dVal['template_select'] = array_merge($oldSelect, (array)$dVal['template_select']);
+                        }
+                        if (!empty($oldSelect['wxshipin_custom_tpl_id'])) {
+                            $dVal['template_select']['wxshipin_custom_tpl_id'] = $oldSelect['wxshipin_custom_tpl_id'];
+                        }
+                    }
+
                     $rs = $printTpl->save($dVal);
 
                     if($rs['rs'] == 'succ') {

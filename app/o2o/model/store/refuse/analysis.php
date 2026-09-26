@@ -17,6 +17,17 @@
 
 class o2o_mdl_store_refuse_analysis extends dbeav_model
 {
+    var $has_export_cnf = true;
+    var $export_name    = '门店拒单列表';
+
+    public function modifier_reason_id($reasonId)
+    {
+        if ($reasonId === '' || $reasonId === null) {
+            return '';
+        }
+        $row = app::get('o2o')->model('refuse_reason')->db_dump($reasonId, 'reason_name');
+        return $row['reason_name'] ?? $reasonId;
+    }
 
     /**
      * 获取_reason_analysis

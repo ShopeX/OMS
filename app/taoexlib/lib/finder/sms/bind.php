@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class taoexlib_finder_sms_bind
 {
     //var $addon_cols = "";
@@ -48,7 +32,7 @@ class taoexlib_finder_sms_bind
         } else {
             $rule_info = app::get('omeauto')->model('order_type')->select()->columns('name,tid')->where('tid=?',$row['_0_tid'])->instance()->fetch_row();
             $desc = '短信分组规则：'.$rule_info['name'].'(点击编辑)';
-            $html = "<a href='javascript:voide(0);' onclick=\"new Dialog('index.php?app=taoexlib&ctl=admin_sms_rule&act=edit_rule&p[0]={$rule_info[tid]}&finder_id={$_GET['_finder']['finder_id']}',{width:760,height:480,title:'修改分组规则'}); \">$rule_info[name]</a>";
+            $html = "<a href='javascript:voide(0);' onclick=\"new Dialog('index.php?app=taoexlib&ctl=admin_sms_rule&act=edit_rule&p[0]={$rule_info['tid']}&finder_id={$_GET['_finder']['finder_id']}',{width:760,height:480,title:'修改分组规则'}); \">{$rule_info['name']}</a>";
         }
          
         return "<div onmouseover='bindFinderColTip(event)' rel='".$desc."'><span>".$html."</span><div>";

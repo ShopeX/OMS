@@ -1,0 +1,26 @@
+<div class="tableform" style="padding:24px;text-align:center;min-height:80px;">
+  <h3 style="margin:0 0 12px;<{if !$ok}>color:#c00;<{/if}>"><{if $ok}>绑定成功<{else}>绑定失败<{/if}></h3>
+  <p style="margin:0 0 20px;line-height:1.6;"><{$msg}></p>
+  <{button label="关闭" class="btn-primary" id="sf-bind-close-btn"}>
+</div>
+<script>
+(function () {
+  var btn = $('sf-bind-close-btn');
+  if (!btn) return;
+  btn.addEvent('click', function () {
+    try {
+      var dig = this.getParent('.dialog');
+      if (dig && dig.retrieve('instance')) {
+        dig.retrieve('instance').close();
+      }
+    } catch (e) {}
+    <{if $finder_id}>
+    try {
+      if (window.finderGroup && window.finderGroup['<{$finder_id}>']) {
+        window.finderGroup['<{$finder_id}>'].refresh();
+      }
+    } catch (e2) {}
+    <{/if}>
+  });
+})();
+</script>

@@ -69,6 +69,10 @@ class financebase_crontab_billapidownload extends financebase_abstract_crontab
                 continue;
             }
 
+            // 商家账单明细走 billapidownloadhourly；本任务仅钱包等对账渠道（同店可有第二条 channel.biz_type=360buy_bills）
+            if (!empty($v['biz_type']) && $v['biz_type'] === '360buy_bills') {
+                continue;
+            }
 
             $class_name = 'financebase_data_bill_' . $node_type_ref[$v['node_type']];
             if (!isset($class_pool[$class_name])) {

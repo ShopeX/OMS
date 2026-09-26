@@ -44,8 +44,8 @@ class console_mdl_delivery extends dbeav_model{
     function searchOptions(){
         $parentOptions = parent::searchOptions();
         $childOptions = array(
-            'delivery_bn'=>app::get('base')->_('发货单号'),
             'order_bn'=>app::get('base')->_('订单号'),
+            'delivery_bn'=>app::get('base')->_('发货单号'),
             'member_uname'=>app::get('base')->_('用户名'),
             'ship_name'=>app::get('base')->_('收货人'),
             'ship_tel_mobile'=>app::get('base')->_('联系电话'),
@@ -55,7 +55,59 @@ class console_mdl_delivery extends dbeav_model{
         );
         return array_merge($childOptions,$parentOptions);
     }
+    
+    /**
+     * 是否需要真实 count。
+     * 高级筛选/快捷搜索会把条件写入 finder.filter.value，并在 refresh 时拼进 POST；
+     * 普通 Tab 浏览、翻页通常只有 _finder、items 等系统字段。
+     *
+     * @param mixed $filter
+     * @return bool
+     */
+    private function _needRealFinderCount($filter)
+    {
+        if (is_array($filter) && !empty($filter['advance'])) {
+            return true;
+        }
+        if (isset($_REQUEST['filter']) && is_array($_REQUEST['filter']) && !empty($_REQUEST['filter']['advance'])) {
+            return true;
+        }
 
+        $skip = array(
+            '_finder' => 1,
+            'items' => 1,
+            'page' => 1,
+            'plimit' => 1,
+            'finder_plimit' => 1,
+            'action' => 1,
+            '_token' => 1,
+        );
+
+        foreach ((array) $_POST as $key => $value) {
+            if (isset($skip[$key]) || strpos($key, '_finder') === 0) {
+                continue;
+            }
+            if ($value === '' || $value === null) {
+                continue;
+            }
+            if (is_array($value)) {
+                $hasValue = false;
+                foreach ($value as $v) {
+                    if ($v !== '' && $v !== null) {
+                        $hasValue = true;
+                        break;
+                    }
+                }
+                if (!$hasValue) {
+                    continue;
+                }
+            }
+            return true;
+        }
+
+        return false;
+    }
+    
     public function _filter($filter,$tableAlias=null,$baseWhere=null)
     {
         $baseWhere = (array) $baseWhere;
@@ -64,6 +116,57 @@ class console_mdl_delivery extends dbeav_model{
         //setting
         $deliveryIds = array();
         $where = '';
+
+        //filter
+        foreach ($filter as $key => $value) {
+            $pos = strpos($key,'|');
+            $field = false !== $pos ? substr($key,0,$pos): $key;
+
+            $encrypt_type = $this->__encrypt_cols[$field];
+            if ($encrypt_type) {
+                $searchtype = false !== $pos ? substr($key,$pos+1): 'nequal';
+
+                // 京东加密
+                $encryptVal360 = kernel::single('erpapi_rpc_hufu')->encrypt($value).kernel::single('ome_security_hash')->get_code();
+
+                // 拼多多加密
+                $encryptValPdd = kernel::single('erpapi_rpc_fangzhou')->encrypt($value).kernel::single('ome_security_hash')->get_code();
+
+                if ($searchtype!='nequal' && in_array($encrypt_type,array('search','nick','receiver_name'))) {
+                    $encryptVal = kernel::single('ome_security_factory')->search($value,$encrypt_type);
+
+                    $encryptVal360 = kernel::single('ome_security_factory')->search($encryptVal360,$encrypt_type);
+
+                    $encryptValPdd = kernel::single('ome_security_factory')->search($encryptValPdd,$encrypt_type);
+                } else {
+                    $encryptVal = kernel::single('ome_security_factory')->encryptPublic($value,$encrypt_type);
+
+                    $encryptVal360 = kernel::single('ome_security_factory')->encryptPublic($encryptVal360,$encrypt_type);
+
+                    $encryptValPdd = kernel::single('ome_security_factory')->encryptPublic($encryptValPdd,$encrypt_type);
+                }
+
+                $originalVal      = utils::addslashes_array($value);
+                $encryptVal = utils::addslashes_array($encryptVal);
+
+                switch ($searchtype) {
+                    case 'has':
+                        $baseWhere[] = "({$tPre}{$field} LIKE '%".$originalVal."%' || {$tPre}{$field} LIKE '%".$encryptVal."%')";
+                        break;
+                    case 'head':
+                        $baseWhere[] = "({$tPre}{$field} LIKE '".$originalVal."%' || {$tPre}{$field} LIKE '%".$encryptVal."%')";
+                        break;
+                    case 'foot':
+                        $baseWhere[] = "({$tPre}{$field} LIKE '%".$originalVal."' || {$tPre}{$field} LIKE '%".$encryptVal."%')";
+                        break;
+                    default:
+                        $baseWhere[] = "{$tPre}{$field} IN('".$originalVal."','".$encryptVal."','".$encryptVal360."','".$encryptValPdd."')";
+                        break;
+                }
+
+                unset($filter[$key]);
+            }
+        }
 
         if(isset($filter['ship_tel_mobile'])){
             $encryptVal = kernel::single('ome_security_factory')->encryptPublic($filter['ship_tel_mobile'],'phone');

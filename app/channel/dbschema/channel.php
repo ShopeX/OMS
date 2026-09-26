@@ -63,6 +63,7 @@ $db['channel'] = array(
                 'cloudprint'=> '云打印',
                 'ticket'   => '工单',
                 'qimen'    => '奇门',
+                'sms'      => '短信',
             ),
             'width' => '120',
         ),
@@ -173,6 +174,7 @@ $db['channel'] = array(
             'in_list'         => true,
             'default_in_list' => true,
         ),
+        
         'secret_key'           => array(
             'type'     => 'varchar(100)',
             'editable' => false,
@@ -216,6 +218,15 @@ $db['channel'] = array(
             'default_in_list' => true,
             'is_title' => true,
             'width' => '120',
+        ),
+        'biz_type'             => array(
+            'type'            => 'varchar(32)',
+            'required'        => false,
+            'default'         => '',
+            'editable'        => false,
+            'label'           => '业务类型',
+            'in_list'         => true,
+            'default_in_list' => false,
         ),
     ),
     'index'   => array(

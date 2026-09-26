@@ -37,6 +37,7 @@ class console_ctl_admin_carrier extends desktop_controller{
                 'use_buildin_import'=>false,
                 'use_buildin_recycle'=>false,
                 'base_filter' => $filter,
+                'orderBy' => 'disabled DESC',
                 'actions'=>array(
                         array('label'=>'同步承运商','href'=>'index.php?app=console&ctl=admin_carrier&act=sync&finder_id='.$_GET['finder_id']),
                 ),
@@ -59,8 +60,12 @@ class console_ctl_admin_carrier extends desktop_controller{
         $purchaseLib  = kernel::single('purchase_purchase_order');
         $shopList     = $purchaseLib->get_vop_shop_list();
         
-        if($shopList)
-        {
+        // check
+        if(empty($shopList)){
+            $this->end(false, app::get('base')->_('没有唯品会JIT类型的店铺!'));
+        }
+        
+        if($shopList){
             foreach ($shopList as $key => $val)
             {
                 $shop_id    = $val['shop_id'];

@@ -91,7 +91,7 @@ $db['order_invoice']=array (
                         )
                 )
         ),
-    'comment' => '订单发表记录',
+    'comment' => '订单发票信息表',
     'engine' => 'innodb',
     'version' => '$Rev:  $',
 );

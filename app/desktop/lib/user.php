@@ -208,6 +208,10 @@ class desktop_user{
         if ( in_array($_GET['act'],['execlImportDailog', 'execlImportTmpl', 'execlImportTmpl','doExcelImport'] ) ) {
             return true;
          }
+        // alertpages 仅为弹窗加载壳（loadpage.html），finder_id 在 goto 内；内页请求仍走下方权限校验
+        if (isset($_GET['act']) && $_GET['act'] === 'alertpages') {
+            return true;
+        }
 
         $authorityFinderId = $_GET['_finder']['finder_id'] ?: ($_GET['finder_id'] ?: ($_GET['find_id'] ?: substr(md5($_SERVER['QUERY_STRING']),5,6)));
 

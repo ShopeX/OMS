@@ -5,6 +5,60 @@
 class ome_reshipping extends ome_abstract
 {
     /**
+     * 兜底：用基础物料货号(bn)解析 sales_material_type=1 的销售物料
+     * basic_material.material_bn → bm_id → sales_basic_material.sm_id → sales_material(type=1) → sales_material_bn
+     *
+     * @param string $basicBn
+     * @param string $shopId
+     * @return array sm_id(int), sales_material_bn(string)
+     */
+    private function _resolveSalesMaterialType1ByBasicBn($basicBn, $shopId = '')
+    {
+        $basicBn = trim((string) $basicBn);
+        if ($basicBn === '') {
+            return array('sm_id' => 0, 'sales_material_bn' => '');
+        }
+
+        $db = kernel::database();
+        $shopClause = '';
+        if ($shopId !== '') {
+            $shopClause = ' AND (shop_id=' . $db->quote($shopId) . ' OR shop_id=' . $db->quote('_ALL_') . ')';
+        }
+
+        $bm = app::get('material')->model('basic_material')->db_dump(array('material_bn' => $basicBn), 'bm_id');
+        if (empty($bm['bm_id'])) {
+            return array('sm_id' => 0, 'sales_material_bn' => '');
+        }
+        $bmId = (int) $bm['bm_id'];
+
+        $sbmRows = $db->select('SELECT sm_id FROM sdb_material_sales_basic_material WHERE bm_id=' . $bmId);
+        if (empty($sbmRows)) {
+            return array('sm_id' => 0, 'sales_material_bn' => '');
+        }
+
+        $seen = array();
+        foreach ($sbmRows as $sbm) {
+            $smIdTry = isset($sbm['sm_id']) ? (int) $sbm['sm_id'] : 0;
+            if ($smIdTry <= 0 || isset($seen[$smIdTry])) {
+                continue;
+            }
+            $seen[$smIdTry] = true;
+
+            $sqlSm = 'SELECT sm_id, sales_material_bn FROM sdb_material_sales_material'
+                . ' WHERE sm_id=' . $smIdTry . ' AND sales_material_type=1' . $shopClause;
+            $rowSm = $db->selectrow($sqlSm);
+            if (!empty($rowSm['sm_id']) && isset($rowSm['sales_material_bn']) && trim((string) $rowSm['sales_material_bn']) !== '') {
+                return array(
+                    'sm_id' => (int) $rowSm['sm_id'],
+                    'sales_material_bn' => trim((string) $rowSm['sales_material_bn']),
+                );
+            }
+        }
+
+        return array('sm_id' => 0, 'sales_material_bn' => '');
+    }
+
+    /**
      * 同意补寄申请
      * 
      * @param int $reshipping_id 补寄申请单ID
@@ -32,17 +86,21 @@ class ome_reshipping extends ome_abstract
         if ($validateResult['rsp'] == 'fail') {
             return $validateResult;
         }
-        
-        // 校验通过后，调用矩阵同意接口
-        $apiResult = kernel::single('erpapi_router_request')->set('shop', $reshipping['shop_id'])->reshipping_agree(array(
-            'dispute_id' => $reshipping['reshipping_bn'],
-        ));
-        
-        if ($apiResult['rsp'] == 'fail') {
-            // 清除写入的明细
-            $itemsDetailModel = app::get('ome')->model('return_reshipping_items_detail');
-            $itemsDetailModel->delete(array('reshipping_id' => $reshipping_id));
-            return array('rsp' => 'fail', 'msg' => '调用同意接口失败：' . (isset($apiResult['msg']) ? $apiResult['msg'] : '未知错误'));
+
+        $isLocalSource = isset($reshipping['source']) && $reshipping['source'] === 'local';
+
+        if (!$isLocalSource) {
+            // 校验通过后，调用矩阵同意接口
+            $apiResult = kernel::single('erpapi_router_request')->set('shop', $reshipping['shop_id'])->reshipping_agree(array(
+                'dispute_id' => $reshipping['reshipping_bn'],
+            ));
+
+            if ($apiResult['rsp'] == 'fail') {
+                // 清除写入的明细
+                $itemsDetailModel = app::get('ome')->model('return_reshipping_items_detail');
+                $itemsDetailModel->delete(array('reshipping_id' => $reshipping_id));
+                return array('rsp' => 'fail', 'msg' => '调用同意接口失败：' . (isset($apiResult['msg']) ? $apiResult['msg'] : '未知错误'));
+            }
         }
         
         // 更新补寄申请单状态
@@ -90,28 +148,42 @@ class ome_reshipping extends ome_abstract
         if ($reshipping['status'] != '0') {
             return array('rsp' => 'fail', 'msg' => '补寄申请单状态不正确，无法拒绝');
         }
-        
-        // 验证必填字段
-        if (empty($refuseData['refuse_reason_id'])) {
-            return array('rsp' => 'fail', 'msg' => '拒绝原因不能为空');
-        }
-        if (empty($refuseData['leave_message'])) {
-            return array('rsp' => 'fail', 'msg' => '拒绝留言不能为空');
-        }
-        if (empty($refuseData['leave_message_pics'])) {
-            return array('rsp' => 'fail', 'msg' => '凭证图片不能为空');
-        }
-        
-        // 调用矩阵拒绝接口
-        $apiResult = kernel::single('erpapi_router_request')->set('shop', $reshipping['shop_id'])->reshipping_refuse(array(
-            'dispute_id' => $reshipping['reshipping_bn'],
-            'seller_refuse_reason_id' => $refuseData['refuse_reason_id'],
-            'leave_message_pics' => $refuseData['leave_message_pics'], // 单个 base64 字符串
-            'leave_message' => $refuseData['leave_message'],
-        ));
-        
-        if ($apiResult['rsp'] == 'fail') {
-            return array('rsp' => 'fail', 'msg' => '调用拒绝接口失败：' . (isset($apiResult['msg']) ? $apiResult['msg'] : '未知错误'));
+
+        $isLocalSource = isset($reshipping['source']) && $reshipping['source'] === 'local';
+
+        if ($isLocalSource) {
+            if (empty($refuseData['leave_message'])) {
+                return array('rsp' => 'fail', 'msg' => '拒绝留言不能为空');
+            }
+            if (empty($refuseData['refuse_reason_id'])) {
+                $refuseData['refuse_reason_id'] = 'local';
+            }
+            if (empty($refuseData['refuse_reason'])) {
+                $refuseData['refuse_reason'] = $refuseData['leave_message'];
+            }
+        } else {
+            // 验证必填字段（平台单需同步矩阵）
+            if (empty($refuseData['refuse_reason_id'])) {
+                return array('rsp' => 'fail', 'msg' => '拒绝原因不能为空');
+            }
+            if (empty($refuseData['leave_message'])) {
+                return array('rsp' => 'fail', 'msg' => '拒绝留言不能为空');
+            }
+            if (empty($refuseData['leave_message_pics'])) {
+                return array('rsp' => 'fail', 'msg' => '凭证图片不能为空');
+            }
+
+            // 调用矩阵拒绝接口
+            $apiResult = kernel::single('erpapi_router_request')->set('shop', $reshipping['shop_id'])->reshipping_refuse(array(
+                'dispute_id' => $reshipping['reshipping_bn'],
+                'seller_refuse_reason_id' => $refuseData['refuse_reason_id'],
+                'leave_message_pics' => $refuseData['leave_message_pics'], // 单个 base64 字符串
+                'leave_message' => $refuseData['leave_message'],
+            ));
+
+            if ($apiResult['rsp'] == 'fail') {
+                return array('rsp' => 'fail', 'msg' => '调用拒绝接口失败：' . (isset($apiResult['msg']) ? $apiResult['msg'] : '未知错误'));
+            }
         }
         // 更新补寄申请单
         $updateData = array(
@@ -203,48 +275,98 @@ class ome_reshipping extends ome_abstract
         
         // 用于保存校验阶段查询到的sm_id，避免重复查询
         $itemSmIdMap = array();
+        $itemSalesBnMap = array();
+        $shopId = isset($reshipping['shop_id']) ? trim((string) $reshipping['shop_id']) : '';
         
         // 校验所有商品项的销售物料编码
         foreach ($items as $item) {
-            // 只从sales_material_bn获取销售物料编码，如果不存在则报错
-            if (!isset($items_detail[$item['item_id']]['sales_material_bn']) || 
-                empty(trim($items_detail[$item['item_id']]['sales_material_bn']))) {
-                return array('rsp' => 'fail', 'msg' => '商品项ID ' . $item['item_id'] . ' 的销售物料编码不能为空');
+            // sales_material_bn / sm_id 取不到时：不报错不中断，留空继续保存
+            $sales_material_bn = '';
+            if (isset($items_detail[$item['item_id']]['sales_material_bn'])) {
+                $sales_material_bn = trim((string) $items_detail[$item['item_id']]['sales_material_bn']);
             }
-            
-            $sales_material_bn = trim($items_detail[$item['item_id']]['sales_material_bn']);
-            
-            // 根据sales_material_bn查询销售物料表获取sm_id
-            $salesMaterialList = $salesMaterialModel->getList(
-                'sm_id', 
-                array('sales_material_bn' => $sales_material_bn, 'shop_id' => array($reshipping['shop_id'], '_ALL_'), 'sales_material_type' => ['1', '2', '3']), 
-                0, 
-                1
-            );
-            
-            // 如果查询不到sm_id，报错
-            if (!$salesMaterialList || !isset($salesMaterialList[0]['sm_id'])) {
-                return array('rsp' => 'fail', 'msg' => '销售物料编码 ' . $sales_material_bn . ' 不存在或不属于该店铺');
+            $itemSalesBnMap[$item['item_id']] = $sales_material_bn;
+
+            $smId = 0;
+            if ($sales_material_bn !== '') {
+                // 根据sales_material_bn查询销售物料表获取sm_id
+                $salesMaterialList = $salesMaterialModel->getList(
+                    'sm_id',
+                    array(
+                        'sales_material_bn' => $sales_material_bn,
+                        'shop_id' => array($reshipping['shop_id'], '_ALL_'),
+                        'sales_material_type' => array('1', '2', '3'),
+                    ),
+                    0,
+                    1
+                );
+                if ($salesMaterialList && isset($salesMaterialList[0]['sm_id'])) {
+                    $smId = (int) $salesMaterialList[0]['sm_id'];
+                }
             }
-            
-            // 保存查询到的sm_id，供后续使用
-            $itemSmIdMap[$item['item_id']] = $salesMaterialList[0]['sm_id'];
+
+            // 如果仍然取不到：用当前行 bn（基础物料号）兜底解析一次；仍失败则报错，不能同意通过
+            if ($smId <= 0 || $sales_material_bn === '') {
+                $basicBn = isset($item['bn']) ? trim((string) $item['bn']) : '';
+                $fallback = $this->_resolveSalesMaterialType1ByBasicBn($basicBn, $shopId);
+                if (!empty($fallback['sm_id']) && !empty($fallback['sales_material_bn'])) {
+                    $smId = (int) $fallback['sm_id'];
+                    $sales_material_bn = (string) $fallback['sales_material_bn'];
+                    $itemSalesBnMap[$item['item_id']] = $sales_material_bn;
+                } else {
+                    return array('rsp' => 'fail', 'msg' => '无法解析销售物料（item_id=' . $item['item_id'] . '，bn=' . $basicBn . '），请维护销售物料映射后重试');
+                }
+            }
+
+            // 保存查询到的sm_id（一定>0），供后续使用
+            $itemSmIdMap[$item['item_id']] = $smId;
         }
-        
-        // 校验通过后，保存商品明细到items_detail表
+
+        // 校验确认数量：允许单行等于0，但至少需有一条大于0
+        $hasPositiveQty = false;
         foreach ($items as $item) {
-            $sales_material_bn = trim($items_detail[$item['item_id']]['sales_material_bn']);
+            $detailNums = isset($items_detail[$item['item_id']]['nums'])
+                ? (int) $items_detail[$item['item_id']]['nums']
+                : (int) $item['nums'];
+            if ($detailNums < 0) {
+                return array('rsp' => 'fail', 'msg' => '确认数量不能小于0');
+            }
+            if ($detailNums > 0) {
+                $hasPositiveQty = true;
+            }
+        }
+        if (!$hasPositiveQty) {
+            return array('rsp' => 'fail', 'msg' => '至少需要一条确认数量大于0的商品');
+        }
+
+        // 覆盖包裹中心预写的明细，避免重复插入
+        $reshippingItemsDetailModel->delete(array('reshipping_id' => $reshipping_id));
+        
+        // 校验通过后，保存商品明细到items_detail表（金额与申请行 return_reshipping_items 一致，数量变更时按比例缩放）
+        foreach ($items as $item) {
+            $sales_material_bn = isset($itemSalesBnMap[$item['item_id']]) ? $itemSalesBnMap[$item['item_id']] : '';
             
             // 直接使用校验阶段保存的sm_id，不再查询
-            $sm_id = $itemSmIdMap[$item['item_id']];
+            $sm_id = isset($itemSmIdMap[$item['item_id']]) ? (int) $itemSmIdMap[$item['item_id']] : 0;
+            
+            $detailNums = isset($items_detail[$item['item_id']]['nums'])
+                ? (int) $items_detail[$item['item_id']]['nums']
+                : (int) $item['nums'];
+            $origNums = (int) $item['nums'];
+            $ratio = ($origNums > 0) ? ($detailNums / $origNums) : 1.0;
             
             $detailData = array(
                 'reshipping_id' => $reshipping_id,
                 'item_id' => $item['item_id'],
                 'sm_id' => $sm_id,
                 'sales_material_bn' => $sales_material_bn,
-                'nums' => isset($items_detail[$item['item_id']]['nums']) ? $items_detail[$item['item_id']]['nums'] : $item['nums'],
+                'nums' => $detailNums,
                 'price' => $item['price'],
+                'pmt_price' => round((float) $item['pmt_price'] * $ratio, 3),
+                'sale_price' => round((float) $item['sale_price'] * $ratio, 3),
+                'amount' => round((float) $item['amount'] * $ratio, 3),
+                'divide_order_fee' => round((float) $item['divide_order_fee'] * $ratio, 3),
+                'part_mjz_discount' => round((float) $item['part_mjz_discount'] * $ratio, 3),
             );
             $reshippingItemsDetailModel->insert($detailData);
         }
@@ -262,6 +384,7 @@ class ome_reshipping extends ome_abstract
     {
         $reshippingModel = app::get('ome')->model('return_reshipping');
         $reshippingItemsDetailModel = app::get('ome')->model('return_reshipping_items_detail');
+        $reshippingItemsModel = app::get('ome')->model('return_reshipping_items');
         $orderModel = app::get('ome')->model('orders');
         $salesMaterialModel = app::get('material')->model('sales_material');
         
@@ -287,10 +410,17 @@ class ome_reshipping extends ome_abstract
             return $result;
         }
         
-        // 获取商品明细（已确认的商品）
+        // 获取商品明细（已确认的商品），补发订单仅生成数量大于0的行
         $itemsDetail = $reshippingItemsDetailModel->getList('*', array('reshipping_id' => $reshipping_id));
         if (empty($itemsDetail)) {
             $result['msg'] = '补寄商品明细不存在';
+            return $result;
+        }
+        $itemsDetail = array_values(array_filter($itemsDetail, function ($row) {
+            return isset($row['nums']) && (int) $row['nums'] > 0;
+        }));
+        if (empty($itemsDetail)) {
+            $result['msg'] = '没有数量大于0的补寄商品';
             return $result;
         }
         
@@ -346,16 +476,52 @@ class ome_reshipping extends ome_abstract
         $bufaOrderSdf['final_amount'] = 0.00;
         $bufaOrderSdf['cost_item'] = 0.00;
         $bufaOrderSdf['custom_mark'] = '';
-        $bufaOrderSdf['mark_text'] = '';
+        $merchantMark = isset($reshipping['merchant_mark']) ? trim($reshipping['merchant_mark']) : '';
+        if ($merchantMark !== '') {
+            $opInfo = kernel::single('ome_func')->getDesktopUser();
+            $bufaOrderSdf['mark_text'] = serialize(array(
+                array(
+                    'op_name'    => $opInfo['op_name'],
+                    'op_time'    => date('Y-m-d H:i', time()),
+                    'op_content' => $merchantMark,
+                ),
+            ));
+        } else {
+            $bufaOrderSdf['mark_text'] = '';
+        }
+        $bufaOrderSdf['discount'] = 0.00;
+        $bufaOrderSdf['pmt_goods'] = 0.00;
+        $bufaOrderSdf['pmt_order'] = 0.00;
         
-        // 收货人信息（使用补寄申请单的购买人信息）
-        $consignee = $this->_formatReshippingConsignee($reshipping);
+        // 收货人：物流中心包裹中心补寄单沿用原发货单快照；其余走原 _formatReshippingConsignee 逻辑
+        $returnReshippingLib = kernel::single('ome_return_reshipping');
+        $isDeliveryBillReshipping = $returnReshippingLib->isDeliveryBillLocalReshipping($reshipping);
+        $applyItemsByItemId = array();
+        $originalOrderId = (int) $reshipping['order_id'];
+        if ($isDeliveryBillReshipping) {
+            $applyItems = $reshippingItemsModel->getList('*', array('reshipping_id' => $reshipping_id));
+            foreach ($applyItems as $applyRow) {
+                if (!empty($applyRow['item_id'])) {
+                    $applyItemsByItemId[(int) $applyRow['item_id']] = $applyRow;
+                }
+            }
+        }
+        if ($isDeliveryBillReshipping) {
+            $consignee = $this->_buildBufaConsigneeFromDeliveryBill($reshipping, $originalOrder);
+        } else {
+            $consignee = $this->_formatReshippingConsignee($reshipping);
+        }
         $bufaOrderSdf['consignee'] = $consignee;
         // 构建订单明细
         // $orderObjs 对应销售物料，$order_items 对应销售物料下的基础物料
         $order_objects = array();
         $salesBasicMaterialModel = app::get('material')->model('sales_basic_material');
         $basicMaterialModel = app::get('material')->model('basic_material');
+        $sumPmtGoods = 0.0;
+        $sumPmtOrder = 0.0;
+        $sumCostItem = 0.0;
+        $sumDivideOrderFee = 0.0;
+        $buOidReshipNums = array();
         
         foreach ($itemsDetail as $itemDetail) {
             // 获取销售物料信息
@@ -364,7 +530,13 @@ class ome_reshipping extends ome_abstract
                 continue;
             }
             
-            // 创建销售物料对应的 order_objects
+            // 创建销售物料对应的 order_objects（金额与 return_reshipping_items_detail 对齐，缺省为 0）
+            $dPrice = isset($itemDetail['price']) ? (float) $itemDetail['price'] : 0.0;
+            $dPmtPrice = isset($itemDetail['pmt_price']) ? (float) $itemDetail['pmt_price'] : 0.0;
+            $dSalePrice = isset($itemDetail['sale_price']) ? (float) $itemDetail['sale_price'] : 0.0;
+            $dAmount = isset($itemDetail['amount']) ? (float) $itemDetail['amount'] : 0.0;
+            $dDivideFee = isset($itemDetail['divide_order_fee']) ? (float) $itemDetail['divide_order_fee'] : 0.0;
+            $dPartMjz = isset($itemDetail['part_mjz_discount']) ? (float) $itemDetail['part_mjz_discount'] : 0.0;
             $orderObjs = array(
                 'obj_type' => $salesMaterial['sales_material_type'] == '2' ? 'pkg' : ($salesMaterial['sales_material_type'] == '3' ? 'gift' : 'goods'),
                 'obj_alias' => $salesMaterial['sales_material_name'],
@@ -372,11 +544,31 @@ class ome_reshipping extends ome_abstract
                 'name' => $salesMaterial['sales_material_name'],
                 'bn' => $itemDetail['sales_material_bn'],
                 'quantity' => $itemDetail['nums'],
-                'price' => 0.00,
-                'pmt_price' => 0.00,
-                'sale_price' => 0.00,
+                'price' => $dPrice,
+                'pmt_price' => $dPmtPrice,
+                'sale_price' => $dSalePrice,
+                'amount' => $dAmount,
+                'divide_order_fee' => $dDivideFee,
+                'part_mjz_discount' => $dPartMjz,
                 'order_items' => array(),
             );
+            $detailItemId = isset($itemDetail['item_id']) ? (int) $itemDetail['item_id'] : 0;
+            if ($isDeliveryBillReshipping && $detailItemId > 0 && isset($applyItemsByItemId[$detailItemId])) {
+                $platformOid = $returnReshippingLib->resolvePlatformOidForApplyItem(
+                    $applyItemsByItemId[$detailItemId],
+                    $originalOrderId
+                );
+                if ($platformOid !== '') {
+                    $orderObjs['oid'] = $platformOid;
+                    $detailNumsForOid = isset($itemDetail['nums']) ? (int) $itemDetail['nums'] : 0;
+                    if ($detailNumsForOid > 0) {
+                        if (!isset($buOidReshipNums[$platformOid])) {
+                            $buOidReshipNums[$platformOid] = 0;
+                        }
+                        $buOidReshipNums[$platformOid] += $detailNumsForOid;
+                    }
+                }
+            }
             
             // 获取销售物料关联的基础物料
             $salesBasicMaterials = $salesBasicMaterialModel->getList('*', array('sm_id' => $salesMaterial['sm_id']), 0, -1);
@@ -386,13 +578,37 @@ class ome_reshipping extends ome_abstract
                 continue;
             }
             
-            // 为每个基础物料创建 order_items
+            // 先收集有效的基础物料行，再按 number 占比分摊 itemDetail 金额（多子行时避免重复整行金额）
+            $bmLines = array();
             foreach ($salesBasicMaterials as $salesBasicMaterial) {
-                // 获取基础物料信息
                 $basicMaterial = $basicMaterialModel->db_dump($salesBasicMaterial['bm_id'], 'bm_id,material_name,material_bn,type');
                 if (empty($basicMaterial)) {
                     continue;
                 }
+                $bmLines[] = array(
+                    'salesBasicMaterial' => $salesBasicMaterial,
+                    'basicMaterial'      => $basicMaterial,
+                );
+            }
+            if (empty($bmLines)) {
+                continue;
+            }
+            $totalBmNumber = 0.0;
+            foreach ($bmLines as $bl) {
+                $totalBmNumber += (float) $bl['salesBasicMaterial']['number'];
+            }
+            $equalRatio = null;
+            if ($totalBmNumber <= 0) {
+                $cnt = count($bmLines);
+                $equalRatio = $cnt > 0 ? (1.0 / $cnt) : 1.0;
+            }
+            
+            foreach ($bmLines as $bl) {
+                $salesBasicMaterial = $bl['salesBasicMaterial'];
+                $basicMaterial = $bl['basicMaterial'];
+                $ratio = $equalRatio !== null
+                    ? $equalRatio
+                    : ((float) $salesBasicMaterial['number'] / $totalBmNumber);
                 
                 $order_item = array(
                     'product_id'        => $basicMaterial['bm_id'] ? $basicMaterial['bm_id'] : 0,
@@ -401,20 +617,24 @@ class ome_reshipping extends ome_abstract
                     'quantity'          => $salesBasicMaterial['number'] * $itemDetail['nums'],
                     'addon'             => '',
                     'item_type'         => $salesMaterial['sales_material_type'] == '2' ? 'pkg' : 'product',
-                    'price'             => 0.00,
-                    'pmt_price'         => 0.00,
-                    'sale_price'        => 0.00,
+                    'price'             => round($dPrice * $ratio, 4),
+                    'pmt_price'         => round($dPmtPrice * $ratio, 3),
+                    'sale_price'        => round($dSalePrice * $ratio, 3),
+                    'amount'            => round($dAmount * $ratio, 3),
+                    'divide_order_fee'  => round($dDivideFee * $ratio, 3),
+                    'part_mjz_discount' => round($dPartMjz * $ratio, 3),
                     'delete'            => 'false',
                 );
                 
                 $orderObjs['order_items'][] = $order_item;
             }
             
-            if (empty($orderObjs['order_items'])) {
-                continue;
-            }
-            
             $order_objects[] = $orderObjs;
+            $sumPmtGoods += $dPmtPrice;
+            $sumPmtOrder += $dPartMjz;
+            $lineNums = isset($itemDetail['nums']) ? (float) $itemDetail['nums'] : 0.0;
+            $sumCostItem += $dPrice * $lineNums;
+            $sumDivideOrderFee += $dDivideFee;
         }
         
         if (empty($order_objects)) {
@@ -423,6 +643,13 @@ class ome_reshipping extends ome_abstract
         }
         
         $bufaOrderSdf['order_objects'] = $order_objects;
+        $bufaOrderSdf['pmt_goods'] = round($sumPmtGoods, 3);
+        $bufaOrderSdf['pmt_order'] = round($sumPmtOrder, 3);
+        $bufaOrderSdf['cost_item'] = round($sumCostItem, 3);
+        $amtPay = round($sumDivideOrderFee, 3);
+        $bufaOrderSdf['total_amount'] = $amtPay;
+        $bufaOrderSdf['final_amount'] = $amtPay;
+        $bufaOrderSdf['payed'] = $amtPay;
         
         // 创建补发订单
         $error_msg = '';
@@ -431,12 +658,53 @@ class ome_reshipping extends ome_abstract
             $result['msg'] = '创建补发订单失败：' . $error_msg;
             return $result;
         }
+
+        // OMS创建订单之后，调用service处理相关业务（如 company_code 写入订单扩展属性）
+        foreach (kernel::servicelist('ome.service.order.create.after') as $object) {
+            if (method_exists($object, 'after_create')) {
+                $object->after_create($bufaOrderSdf);
+            }
+        }
         
         // 更新为已支付（0元订单创建时是未支付）
         $orderModel->update(array('pay_status' => '1'), array('order_id' => $bufaOrderSdf['order_id']));
         
         // 保存收件人敏感数据
         $this->_saveReshippingReceiverEncrypt($bufaOrderSdf['order_id'], $reshipping);
+
+        // 包裹中心补发：打「补寄」订单标记
+        if ($isDeliveryBillReshipping) {
+            $labelError = '';
+            if (!kernel::single('ome_bill_label')->markBillLabel(
+                $bufaOrderSdf['order_id'],
+                '',
+                'SOMS_BUFA_PKG',
+                'order',
+                $labelError
+            )) {
+                app::get('ome')->model('operation_log')->write_log(
+                    'order_modify@ome',
+                    $bufaOrderSdf['order_id'],
+                    '包裹中心补发：打「补寄」标记失败：' . ($labelError ?: '未知错误')
+                );
+            }
+        }
+
+        // 包裹中心补发：按创建订单使用的 oid 复制原单优惠方案
+        if ($isDeliveryBillReshipping && !empty($buOidReshipNums)) {
+            $promoCopied = $returnReshippingLib->copyOriginalOrderPromotionsByOids(
+                $originalOrderId,
+                (int) $bufaOrderSdf['order_id'],
+                $buOidReshipNums
+            );
+            if ($promoCopied > 0) {
+                app::get('ome')->model('operation_log')->write_log(
+                    'order_modify@ome',
+                    $bufaOrderSdf['order_id'],
+                    '包裹中心补发：已从原订单复制 ' . $promoCopied . ' 条优惠方案（按子单 oid）'
+                );
+            }
+        }
         
         // 计算最晚发货时间（同意时间+24小时）
         $agreeTime = strtotime($reshipping['up_time'] ? $reshipping['up_time'] : date('Y-m-d H:i:s'));
@@ -680,6 +948,71 @@ class ome_reshipping extends ome_abstract
     }
     
     /**
+     * 物流中心包裹中心补寄单：补发订单收货人沿用原发货单/原订单快照
+     *
+     * @param array $reshipping
+     * @param array $originalOrder orders::dump 结果
+     * @return array
+     */
+    private function _buildBufaConsigneeFromDeliveryBill($reshipping, $originalOrder)
+    {
+        $deliveryId = 0;
+        if (!empty($reshipping['extend_field'])) {
+            $extend = is_array($reshipping['extend_field'])
+                ? $reshipping['extend_field']
+                : json_decode($reshipping['extend_field'], true);
+            if (!empty($extend['delivery_id'])) {
+                $deliveryId = (int) $extend['delivery_id'];
+            }
+        }
+        if ($deliveryId > 0) {
+            $rows = app::get('ome')->model('delivery')->getList(
+                'ship_name,ship_mobile,ship_tel,ship_addr,ship_area',
+                array('delivery_id' => $deliveryId),
+                0,
+                1
+            );
+            if (!empty($rows[0])) {
+                $d = $rows[0];
+                return array(
+                    'name'      => $d['ship_name'],
+                    'addr'      => $d['ship_addr'],
+                    'zip'       => '',
+                    'telephone' => $d['ship_tel'],
+                    'mobile'    => $d['ship_mobile'],
+                    'email'     => '',
+                    'area'      => $d['ship_area'],
+                );
+            }
+        }
+
+        if (!empty($originalOrder['consignee']) && is_array($originalOrder['consignee'])) {
+            $c = $originalOrder['consignee'];
+            $area = isset($c['area']) ? $c['area'] : '';
+            if (is_array($area)) {
+                $parts = array();
+                foreach (array('province', 'city', 'county', 'district', 'town') as $k) {
+                    if (!empty($area[$k])) {
+                        $parts[] = $area[$k];
+                    }
+                }
+                $area = implode('/', $parts);
+            }
+            return array(
+                'name'      => isset($c['name']) ? $c['name'] : '',
+                'addr'      => isset($c['addr']) ? $c['addr'] : '',
+                'zip'       => isset($c['zip']) ? $c['zip'] : '',
+                'telephone' => isset($c['telephone']) ? $c['telephone'] : '',
+                'mobile'    => isset($c['mobile']) ? $c['mobile'] : '',
+                'email'     => isset($c['email']) ? $c['email'] : '',
+                'area'      => $area,
+            );
+        }
+
+        return $this->_formatReshippingConsignee($reshipping);
+    }
+
+    /**
      * 格式化补寄申请单的收货人信息
      * 参考 dealExchangeEncrypt 方法处理密文 oaid
      * 
@@ -738,21 +1071,73 @@ class ome_reshipping extends ome_abstract
     private function _saveReshippingReceiverEncrypt($order_id, $reshipping)
     {
         $receiverObj = app::get('ome')->model('order_receiver');
-        
-        // 构建收件人敏感数据
+
         $receiverData = array(
             'order_id' => $order_id,
         );
-        
-        // 如果有 oaid，保存到 receiver 表
-        if ($reshipping['oaid']) {
-            $receiverData['encrypt_source_data'] = json_encode(array('oaid' => $reshipping['oaid']));
+
+        $encryptJson = '';
+        if (kernel::single('ome_return_reshipping')->isDeliveryBillLocalReshipping($reshipping)) {
+            $originalOrderId = !empty($reshipping['order_id']) ? (int) $reshipping['order_id'] : 0;
+            if ($originalOrderId > 0) {
+                $originalReceiver = $receiverObj->db_dump(array('order_id' => $originalOrderId), 'encrypt_source_data');
+                if (!empty($originalReceiver['encrypt_source_data'])) {
+                    $encryptJson = $originalReceiver['encrypt_source_data'];
+                }
+            }
+        } elseif (!empty($reshipping['oaid'])) {
+            $encryptJson = json_encode(array('oaid' => $reshipping['oaid']));
         }
-        
-        // 保存收件人敏感数据
+        if ($encryptJson !== '') {
+            $receiverData['encrypt_source_data'] = $encryptJson;
+        }
+
         $receiverObj->save($receiverData);
-        
+
         return true;
+    }
+    
+    /**
+     * 补寄确认明细展示：历史数据未写入金额时，按申请行 return_reshipping_items（订单行快照）与 item_id、数量比例补全
+     *
+     * @param array $items        return_reshipping_items 列表
+     * @param array $itemsDetail  return_reshipping_items_detail 列表
+     * @return array
+     */
+    public function enrichItemsDetailFromItems(array $items, array $itemsDetail)
+    {
+        $itemsByItemId = array();
+        foreach ($items as $it) {
+            if (!empty($it['item_id'])) {
+                $itemsByItemId[$it['item_id']] = $it;
+            }
+        }
+        foreach ($itemsDetail as $k => $d) {
+            $iid = isset($d['item_id']) ? (int) $d['item_id'] : 0;
+            if ($iid <= 0 || !isset($itemsByItemId[$iid])) {
+                continue;
+            }
+            $app = $itemsByItemId[$iid];
+            $hasDetailMoney = ((float) $d['amount'] > 0 || (float) $d['sale_price'] > 0 || (float) $d['divide_order_fee'] > 0);
+            if ($hasDetailMoney) {
+                continue;
+            }
+            if ((float) $app['amount'] <= 0 && (float) $app['sale_price'] <= 0 && (float) $app['divide_order_fee'] <= 0) {
+                continue;
+            }
+            $origNums = (int) $app['nums'];
+            $detailNums = (int) $d['nums'];
+            $ratio = ($origNums > 0) ? ($detailNums / $origNums) : 1.0;
+            $itemsDetail[$k]['pmt_price'] = round((float) $app['pmt_price'] * $ratio, 3);
+            $itemsDetail[$k]['sale_price'] = round((float) $app['sale_price'] * $ratio, 3);
+            $itemsDetail[$k]['amount'] = round((float) $app['amount'] * $ratio, 3);
+            $itemsDetail[$k]['divide_order_fee'] = round((float) $app['divide_order_fee'] * $ratio, 3);
+            $itemsDetail[$k]['part_mjz_discount'] = round((float) $app['part_mjz_discount'] * $ratio, 3);
+            if ((float) $d['price'] == 0 && (float) $app['price'] > 0) {
+                $itemsDetail[$k]['price'] = $app['price'];
+            }
+        }
+        return $itemsDetail;
     }
 }
 

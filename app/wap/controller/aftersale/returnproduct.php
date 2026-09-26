@@ -368,12 +368,49 @@ class wap_ctl_aftersale_returnproduct extends wap_controller{
             if ($mainImage) {
                 $items[$k]['goods_img_url'] = $mainImage['full_url'];
             }
+            $items[$k]['need_serial'] = kernel::single('material_serial')->checkSerialById($v['product_id']) ? 'true' : 'false';
         }
+        // 与退货列表一致：传 original_reship_bn，展示发货出库唯一码，避免落到在库 SN
+        $items = kernel::single('wap_delivery')->enrichItemsByBnByService($items, 'bn', array(
+            'original_reship_bn' => $returns['original_reship_bn'] ?? '',
+            'return_id'          => $returns['return_id'] ?? $return_id,
+            'order_id'           => $returns['order_id'] ?? '',
+            'wap_return_status'  => $returns['status'] ?? '',
+        ));
         $this->pagedata['items'] = $items;
 
         $this->pagedata['wait_return_url'] = app::get('wap')->router()->gen_url(array('ctl'=>'aftersale_returnproduct','act'=>'pending'));
         $this->pagedata['do_reship_url'] = app::get('wap')->router()->gen_url(array('ctl'=>'aftersale_returnproduct','act'=>'doReship'), true);
+        $this->pagedata['scan_return_serial_url'] = app::get('wap')->router()->gen_url(array('ctl'=>'aftersale_returnproduct','act'=>'scanReturnSerial'), true);
+        $this->pagedata['wx_sign_url'] = app::get('wap')->router()->gen_url(array('ctl'=>'order','act'=>'getWxSign'), true);
         $this->display('return/reship.html');
+    }
+
+    /**
+     * 扫描退货唯一码
+     */
+    public function scanReturnSerial()
+    {
+        $return_id   = intval($_POST['return_id']);
+        $sn          = trim($_POST['sn']);
+        $scannedList = [];
+        if (!empty($_POST['scanned_list'])) {
+            $scannedList = json_decode($_POST['scanned_list'], true);
+            if (!is_array($scannedList)) {
+                $scannedList = [];
+            }
+        }
+
+        $expected_bn = trim($_POST['bn'] ?? '');
+        $serialLib = kernel::single('wap_return_serial');
+        $err_msg   = '';
+        $result    = $serialLib->scanReturnSerial($return_id, $sn, $scannedList, $err_msg, $expected_bn);
+        if ($result === false) {
+            echo json_encode(['res' => 'error', 'msg' => $err_msg ?: '扫描失败']);
+            exit;
+        }
+        echo json_encode(array_merge(['res' => 'succ'], $result));
+        exit;
     }
     
     /**
@@ -385,36 +422,71 @@ class wap_ctl_aftersale_returnproduct extends wap_controller{
         $return_id = $_POST['return_id'];
         $returnMdl = app::get('wap')->model('return');
         $returns = $returnMdl->dump(array("return_id"=>$_POST["return_id"],"return_type"=>"return"),"*");
-        $action = $_POST['action'];
-        $items = $_POST['items']; // 这是一个数组
+        if (empty($returns)) {
+            echo json_encode(array('res'=>'error', 'msg'=>'退货单不存在'));
+            exit;
+        }
+        if (intval($returns['status']) !== 1) {
+            echo json_encode(array('res'=>'error', 'msg'=>'退货单状态不正确'));
+            exit;
+        }
+
+        $items = $_POST['items'];
+        if (empty($items) || !is_array($items)) {
+            echo json_encode(array('res'=>'error', 'msg'=>'退货明细不能为空'));
+            exit;
+        }
+
+        $serialLib = kernel::single('wap_return_serial');
+        $serialItems = [];
+        if (!empty($_POST['serial_items'])) {
+            $serialItems = json_decode($_POST['serial_items'], true);
+            if (!is_array($serialItems)) {
+                $serialItems = [];
+            }
+        }
+        $snMap = $serialLib->validateSerialItemsForReship($return_id, $items, $serialItems, $serialErr);
+        if ($snMap === false) {
+            echo json_encode(array('res'=>'error', 'msg'=>$serialErr ?: '唯一码校验失败'));
+            exit;
+        }
 
         $reshipdata = [
             'reship_bn'=>$returns['original_reship_bn'],
-            'status'   =>'FINISH',    
+            'status'   =>'FINISH',
             'demo'     => "门店退货单回传",
-
         ];
         $reship_items = [];
-        // 处理每个商品
         foreach ($items as $item) {
-            $bn = $item['bn'];
-            $num = $item['num'];
-            $reship_items[] = array(
-                'product_bn'    => $bn,
-                'normal_num'    => $num,
-                
+            $bn = trim($item['bn']);
+            $num = intval($item['num']);
+            if ($bn === '' || $num <= 0) {
+                continue;
+            }
+            $row = array(
+                'product_bn' => $bn,
+                'normal_num' => $num,
             );
-            // 处理退货入库逻辑...
+            if (!empty($snMap[$bn])) {
+                $row['sn_list'] = $snMap[$bn];
+            }
+            $reship_items[] = $row;
+        }
+        if (empty($reship_items)) {
+            echo json_encode(array('res'=>'error', 'msg'=>'退货明细无效'));
+            exit;
         }
         $reshipdata['item'] = json_encode($reship_items);
 
-        $store_id      = kernel::single('ome_branch')->isStoreBranch($returns['branch_id']);
-       
+        $store_id = kernel::single('ome_branch')->isStoreBranch($returns['branch_id']);
         $rs = kernel::single('erpapi_router_response')->set_channel_id($store_id)->set_api_name('store.reship.status_update')->dispatch($reshipdata);
-        if($rs['rsp']=='succ'){
-            $returnMdl->update(array("status"=>3),array("return_id"=>$return_id));
+        if ($rs['rsp'] == 'succ') {
+            $returnMdl->update(array("status"=>3), array("return_id"=>$return_id));
+            echo json_encode(array('res'=>'succ', 'status'=>'已确认', 'msg'=>'退货入库成功'));
+            exit;
         }
-        echo json_encode(array('res'=>'succ', 'status'=>'已确认', 'msg'=>'已确认退货'));
+        echo json_encode(array('res'=>'error', 'msg'=>($rs['msg'] ?: '退货入库失败')));
+        exit;
     }
     
 

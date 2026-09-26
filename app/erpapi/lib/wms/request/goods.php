@@ -264,8 +264,14 @@ class erpapi_wms_request_goods extends erpapi_wms_request_abstract
         if($sdf['material']['material_bn']) {
             $params['item_code'] = $sdf['material']['material_bn'];
         }
+        if($sdf['material']['item_id']) {
+            $params['item_id'] = $sdf['material']['item_id'];
+        }
         if($sdf['wms_branch_bn']) {
             $params['warehouse_code'] = $this->get_warehouse_code($this->__channelObj->wms['channel_id'], $sdf['wms_branch_bn']);
+        }
+        if (isset($sdf['inventory_type']) && !empty($sdf['inventory_type'])) {
+            $params['inventory_type'] = $sdf['inventory_type'];
         }
         $rs = $this->__caller->call(WMS_STOCK_QUERY, $params, [],$title,10,$sdf['wms_branch_bn']);
         if(isset($rs['data'])) {

@@ -159,7 +159,13 @@ class ome_order_split
                     
                     //[捆绑商品]发货数量
                     $pkg_product   = $salesBasicMaterialObj->dump(array('sm_id'=>$pkg_goods['sm_id'], 'bm_id'=>$product_id), 'number');
-                    $obj_list[$obj_id]['send_num']    = intval($val['send_num'] / $pkg_product['number']);
+                    
+                    // 兼容订单明细：PKG捆绑商品被批量替换成促销销售物料不包含的基础物料
+                    if(empty($pkg_product)){
+                        $obj_list[$obj_id]['send_num'] = intval($val['send_num']);
+                    }else{
+                        $obj_list[$obj_id]['send_num']    = intval($val['send_num'] / $pkg_product['number']);
+                    }
                     
                     $obj_list[$obj_id]['weight']  = 0;
                     if($obj_list[$obj_id]['net_weight'] > 0)

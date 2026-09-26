@@ -39,8 +39,24 @@ class erpapi_shop_matrix_pinduoduo_response_aftersalev2 extends erpapi_shop_resp
         $shopId = $sdf['shop_id'] = $this->__channelObj->channel['shop_id'];
         $tgOrder = $this->getOrder('order_id,ship_status,order_bn', $shopId, $sdf['order_bn']);
 
+        // 仅订单号不存在时：赠品子单 tid → main_oid 反查主单，并用 oid 定位子单行
+        if (!$tgOrder) {
+            $giftTid = $sdf['order_bn'];
+            $giftOid = isset($params['oid']) ? $params['oid'] : (isset($sdf['oid']) ? $sdf['oid'] : '');
+            $mainInfo = $this->_getMainOrderByGiftTid($shopId, $giftTid, $giftOid);
+            if ($mainInfo && $mainInfo['order_bn']) {
+                $sdf['gift_tid_to_main'] = true;
+                $sdf['oid_ship_status'] = $this->_judgeOidShipStatus(
+                    $mainInfo['obj_id'],
+                    !empty($mainInfo['from_archive']),
+                    isset($mainInfo['ship_status']) ? $mainInfo['ship_status'] : '0'
+                );
+                $sdf['order_bn'] = $mainInfo['order_bn'];
+                $tgOrder = $this->getOrder('order_id,ship_status,order_bn', $shopId, $sdf['order_bn']);
+            }
+        }
 
-        if(in_array($tgOrder['ship_status'],array('3','4'))){
+        if($tgOrder && in_array($tgOrder['ship_status'],array('3','4'))){
             $change_flag = $this->_tranChange($sdf,$tgOrder);
 
             if($change_flag){
@@ -53,6 +69,124 @@ class erpapi_shop_matrix_pinduoduo_response_aftersalev2 extends erpapi_shop_resp
 
         }
         return array_merge($sdf, $pinduoduoSdf);
+    }
+
+    /**
+     * 按关联子单号(main_oid=赠品tid) 反查主单，并用 oid 定位 order_objects 行
+     *
+     * @param string $shopId
+     * @param string $giftTid 请求 tid（存于 order_objects.main_oid）
+     * @param string $oid     请求 oid，用于精确定位子单行
+     * @return array|false {order_id, order_bn, obj_id, oid, ship_status, from_archive}
+     */
+    protected function _getMainOrderByGiftTid($shopId, $giftTid, $oid = '')
+    {
+        if (!$giftTid) {
+            return false;
+        }
+
+        // archive.order_objects 无 main_oid，仅查在线表
+        $info = $this->_findMainOrderObjectByGiftTid(
+            app::get('ome')->model('order_objects'),
+            app::get('ome')->model('orders'),
+            $shopId,
+            $giftTid,
+            $oid
+        );
+        if ($info) {
+            $info['from_archive'] = false;
+            return $info;
+        }
+
+        return false;
+    }
+
+    /**
+     * 判断 oid 对应子单行发货状态（不写库）
+     * 规则：该 obj 下所有明细 nums == sendnum == split_num → '1'，否则回退 order_objects.ship_status
+     *
+     * @param int|string $objId
+     * @param bool $fromArchive
+     * @param string $fallbackShipStatus
+     * @return string
+     */
+    protected function _judgeOidShipStatus($objId, $fromArchive = false, $fallbackShipStatus = '0')
+    {
+        if (!$objId) {
+            return (string) $fallbackShipStatus;
+        }
+
+        $itemApp = $fromArchive ? 'archive' : 'ome';
+        // 不选 delete 列：MySQL 保留字，select 未加反引号会语法错误
+        $items = app::get($itemApp)->model('order_items')->getList(
+            'item_id,nums,sendnum,split_num',
+            array('obj_id' => $objId, 'delete' => 'false')
+        );
+        if (empty($items)) {
+            return (string) $fallbackShipStatus;
+        }
+
+        foreach ($items as $item) {
+            $nums = (int) $item['nums'];
+            $sendnum = (int) $item['sendnum'];
+            $splitNum = (int) $item['split_num'];
+            if ($nums <= 0 || $nums !== $sendnum || $nums !== $splitNum) {
+                return (string) $fallbackShipStatus;
+            }
+        }
+
+        return '1';
+    }
+
+    /**
+     * @param object $objectMdl
+     * @param object $orderMdl
+     * @param string $shopId
+     * @param string $giftTid
+     * @param string $oid
+     * @return array|false
+     */
+    protected function _findMainOrderObjectByGiftTid($objectMdl, $orderMdl, $shopId, $giftTid, $oid = '')
+    {
+        $cols = 'order_id,obj_id,oid,main_oid,ship_status';
+        $objs = array();
+
+        // 优先：main_oid + oid 精确定位一行
+        if ($oid !== '' && $oid !== null && (string) $oid !== '0') {
+            $objs = $objectMdl->getList($cols, array('main_oid' => $giftTid, 'oid' => $oid), 0, 1);
+        }
+        // 回退：仅 main_oid
+        if (empty($objs)) {
+            $objs = $objectMdl->getList($cols, array('main_oid' => $giftTid), 0, 1);
+        }
+        if (empty($objs)) {
+            return false;
+        }
+
+        $order = $orderMdl->getList('order_id,order_bn', array(
+            'order_id' => $objs[0]['order_id'],
+            'shop_id'  => $shopId,
+        ), 0, 1);
+        if (empty($order[0]['order_bn'])) {
+            return false;
+        }
+
+        return array(
+            'order_id'    => $objs[0]['order_id'],
+            'order_bn'    => $order[0]['order_bn'],
+            'obj_id'      => $objs[0]['obj_id'],
+            'oid'         => isset($objs[0]['oid']) ? $objs[0]['oid'] : '',
+            'ship_status' => isset($objs[0]['ship_status']) ? $objs[0]['ship_status'] : '0',
+        );
+    }
+
+    /**
+     * @deprecated 请使用 _getMainOrderByGiftTid
+     */
+    protected function _getMainOrderBnByGiftTid($shopId, $giftTid)
+    {
+        $info = $this->_getMainOrderByGiftTid($shopId, $giftTid, '');
+        return $info ? $info['order_bn'] : '';
     }
     
     /**
@@ -99,6 +233,9 @@ class erpapi_shop_matrix_pinduoduo_response_aftersalev2 extends erpapi_shop_resp
         if($sdf['refund_type'] == 'reship') {
             return array();
         }
+        if ($sdf['order']['tran_type'] == 'archive') {
+            return $this->formatArchiveitemlist($sdf, $convert);
+        }
         
         if($sdf['from_platform'] == 'yjdf'){
             $itemList = $sdf['refund_item_list']['return_item'];
@@ -115,6 +252,50 @@ class erpapi_shop_matrix_pinduoduo_response_aftersalev2 extends erpapi_shop_resp
             
             return parent::_formatAddItemList($sdf, $convert);
         }
+    }
+
+    /**
+     * 归档订单：按 oid 关联 archive.order_objects，返回以 object bn 为键的明细
+     */
+    public function formatArchiveitemlist($sdf, $convert)
+    {
+        $refund_item_list = $sdf['refund_item_list']['return_item'];
+        if (empty($refund_item_list)) {
+            return array();
+        }
+
+        $archiveOrderObjectMdl = app::get('archive')->model('order_objects');
+        $oids = array_column($refund_item_list, 'oid');
+        $filter = array('oid' => $oids);
+        if ($sdf['order']['order_id']) {
+            $filter['order_id'] = $sdf['order']['order_id'];
+        }
+        $object = $archiveOrderObjectMdl->getList('order_id,oid,bn,quantity,obj_id', $filter);
+        $object = array_column($object, null, 'oid');
+
+        $arrItem = array();
+        foreach ($refund_item_list as $item) {
+            if ($object[$item['oid']]['bn']) {
+                $item['bn'] = $object[$item['oid']]['bn'];
+            }
+            if ($arrItem[$item['bn']]) {
+                $arrItem[$item['bn']]['num'] += $item['num'];
+            } else {
+                $arrItem[$item['bn']] = $item;
+            }
+            if ($object[$item['oid']]['obj_id']) {
+                $arrItem[$item['bn']]['obj_id'][] = $object[$item['oid']]['obj_id'];
+            }
+        }
+        return $arrItem;
+    }
+
+    protected function _returnProductAddSdf($sdf)
+    {
+        if ($sdf['order']['tran_type'] == 'archive') {
+            $sdf['archive'] = '1';
+        }
+        return parent::_returnProductAddSdf($sdf);
     }
 
     # 拼多多退款申请附加

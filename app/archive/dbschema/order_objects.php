@@ -128,7 +128,42 @@ $db['order_objects']=array (
         'editable' => false,
         'label' => '优惠分摊',
     ),
-    'delete' => array(
+    'platform_amount' =>
+    array (
+        'type' => 'money',
+        'default' => '0',
+        'editable' => false,
+        'label' => '平台承担金额（不包含支付优惠）',
+    ),
+    'settlement_amount' =>
+    array (
+        'type' => 'money',
+        'default' => '0',
+        'editable' => false,
+        'label' => '结算金额',
+    ),
+    'actually_amount' =>
+    array (
+        'type' => 'money',
+        'default' => '0',
+        'editable' => false,
+        'label' => '客户实付',
+    ),
+    'platform_pay_amount' =>
+    array (
+        'type' => 'money',
+        'default' => '0',
+        'editable' => false,
+        'label' => '支付优惠金额',
+    ),
+     'refund_money' => array (
+         'type' => 'money',
+         'editable' => false,
+         'label' => '退款金额',
+         'default'=>0,
+         'comment' => '子单退款金额',
+     ),
+     'delete' => array(
         'type' => 'bool',
         'default' => 'false',
         'editable' => false,

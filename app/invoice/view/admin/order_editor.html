@@ -19,7 +19,8 @@
 <div class="form-layout">
 <form action="index.php?app=<{$env.get.app}>&ctl=<{$env.get.ctl}>&act=<{$act}>" method="post" id="order_frm" name="order_frm">
     <div class="form-layout-block">
-        <h2><{if $title }><{$title}><{else}>发票操作<{/if}></h2>
+        <input type="hidden" id="auto_order_invoice" name="auto_order_invoice" value="false">
+        <h2>&nbsp;&nbsp;<{if $title }><{$title}><{else}>发票操作<{/if}></h2>
         <h3>发票相关信息</h3>
         <div class="form-layout-fields">
             <div class="form-field" style="width: 50%">
@@ -38,11 +39,18 @@
                 <span class="form-field-label">税金：</span>
                 <span style="font-size: 20px;font-weight: bold;color: red">&yen;<{$invoice_order.cost_tax}></span>
             </div>
-            <div class="form-field" style="width: 50%">
-                <span class="form-field-label">开票方式：</span>
-                <div class="form-radios">
-                    <label><input name="item[mode]" type="radio" value="0" <{if $invoice_order.type_id == '1'}> checked="checked"<{/if}>>专用发票</label>
-                    <label><input name="item[mode]" type="radio" value="1" <{if $invoice_order.type_id == '0' }>checked="checked"<{/if}>>普通发票</label>
+            <div class="form-field" style="width: 100%; clear: both;">
+                <span class="form-field-label">开票方式</span>
+                <div class="form-radios" id="mode_radios">
+                    <label><input name="item[mode]" type="radio" value="0" onclick="selectInvoiceType(this);" <{if $invoice_order.mode != '1'}> checked="checked"<{/if}>>普通发票</label>
+                    <label><input name="item[mode]" type="radio" value="1" onclick="selectInvoiceType(this);" <{if $invoice_order.mode == '1'}> checked="checked"<{/if}>>数电发票</label>
+                </div>
+            </div>
+            <div class="form-field" style="width: 100%; clear: both;">
+                <span class="form-field-label">发票类型</span>
+                <div class="form-radios" id="type_id_radios">
+                    <label><input name="item[type_id]" type="radio" value="0" <{if $invoice_order.type_id != '1'}> checked="checked"<{/if}>><span id="type_id_label_0">普通发票</span></label>
+                    <label><input name="item[type_id]" type="radio" value="1" <{if $invoice_order.type_id == '1'}> checked="checked"<{/if}>><span id="type_id_label_1">专用发票</span></label>
                 </div>
             </div>
             <div class="form-field" style="width: 50%">
@@ -162,20 +170,24 @@
     <div class="form-layout-block" id="consigneeinfo" >
         <h3>收票人信息</h3>
         <div class="form-layout-fields" >
-            <div class="form-field" style="width: 50%">
+            <div class="form-field" <{if $displayButtons['tax_company'] == 'false'}>style="width: 50%; display: none;"<{else}>style="width: 50%"<{/if}> >
                 <span class="form-field-label">收票人姓名：</span>
                 <input class="form-input" type="text" name="item[tax_company]" maxlength="50"  value="<{$invoice_order.tax_company}>">
             </div>
-            <div class="form-field" style="width: 50%">
+            <div class="form-field" <{if $displayButtons['ship_tel'] == 'false'}>style="width: 50%; display: none;"<{else}>style="width: 50%"<{/if}> >
                 <span class="form-field-label">收票人电话：</span>
                 <input class="form-input" type="text" sensitive-field="ship_tel" name="item[ship_tel]" maxlength="32"  value="<{$invoice_order.ship_tel}>">
             </div>
-            <div class="form-field" style="width: 50%">
+            <div class="form-field" <{if $displayButtons['ship_addr'] == 'false'}>style="width: 50%; display: none;"<{else}>style="width: 50%"<{/if}> >
                 <span class="form-field-label">收票地址：</span>
                 <input class="form-input" type="text" sensitive-field="ship_addr" name="item[ship_addr]" maxlength="100"  value="<{$invoice_order.ship_addr}>">
             </div>
+            <div class="form-field" <{if $displayButtons['ship_email'] == 'false'}>style="width: 50%; display: none;"<{else}>style="width: 50%"<{/if}> >
+                <span class="form-field-label">收票人Email：</span>
+                <input class="form-input" type="text" sensitive-field="ship_email" name="item[ship_email]" maxlength="100"  value="<{$invoice_order.ship_email}>">
+            </div>
         </div>
-        <div class="form-layout-fields" style="display: none">
+        <div class="form-layout-fields" <{if $displayButtons['other_detail'] == 'false'}>style="display: none"<{/if}> >
             <div class="form-field" style="width: 50%">
                 <span class="form-field-label">名称：</span>
                 <input class="form-input" type="text" id="payee_name" name="item[payee_name]" value="<{$invoice_order.payee_name}>">
@@ -231,13 +243,18 @@
     <{input type="hidden" name="item[is_edit]" value=$invoice_order.is_edit}>
     <input type="hidden" id="act" value="<{$act}>">
     <div class="form-layout-block"  >
-        <div class="table-action text_left" style="text-align: center;"><{if $invoice_order.id && $act !=
-            'doAddChangeTicket'}><{button label="保存发票信息" type="button" id="btn_submit"
-            name="btn_submit" }><{elseif $act == 'doAddChangeTicket'}><{button
-            label="保存发票改票信息" type="button" id="btn_submit" name="btn_submit" }><em><font
-                    color="red">&nbsp;&nbsp;（保存后，电票将立即冲红）</font></em><{else}><{button
-            label="添加新记录" type="button" id="btn_submit" name="btn_submit" }><{/if}>
-            <{button type="button" class="btn-secondary" id="return-btn" label="返 回" onclick="location.href=window.frameElement.src;"}>
+        <div class="table-action text_left" style="text-align: center;">
+            <{if $invoice_order.id && $act != 'doAddChangeTicket'}>
+                <{button label="保存并开票" type="button" id="btn_auto_submit" name="btn_auto_submit" }>&nbsp;&nbsp;
+                <{button label="保存发票信息" type="button" id="btn_submit" name="btn_submit" }>&nbsp;&nbsp;
+            <{elseif $act == 'doAddChangeTicket'}>
+                <{button label="保存发票改票信息" type="button" id="btn_submit" name="btn_submit" }>
+                <em><font color="red">&nbsp;&nbsp;（保存后，电票将立即冲红）</font></em>
+            <{else}>
+                <{button label="添加新记录" type="button" id="btn_submit" name="btn_submit" }>
+            <{/if}>
+
+            <{button type="button" class="btn-secondary" id="return-btn" label="关 闭" onclick="javascript:void(window.close());"}>
         </div>
     </div>
 </form>
@@ -277,7 +294,29 @@
     if ($('act').getValue() == 'history') {
         $$("input", "button", "select").set('disabled', 'disabled');
     }
+    var typeIdLabels = {
+        '0': ['普通发票', '专用发票'],
+        '1': ['数电增值税电子普通发票', '数电增值税电子专用发票']
+    };
+
+    function updateTypeIdLabels(mode) {
+        var labels = typeIdLabels[mode] || typeIdLabels['0'];
+        $('type_id_label_0').set('text', labels[0]);
+        $('type_id_label_1').set('text', labels[1]);
+    }
+
+    function selectInvoiceType(obj) {
+        updateTypeIdLabels(obj.getAttribute('value'));
+    }
+
     window.addEvent('domready', function () {
+        var modeChecked = $$('input[name="item[mode]"]:checked');
+        if (modeChecked.length) {
+            updateTypeIdLabels(modeChecked[0].getValue());
+        } else if ($('mode_radios')) {
+            updateTypeIdLabels('0');
+        }
+
         Ex_Loader('security', function () {
             new Security({
                 url: 'index.php?app=invoice&ctl=admin_order&act=showSensitiveData&p[0]=<{$invoice_order.id}>',
@@ -293,21 +332,9 @@
     });
 
 
-    //纸质发票 电子发票 切换
-    function selectMode(obj) {
-        var mode = parseInt(obj.getAttribute("value"));
-        if (mode == 1) {
-            // $("tr_type_id").hide();
-        } else {
-            //选择的纸质发票
-            // $("tr_type_id").show();
-        }
-    }
-
     //表单验证
     function submit_frm() {
         var _form = $('order_frm');
-        var mode = parseInt(_form.getElement("input[name='item[mode]']:checked").getValue()); //开票方式
         var amount = parseInt($('amount_input').getValue()); //开票金额
         var title = _form.getElement("input[name='item[title]']").getValue(); //发票抬头
 
@@ -323,13 +350,10 @@
         var is_yhzcbs = $E("input[type=radio][name=item[yhzcbs]]::checked").value;
         var zzstsgl = _form.getElement("input[name='item[zzstsgl]']").getValue(); //增值税特殊管理
 
-        if (mode == 0) {
-            //纸质发票
-            if (!amount) {
-                alert("请填写开票金额");
-                $('amount_input').focus();
-                return false;
-            }
+        if (!amount) {
+            alert("请填写开票金额");
+            $('amount_input').focus();
+            return false;
         }
         if (is_yhzcbs == '1' && !zzstsgl) {
             alert("有优惠政策时，请填写增值税特殊管理！");
@@ -390,30 +414,114 @@
 
         var _form = $('order_frm');
         var btn = $('btn_submit');
-        var finder = finderGroup['<{$env.get.finder_id}>'];
 
-        _form.store('target', {
-            onSuccess: function (response) {
-                var hash_res_obj = JSON.decode(response);
-                if (hash_res_obj.success != undefined && hash_res_obj.success != "") {
-                    try {
-                        var _dialogIns = btn.getParent('.dialog').retrieve('instance');
-                    } catch (e) {
-                    }
-                    if (_dialogIns) {
-                        _dialogIns.close();
-                        finder.refresh();
-                    }
-                }
-            }
-        });
+        var is_auto_invoice = false;
+        var btn_auto_submit = null;
+        if ($defined($('btn_auto_submit'))) {
+            is_auto_invoice = true;
+            var btn_auto_submit = $('btn_auto_submit');
+        }
 
-        btn.addEvent('click', function () {
+        // btn
+        btn.addEvent('click', function (e) {
             var flag = submit_frm();
-            if (flag) {
-                _form.fireEvent('submit', {stop: $empty});
+            if (!flag) {
+                return;
             }
+
+            $('auto_order_invoice').value = 'false';
+
+            var target = _form.retrieve('target') || {};
+            var prevOnComplete = target.onComplete;
+            target.onRequest = function () {
+                window.__skipDesktopSplashInnerRedirect = true;
+                btn.disabled = true;
+
+                if(is_auto_invoice){
+                    btn_auto_submit.disabled = true;
+                }
+            };
+            target.onComplete = function (jsontext) {
+                window.__skipDesktopSplashInnerRedirect = false;
+                if (typeof prevOnComplete === 'function') {
+                    prevOnComplete(jsontext);
+                }
+                try {
+                    var json = JSON.decode(jsontext);
+                    if (json && typeof json.error != 'undefined') {
+                        btn.disabled = false;
+
+                        if(is_auto_invoice){
+                            btn_auto_submit.disabled = false;
+                        }
+                    } else {
+                        btn.disabled = true;
+
+                        if(is_auto_invoice){
+                            btn_auto_submit.disabled = true;
+                        }
+
+                        if (opener && opener.finderGroup && opener.finderGroup['<{$env.get.finder_id}>']) {
+                            opener.finderGroup['<{$env.get.finder_id}>'].refresh.delay(100, opener.finderGroup['<{$env.get.finder_id}>']);
+                        }
+                        setTimeout(function () { window.close(); }, 200);
+                    }
+                } catch (e) {}
+            };
+            _form.store('target', target);
+            _form.fireEvent('submit', e);
         });
+
+        if(is_auto_invoice){
+            btn_auto_submit.addEvent('click', function (e) {
+                var flag = submit_frm();
+                if (!flag) {
+                    return;
+                }
+
+                $('auto_order_invoice').value = 'true';
+
+                var target = _form.retrieve('target') || {};
+                var prevOnComplete = target.onComplete;
+                target.onRequest = function () {
+                    window.__skipDesktopSplashInnerRedirect = true;
+                    btn.disabled = true;
+
+                    if(is_auto_invoice){
+                        btn_auto_submit.disabled = true;
+                    }
+                };
+                target.onComplete = function (jsontext) {
+                    window.__skipDesktopSplashInnerRedirect = false;
+                    if (typeof prevOnComplete === 'function') {
+                        prevOnComplete(jsontext);
+                    }
+                    try {
+                        var json = JSON.decode(jsontext);
+                        if (json && typeof json.error != 'undefined') {
+                            btn.disabled = false;
+
+                            if(is_auto_invoice){
+                                btn_auto_submit.disabled = false;
+                            }
+                        } else {
+                            btn.disabled = true;
+
+                            if(is_auto_invoice){
+                                btn_auto_submit.disabled = true;
+                            }
+
+                            if (opener && opener.finderGroup && opener.finderGroup['<{$env.get.finder_id}>']) {
+                                opener.finderGroup['<{$env.get.finder_id}>'].refresh.delay(100, opener.finderGroup['<{$env.get.finder_id}>']);
+                            }
+                            setTimeout(function () { window.close(); }, 200);
+                        }
+                    } catch (e) {}
+                };
+                _form.store('target', target);
+                _form.fireEvent('submit', e);
+            });
+        }
 
     })();
 </script>

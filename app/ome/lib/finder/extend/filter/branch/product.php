@@ -19,7 +19,7 @@ class ome_finder_extend_filter_branch_product{
         $brObj = app::get('ome')->model('branch');
 
         $is_super = kernel::single('desktop_user')->is_super();
-        
+
         #过滤o2o门店虚拟仓库
         if ($is_super){
             $branch_rows = $brObj->getList('branch_id,name', array(),0,-1);
@@ -38,8 +38,8 @@ class ome_finder_extend_filter_branch_product{
                     'editable' => false,
                     'label' => '仓库',
                     'width' => 110,
-                    'default_value'=>$branch_rows[0]['branch_id'],
-                    'filtertype' => 'normal',
+                    // 与发货列表/门店库存一致：可搜索多选，不默认选中第一个仓
+                    'filtertype' => 'fuzzy_search_multiple',
                     'filterdefault' => true,
                     'in_list' => true,
                     'panel_id' => 'ome_branch_finder_top',
@@ -50,10 +50,10 @@ class ome_finder_extend_filter_branch_product{
                     'editable' => false,
                     'label' => '基础物料编码',
                     'width' => 110,
-                  
+
                     'filtertype' => 'normal',
                     'filterdefault' => true,
-                 
+
                     'panel_id' => 'ome_branch_finder_top',
                 ),
                'material_name' =>
@@ -74,7 +74,7 @@ class ome_finder_extend_filter_branch_product{
                     'filtertype' => 'normal',
                     'required' => true,
                     'label' => '真实库存',
-                  
+
                     'editable' => false,
                     'in_list' => true,
                     'default_in_list' => true,
@@ -88,7 +88,7 @@ class ome_finder_extend_filter_branch_product{
                     'filtertype' => 'normal',
                     'required' => true,
                     'label' => '可用库存',
-                
+
                     'editable' => false,
                     'in_list' => true,
                     'default_in_list' => true,
@@ -102,4 +102,4 @@ class ome_finder_extend_filter_branch_product{
      }
 
 
-}
+}

@@ -227,18 +227,30 @@ class taoexlib_utils {
             return false;
         }
         
-        //检查短信账户信息是否存在
-        base_kvstore::instance('taoexlib')->fetch('account', $account);
-        if (!unserialize($account)) {
+        $channelId = self::getEnabledSmsChannelId();
+        if (!$channelId) {
             return false;
         }
+
         $mscontent =array(
             'phones' => $content['phones'],
             'replace' => $content['replace'],
             'tplid'  =>$content['tplid'],
             'content'=>$content['content'],
         );
-        return kernel::single('erpapi_router_request')->set('sms', $account)->sms_sendOne($mscontent, !$echostr);
+        $queue = $content['direct_send'] === true ? false : true;
+        return kernel::single('erpapi_router_request')->set('sms', $channelId)->sms_sendOne($mscontent, $queue);
+    }
+
+    public static function getEnabledSmsChannelId()
+    {
+        $channelMdl = app::get('channel')->model('channel');
+        $channels = $channelMdl->getList('channel_id', array('channel_type' => 'sms', 'disabled' => 'false'), 0, -1, 'channel_id ASC');
+        if(!$channels){
+            return false;
+        }
+
+        return $channels[0]['channel_id'];
     }
 
     /**
@@ -322,6 +334,22 @@ class taoexlib_utils {
      * @param string $token
      */
     public static function send($arr, $content, $type) {
+//        $param = array(
+//            'certi_app' => 'sms.send',
+//            'entId' => $arr['entid'],
+//            'entPwd' => md5($arr['password'] . 'ShopEXUser'),
+//            'license' => base_certificate::get('certificate_id') ? base_certificate::get('certificate_id') : 1,
+//            'source' => APP_SOURCE,
+//            'contents' => $content,
+//            'version' => self::VERSION,
+//            'format' => 'json',
+//            'sendType' => $type,
+//            'timestamp' => self::get_server_time(),
+//        );
+//        $param['certi_ac'] = self::base_make_shopex_ac($param, APP_TOKEN);
+//        
+//        $http = new base_httpclient;
+        //$result = $http->post(self::SERVICE_URL, $param);
         $content_request = json_decode($content,1);
         $result = kernel::single('taoexlib_request_sms')->sms_request('sendByTmpl','post',$content_request[0]);
         
@@ -431,6 +459,21 @@ class taoexlib_utils {
         else {
             return self::$serverTimestamp + time() - self::$localTimestamp;
         }                   
+    }
+    
+    public static function get_book_url($arr) {
+        $url = SMS_URL.'?ctl=sms&act=prdsList&source=';
+
+//      免登进入购买套餐页面
+        $param = array(
+            'biz_id' => base64_encode(APP_SOURCE),
+            'entid' => $arr['entid'],
+            'ac' => md5($arr['entid'] . md5($arr['password'] . 'ShopEXUser')),
+            't' => self::get_server_time()
+        );      
+
+        $source = self::encode($param['biz_id'] . '|' . $param['entid'] . '|' . $param['ac'] . '|' . $param['t']);
+        return $url . $source;
     }
     
     public static function check_account_status() {

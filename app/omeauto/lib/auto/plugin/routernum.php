@@ -39,7 +39,8 @@ class omeauto_auto_plugin_routernum extends omeauto_auto_plugin_abstract impleme
     public function process(& $group, &$confirmRoles=null) {
         $allow = true;
         #添加默认值，避免缺少路由次数陷入死循环
-        $confirmRoles['router_num'] = $confirmRoles['router_num'] > 0 ? (int)$confirmRoles['router_num'] : 9;
+        $routerNumLimit = $this->_getRouterNumLimit($group);
+        $confirmRoles['router_num'] = $confirmRoles['router_num'] > 0 ? (int)$confirmRoles['router_num'] : $routerNumLimit;
         foreach ($group->getOrders() as  $order) {
             $extendModel = app::get('ome')->model('order_extend');
             $extendOrder = $extendModel->db_dump(array('order_id'=>$order['order_id']), 'router_num');
@@ -54,6 +55,49 @@ class omeauto_auto_plugin_routernum extends omeauto_auto_plugin_abstract impleme
             $group->setStatus(omeauto_auto_group_item::__OPT_HOLD, $this->_getPlugName());
         }
 
+    }
+
+    /**
+     * 获取路由次数上限：门店仓读系统配置，其他仓默认9次
+     *
+     * @param omeauto_auto_group_item $group
+     * @return int
+     */
+    private function _getRouterNumLimit($group)
+    {
+        if (!$this->_isStoreBranchGroup($group)) {
+            return 9;
+        }
+        $routerNumLimit = (int) app::get('o2o')->getConf('o2o.order.router_num');
+        return $routerNumLimit > 0 ? $routerNumLimit : 3;
+    }
+
+    /**
+     * 是否门店仓审单（branch 插件在 routernum 之前已选仓）
+     *
+     * @param omeauto_auto_group_item $group
+     * @return bool
+     */
+    private function _isStoreBranchGroup($group)
+    {
+        if ($group->isStoreBranch()) {
+            return true;
+        }
+        $branchIds = $group->getBranchId();
+        if (empty($branchIds)) {
+            return false;
+        }
+        $ids = is_array($branchIds) ? $branchIds : array($branchIds);
+        if (in_array('sys_appoint', $ids, true)) {
+            return true;
+        }
+        $branchLib = kernel::single('ome_branch');
+        foreach ($ids as $branchId) {
+            if ($branchLib->isStoreBranch($branchId)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 

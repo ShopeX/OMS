@@ -44,8 +44,25 @@ class console_finder_adjust {
     public function detail_item($id){
         $render = app::get('console')->render();
         $items = app::get('console')->model('adjust_items')->getList('*', ['adjust_id'=>$id]);
+        foreach ($items as $k => $item) {
+            $sns = console_adjust_serial::parseSnList($item['sn'] ?? '');
+            $items[$k]['sn_text'] = implode(',', $sns);
+        }
         $render->pagedata['items'] = $items;
         return $render->fetch('admin/adjust/items.html');
+    }
+
+    public $detail_serial = "唯一码列表";
+    public function detail_serial($id)
+    {
+        $render = app::get('console')->render();
+        $page = max(1, intval($_GET['serial_page'] ?? 1));
+        $render->pagedata = array_merge(
+            $render->pagedata,
+            console_adjust_serial::preparePagedAdjustSerialListViewData($id, $page, 50)
+        );
+
+        return $render->fetch('admin/adjust/serial_list.html');
     }
 
     public $detail_oplog = "操作记录";

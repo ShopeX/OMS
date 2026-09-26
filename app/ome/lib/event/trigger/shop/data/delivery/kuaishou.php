@@ -45,7 +45,7 @@ class ome_event_trigger_shop_data_delivery_kuaishou extends ome_event_trigger_sh
         $this->_get_order_objects_sdf($delivery_id);
 
         // 唯一码
-        $this->__sdf['serial_number'] = $this->_get_product_serial($delivery_id);
+        $this->__sdf['serial_number'] = $this->_get_product_serial_sn_imei($delivery_id);
 
         // 如果订单已经发货，处理多包裹
         $this->__sdf['delivery_package'] = [];

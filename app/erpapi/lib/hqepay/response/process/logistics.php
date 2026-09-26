@@ -49,6 +49,9 @@ class erpapi_hqepay_response_process_logistics {
         if ($params['embrace_time']){
             $data['embrace_time'] = $params['embrace_time'];
         }
+
+        // 同步物流状态到 delivery_bill（按 logi_no；已签收写 sign_time）
+        $this->syncDeliveryBillByLogiNo($params);
         
         $ret = app::get('ome')->model('delivery')->update($data, $filter);
         if(is_bool($ret)) {
@@ -82,5 +85,37 @@ class erpapi_hqepay_response_process_logistics {
         }
 
         return array('rsp'=>'succ', 'msg' => '更新物流状态成功!');
+    }
+
+    /**
+     * 按运单号同步物流跟踪状态到 delivery_bill
+     * 关联：logi_no（可选附带 delivery_id）
+     * 已签收(logi_status=3)时同步 sign_time
+     *
+     * @param array $params logi_no / logi_status / sign_time / delivery_id(可选)
+     * @return mixed update 结果；无运单号返回 false
+     */
+    public function syncDeliveryBillByLogiNo($params)
+    {
+        $logi_no = trim((string) ($params['logi_no'] ?? ''));
+        if ($logi_no === '' || !isset($params['logi_status']) || $params['logi_status'] === '') {
+            return false;
+        }
+
+        $data = array(
+            'logi_status' => $params['logi_status'],
+        );
+        if ((string) $params['logi_status'] === '3') {
+            $data['sign_time'] = !empty($params['sign_time']) ? $params['sign_time'] : time();
+        }
+
+        $filter = array(
+            'logi_no' => $logi_no,
+        );
+        if (!empty($params['delivery_id'])) {
+            $filter['delivery_id'] = $params['delivery_id'];
+        }
+
+        return app::get('ome')->model('delivery_bill')->update($data, $filter);
     }
 }

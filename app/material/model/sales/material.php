@@ -734,6 +734,16 @@ class material_mdl_sales_material extends dbeav_model{
         return $material_rows;
     }
 
+    /**
+     * 销售物料扩展列模板（参照 basic 的 getcolstemplate，统一路径）
+     * 读取 sdb_desktop_customcols 中 tbl_name = sdb_material_basic_material_props 的列，返回 '*:col_name' => 'sales_bm_props/col_key'
+     * @return array
+     */
+    public function getsalescolstemplate()
+    {
+        return kernel::single('material_customcols')->getcolstemplateForBmProps();
+    }
+
     //根据配置字段获取导出的标题行
     public function getExportTitle($fields){
         $title = array();
@@ -754,9 +764,22 @@ class material_mdl_sales_material extends dbeav_model{
     public function getExportDataByCustom($fields, $filter, $has_detail, $curr_sheet, $start, $end, $op_id)
     {
         
+        // 扩展列：使用统一入口 getsalescolstemplate（参照 basic 的 getcolstemplate）
+        $salesColsTemplate = $this->getsalescolstemplate();
+        $extendedCols = array();
+        foreach ($salesColsTemplate as $title => $path) {
+            $extendedCols[] = array(
+                'col_name' => preg_replace('/^\*:/', '', $title),
+                'col_key'  => preg_replace('#^sales_bm_props/#', '', $path),
+            );
+        }
+        $extendedHeader = '';
+        if ($extendedCols) {
+            $extendedHeader = ',' . mb_convert_encoding(implode(',', array_column($extendedCols, 'col_name')), 'GBK', 'UTF-8');
+        }
         //根据选择的字段定义导出的第一行标题
         if ($curr_sheet == 1) {
-            $data['content']['main'][] = $this->getExportTitle($fields).mb_convert_encoding(',基础物料编码,基础物料名称,数量,组合价格贡献占比,固定价,福袋组合编码', 'GBK', 'UTF-8');
+            $data['content']['main'][] = $this->getExportTitle($fields).mb_convert_encoding(',基础物料编码,基础物料名称,数量,组合价格贡献占比,固定价,福袋组合编码', 'GBK', 'UTF-8').$extendedHeader;
         }
         
         if (!$list = $this->getList('*', $filter)) {
@@ -804,8 +827,20 @@ class material_mdl_sales_material extends dbeav_model{
                     $exptmp_data[] = '';
                 }
             }
+            // 当前销售物料下 sm_id+bm_id 对应的 sdb_material_basic_material_props，按 bm_id 索引
+            $propsByBm = array();
+            if ($extendedCols && !empty($salesMInfo['sm_id'])) {
+                $propsList = app::get('material')->model('sales_basic_material_props')->getList('bm_id,props_col,props_value', array('sm_id' => $salesMInfo['sm_id']), 0, -1);
+                foreach ($propsList as $p) {
+                    if (!isset($propsByBm[$p['bm_id']])) {
+                        $propsByBm[$p['bm_id']] = array();
+                    }
+                    $propsByBm[$p['bm_id']][$p['props_col']] = $p['props_value'];
+                }
+            }
             foreach ($basicMInfos as $basicMInfo) {
                 $tmp = $exptmp_data;
+                $bm_id = isset($basicMInfo['bm_id']) ? $basicMInfo['bm_id'] : null;
                 if ($salesMInfo['sales_material_type'] == 5) {
                     //多选一
                     
@@ -815,7 +850,7 @@ class material_mdl_sales_material extends dbeav_model{
                     $tmp[] = isset($basicMInfo['rate']) ? $basicMInfo['rate'] : '';
                     $tmp[] = isset($basicMInfo['fixed_price']) ? $basicMInfo['fixed_price'] : '';
                     $tmp[] = '';
-                }elseif ($salesMInfo['sales_material_type'] == 7) {
+                } elseif ($salesMInfo['sales_material_type'] == 7) {
                     //福袋
                     
                     $tmp[] = $basicMInfo['material_bn'];
@@ -832,6 +867,12 @@ class material_mdl_sales_material extends dbeav_model{
                     $tmp[] = isset($basicMInfo['rate']) ? $basicMInfo['rate'] : '';
                     $tmp[] = isset($basicMInfo['fixed_price']) ? $basicMInfo['fixed_price'] : '';
                     $tmp[] = '';
+                }
+                // 扩展列：按 col_key 顺序追加，有 sm_id+bm_id 对应 props 的则展示值
+                foreach ($extendedCols as $ec) {
+                    $colKey = isset($ec['col_key']) ? $ec['col_key'] : '';
+                    $val = ($bm_id !== null && isset($propsByBm[$bm_id][$colKey])) ? $propsByBm[$bm_id][$colKey] : '';
+                    $tmp[] = $val !== '' ? mb_convert_encoding($val, 'GBK', 'UTF-8') : '';
                 }
                 $data['content']['main'][] = implode(',', $tmp);
             }

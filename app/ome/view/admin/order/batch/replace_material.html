@@ -1,0 +1,437 @@
+<style>
+.product-row {
+    background-color: #f8f9fa !important;
+    font-weight: bold;
+    cursor: pointer;
+}
+.item-row {
+    background-color: #ffffff !important;
+}
+.item-row:hover {
+    background-color: #f8f9fa !important;
+}
+.toggle-icon {
+    margin-right: 5px;
+    font-size: 12px;
+    color: #666;
+}
+.disabled {
+    opacity: 0.5;
+    text-decoration: line-through;
+    background-color: #ddd !important;
+}
+.deleted-row {
+    background-color: #f8d7da !important;
+    color: #721c24;
+    text-decoration: line-through;
+    opacity: 0.8;
+}
+.deleted-row:hover {
+    background-color: #f5c6cb !important;
+}
+.new-gift-row {
+    background-color: #d4edda !important;
+    border-left: 3px solid #28a745;
+}
+.new-gift-row:hover {
+    background-color: #c3e6cb !important;
+}
+/* 禁用按钮样式 */
+.disabled-btn {
+    background-color: #6c757d !important;
+    color: #ffffff !important;
+    cursor: not-allowed !important;
+    opacity: 0.6 !important;
+}
+.disabled-btn:hover {
+    background-color: #6c757d !important;
+    color: #ffffff !important;
+}
+.replaced {
+    background-color: #fff3cd !important;
+    border-left: 3px solid #ffc107;
+}
+.replaced:hover {
+    background-color: #ffeaa7 !important;
+}
+/* 物料名称列样式 */
+.name-cell {
+    width: 260px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    position: relative;
+}
+.name-cell:hover {
+    background-color: #f0f8ff;
+}
+/* 悬停提示框 */
+.name-tooltip {
+    position: absolute;
+    background-color: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    display: none;
+    max-width: 300px;
+    word-wrap: break-word;
+    white-space: normal;
+}
+
+</style>
+<div class="finder-detail" id="submit_box">
+    <div class="notice" style="background-color:#FFE3E7; color:red; font-weight:bold;">注意：批量替换基础物料时，会自动赋予被替换基础物料的相关金额。</div>
+
+    <table  cellspacing="0" cellpadding="0" border="0">
+      <tbody>
+        <tr>
+        <td style="text-align: left; padding-top: 10px; padding-bottom: 20px;" >
+            <h3>
+                订单商品明细：
+                <input class="dailog-batch-ipt" type="hidden" name="current_order_id" id="current_order_id" value="<{$orderInfo.order_id}>">
+                <input class="dailog-batch-ipt" type="hidden" name="current_order_bn" id="current_order_bn" value="<{$orderInfo.order_bn}>">
+            </h3>
+        </td>
+        <td style="text-align: right; padding-top: 10px; padding-bottom: 20px;" >&nbsp;</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div id="gift-list">
+        <table class="gridlist" width="100%" cellspacing="0" cellpadding="0" border="0" >
+            <thead><tr>
+                <th>物料编码</th>
+                <th>物料名称</th>
+                <th>购买数量</th>
+                <th>商品单价</th>
+                <th>销售小计</th>
+                <th>操作</th>
+            </tr></thead>
+            <tbody id="old-gift-list">
+                <{foreach from=$orderInfo.order_objects item=object}>
+                    <!-- 商品行 -->
+                    <tr data-old="true" obj-data-bn="<{$object.bn}>" class="product-row" style="background-color: #f8f9fa; font-weight: bold; cursor: pointer;">
+                        <td class="bn">
+                            <span class="toggle-icon" style="margin-right: 5px;">▼</span>
+                            <{$object.bn}>
+                        </td>
+                        <td class="name-cell" title="<{$object.name}>"><{$object.name}></td>
+                        <td class="quantity"><{$object.quantity}></td>
+                        <td class="price"><{$object.price}></td>
+                        <td class="sale_price"><{$object.sale_price}></td>
+                        <td></td>
+                    </tr>
+
+                    <!-- 子商品行 -->
+                    <{foreach from=$object.order_items item=item}>
+                        <tr data-old="true" item-data-bn="<{$object.bn}>" data-item-id="<{$item.item_id}>" class="item-row" style="background-color: #ffffff;">
+                            <td class="bn" style="padding-left: 30px;">└─ <{$item.bn}></td>
+                            <td class="name-cell" title="<{$item.name}>"><{$item.name}></td>
+                            <td class="quantity"><{$item.quantity}></td>
+                            <td class="price"><{$item.price}></td>
+                            <td class="sale_price"><{$item.sale_price}></td>
+                            <td>
+                                <{if $item.is_allow_replace}>
+                                    <{button label="替换" class="replace-material-btn"}>
+                                <{/if}>
+
+                                <{if $item.warning_message}>
+                                    <span style="color: #ff0000;"><{$item.warning_message}></span>
+                                <{/if}>
+                            </td>
+                        </tr>
+                    <{/foreach}>
+                <{/foreach}>
+            </tbody>
+        </table>
+    </div>
+</div>
+<script type="text/javascript">
+    var order_bn = "<{$orderInfo.order_bn}>";
+
+// 替换基础物料按钮
+$ES('.replace-material-btn').addEvent('click',function(){
+    replaceMaterialBn(this);
+});
+
+// 替换基础物料功能
+function replaceMaterialBn(el) {
+   var trEl = el.getParent('tr');
+   if (!trEl) {
+       console.error('replaceMaterialBn: 无法找到tr元素');
+       return;
+   }
+   
+   // 检查替换按钮是否被禁用
+   if (el.disabled || el.hasClass('disabled-btn')) {
+       MessageBox.error('当前已有替换基础物料，请先删除新基础物料后再进行替换操作');
+       return;
+   }
+   
+   var currentBn = trEl.dataset.bn;
+   var currentItemId = trEl.dataset.itemId;
+   
+   // 获取当前订单ID（从页面中获取）
+   var current_order_id = $('current_order_id').value;
+   
+   if (!current_order_id) {
+       MessageBox.error('无法获取订单ID，请检查页面数据');
+       return;
+   }
+   
+   // 选择基础物料
+   var url = 'index.php?app=desktop&act=alertpages&goto=' + encodeURIComponent('index.php?app=ome&ctl=admin_batch_order&act=findBasicMaterial&singleselect=radio');
+   Ex_Loader('modedialog',function(){
+      new finderDialog(url,{params:{url:'index.php?app=ome&ctl=admin_batch_order&act=getSelectBasicMaterial',name:'bm_id[]'},width:1000,height:660,
+        onCallback:function(rs){
+              if(!rs){
+                  MessageBox.info('没有选择任何基础物料，请重试!');
+                  return;
+              }
+              
+              selectedMaterials = JSON.decode(rs);
+              
+              console.log('选择的基础物料：:', selectedMaterials);
+              
+              // 使用第一个选择的基础物料进行替换
+              var selectedMaterial = selectedMaterials[0];
+              console.log('开始替换为:', selectedMaterial);
+              replaceCurrentItem(trEl, selectedMaterial, currentBn, currentItemId);
+        }
+      });
+   });
+}
+
+    // 替换当前子商品
+    function replaceCurrentItem(trEl, newItem, currentBn, currentItemId) {
+        console.log('开始替换子商品，当前行:', trEl);
+        console.log('新商品信息:', newItem);
+        
+        // 获取当前行的购买数量
+        var currentQuantity = 1; // 默认值
+        var quantityCell = trEl.getElement('.quantity');
+        if (quantityCell) {
+            var quantityText = quantityCell.getText().trim();
+            var parsedQuantity = parseInt(quantityText);
+            if (!isNaN(parsedQuantity) && parsedQuantity > 0) {
+                currentQuantity = parsedQuantity;
+            }
+        }
+        console.log('当前行购买数量:', currentQuantity);
+        
+        // 1. 将当前行标记为已替换状态
+        trEl.addClass('replaced');
+        
+        // 修改操作列，仅保留替换按钮
+        var actionCell = trEl.getElement('td:last-child');
+        if (actionCell) {
+            // 创建新的操作按钮
+            var newActionHtml = '<{button label="替换" class="replace-material-btn"}>';
+            actionCell.innerHTML = newActionHtml;
+            
+            // 绑定替换按钮事件
+            var replaceBtn = actionCell.getElement('.replace-material-btn');
+            if (replaceBtn) {
+                replaceBtn.addEvent('click', function(e) {
+                    e.stop();
+                    replaceMaterialBn(this);
+                });
+            }
+        }
+        
+        // 2. 在当前行下方插入新添加的基础物料行（绿色高亮）
+        var newItemHtml = '<td class="bn" style="padding-left: 30px;">└─ ' + newItem.material_bn + '</td>' +
+            '<td class="name name-cell" title="' + newItem.material_name + '">' + newItem.material_name + '</td>' +
+            '<td class="quantity">' + currentQuantity + '</td>' +
+            '<td class="price"> - </td>' +
+            '<td class="sale_price"> - </td>' +
+            '<td>' +
+                '<{button label="删除" class="del-material-btn"}>' +
+                '<input class="dailog-batch-ipt" type="hidden" name="replaceProduct[]" value="' + newItem.material_bn + '">' +
+                '<input class="dailog-batch-ipt" type="hidden" name="replaceProductNumber[' + newItem.material_bn + ']" value="' + currentQuantity + '">' +
+                '<input class="dailog-batch-ipt" type="hidden" name="replace_items[]" value="' + currentItemId + ':' + newItem.bm_id + '">' +
+            '</td>';
+        
+        var newTrEl = new Element('tr', {
+            'data-new': 'true',
+            'item-data-bn': currentBn, // 使用原始商品编码，便于还原时查找
+            'data-new-bn': newItem.material_bn, // 新商品编码
+            'data-bm-id': newItem.bm_id,
+            'class': 'new-gift-row item-row',
+            'style': 'background-color: #d4edda; border-left: 3px solid #28a745;',
+            'html': newItemHtml
+        });
+        
+        // 在当前行之后插入新行
+        trEl.getParent().insertBefore(newTrEl, trEl.getNext());
+        
+        // 3. 为新行绑定事件
+        var delBtn = newTrEl.getElement('.del-material-btn');
+        if (delBtn) {
+            delBtn.addEvent('click', function(e) {
+                e.stop();
+                delMaterial(this);
+            });
+        }
+        
+        // 4. 禁用原商品行的替换按钮
+        var originalReplaceBtn = trEl.getElement('.replace-material-btn');
+        if (originalReplaceBtn) {
+            originalReplaceBtn.addClass('disabled-btn');
+            originalReplaceBtn.disabled = true;
+            originalReplaceBtn.title = '已有替换商品，请先删除新商品';
+        }
+        
+        // 5. 存储关联关系，用于删除新商品时恢复原商品行按钮
+        newTrEl.dataset.originalRowId = trEl.id || 'row_' + Date.now();
+        trEl.id = newTrEl.dataset.originalRowId;
+        
+        console.log('已标记当前行为替换状态，添加新行:', newTrEl);
+        
+        // 6. 显示替换成功提示
+        MessageBox.success('子商品已替换为：' + newItem.material_name);
+    }
+
+    $ES('.del-material-btn').addEvent('click',function(){
+        delMaterial(this);
+    });
+
+    // 删除基础物料
+    function delMaterial(el){
+        console.log('delMaterial被调用，参数:', el);
+
+        if (!el) {
+            console.error('delMaterial: 参数为空');
+            return;
+        }
+
+        var trEl = el.getParent('tr');
+        console.log('找到的tr元素:', trEl);
+
+        if (!trEl) {
+            console.error('删除基础物料时，无法找到tr元素');
+            return;
+        }
+
+        // 检查删除按钮是否被禁用（仅对非新添加的行进行检查）
+        if (trEl.dataset.new !== 'true' && (el.disabled || el.hasClass('disabled-btn'))) {
+            MessageBox.warning('当前已有替换商品，请先删除新商品后再进行删除操作');
+            return;
+        }
+
+        // 如果是新添加的赠品，删除并恢复原商品行的样式和按钮
+        if (trEl.dataset.new == 'true') {
+            console.log('删除新添加的赠品');
+
+            // 查找并恢复原商品行的样式和按钮
+            var originalRowId = trEl.dataset.originalRowId;
+            if (originalRowId) {
+                var originalRow = $E('#' + originalRowId);
+                if (originalRow) {
+                    // 1. 恢复原商品行的样式（移除删除状态样式）
+                    originalRow.removeClass('deleted-row');
+                    originalRow.dataset.deleted = 'false';
+                    originalRow.style.backgroundColor = '';
+                    originalRow.style.color = '';
+                    originalRow.style.fontStyle = '';
+                    originalRow.style.textDecoration = '';
+
+                    // 2. 恢复原商品行的替换按钮和删除按钮
+                    var originalReplaceBtn = originalRow.getElement('.replace-material-btn');
+                    if (originalReplaceBtn) {
+                        originalReplaceBtn.removeClass('disabled-btn');
+                        originalReplaceBtn.disabled = false;
+                        originalReplaceBtn.title = '';
+                        console.log('已恢复原商品行的替换按钮');
+                    }
+
+                    var originalDelBtn = originalRow.getElement('.del-material-btn');
+                    if (originalDelBtn) {
+                        originalDelBtn.removeClass('disabled-btn');
+                        originalDelBtn.disabled = false;
+                        originalDelBtn.title = '';
+                        console.log('已恢复原商品行的删除按钮');
+                    }
+
+                    // 3. 移除删除标记的隐藏字段
+                    var deleteInput = originalRow.getElement('input[name="replace[]"]');
+                    if (deleteInput) {
+                        deleteInput.remove();
+                    }
+
+                    // 4. 清理数据属性
+                    delete originalRow.dataset.originalBn;
+                    delete originalRow.dataset.originalItemId;
+
+                    console.log('已恢复原商品行的样式和状态');
+                }
+            }
+
+            trEl.remove();
+            return;
+        }
+
+        trEl.toggleClass('disabled');
+
+        // 控制替换按钮的状态
+        var replaceBtn = trEl.getElement('.replace-material-btn');
+        if (replaceBtn) {
+            if (trEl.hasClass('disabled')) {
+                // 行被禁用时，禁用替换按钮
+                replaceBtn.addClass('disabled-btn');
+                replaceBtn.disabled = true;
+                replaceBtn.title = '当前行已删除，无法进行替换操作';
+            } else {
+                // 行恢复时，启用替换按钮
+                replaceBtn.removeClass('disabled-btn');
+                replaceBtn.disabled = false;
+                replaceBtn.title = '';
+            }
+        }
+
+        if (trEl.dataset.old == 'true') {
+            var inputEl = trEl.getElement('input[name=replace[]]');
+            if (inputEl) {
+                inputEl.toggleClass('dailog-batch-ipt');
+            }
+
+            // 记录被删除的item_id和bn信息
+            var itemId = trEl.dataset.itemId;
+            var itemBn = trEl.getElement('.bn') ? trEl.getElement('.bn').getText().replace('└─ ', '') : '';
+
+            if (trEl.hasClass('disabled')) {
+                // 行被删除时，添加删除记录
+                if (itemId && itemBn) {
+                    // 检查是否已经存在删除记录
+                    var existingDeleteRecord = trEl.getElement('input[name="deleted_items[]"]');
+                    if (!existingDeleteRecord) {
+                        var deleteRecord = new Element('input', {
+                            type: 'hidden',
+                            name: 'deleted_items[]',
+                            value: itemId + ':' + itemBn,
+                            'class': 'dailog-batch-ipt'
+                        });
+                        trEl.appendChild(deleteRecord);
+                        console.log('记录删除的商品 - item_id:', itemId, 'bn:', itemBn);
+                    }
+                }
+            } else {
+                // 行恢复时，移除删除记录
+                var deleteRecord = trEl.getElement('input[name="deleted_items[]"]');
+                if (deleteRecord) {
+                    deleteRecord.remove();
+                    console.log('移除删除记录 - item_id:', itemId, 'bn:', itemBn);
+                }
+            }
+        }
+
+        if (trEl.hasClass('disabled') && trEl.dataset.old != 'true') {
+            console.log('删除现有赠品');
+            trEl.remove();
+        }
+    }
+</script>

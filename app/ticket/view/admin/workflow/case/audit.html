@@ -29,23 +29,35 @@
                     </td>
                 </tr>
                 <tr>
-                    <th><{t}>赠品明细：<{/t}></th>
+                    <th><{t}>审批金额：<{/t}></th>
+                    <td><{$approvalAmount|default:'0.000'}> 元</td>
+                </tr>
+                <tr>
+                    <th><{if $sceneType == 'approve_orders'}>订单明细<{else}>赠品明细<{/if}>：</th>
                     <td>
                         <div class="clear division">
                         <table width="100%" border="0" cellspacing="0" cellpadding="0" class="gridlist">
                             <thead>
                                 <tr>
-                                <th style="width:230px; height:26px;">赠品编码</th>
-                                <th style="width:330px;">赠品名称</th>
-                                <th style="width:120px;">申请数量</th>
+                                <th style="width:230px; height:26px;"><{if $sceneType == 'approve_orders'}>商品编码<{else}>赠品编码<{/if}></th>
+                                <th style="width:330px;"><{if $sceneType == 'approve_orders'}>商品名称<{else}>赠品名称<{/if}></th>
+                                <th style="width:120px;">数量</th>
+                                <{if $sceneType == 'approve_orders'}>
+                                <th style="width:120px;">单价</th>
+                                <th style="width:120px;">金额</th>
+                                <{/if}>
                               </tr>
                             </thead>
                             <tbody>
-                            <{foreach from=$addGiftList item=item}>
+                            <{foreach from=$approvalItemList item=item}>
                             <tr>
                                 <td style="width:230px; height:30px;"><{$item.bn}></td>
                                 <td><input autocomplete="off" class="x-input " type="text" name="gift_bns[]" value="<{$item.name}>" readonly="readonly" style="border:0px; width:300px;"></td>
-                                <td><{$item.quantity}></td>
+                                <td><{$item.quantity|default:$item.nums}></td>
+                                <{if $sceneType == 'approve_orders'}>
+                                <td><{$item.price|default:'0.00'}></td>
+                                <td><{$item.amount|default:'0.00'}></td>
+                                <{/if}>
                             </tr>
                             <{/foreach}>
                             </tbody>

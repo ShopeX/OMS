@@ -44,16 +44,16 @@ class ome_redis
 
         if ($redisConfig2) {
             $config = explode(':', constant('STORE_REDIS_CONFIG'));
-            self::$stockRedis->connect($config[0], $config[1]);
-            
+            self::_redisSocketConnect(self::$stockRedis, $config, 'STORE_REDIS');
+
             // 密码
             if (defined('STORE_REDIS_AUTH') && constant('STORE_REDIS_AUTH')){
                 self::$stockRedis->auth(constant('STORE_REDIS_AUTH'));
             }
         } else {
             $config = explode(':', constant('KVSTORE_REDIS_CONFIG'));
-            self::$stockRedis->connect($config[0], $config[1]);
-            
+            self::_redisSocketConnect(self::$stockRedis, $config, 'KVSTORE_REDIS');
+
             // 密码
             if (defined('KVSTORE_REDIS_AUTH') && constant('KVSTORE_REDIS_AUTH')){
                 self::$stockRedis->auth(constant('KVSTORE_REDIS_AUTH'));
@@ -99,16 +99,16 @@ class ome_redis
 
         if ($redisConfig2) {
             $config = explode(':', constant('STORE_REDIS_CONFIG'));
-            self::$publicRedis->connect($config[0], $config[1]);
-            
+            self::_redisSocketConnect(self::$publicRedis, $config, 'STORE_REDIS');
+
             // 密码
             if (defined('STORE_REDIS_AUTH') && constant('STORE_REDIS_AUTH')){
                 self::$publicRedis->auth(constant('STORE_REDIS_AUTH'));
             }
         } else {
             $config = explode(':', constant('KVSTORE_REDIS_CONFIG'));
-            self::$publicRedis->connect($config[0], $config[1]);
-            
+            self::_redisSocketConnect(self::$publicRedis, $config, 'KVSTORE_REDIS');
+
             // 密码
             if (defined('KVSTORE_REDIS_AUTH') && constant('KVSTORE_REDIS_AUTH')){
                 self::$publicRedis->auth(constant('KVSTORE_REDIS_AUTH'));
@@ -352,6 +352,69 @@ class ome_redis
         }
 
         return $result;
+    }
+
+    /**
+     * Redis socket 连接（可选 TLS；常量前缀 KVSTORE_REDIS 或 STORE_REDIS，与 base_kvstore_redis 一致）
+     *
+     * @param Redis $redis
+     * @param array $config explode(':', *_REDIS_CONFIG) 结果
+     * @param string $prefix KVSTORE_REDIS|STORE_REDIS
+     * @return void
+     */
+    private static function _redisSocketConnect($redis, array $config, $prefix)
+    {
+        $host = $config[0];
+        $port = isset($config[1]) ? (int) $config[1] : 6379;
+        $tlsConst = $prefix . '_TLS';
+        if (defined($tlsConst) && self::_redisTlsConstantEnabled($tlsConst)) {
+            $ctConst = $prefix . '_CONNECT_TIMEOUT';
+            $rtConst = $prefix . '_READ_TIMEOUT';
+            $connectTimeout = defined($ctConst) ? (float) constant($ctConst) : 2.0;
+            $readTimeout = defined($rtConst) ? (float) constant($rtConst) : 2.0;
+            $context = self::_redisStreamContextForPrefix($prefix);
+            $redis->connect($host, $port, $connectTimeout, null, 0, $readTimeout, $context);
+        } else {
+            $redis->connect($host, $port);
+        }
+    }
+
+    /**
+     * @param string $constName 如 KVSTORE_REDIS_TLS
+     * @return bool
+     */
+    private static function _redisTlsConstantEnabled($constName)
+    {
+        $v = constant($constName);
+        if ($v === true || $v === 1) {
+            return true;
+        }
+        if (is_string($v)) {
+            $v = strtolower(trim($v));
+            return $v === '1' || $v === 'true' || $v === 'yes' || $v === 'on';
+        }
+        return false;
+    }
+
+    /**
+     * @param string $prefix KVSTORE_REDIS|STORE_REDIS
+     * @return array
+     */
+    private static function _redisStreamContextForPrefix($prefix)
+    {
+        $ctxName = $prefix . '_STREAM_CONTEXT';
+        if (defined($ctxName)) {
+            $ctx = constant($ctxName);
+            if (is_array($ctx) && $ctx !== array()) {
+                return $ctx;
+            }
+        }
+        return array(
+            'stream' => array(
+                'verify_peer' => true,
+                'verify_peer_name' => true,
+            ),
+        );
     }
 
 }

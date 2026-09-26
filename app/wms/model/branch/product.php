@@ -18,6 +18,39 @@
 class wms_mdl_branch_product extends ome_mdl_branch_product{
      var $export_name = '仓库库存';
 
+     private $_list_extra_gt_master_done = false;
+     private $_export_extra_gt_master_done = false;
+
+     public function extra_cols()
+     {
+         return material_basic_material_master::extraCols();
+     }
+
+     public function extra_gt_master($rows)
+     {
+         if ($this->_list_extra_gt_master_done || empty($rows)) {
+             return $rows;
+         }
+         $rows = material_basic_material_master::fillListRowsWithIdField($rows, 'product_id');
+         $this->_list_extra_gt_master_done = true;
+         return $rows;
+     }
+
+     public function export_extra_cols()
+     {
+         return material_basic_material_master::extraCols();
+     }
+
+     public function export_extra_gt_master($list)
+     {
+         if ($this->_export_extra_gt_master_done || empty($list)) {
+             return $list;
+         }
+         $list = material_basic_material_master::fillListRowsWithIdField($list, 'product_id');
+         $this->_export_extra_gt_master_done = true;
+         return $list;
+     }
+
      public function table_name($real = false){
         if($real){
            $table_name = 'sdb_ome_branch_product';
@@ -78,6 +111,10 @@ class wms_mdl_branch_product extends ome_mdl_branch_product{
         $barcodeLib = kernel::single('material_basic_material_barcode');
 
         if( !$list=$this->getlists('*',$filter,0,-1) )return false;
+
+        $list = material_basic_material_master::fillListRowsWithIdField($list, 'product_id');
+        $masterCols = material_basic_material_master::extraCols();
+
         foreach( $list as $aFilter ){
             $branch = $branchObj->dump($aFilter['branch_id'],'name');
             $barcode = $barcodeLib->getBarcodeById($aFilter['product_id']);
@@ -94,6 +131,9 @@ class wms_mdl_branch_product extends ome_mdl_branch_product{
             $detail['bn'] = $this->charset->utf2local($aFilter['bn'])."\t";
             $detail['branch_name'] = $this->charset->utf2local($branch['name']);
             $detail['arrive_store'] = $aFilter['arrive_store'];
+            foreach ($masterCols as $colKey => $colDef) {
+                $detail[$colKey] = isset($aFilter[$colKey]) ? $this->charset->utf2local($aFilter[$colKey]) : '';
+            }
             foreach( $this->oSchema['csv']['branch_product'] as $k => $v ){
 
                 $pRow[$k] =  utils::apath( $detail,explode('/',$v) );
@@ -123,6 +163,9 @@ class wms_mdl_branch_product extends ome_mdl_branch_product{
                 '*:冻结库存' => 'store_freeze',
                 '*:在途库存'=>'arrive_store'
                 );
+                foreach (material_basic_material_master::extraCols() as $colKey => $colDef) {
+                    $this->oSchema['csv'][$filter]['*:' . $colDef['label']] = $colKey;
+                }
                 break;
         }
         $this->ioTitle[$ioType][$filter] = array_keys( $this->oSchema[$ioType][$filter] );
@@ -201,6 +244,8 @@ class wms_mdl_branch_product extends ome_mdl_branch_product{
             $filter['visibility']    = ($filter['visibility'] == 'true' ? 1 : 0);
             $strWhere .= ' and a.visibled='."'{$filter['visibility']}'";
         }
+
+        material_basic_material_master::appendMasterWhere($filter, $strWhere, 'bp', 'product_id');
         
         //col
         $col_tmp[]    = 'a.bm_id, a.material_name AS name, a.material_bn AS bn, a.visibled AS visibility';

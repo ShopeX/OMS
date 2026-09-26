@@ -43,6 +43,9 @@ $db['store'] = array(
             'label'    => '门店名称',
             'editable' => false,
             'is_title' => true,
+            'searchtype' => 'has',
+            'filtertype' => 'normal',
+            'filterdefault' => true,
             'in_list'         => true,
             'default_in_list' => true,
         ),
@@ -255,6 +258,13 @@ $db['store'] = array(
             'comment'  => '是否参加O2O(1=是，2=否)',
             'in_list'         => true,
             'default_in_list' => true,
+        ),
+        'accept_order_limit' => array(
+            'type'     => 'int unsigned',
+            'editable' => false,
+            'label'    => '接单量',
+            'default'  => 0,
+            'comment'  => '门店接单量上限，0表示不限制',
         ),
     ),
     'index'   => array(

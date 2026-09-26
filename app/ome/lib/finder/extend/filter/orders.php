@@ -25,7 +25,14 @@ class ome_finder_extend_filter_orders{
             $pay_bn[$payment['pay_bn']] = $payment['custom_name'];
         }
         $order_bool_list =kernel::single('ome_order_bool_type')->getOrder_type_list();
-        $shopName = array_column(app::get('ome')->model('shop')->getList('name,shop_id'),'name','shop_id');
+        
+        // 线上店铺列表（按是否常用店铺进行排序）
+        $shopFilter = array(
+            's_type' => '1',
+        );
+        $shopList = app::get('ome')->model('shop')->getList('name,shop_id', $shopFilter, 0, -1, 'is_common_shop ASC, s_status DESC');
+        
+        $shopName = array_column($shopList, 'name','shop_id');
         
         //物流服务标签列表
         $axOrderLib = kernel::single('dchain_order');
@@ -314,7 +321,7 @@ class ome_finder_extend_filter_orders{
                     'editable' => false,
                 ),
                 'order_label' => array (
-                    'type' => 'table:order_labels@omeauto',
+                    'type' => kernel::single('ome_bill_label')->getBillLabelFilterOptions('order'),
                     'label' => '订单标记',
                     'width' => 120,
                     'filtertype' => 'normal',

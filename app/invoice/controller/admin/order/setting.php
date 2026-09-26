@@ -133,8 +133,14 @@ class invoice_ctl_admin_order_setting extends desktop_controller
     public function loadChannel($sid)
     {
         $settingMdl = app::get('invoice')->model('order_setting');
-
-        $this->pagedata['shopList'] = app::get('ome')->model('shop')->getList("shop_id,name");
+        
+        // 线上店铺列表
+        $filter = array(
+            's_type' => '1',
+        );
+        $shopList = app::get('ome')->model('shop')->getList("*", $filter);
+        
+        $this->pagedata['shopList'] = $shopList;
 
         $item = $settingMdl->db_dump($sid);
         $item['shopids'] = explode(',',$item['shopids']);

@@ -1,18 +1,4 @@
-<!--
-  Copyright 2012-2026 ShopeX (https://www.shopex.cn)
 
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
--->
 <{capture name="header"}>
   <link href="../app/ome/statics/ome.css" rel="stylesheet" type="text/css">
 <{/capture}>
@@ -89,6 +75,14 @@
             <td><{$sales.service_price|cur}></td>
             <{/if}>
         </tr>
+        <tr>
+            <th>退款金额：</th>
+            <td><{$sales.refund_money|cur}></td>
+          
+            <th></th>
+            <td></td>
+            
+        </tr>
     </table>
 </div>
 
@@ -140,6 +134,7 @@
                 <th orderkey="weight"><{t}>销售总价<{/t}></th>
                 <th orderkey="store"><{t}>平摊优惠<{/t}></th>
 				<th orderkey="unit"><{t}>销售金额<{/t}></th>
+				<th orderkey="unit"><{t}>退款金额<{/t}></th>
                 <th orderkey="unit"><{t}>支付优惠金额<{/t}></th>
                 <th orderkey="unit"><{t}>客户实付<{/t}></th>
 				<th orderkey="unit"><{t}>平台承担<{/t}></th>
@@ -157,12 +152,13 @@
 	  <td><{$dataitem.bn}></td>
 	  <td><{$dataitem.name}></td>
       <td><{$dataitem.spec_name|default:'-'}></td>
-	  <td><{$dataitem.price|cur}></td>
+	  <td><{if $show_original_price}><{$dataitem.price|cur}><{else}>-<{/if}></td>
       <td><{$dataitem.nums}></td>
       <td><{if $show_sale_price}><{$dataitem.pmt_price|cur}><{else}>-<{/if}></td>
       <td><{if $show_sale_price}><{$dataitem.sale_price|cur}><{else}>-<{/if}></td>
       <td><{if $show_sale_price}><{$dataitem.apportion_pmt|cur}><{else}>-<{/if}></td>
 	  <td><{if $show_sale_price}><{$dataitem.sales_amount|cur}><{else}>-<{/if}></td>
+	  <td><{if $show_sale_price}><{$dataitem.refund_money|default:0|cur}><{else}>-<{/if}></td>
       <td><{if $show_sale_price}><{$dataitem.platform_pay_amount|cur}><{else}>-<{/if}></td>
       <td><{if $show_sale_price}><{$dataitem.actually_amount|cur}><{else}>-<{/if}></td>
 	  <td><{if $show_sale_price}><{$dataitem.platform_amount|cur}><{else}>-<{/if}></td>
@@ -182,12 +178,13 @@
           <td><{$item.bn}></td>
           <td> <{$item.name}> </td>
           <td> - </td>
-          <td><{$item.price}></td>
+          <td><{if $show_original_price}><{$item.price}><{else}>-<{/if}></td>
           <td><{$item.nums}></td>
           <td><{if $show_sale_price}><{$item.pmt_price|cur}><{else}>-<{/if}></td>
           <td><{if $show_sale_price}><{$item.sale_price|cur}><{else}>-<{/if}></td>
           <td><{if $show_sale_price}><{$item.apportion_pmt|cur}><{else}>-<{/if}></td>
           <td><{if $show_sale_price}><{$item.amount|cur}><{else}>-<{/if}></td>
+          <td>-</td>
         </tr>
         <{/foreach}>
     <{/if}>
@@ -197,6 +194,66 @@
 </table>
 </div>
 
+<h4>唯一码明细：</h4>
+<div class="goods-spec-cell">
+    <table cellspacing="0" cellpadding="0" border="0" class="gridlist">
+        <thead>
+        <tr>
+            <th><{t}>物料编码<{/t}></th>
+            <th><{t}>物料名称<{/t}></th>
+            <th><{t}>唯一码<{/t}></th>
+            <th><{t}>吊牌价<{/t}></th>
+            <th><{t}>销售价<{/t}></th>
+            <th><{t}>金价<{/t}></th>
+            <th><{t}>颜色<{/t}></th>
+            <th><{t}>净度<{/t}></th>
+            <th><{t}>切工<{/t}></th>
+            <th><{t}>证书<{/t}></th>
+        </tr>
+        </thead>
+        <tbody>
+        <{if $sale_serial_number_items}>
+        <{foreach from=$sale_serial_number_items item=item}>
+        <tr>
+            <td><{$item.bn}></td>
+            <td><{$item.product_name}></td>
+            <td><{$item.serial_number}></td>
+            <td><{if $show_sale_price}><{$item.price|cur}><{else}>-<{/if}></td>
+            <td><{if $show_sale_price}><{$item.sale_price|cur}><{else}>-<{/if}></td>
+            <td><{if $show_sale_price}><{$item.gold_value|cur}><{else}>-<{/if}></td>
+            <td><{$item.color}></td>
+            <td><{$item.clarity}></td>
+            <td><{$item.diamond_cut}></td>
+            <td><{$item.certificate}></td>
+        </tr>
+        <{/foreach}>
+        <{else}>
+        <tr>
+            <td colspan="10" style="text-align:center;color:#999;">暂无唯一码明细</td>
+        </tr>
+        <{/if}>
+        </tbody>
+    </table>
+</div>
+
+<{if $sale_serial_number_items}>
+<div class="goods-spec-cell">
+    <table cellspacing="0" cellpadding="0" border="0" class="gridlist">
+        <thead>
+        <tr>
+            <th><{t}>吊牌价合计<{/t}></th>
+            <th><{t}>销售价合计<{/t}></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td><{if $show_sale_price}><{$sum_price|cur}><{else}>-<{/if}></td>
+            <td><{if $show_sale_price}><{$sum_sale_price|cur}><{else}>-<{/if}></td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+<{/if}>
 
 <{if $selling_agent_info}>
     <div class="tableform">

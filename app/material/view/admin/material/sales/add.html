@@ -15,6 +15,8 @@
     .luckybag_table {margin:4px 0;}
     .luckybag_table_operation_th {width:50px;}
     .luckybag_rule {height:30px}
+    #extended_cols_block select.ext-col-select { min-width:280px; width:280px; max-width:100%; box-sizing:border-box; }
+    #dataNode select.ext-col-select, #gift_dataNode select.ext-col-select { min-width:200px; width:200px; max-width:100%; box-sizing:border-box; }
 </style>
 <div class="form-layout">
 <form method="post" id="sales_material_form" action="index.php?app=material&ctl=admin_material_sales&act=toAdd">
@@ -69,6 +71,23 @@
                 <span class="form-field-label">关联基础物料：</span>
                 <{input class='form-input' type='material_object' object='basic_material@material' breakpoint='0' name='bm_id' textcol='material_name' value=$data.pgid callback='material_object_callback' replacehtml=$replacehtml emptytext='选取基础物料' style='float:left;width:200px;' filter='visibled=1' }>
             </div>
+            <div id="extended_cols_block" style="display:none;">
+                <{foreach from=$extendedColsForBmProps item=customcol}>
+                <div class="form-field ext-col-row" data-col-key="<{$customcol.col_key}>">
+                    <span class="form-field-label"><{$customcol.col_name}>：</span>
+                    <{if $customcol.col_type == 'select' && $customcol.options}>
+                    <select class="form-input ext-col-select" issearch="fuzzy-search" style="min-width:280px;width:280px;max-width:100%;box-sizing:border-box;" name="props[<{$customcol.col_key}>]" id="ext_col_<{$customcol.col_key}>">
+                        <option value="">请选择</option>
+                        <{foreach from=$customcol.options item=opt}>
+                        <option value="<{$opt.color_code}>"><{$opt.color_name}></option>
+                        <{/foreach}>
+                    </select>
+                    <{else}>
+                    <input type="text" class="form-input ext-col-input" name="props[<{$customcol.col_key}>]" id="ext_col_<{$customcol.col_key}>" value="" />
+                    <{/if}>
+                </div>
+                <{/foreach}>
+            </div>
             <div class="form-field" id="bind_basic_giftmaterial" style="display:none">
                 <span class="form-field-label">关联礼盒：</span>
                 <{input class='form-input' type='material_object' object='basic_material@material' breakpoint='0' name='box_id' textcol='material_name' value=$data.pgid callback='material_object_callback' replacehtml=$replacehtml emptytext='选取礼盒' style='float:left;width:200px;' filter='visibled=1&type=4' }>
@@ -108,12 +127,15 @@
                 <th style="display: none;">固定价</th>
                 <th>数量</th>
                 <th>组合价格贡献占比(1-100数值)</th>
+                <{foreach from=$extendedColsForBmProps item=customcol}>
+                <th><{$customcol.col_name}></th>
+                <{/foreach}>
                 <th style="width:30px;">删除</th>
                 </tr>
                 </thead>
                 <tbody id="dataNode">
                 <tr>
-                    <td colspan="7" style="padding:0;"><div class="note" style="margin:0;"> 暂无组合关联的基础物料信息 </div></td>
+                    <td colspan="<{$materialTableColspan|default:8}>" style="padding:0;"><div class="note" style="margin:0;"> 暂无组合关联的基础物料信息 </div></td>
                 </tr>
                 </tbody>
             </table>
@@ -263,12 +285,24 @@
     </div>
 </form>
 </div>
+<script type="application/json" id="extendedColsForBmPropsJson"><{$extendedColsForBmPropsJson|default:'[]'}></script>
 <script>
 
 // 价格配置变量
 var priceRate = '<{$price_rate|default:"retail_price"}>';
 var priceField = '<{$price_field|default:"retail_price"}>';
 var priceLabel = '<{$price_label|default:"零售价"}>';
+// 扩展列数组：desktop_customcols（col_name/col_key/col_type），col_type 为 input 或 select
+var extendedColsForBmProps = [];
+(function(){
+    try {
+        var el = document.getElementById('extendedColsForBmPropsJson');
+        if (el && el.textContent) {
+            var raw = el.textContent.replace(/^\s+|\s+$/g, '');
+            if (raw) extendedColsForBmProps = JSON.parse(raw);
+        }
+    } catch(e) {}
+})();
 
 (function(){
     window.addEvent('domready', function() {
@@ -288,14 +322,19 @@ var priceLabel = '<{$price_label|default:"零售价"}>';
                     if (this.value == '6') {
                         $('bind_basic_material').setStyle('display', 'none');
                         $('bind_basic_giftmaterial').setStyle('display', 'table-row');
+                        $('extended_cols_block').setStyle('display', 'none');
                     } else {
                         $('bind_basic_giftmaterial').setStyle('display', 'none');
+                        // 普通时若已选基础物料，再根据是否 is_custom_color 显示扩展列
+                        var bmId = $('sales_material_form').getElement('input[name=bm_id]') ? $('sales_material_form').getElement('input[name=bm_id]').get('value') : '';
+                        if (bmId) { loadCustomColorCodeByBmId(bmId); } else { $('extended_cols_block').setStyle('display', 'none'); }
                     }
                     $('shop_id').setStyle('display', 'block');
                     $('retail_price').set('readonly', false);
                     $('shop_text').setStyle('display', 'none');
                  
                 }else{ //组合 福袋 多选一 赠品
+                    $('extended_cols_block').setStyle('display', 'none');
                     $('retail_price').set('readonly', false);
                     if(this.value == '4'){ //福袋
                         $('luckybag_rules').setStyle('display','block');
@@ -327,12 +366,13 @@ var priceLabel = '<{$price_label|default:"零售价"}>';
 
         var callurl='index.php?app=material&ctl=admin_material_basic&act=getMaterial',store=[],bmStore=[],giftStore=[];
         var url='index.php?app=desktop&act=alertpages&goto='+encodeURIComponent('index.php?app=material&ctl=admin_material_basic&act=findMaterial');
-        //组合
+        // 组合：扩展列按 col_type 渲染 input 或 select（is_custom_color=1 时），否则显示 -
         var tpl='<tr key="{bm_id}" id="bm_{bm_id}" title="点击选取/反选此条记录">'
             +'  <td>{material_bn}</td><td class="material-name">{material_name}</td><td>{' + (priceField || 'retail_price') + '}</td>'
             +'  <td style="display: none;">{fixed_price}</td>'
             +'  <td><input type="text" value="{num}" key="num" vtype="number&amp;&amp;required" tname="at[_PRIMARY_]" size="6"></td>'
             +'  <td><input type="text" vtype="number&amp;&amp;required" tname="pr[_PRIMARY_]" key="rate" value="{rate}" id="rate_{bm_id}" size="5"></td>'
+            +'  {extended_cols_cells}'
             +'  <td><{img src="bundle/delecate.gif" app="desktop" key="state" class="pointer btn-delete-item"}></td>'
             +'</tr>';
 
@@ -345,11 +385,17 @@ var priceLabel = '<{$price_label|default:"零售价"}>';
             '</tr>';
 
         $('material-find-btn').addEvent('click',function(e){
-            new finderDialog(url,{params:{url:callurl,name:'bm_id[]'},width:1000,height:660,
+            var getMaterialUrl = callurl + (callurl.indexOf('?') >= 0 ? '&' : '?') + 'need_extended_cols=1';
+            new finderDialog(url,{params:{url:getMaterialUrl,name:'bm_id[]'},width:1000,height:660,
                 onCallback:function(rs){
                     if(!rs)return;
                     rs=JSON.decode(rs);
-                    init(rs);
+                    if (rs && rs.data && rs.extendedColsForBmProps) {
+                        extendedColsForBmProps = rs.extendedColsForBmProps;
+                        init(rs.data);
+                    } else {
+                        init(rs);
+                    }
                 }
             });
         });
@@ -422,7 +468,7 @@ var priceLabel = '<{$price_label|default:"零售价"}>';
         var pag,rows,giftPag;
         function emptyData(){
             var noData='<tr>'
-                +'<td colspan="7" style="padding:0;"><div class="note" style="margin:0;"> 暂无组合关联的基础物料信息... </div></td>'
+                +'<td colspan="8" style="padding:0;"><div class="note" style="margin:0;"> 暂无组合关联的基础物料信息... </div></td>'
                 +'</tr>';
             $('dataNode').set('html',noData);
         }
@@ -464,6 +510,7 @@ var priceLabel = '<{$price_label|default:"零售价"}>';
                  el.fireEvent('mouseenter',e);
                 }
                 });
+                if ($('dataNode')) initMaterialExtColTailSelectIn($('dataNode'));
             }
             });
         }
@@ -519,6 +566,7 @@ var priceLabel = '<{$price_label|default:"零售价"}>';
                             el.fireEvent('mouseenter', e);
                         }
                     });
+                    if ($('gift_dataNode')) initMaterialExtColTailSelectIn($('gift_dataNode'));
                 }
             });
         }
@@ -545,7 +593,7 @@ var priceLabel = '<{$price_label|default:"零售价"}>';
                 + '</tr>';
             $('gift_dataNode').set('html', noData);
         }
-        
+
         // 基础物料选择初始化函数
         function init(rs,sm_type = 'pkg'){
             // 根据销售物料类型,对全局变量store的内容做调整
@@ -572,15 +620,56 @@ var priceLabel = '<{$price_label|default:"零售价"}>';
              if(brandHtml) {
                $('brand').setHTML(brandHtml);
              }
-             
+             // 组合：为每行生成扩展列单元格，select 选项统一用 col.options（来自 service）
+             function buildPkgColorCellsAndCreate(){
+                 var cols = extendedColsForBmProps && extendedColsForBmProps.length ? extendedColsForBmProps : [];
+                 var smTypeEl = $('sales_material_form') && $('sales_material_form').getElement('input[name=sales_material_type]:checked');
+                 var smType = smTypeEl ? smTypeEl.value : '1';
+                 store.each(function(item){
+                     var cells = [];
+                     if (smType == '1' || smType == '6') {
+                         cols.forEach(function () {
+                             cells.push('<td>-</td>');
+                         });
+                         item.extended_cols_cells = cells.join('');
+                         return;
+                     }
+                     cols.forEach(function(col){
+                         var colKey = col.col_key || 'custom_color_code';
+                         var colType = (col.col_type || 'input').toLowerCase();
+                         if (item.is_custom_color == 1) {
+                             if (colType === 'select') {
+                                 var optList = (col.options && col.options.length) ? col.options : [];
+                                 var opts = '<option value="">请选择</option>';
+                                 if (optList.length) {
+                                     optList.forEach(function(c){
+                                         var val = (c.color_code != null ? c.color_code : c.value) || '';
+                                         var txt = (c.color_name != null ? c.color_name : c.label) || c.color_code || c.value || '-';
+                                         opts += '<option value="' + String(val).replace(/"/g,'&quot;') + '">' + String(txt).replace(/</g,'&lt;') + '</option>';
+                                     });
+                                 }
+                                 cells.push('<td><select name="props[' + colKey + '][' + item.bm_id + ']" class="form-input ext-col-select" issearch="fuzzy-search" style="min-width:200px;width:200px;max-width:100%;box-sizing:border-box;">' + opts + '</select></td>');
+                             } else {
+                                 cells.push('<td><input type="text" name="props[' + colKey + '][' + item.bm_id + ']" class="form-input" style="min-width:80px;" value="" /></td>');
+                             }
+                         } else {
+                             cells.push('<td>-</td>');
+                         }
+                     });
+                     item.extended_cols_cells = cells.join('');
+                 });
+                 createProduct(store);
+                 bmStore = store;
+             }
+             if (sm_type !== 'gift') {
+                 buildPkgColorCellsAndCreate();
+             }
              // 不同的销售物料类型调用不同的函数,并保存store数据至类型变量
              if(sm_type == 'gift'){
                  createGiftProduct(store);
                  giftStore = store;
-             }else{
-                 createProduct(store);
-                 bmStore = store;
              }
+             // 非 gift（组合等）时已在上面通过 buildPkgColorCellsAndCreate 调用 createProduct(store) 并设置 bmStore
              
         }
 
@@ -756,6 +845,7 @@ var priceLabel = '<{$price_label|default:"零售价"}>';
                       }
                   });
             }
+            syncMaterialExtColTailSelectToNative(form);
             form.fireEvent('submit',e);
         });
 
@@ -987,6 +1077,11 @@ var priceLabel = '<{$price_label|default:"零售价"}>';
                 }
             });
         }
+
+        setTimeout(function() {
+            if ($('extended_cols_block')) initMaterialExtColTailSelectIn($('extended_cols_block'));
+        }, 200);
+
     });
 
     //福袋
@@ -1004,6 +1099,55 @@ var priceLabel = '<{$price_label|default:"零售价"}>';
 
 })();
 
+function destroyMaterialExtColTailSelect(sel) {
+    if (!sel || typeof tail === 'undefined' || !tail.select || !tail.select.inst) return;
+    var tid = sel.getAttribute('data-tail-select');
+    if (!tid || !tail.select.inst[tid]) return;
+    try { tail.select.inst[tid].remove(); } catch (e) {}
+}
+
+function initMaterialExtColTailSelectIn(root) {
+    if (!root) return;
+    Ex_Loader('tail.select', function() {
+        if (typeof tail === 'undefined' || !tail.select) return;
+        var w = (root.get && root.get('id') === 'extended_cols_block') ? 280 : 200;
+        root.getElements('select[issearch="fuzzy-search"]').each(function(sel) {
+            try {
+                destroyMaterialExtColTailSelect(sel);
+                tail.select(sel, {
+                    search: true,
+                    width: w,
+                    height: 300,
+                    searchMinLength: 0,
+                    searchFocus: true,
+                    searchMarked: true,
+                    locale: 'zh'
+                });
+            } catch (e) {}
+        });
+    });
+}
+
+/** 提交前把 tail.select 当前值同步到原生 select，否则异步提交序列化时 props 可能丢失 */
+function syncMaterialExtColTailSelectToNative(form) {
+    if (!form || typeof tail === 'undefined' || !tail.select || !tail.select.inst) return;
+    form.getElements('select[issearch="fuzzy-search"]').each(function(sel) {
+        var tid = sel.getAttribute('data-tail-select');
+        if (!tid) return;
+        var inst = tail.select.inst[tid];
+        if (!inst || typeof inst.value !== 'function') return;
+        var v = inst.value();
+        if (v === null || typeof v === 'undefined') {
+            if (sel.options && sel.options.length) sel.selectedIndex = 0;
+            return;
+        }
+        var strV = String(v);
+        $A(sel.options).each(function(opt) {
+            opt.selected = (String(opt.value) === strV);
+        });
+    });
+}
+
         function material_object_callback(rs,handle){
             var p_node = handle.getParent('div');
             var html = '已选择了1个物料,'+"<a href='javascript:void(0);' onclick='material_selected_show();'>查看关联的物料.</a>";
@@ -1014,6 +1158,60 @@ var priceLabel = '<{$price_label|default:"零售价"}>';
                 var div = new Element('div',{'html':html,'id':'hand-selected-product'});
                 div.injectAfter(p_node);
             }
+            // 普通物料时：根据基础物料是否 is_custom_color=1 显示调色号下拉
+            var typeVal = $$('input[name=sales_material_type]:checked').get('value');
+            if (typeVal == '1') {
+                var bmId = '';
+                if (rs && $defined(rs) && (rs.length || rs.bm_id)) {
+                    var row = $type(rs) === 'array' && rs.length ? rs[0] : rs;
+                    bmId = row && (row.bm_id !== undefined) ? row.bm_id : (row && row.id !== undefined ? row.id : '');
+                }
+                if (!bmId && $defined($('sales_material_form'))) {
+                    var inp = $('sales_material_form').getElement('input[name=bm_id]');
+                    if (inp) { bmId = inp.get('value'); }
+                }
+                setTimeout(function(){ if (!bmId && $defined($('sales_material_form'))) { var i = $('sales_material_form').getElement('input[name=bm_id]'); if (i) bmId = i.get('value'); } loadCustomColorCodeByBmId(bmId || ''); }, 80);
+            }
+        }
+        function loadCustomColorCodeByBmId(bmId){
+            var block = $('extended_cols_block');
+            if (!bmId || !block) { if (block) block.setStyle('display', 'none'); return; }
+            var url = 'index.php?app=material&ctl=admin_material_sales&act=getBmCustomColorAndColorCodes&bm_id=' + encodeURIComponent(bmId);
+            var req = new Request({ url: url, method: 'get', onSuccess: function(resp){
+                try {
+                    var data = JSON.parse(resp);
+                    var visibleKeys = (data.visible_col_keys && data.visible_col_keys.length) ? data.visible_col_keys : [];
+                    if (visibleKeys.length > 0) {
+                        block.setStyle('display', 'block');
+                        var rows = block.getElements('.ext-col-row');
+                        if (rows) {
+                            rows.each(function(row){
+                                var colKey = row.getAttribute('data-col-key');
+                                row.setStyle('display', visibleKeys.indexOf(colKey) !== -1 ? '' : 'none');
+                            });
+                        }
+                        var selects = block.getElements('.ext-col-select');
+                        if (selects && data.color_list && data.color_list.length) {
+                            selects.each(function(sel){
+                                var saved = sel.get('value') || '';
+                                destroyMaterialExtColTailSelect(sel);
+                                sel.empty();
+                                sel.appendChild(new Element('option', { value: '', text: '请选择' }));
+                                data.color_list.each(function(item){
+                                    var code = item.color_code || '';
+                                    var opt = new Element('option', { value: code, text: (item.color_name || item.color_code || '') });
+                                    if (saved && String(saved) === String(code)) opt.selected = true;
+                                    sel.appendChild(opt);
+                                });
+                            });
+                        }
+                        initMaterialExtColTailSelectIn(block);
+                    } else {
+                        block.setStyle('display', 'none');
+                    }
+                } catch(e) { block.setStyle('display', 'none'); }
+            }, onFailure: function(){ block.setStyle('display', 'none'); } });
+            req.send();
         }
 
         function material_selected_show(){

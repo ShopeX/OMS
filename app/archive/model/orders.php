@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class archive_mdl_orders extends dbeav_model{
      var $has_many = array(
         'order_objects' => 'order_objects',
@@ -28,9 +12,9 @@ class archive_mdl_orders extends dbeav_model{
 
     /**
      * 须加密字段
-     * 
+     *
      * @var string
-     * */
+     **/
     private $__encrypt_cols = array(
         'ship_name'   => 'simple',
         'ship_mobile'    => 'phone',
@@ -171,15 +155,6 @@ class archive_mdl_orders extends dbeav_model{
         return $archive['_count'];
     }
 
-        /**
-     * 获取exportdetail
-     * @param mixed $fields fields
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $limit limit
-     * @param mixed $has_title has_title
-     * @return mixed 返回结果
-     */
     public function getexportdetail($fields,$filter,$offset=0,$limit=1,$has_title=false)
     {
         //获取订单号信息
@@ -365,11 +340,6 @@ class archive_mdl_orders extends dbeav_model{
         return kernel::single('ome_exportextracolumn_archive_logino')->process($rows);
     }
 
-    /**
-     * insert
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function insert(&$data)
     {
         foreach ($this->__encrypt_cols as $field => $type) {
@@ -408,12 +378,13 @@ class archive_mdl_orders extends dbeav_model{
     }
 
     /**
-     * modifier_ship_name
-     * @param mixed $ship_name ship_name
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
+     * 确认收货时间：库内多为时间戳（char），列表展示转为可读时间
      */
+    public function modifier_take_delivery_time($col, $list = null, $row = null)
+    {
+        return ($col && is_numeric($col)) ? date('Y-m-d H:i:s', $col) : '-';
+    }
+
     public function modifier_ship_name($ship_name,$list,$row)
     {
         if ($this->is_export_data) {
@@ -435,13 +406,6 @@ HTML;
         return $ship_name?$return:$ship_name;
     }
 
-    /**
-     * modifier_ship_tel
-     * @param mixed $tel tel
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_ship_tel($tel,$list,$row)
     {
         if ($this->is_export_data) {
@@ -463,13 +427,6 @@ HTML;
         return $tel?$return:$tel;
     }
 
-    /**
-     * modifier_ship_mobile
-     * @param mixed $mobile mobile
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_ship_mobile($mobile,$list,$row)
     {
         if ($this->is_export_data) {
@@ -492,13 +449,6 @@ HTML;
     }
 
 
-    /**
-     * modifier_ship_addr
-     * @param mixed $ship_addr ship_addr
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_ship_addr($ship_addr,$list,$row)
     {
         if ($this->is_export_data) {

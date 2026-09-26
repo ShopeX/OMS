@@ -1,21 +1,5 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/**
 *
 */
 class inventorydepth_mdl_shop_adjustment extends dbeav_model
@@ -74,8 +58,11 @@ class inventorydepth_mdl_shop_adjustment extends dbeav_model
     private function get_export_title_by_fields($fields,&$arr_fields){
         $arr_fields_titles = array(
                 "column_request" => "*:回写库存",
+                "column_source_shop" => "*:来源店铺",
+                "shop_sku_id" => "*:平台SKU ID",
+                "shop_iid" => "*:平台商品ID",
                 "shop_product_bn" => "*:店铺货号",
-                "column_bind" => "*:是否捆绑",
+                "column_bind" => "*:商品类型",
                 "shop_title" => "*:店铺货品名称",
                 "column_regulation" => "*:库存更新规则",
                 "column_shop_stock" => "*:店铺库存",
@@ -86,11 +73,24 @@ class inventorydepth_mdl_shop_adjustment extends dbeav_model
                 "download_time" => "*:同步时间",
                 "mapping" => "*:已对映上本地货品",
                 "update_time" => "*:最后更新时间",
+                "sales_material_type" => "*:销售物料类型",
+                "shop_barcode" => "*:条形码",
+                "column_bidding_type" => "*:出价类型",
+                "sync_map" => "*:关系映射",
         );
         $title_arr = array();
-        $arr_fields = explode(",",$fields);
+        // 与数据行共用同一份字段列表，避免空字段导致表头/数据列错位
+        $arr_fields = array_values(array_filter(array_map('trim', explode(',', $fields)), 'strlen'));
+        $schema = $this->get_schema();
         foreach($arr_fields as $var_af){
-            $title_arr[] = $arr_fields_titles[$var_af];
+            if (isset($arr_fields_titles[$var_af]) && $arr_fields_titles[$var_af] !== '') {
+                $title_arr[] = $arr_fields_titles[$var_af];
+            } elseif (!empty($schema['columns'][$var_af]['label'])) {
+                // 未在硬编码映射中的列表字段，回退到 schema label，避免表头空白
+                $title_arr[] = '*:' . $schema['columns'][$var_af]['label'];
+            } else {
+                $title_arr[] = '*:' . $var_af;
+            }
         }
         return mb_convert_encoding(implode(',',$title_arr), 'GBK', 'UTF-8');
     }
@@ -103,6 +103,9 @@ class inventorydepth_mdl_shop_adjustment extends dbeav_model
                 if($row_arr["request"] == 'true'){
                     $return_data = "开启";
                 }
+                break;
+            case "column_source_shop":
+                $return_data = !empty($row_arr['shop_name']) ? $row_arr['shop_name'] : '-';
                 break;
             case "column_bind":
                 if($row_arr["bind"] == "1"){

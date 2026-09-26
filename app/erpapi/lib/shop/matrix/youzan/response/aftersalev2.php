@@ -119,11 +119,19 @@ class erpapi_shop_matrix_youzan_response_aftersalev2 extends erpapi_shop_respons
     }
 
     protected function _returnProductAdditional($sdf) {
+        // 扩展表枚举仅 refund/return/change：apply→refund，reship→return
+        $refundType = $sdf['refund_type'];
+        if ($refundType === 'apply') {
+            $refundType = 'refund';
+        } elseif ($refundType === 'reship') {
+            $refundType = 'return';
+        }
+
         $ret = array(
             'model' => 'return_product_youzan',
             'data' => array(
                 'shop_id'               => $sdf['shop_id'],
-                'refund_type'           => $sdf['refund_type'] == 'reship' ? 'return' : $sdf['refund_type'],
+                'refund_type'           => $refundType,
                 'refund_version'        => $sdf['refund_version'],
                 'oid'                   => $sdf['oid'],
                 'bill_type'             => $sdf['bill_type'],

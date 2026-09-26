@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class sales_finder_sales{
     var $column_detail = 'detail';
     
@@ -212,7 +196,23 @@ class sales_finder_sales{
             $showSalePrice = false;
         }
         $render->pagedata['show_sale_price'] = $showSalePrice;
+        //原价权限判断
+        $showOriginalPrice = true;
+        if (!kernel::single('desktop_user')->has_permission('original_price')) {
+            $showOriginalPrice = false;
+        }
+        $render->pagedata['show_original_price'] = $showOriginalPrice;
         $render->pagedata['sales'] = $sales[0];
+
+        // 唯一码明细：机器中心发货流水 + goldentra 主档（无 goldentra 时跳过）
+        $sum_price = 0;
+        $sum_sale_price = 0;
+        $sale_serial_number_items = array();
+        
+        $render->pagedata['sale_serial_number_items'] = $sale_serial_number_items;
+        $render->pagedata['sum_price'] = $sum_price;
+        $render->pagedata['sum_sale_price'] = $sum_sale_price;
+
         $render->display('detail.html');
     }
     

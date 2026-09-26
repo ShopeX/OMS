@@ -1,0 +1,62 @@
+<{capture name="header"}>
+<{css app="desktop" src="../perfect/main.css"}>
+<{/capture}>
+<div class="content-container">
+    <h4>编辑唯一码</h4>
+    <div class="tableform">
+        <form action="index.php?ctl=admin_sn&act=updateSn&app=machinecenter&finder_id=<{$env.get.finder_id}>" id="edit-sn-form" method="post">
+            <input type="hidden" name="id" value="<{$data.id|default:0}>">
+            <div class="form-layout-fields">
+                <div class="form-field" style="margin-bottom:12px;">
+                    <span class="form-field-label"><span style="color:red;">*</span>唯一码：</span>
+                    <input id="input-sn" class="form-input" type="text" name="sn" value="<{$data.sn|default:''}>" style="width:260px;" maxlength="32" required>
+                </div>
+            </div>
+            <div class="noprint table-action" style="margin-top:14px;">
+                <{button type="button" id="edit-sn-save-btn" label="保存"}>
+                <{button type="button" class="btn-secondary" label="取消" onclick="javascript:void(window.close());"}>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+(function(){
+    var form = $('edit-sn-form');
+    var dialogInstance = $('edit-sn-save-btn').getParent('.dialog') ? $('edit-sn-save-btn').getParent('.dialog').retrieve('instance') : null;
+    if (!dialogInstance && window.frameElement && window.parent.$) {
+        try {
+            var parentDialog = window.parent.$(window.frameElement).getParent('.dialog');
+            if (parentDialog && parentDialog.retrieve('instance')) dialogInstance = parentDialog.retrieve('instance');
+        } catch (e) {}
+    }
+    $('edit-sn-save-btn').addEvent('click', function (e) {
+        e.stop();
+        var btn = this;
+        if (!$('input-sn').get('value').trim()) {
+            Messagebox.alert('请输入唯一码');
+            return;
+        }
+        form.store('target', {
+            onRequest: function () { btn.disabled = true; },
+            onComplete: function (jsontext) {
+                btn.disabled = false;
+                try {
+                    var json = typeof jsontext === 'string' ? JSON.decode(jsontext) : jsontext;
+                    if (typeof json.error !== 'undefined') {
+                        Messagebox.alert(json.error);
+                        return;
+                    }
+                    finderGroup["<{$env.get.finder_id}>"].refresh.delay(400,finderGroup["<{$env.get.finder_id}>"]);
+                    if (dialogInstance && typeof dialogInstance.close === 'function') {
+                        dialogInstance.close();
+                    } else {
+                        setTimeout(function () { window.close(); }, 150);
+                    }
+                    
+                } catch (err) {}
+            }
+        });
+        form.fireEvent('submit', e);
+    });
+})();
+</script>

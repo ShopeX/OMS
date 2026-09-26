@@ -257,6 +257,11 @@ class wms_receipt_dlyitemsserial{
                     $can_return_serial[$serial['serial_number']] = $serial['bn'];
                 }
             }
+            foreach ($this->getMachineCenterDeliverySerials($deliveryIds) as $serial) {
+                if ($serial['serial_number'] !== '' && $serial['serial_number'] !== null) {
+                    $can_return_serial[$serial['serial_number']] = $serial['bn'];
+                }
+            }
         }
 
         if(!$can_return_serial) return false;
@@ -273,8 +278,95 @@ class wms_receipt_dlyitemsserial{
                     }
                 }
             }
+            foreach ($this->getMachineCenterReshipSerialNumbers($reshipIds) as $sn) {
+                if (isset($can_return_serial[$sn])) {
+                    unset($can_return_serial[$sn]);
+                }
+            }
         }
 
         return $can_return_serial;
+    }
+
+    /**
+     * 机器中心发货出库流水中的唯一码（original_type=delivery）
+     *
+     * @param int[] $deliveryIds
+     * @return array<int, array{bn:string, serial_number:string}>
+     */
+    private function getMachineCenterDeliverySerials(array $deliveryIds)
+    {
+        if (empty($deliveryIds) || !app::get('machinecenter')->is_installed()) {
+            return array();
+        }
+        $snFlowMdl = app::get('machinecenter')->model('material_sn_flow');
+        $filter = array('original_type' => 'delivery');
+        if (count($deliveryIds) === 1) {
+            $filter['original_id'] = reset($deliveryIds);
+        } else {
+            $filter['original_id|in'] = $deliveryIds;
+        }
+        $rows = $snFlowMdl->getList('sn_id,material_bn', $filter, 0, -1);
+        if (empty($rows)) {
+            return array();
+        }
+        $snIds = array_values(array_unique(array_filter(array_column($rows, 'sn_id'))));
+        if (empty($snIds)) {
+            return array();
+        }
+        $snMdl = app::get('machinecenter')->model('material_sn');
+        $snFilter = count($snIds) === 1 ? array('id' => reset($snIds)) : array('id|in' => $snIds);
+        $snRows = $snMdl->getList('id,sn', $snFilter, 0, -1);
+        $idToSn = array();
+        foreach ($snRows as $r) {
+            $idToSn[$r['id']] = $r['sn'];
+        }
+        $out = array();
+        foreach ($rows as $row) {
+            $sn = isset($idToSn[$row['sn_id']]) ? $idToSn[$row['sn_id']] : '';
+            if ($sn === '') {
+                continue;
+            }
+            $out[] = array('bn' => $row['material_bn'], 'serial_number' => $sn);
+        }
+        return $out;
+    }
+
+    /**
+     * 机器中心已退货入库流水中的 SN（original_type=reship，与 succ 退货单对齐）
+     *
+     * @param int[] $reshipIds
+     * @return string[]
+     */
+    private function getMachineCenterReshipSerialNumbers(array $reshipIds)
+    {
+        if (empty($reshipIds) || !app::get('machinecenter')->is_installed()) {
+            return array();
+        }
+        $snFlowMdl = app::get('machinecenter')->model('material_sn_flow');
+        $filter = array('original_type' => 'reship');
+        if (count($reshipIds) === 1) {
+            $filter['original_id'] = reset($reshipIds);
+        } else {
+            $filter['original_id|in'] = $reshipIds;
+        }
+        $rows = $snFlowMdl->getList('sn_id', $filter, 0, -1);
+        if (empty($rows)) {
+            return array();
+        }
+        $snIds = array_values(array_unique(array_filter(array_column($rows, 'sn_id'))));
+        if (empty($snIds)) {
+            return array();
+        }
+        $snMdl = app::get('machinecenter')->model('material_sn');
+        $snFilter = count($snIds) === 1 ? array('id' => reset($snIds)) : array('id|in' => $snIds);
+        $snRows = $snMdl->getList('id,sn', $snFilter, 0, -1);
+        $sns = array();
+        foreach ($snRows as $r) {
+            if ($r['sn'] !== '' && $r['sn'] !== null) {
+                $sns[] = $r['sn'];
+            }
+        }
+        return $sns;
     }
 }

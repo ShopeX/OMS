@@ -17,6 +17,7 @@ class ticket_mdl_workflow_node extends dbeav_model {
     {
         return array(
             'start' => '开始',
+            'condition' => '条件',
             'approval' => '审批',
             'end' => '结束',
         );

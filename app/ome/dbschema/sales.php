@@ -322,7 +322,7 @@ $db['sales'] = array(
         'refund_money'        => array(
             'type'     => 'money',
             'default'  => '0',
-            'label'    => '退款费用',
+            'label'    => '退款金额',
         ),
         'shop_type'            => array(
             'type'          => 'varchar(50)',

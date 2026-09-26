@@ -69,23 +69,20 @@ class console_mdl_delivery_bill extends dbeav_model
     {
         $where = '';
         
-        //多包裹号查询
-        if($filter['package_bn'] && is_string($filter['package_bn']) && strpos($filter['package_bn'], "\n") !== false){
-            $filter['package_bn'] = array_unique(array_map('trim', array_filter(explode("\n", $filter['package_bn']))));
-        }
-        
-        //多订单号查询
-        if($filter['order_bn'] && is_string($filter['order_bn']) && strpos($filter['order_bn'], "\n") !== false){
-            $filter['order_bn'] = array_unique(array_map('trim', array_filter(explode("\n", $filter['order_bn']))));
-        }
-        
-        //多发货单单号查询
-        if($filter['delivery_bn'] && is_string($filter['delivery_bn']) && strpos($filter['delivery_bn'], "\n") !== false){
-            $filter['delivery_bn'] = array_unique(array_map('trim', array_filter(explode("\n", $filter['delivery_bn']))));
+        //多包裹号/订单号/发货单号/运单号：换行拆成 IN（走本表字段索引）
+        foreach (array('order_bn', 'package_bn', 'delivery_bn', 'logi_no') as $field) {
+            if (!empty($filter[$field]) && is_string($filter[$field])
+                && (strpos($filter[$field], "\n") !== false || strpos($filter[$field], "\r") !== false)
+            ) {
+                $filter[$field] = array_values(array_unique(array_map(
+                    'trim',
+                    array_filter(preg_split('/[\r\n]+/', $filter[$field]))
+                )));
+            }
         }
         
         //[兼容]已发货的状态
-        if($filter['status'] == '1'){
+        if (isset($filter['status']) && $filter['status'] == '1') {
             $filter['status'] = array('1', '4'); //签收状态也是已发货
         }
         

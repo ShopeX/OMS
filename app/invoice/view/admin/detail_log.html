@@ -36,7 +36,7 @@
                 <{if !@unserialize($log.memo)}>
                 <span><{$log.memo}></span>
                 <{else}>
-                <a href='index.php?app=invoice&ctl=admin_order&act=show_history&p[0]=<{$log.log_id}>' target="_blank">查看快照</a>
+                <a href='index.php?app=invoice&ctl=admin_order&act=show_history&finder_vid=<{$env.get.finder_vid}>&finder_id=<{$env.get.finder_id}>&p[0]=<{$log.log_id}>' target="_blank">查看快照</a>
                 <{/if}>
             </td>
         </tr>

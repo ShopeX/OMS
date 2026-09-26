@@ -106,6 +106,9 @@ class console_ctl_admin_stock extends desktop_controller{
                 'use_buildin_filter'=>true,
                 'use_buildin_selectrow'=>true,
                 'use_view_tab' => true,
+                'finder_cols' => material_basic_material_master::mergeFinderCols(
+                    'column_edit,material_name,material_bn,column_store,column_good_store,column_valid_store,column_o2o_store,column_branch_store_freeze,column_o2o_store_freeze,column_order_store_freeze,column_store_freeze,column_arrive_store,column_barcode,column_cost,column_weight,column_unit,column_retail_price,visibled'
+                ),
                 'object_method'=>array('count'=>'countStock','getlist'=>'getListStock')
         );
         $this->finder('console_mdl_basic_material', $params);

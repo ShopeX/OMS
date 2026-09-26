@@ -50,12 +50,16 @@ class wap_aftersale{
         $aftersale_ids = array();
         $order_ids= array();
         $use_branch_ids = array();
+        $original_reship_bns = array();
         foreach ($dataList as $var_d){
             if($var_d["aftersale_id"] && !in_array($var_d["aftersale_id"],$aftersale_ids)){
                 $aftersale_ids[] = $var_d["aftersale_id"];
             }
             if(!in_array($var_d["order_id"],$order_ids)){
                 $order_ids[] = $var_d["order_id"];
+            }
+            if($var_d["original_reship_bn"] && !in_array($var_d["original_reship_bn"], $original_reship_bns)){
+                $original_reship_bns[] = $var_d["original_reship_bn"];
             }
             //如果是换货按照changebrand_id为准
             $use_branch_id = $var_d["branch_id"];
@@ -103,6 +107,16 @@ class wap_aftersale{
                 $rl_branch_addr[$var_o_s["branch_id"]] = $var_o_s["addr"];
             }
         }
+        $rl_reship_return_logi_no = array();
+        if (!empty($original_reship_bns)) {
+            $rs_ome_reship = app::get('ome')->model('reship')->getList(
+                'reship_bn,return_logi_no',
+                array('reship_bn|in' => $original_reship_bns)
+            );
+            foreach ($rs_ome_reship as $var_reship) {
+                $rl_reship_return_logi_no[$var_reship['reship_bn']] = $var_reship['return_logi_no'];
+            }
+        }
         
         $status_arr = $this->status_arr();
         
@@ -135,7 +149,17 @@ class wap_aftersale{
                     $change_items_data[] = $var_r_i;
                 }
             }
-            $var_data['return_product_items'] = $current_return_items;
+            $displayContext = array(
+                'original_reship_bn' => $var_data['original_reship_bn'],
+                'return_id'          => $var_data['return_id'],
+                'order_id'           => $var_data['order_id'],
+                'wap_return_status'  => $var_data['status'],
+            );
+            $var_data['return_product_items'] = kernel::single('wap_delivery')->enrichItemsByBnByService(
+                $current_return_items,
+                'bn',
+                $displayContext
+            );
             if(!empty($return_items_data)){//退
                 $var_data["return_items_data"] = $return_items_data;
                 $item_num_return = 0; 
@@ -164,6 +188,8 @@ class wap_aftersale{
             $var_data["order_bn"] = $rl_order_id_info[$var_data["order_id"]]["order_bn"];
             //获取物流信息
             $var_data["dly_info"] = $rl_order_id_info[$var_data["order_id"]]["dly_info"];
+            //退回物流单号：wap.return.original_reship_bn → ome.reship.return_logi_no
+            $var_data["return_logi_no"] = $rl_reship_return_logi_no[$var_data["original_reship_bn"]] ?? '';
             //对应门店仓地址addr 如果是换货按照changebrand_id为准
             $current_branch_id = $var_data["branch_id"];
             if($var_data["return_type"] == "change" && $var_data["changebranch_id"]){

@@ -39,9 +39,11 @@ class erpapi_shop_response_process_aftersale
         $params['order_id'] = $params['order']['order_id'];
         $params['op_id'] = $opInfo['op_id'];
         $params['source'] = 'matrix';
-        app::get('ome')->model('return_product')->create_return_product($params);
+        $returnProductMdl = app::get('ome')->model('return_product');
+        $returnProductMdl->create_return_product($params);
         if(empty($params['return_id'])) {
-            return array('rsp'=>'fail', 'msg'=>'售后申请单新建失败');
+            $dbErr = $returnProductMdl->db->errorinfo();
+            return array('rsp'=>'fail', 'msg'=>'售后申请单新建失败'.($dbErr ? ':'.$dbErr : ''));
         }
         
         //log
@@ -51,7 +53,13 @@ class erpapi_shop_response_process_aftersale
         $returnItemModel = app::get('ome')->model('return_product_items');
         foreach($items as $item) {
             $item['return_id'] = $params['return_id'];
-            $returnItemModel->insert($item);
+            $itemRs = $returnItemModel->insert($item);
+            if(!$itemRs) {
+                $dbErr = $returnItemModel->db->errorinfo();
+                $failMsg = '售后申请单明细写入失败'.($dbErr ? ':'.$dbErr : '');
+                $oOperation_log->write_log('return@ome', $params['return_id'], $failMsg);
+                return array('rsp'=>'fail', 'msg'=>$failMsg);
+            }
         }
         $is_return_auto_receive =  app::get('ome')->getConf('ome.return.auto.receive');
         

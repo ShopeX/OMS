@@ -20,6 +20,7 @@
  * @author kamisama.xia@gmail.com
  * @version 0.1
  */
+
 class material_ctl_admin_material_basic extends desktop_controller
 {
 
@@ -28,11 +29,10 @@ class material_ctl_admin_material_basic extends desktop_controller
 
     /**
      * 基础物料列表分栏菜单
-     * 
+     *
      * @param Null
      * @return Array
      */
-
     public function _views()
     {
         $sub_menu = array();
@@ -68,7 +68,7 @@ class material_ctl_admin_material_basic extends desktop_controller
 
     /**
      * 基础物料列表项方法
-     * 
+     *
      * @param Post
      * @return String
      */
@@ -202,7 +202,9 @@ class material_ctl_admin_material_basic extends desktop_controller
             'use_buildin_export'  => $use_buildin_export,
             'use_buildin_import'  => $use_buildin_import,
             'use_buildin_importxls'  => $use_buildin_import,
-            'finder_cols'         => 'column_edit,material_name,material_bn,column_barcode,column_cost,column_weight,column_unit,column_retail_price,visibled,column_specifications,column_brand,column_cat_level_1,column_cat_level_2,column_cat_level_3,column_cat_level_4,column_cat_level_5',
+            'finder_cols'         => material_basic_material_master::mergeFinderCols(
+                'column_edit,column_material_label,material_name,material_bn,column_barcode,column_cost,column_weight,column_unit,column_retail_price,visibled,column_specifications,column_brand,column_cat_level_1,column_cat_level_2,column_cat_level_3,column_cat_level_4,column_cat_level_5'
+            ),
         );
 
 
@@ -210,17 +212,13 @@ class material_ctl_admin_material_basic extends desktop_controller
         $this->finder('material_mdl_basic_material', $params);
     }
 
-    /**
-     * 获取ExportTemplate
-     * @return mixed 返回结果
-     */
     public function getExportTemplate() {
         $this->display('admin/material/basic/get_export_template.html');
     }
 
     /**
      * 基础物料批量导入的模板
-     * 
+     *
      * @param Null
      * @return String
      */
@@ -241,7 +239,7 @@ class material_ctl_admin_material_basic extends desktop_controller
     }
     /**
      * 基础物料批量更新导入的模板
-     * 
+     *
      * @param Null
      * @return String
      */
@@ -254,7 +252,7 @@ class material_ctl_admin_material_basic extends desktop_controller
 
     /**
      * 基础物料新增的展示页面方法
-     * 
+     *
      * @param void
      * @return void
      */
@@ -303,17 +301,20 @@ class material_ctl_admin_material_basic extends desktop_controller
         }
         $this->pagedata['finder_vid'] = $_GET['finder_vid'];
 
-        //自定义
+       //自定义
         
-        $customcols = kernel::single('material_customcols')->getcols();
-
+        $customcols = kernel::single('material_customcols')->attachPropsValues(
+            kernel::single('material_customcols')->getcols(),
+            array()
+        );
+ 
         $this->pagedata['customcols'] = $customcols;
         $this->page('admin/material/basic/add.html');
     }
 
     /**
      * 基础物料新增提交方法
-     * 
+     *
      * @param Post
      * @return Boolean
      */
@@ -342,19 +343,18 @@ class material_ctl_admin_material_basic extends desktop_controller
 
         //获取cat_path
         $cat_id = intval($_POST['cat_id']);
-        if (!$cat_id) {
-            //$this->end(false, '请选择分类');
-            $cat_id = array('cat_path' => ','); //填充默认分类
-        }
-        $rs = $basicMaterialCatObj->dump($cat_id, 'cat_id,cat_path,min_price');
-        if ($rs) {
-            $cat_id    = $rs['cat_id'];
-            $cat_path  = substr($rs['cat_path'] . $cat_id, 1);
-            $min_price = floatval($rs['min_price']); //当前分类的最低限价
-        } else {
-            $cat_id    = 0;
-            $cat_path  = '';
-            $min_price = 0;
+        $cat_path  = '';
+        $min_price = 0;
+        // 允许不选分类：保存为 cat_id=0，不再“填充默认分类”
+        if ($cat_id) {
+            $rs = $basicMaterialCatObj->dump($cat_id, 'cat_id,cat_path,min_price');
+            if ($rs) {
+                $cat_id    = $rs['cat_id'];
+                $cat_path  = substr($rs['cat_path'] . $cat_id, 1);
+                $min_price = floatval($rs['min_price']); //当前分类的最低限价
+            } else {
+                $cat_id    = 0;
+            }
         }
 
         //是否全渠道
@@ -404,19 +404,21 @@ class material_ctl_admin_material_basic extends desktop_controller
 
             if($_POST['props']){
                 $propsMdl = app::get('material')->model('basic_material_props');
+                $customcolsLib = kernel::single('material_customcols');
 
                 $propsdata = array();
 
                 foreach($_POST['props'] as $pk=>$pv){
 
-                    if($pv){
-                        $propsdata = array(
-                            'bm_id'         =>  $addData['bm_id'],
-                            'props_col'     =>  $pk,
-                            'props_value'   =>  $pv,
-                        );
-                        $propsMdl->save($propsdata);
+                    if (!$customcolsLib->isPropValueSavable($pv)) {
+                        continue;
                     }
+                    $propsdata = array(
+                        'bm_id'         =>  $addData['bm_id'],
+                        'props_col'     =>  $pk,
+                        'props_value'   =>  $pv,
+                    );
+                    $propsMdl->save($propsdata);
                 }
 
                 
@@ -508,8 +510,8 @@ class material_ctl_admin_material_basic extends desktop_controller
             $addScanConfInfo = array(
                 'bm_id'        => $addData['bm_id'],
                 'openscan'     => $_POST['special_setting'] ? $_POST['special_setting'] : "",
-                'fromposition' => $_POST['first_num'] ? $_POST['first_num'] : "",
-                'toposition'   => $_POST['last_num'] ? $_POST['last_num'] : "",
+                'fromposition' => intval($_POST['first_num']),
+                'toposition'   => intval($_POST['last_num']),
             );
             $basicMaterialConfObjSpe->insert($addScanConfInfo);
 
@@ -582,7 +584,7 @@ class material_ctl_admin_material_basic extends desktop_controller
 
     /**
      * 基础物料编辑的展示页面方法
-     * 
+     *
      * @param Int $bm_id
      * @return Boolean
      */
@@ -684,22 +686,18 @@ EOF;
             $this->pagedata['bbu_list'] = $bbuMdl->getList('*', ['status' => 'active']);
         }
 
-        $customcols = kernel::single('material_customcols')->getcols();
+        $customcolsLib = kernel::single('material_customcols');
+        $customcols = $customcolsLib->getcols();
 
         $customcol_keys = $customcols ? array_column($customcols,'col_key') : [];
 
         $this->pagedata['customcol_keys'] = $customcol_keys;
         $this->pagedata['arr_props'] = $arr_props;
 
-         //自定义
-       
-        $customcols = kernel::single('material_customcols')->getcols();
-       
-        foreach($customcols as $k=>$v){
-            if($arr_props[$v['col_key']]){
-                $customcols[$k]['col_value'] = $arr_props[$v['col_key']];
-            }
-        }
+        $customcols = kernel::single('material_customcols')->attachPropsValues(
+            kernel::single('material_customcols')->getcols(),
+            $arr_props
+        );
         $this->pagedata['customcols'] = $customcols;
 
         // =============== 获取物料图片信息 ===============
@@ -709,12 +707,12 @@ EOF;
         $this->pagedata['material_images'] = $materialImages;
         $this->pagedata['main_image'] = $mainImage;
 
-        $this->page('admin/material/basic/edit.html');
+        $this->singlepage('admin/material/basic/edit.html');
     }
 
     /**
      * 基础物料编辑提交方法
-     * 
+     *
      * @param Int $bm_id
      * @return Boolean
      */
@@ -743,19 +741,18 @@ EOF;
 
         //获取cat_path
         $cat_id = intval($_POST['cat_id']);
-        if (!$cat_id) {
-            //$this->end(false, '请选择分类');
-            $cat_id = array('cat_path' => ','); //填充默认分类
-        }
-        $rs = $basicMaterialCatObj->dump($cat_id, 'cat_id,cat_path,min_price');
-        if ($rs) {
-            $cat_id    = $rs['cat_id'];
-            $cat_path  = substr($rs['cat_path'] . $cat_id, 1);
-            $min_price = floatval($rs['min_price']); //当前分类的最低限价
-        } else {
-            $cat_id    = 0;
-            $cat_path  = '';
-            $min_price = 0;
+        $cat_path  = '';
+        $min_price = 0;
+        // 允许不选分类：保存为 cat_id=0，不再“填充默认分类”
+        if ($cat_id) {
+            $rs = $basicMaterialCatObj->dump($cat_id, 'cat_id,cat_path,min_price');
+            if ($rs) {
+                $cat_id    = $rs['cat_id'];
+                $cat_path  = substr($rs['cat_path'] . $cat_id, 1);
+                $min_price = floatval($rs['min_price']); //当前分类的最低限价
+            } else {
+                $cat_id    = 0;
+            }
         }
         $updateData['cat_id']   = $cat_id;
         $updateData['cat_path'] = $cat_path;
@@ -929,24 +926,26 @@ EOF;
 
             if($_POST['props']){
                 $propsMdl = app::get('material')->model('basic_material_props');
+                $customcolsLib = kernel::single('material_customcols');
 
                 $propsdata = array();
 
                 foreach($_POST['props'] as $pk=>$pv){
 
-                    if($pv){
-                        $propsdata = array(
-                            'bm_id'         =>  $filter['bm_id'],
-                            'props_col'     =>  $pk,
-                            'props_value'   =>  $pv,
-                        );
-
-                        $props = $propsMdl->db_dump(array('bm_id'=>$filter['bm_id'],'props_col'=>$pk),'id');
-                        if($props){
-                            $propsdata['id'] = $props['id'];
-                        }
-                        $propsMdl->save($propsdata);
+                    if (!$customcolsLib->isPropValueSavable($pv)) {
+                        continue;
                     }
+                    $propsdata = array(
+                        'bm_id'         =>  $filter['bm_id'],
+                        'props_col'     =>  $pk,
+                        'props_value'   =>  $pv,
+                    );
+
+                    $props = $propsMdl->db_dump(array('bm_id'=>$filter['bm_id'],'props_col'=>$pk),'id');
+                    if($props){
+                        $propsdata['id'] = $props['id'];
+                    }
+                    $propsMdl->save($propsdata);
                 }
 
                 
@@ -955,8 +954,8 @@ EOF;
             //保存扫码配置信息
             $addScanConfInfo = array(
                 'openscan'     => $_POST['special_setting'] ? $_POST['special_setting'] : '',
-                'fromposition' => $_POST['first_num'] ? $_POST['first_num'] : '',
-                'toposition'   => intval($_POST['last_num']) ? intval($_POST['last_num']) : 0,
+                'fromposition' => intval($_POST['first_num']),
+                'toposition'   => intval($_POST['last_num']),
             );
             $basicMaterialConfObjSpe->update($addScanConfInfo, $filter);
             //更新物料同步信息
@@ -1179,12 +1178,10 @@ EOF;
         }
         $this->pagedata['arr_props'] = $arr_props;
         
-        $customcols = kernel::single('material_customcols')->getcols();
-        foreach($customcols as $k=>$v){
-            if($arr_props[$v['col_key']]){
-                $customcols[$k]['col_value'] = $arr_props[$v['col_key']];
-            }
-        }
+        $customcols = kernel::single('material_customcols')->attachPropsValues(
+            kernel::single('material_customcols')->getcols(),
+            $arr_props
+        );
         $this->pagedata['customcols'] = $customcols;
 
         // =============== 获取物料图片信息 ===============
@@ -1198,7 +1195,7 @@ EOF;
     }
     /**
      * 基础物料列表弹窗数据获取方法
-     * 
+     *
      * @param Void
      * @return String
      */
@@ -1235,7 +1232,7 @@ EOF;
 
     /**
      * 基础物料列表弹窗选中物料信息查询方法
-     * 
+     *
      * @param Int $bm_id
      * @return String
      */
@@ -1321,15 +1318,37 @@ EOF;
                 $rows[$key]['specifications'] = $extList[$bm_id]['specifications'];
             }
 
+            // 调色号：标记基础物料是否 is_custom_color=1（basic_material_props）
+            $propsMdl = app::get('material')->model('basic_material_props');
+            $customColorBmIds = array();
+            $propList = $propsMdl->getList('bm_id', array(
+                'bm_id|in'     => $bm_ids,
+                'props_col'    => 'is_custom_color',
+                'props_value'  => '1',
+            ), 0, -1);
+            if ($propList) {
+                $customColorBmIds = array_column($propList, 'bm_id');
+            }
+            foreach ($rows as $key => $val) {
+                $rows[$key]['is_custom_color'] = in_array($val['bm_id'], $customColorBmIds) ? 1 : 0;
+            }
+
             unset($bm_ids, $data, $costList);
         }
 
-        echo json_encode($rows);
+        $needExtendedCols = !empty($_GET['need_extended_cols']);
+        if ($needExtendedCols) {
+            $extendedColsForBmProps = kernel::single('material_sales_extended_cols')->getExtendedColsWithParams();
+            $payload = array('data' => isset($rows) ? $rows : array(), 'extendedColsForBmProps' => $extendedColsForBmProps);
+            echo json_encode($payload);
+        } else {
+            echo json_encode(isset($rows) ? $rows : array());
+        }
     }
 
     /**
      * 基础物料组合信息异步加载方法
-     * 
+     *
      * @param Int $bm_id
      * @return String
      */
@@ -1350,7 +1369,7 @@ EOF;
 
     /**
      * 基础物料组合信息异步加载方法
-     * 
+     *
      * @param Int $bm_id
      * @return String
      */
@@ -1406,10 +1425,6 @@ EOF;
         $this->display('admin/material/basic/gensalesmaterial.html');
     }
 
-    /**
-     * dobatchGen
-     * @return mixed 返回值
-     */
     public function dobatchGen()
     {
         //传入的物料格式 id1,id2,id3,一次10个,页面js变量控制
@@ -1448,7 +1463,7 @@ EOF;
 
     /**
      *  对输入的内容进行格式化输出至AJAX
-     * 
+     *
      * @author hzjsq (2011/3/24)
      * @param Mixed $param 要转换的内容
      * @return String
@@ -1861,10 +1876,6 @@ EOF;
     }
     
     //判断O2O门店是否存在
-    /**
-     * 获取StoreRs
-     * @return mixed 返回结果
-     */
     public function getStoreRs()
     {
         //是否有O2O门店
@@ -1935,11 +1946,6 @@ EOF;
     }
 
     //批量停售
-    /**
-     * batchInvisible
-     * @param mixed $view view
-     * @return mixed 返回值
-     */
     public function batchInvisible($view)
     {
         $this->begin('');
@@ -2001,11 +2007,6 @@ EOF;
     }
 
     //批量在售
-    /**
-     * batchVisible
-     * @param mixed $view view
-     * @return mixed 返回值
-     */
     public function batchVisible($view)
     {
         $this->begin('');
@@ -2067,10 +2068,6 @@ EOF;
     }
 
 
-    /**
-     * 删除_material
-     * @return mixed 返回值
-     */
     public function delete_material(){
 
         $this->begin('index.php?app=material&ctl=admin_material_basic&act=index');
@@ -2187,4 +2184,5 @@ EOF;
         }
         $this->end(true, '操作成功');
     }
+
 }

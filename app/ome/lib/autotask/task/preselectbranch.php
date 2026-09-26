@@ -92,6 +92,15 @@ class ome_autotask_task_preselectbranch
             $error_msg = '经销店铺订单不增加仓库预占' . var_export($row, 1);
             return false;
         }
+
+        // 本订单已有拒单门店时，先释放旧仓库预占，避免与审单选仓不一致
+        if (app::get('o2o')->is_installed()) {
+            $refusedStores = app::get('o2o')->model('store_refuse_analysis')->get_refuse_stores($order_id);
+            if (!empty($refusedStores)) {
+                kernel::single('material_basic_material_stock_freeze')->deleteOrderBranchFreeze(array($order_id));
+            }
+        }
+
         $groups[]['orders'][]    = $order_id;
         
         //订单预处理
@@ -140,6 +149,7 @@ class ome_autotask_task_preselectbranch
         }
         
         $itemBranchStore = [];
+        $o2oStoreLib     = app::get('o2o')->is_installed() ? kernel::single('o2o_store') : null;
         if($orders[$orderKey]['objects']) {
             #通过库存就全获取仓库
             $item->updateOrderInfo($orders);
@@ -148,6 +158,9 @@ class ome_autotask_task_preselectbranch
             $branch_id = 0;
             if(is_array($item->getBranchId())) {
                 $branch_id = current($item->getBranchId());
+            }
+            if($branch_id && $o2oStoreLib && $o2oStoreLib->isBranchRefusedByOrder($branch_id, $order_id)) {
+                $branch_id = 0;
             }
             if($branch_id) {
                 $orders = $item->getOrders();
@@ -167,6 +180,9 @@ class ome_autotask_task_preselectbranch
             $arrBranch     = kernel::single('ome_branch_type')->getBranchIdByStoreCode($storeCode, $appointBranch);
             foreach($storeCodeItems as $sc => $items) {
                 $branch_id = $arrBranch[$sc];
+                if($branch_id && $o2oStoreLib && $o2oStoreLib->isBranchRefusedByOrder($branch_id, $order_id)) {
+                    continue;
+                }
                 if($branch_id) {
                     $storeManage      = kernel::single('ome_store_manage');
                     $storeManage->loadBranch(array('branch_id'=>$branch_id));

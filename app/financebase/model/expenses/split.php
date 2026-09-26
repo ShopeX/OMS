@@ -54,15 +54,35 @@ class financebase_mdl_expenses_split extends dbeav_model {
             $where .= ' AND `split_time` <'.(strtotime($filter['split_time_to'])+86400);
         }
         unset($filter['split_time_to']);
-        if($filter['material_bn']) {
+        if(!empty($filter['material_bn'])) {
             $bm = app::get('material')->model('basic_material')->db_dump(array('material_bn'=>$filter['material_bn']), 'bm_id');
             $filter['bm_id'] = $bm['bm_id'];
             unset($filter['material_bn']);
         }
-        if($filter['trade_no']) {
+        if(!empty($filter['trade_no'])) {
             $bill = app::get('financebase')->model('bill')->getList('id',array('trade_no'=>$filter['trade_no']));
             $filter['bill_id'] = array_column($bill, 'id');
             unset($filter['trade_no']);
+        }
+        if(isset($filter['trade_type']) && $filter['trade_type'] !== '') {
+            $bills = app::get('financebase')->model('bill')->getList('id', array('trade_type' => $filter['trade_type']));
+            if($bills) {
+                $billIds = array_column($bills, 'id');
+                if(isset($filter['bill_id|in'])) {
+                    $billIds = array_intersect((array)$filter['bill_id|in'], $billIds);
+                } elseif(isset($filter['bill_id'])) {
+                    $billIds = array_intersect((array)$filter['bill_id'], $billIds);
+                }
+                if($billIds) {
+                    $filter['bill_id|in'] = $billIds;
+                    unset($filter['bill_id']);
+                } else {
+                    $filter['id'] = -1;
+                }
+            } else {
+                $filter['id'] = -1;
+            }
+            unset($filter['trade_type']);
         }
         return parent::_filter($filter, $tableAlias, $baseWhere).$where;
     }

@@ -1,0 +1,209 @@
+<{capture name="header"}>
+<{css app="ome" src="ome.css"}>
+<{css app="ome" src="style.css"}>
+<{script src="coms/modedialog.js" app="desktop"}>
+<{script src="coms/pager.js" app="desktop"}>
+<{/capture}>
+<style>
+    .notice-inline.error {
+        background-image: none;
+        margin-left: 25px
+    }
+
+    #fm1 .division td label, #fm1 .division div label {
+        vertical-align: top;
+    }
+
+    .propetyList li {
+        display: inline-block;
+        width: 40%;
+        padding-bottom: 8px;
+    }
+
+    .areabox {
+        padding: 2px;
+    }
+    .mapping-range-tip{
+        color:#c52f24;
+        background:#fff7f6;
+        border:1px solid #f0d0cc;
+        padding:8px 12px;
+        margin:0 0 10px;
+        line-height:1.6;
+    }
+    .range-op{
+        color:#c52f24;
+        font-size:12px;
+        padding:0 2px;
+        white-space:nowrap;
+    }
+</style>
+<form method="post" id="fm1" action="index.php?app=goldentra&ctl=admin_mapping&act=saveDiamondMapping&finder_id=<{$finder_id}>">
+    <div class="tableform">
+
+        <div class="division">
+            <div class="mapping-range-tip">
+                主石重段取值说明：填写「下限 ~ 上限」时，匹配范围为 <b>≥下限</b> 且 <b>＜上限</b>（左闭右开）。
+                例：填写 <b>0.8 ~ 1.2</b>，表示 <b>≥0.8</b> 且 <b>＜1.2</b>。
+            </div>
+
+            <table border="0" cellspacing="0" cellpadding="0" class="gridlist">
+
+
+                <tr>
+                    <td align="right" nowrap="nowrap">模号：</td>
+                    <td colspan="11">
+                        <input type="hidden" id="m_id" name="m_id"/>
+                        <input type="text" id="mold_code" name="mold_code" vtype="required" class="x-input"/>
+                        <span>
+                            <{img class="pointer btn_mold" title="查看模号列表" app="desktop" src="bundle/zoom_btn.gif"}>
+                        </span>
+                        <span>
+                            <input type="button" name="add_btn" id="add_btn" value="新增">
+                        </span>
+                    </td>
+                </tr>
+
+                <tbody id="spec_body">
+                </tbody>
+
+            </table>
+
+
+        </div>
+
+        <div id="cc" class="noprint table-action">
+            <{button type="button" id="model-save-btn" label="保 存"}> &nbsp;
+            <{button type="button" class="btn-secondary" id="return-btn" label="关 闭"
+            onclick="javascript:void(window.close());"}>
+        </div>
+    </div>
+
+    <input type="hidden" name="type" value="2">
+    <input type="hidden" name="finder_id" value="<{$finder_id}>">
+</form>
+<script>
+    $('model-save-btn').addEvent('click', function (e) {
+        var _this = this;
+        var form = this.getParent('form');
+
+        form.store('target', {
+            onRequest: function () {
+                _this.disabled = true;
+            },
+            onComplete: function (jsontext) {
+                try {
+                    var json = JSON.decode(jsontext);
+                    if (typeof (json.error) != 'undefined') {
+                        _this.disabled = false;
+                    } else {
+                        _this.disabled = true;
+                        opener.finderGroup['<{$env.get.finder_id}>'].refresh.delay(400, opener.finderGroup['<{$env.get.finder_id}>']);
+                        window.close();
+                    }
+                } catch (e) {
+                }
+            }
+        });
+
+
+        form.fireEvent('submit', e);
+    });
+
+    var color_rows = <{$color_rows}>;
+    var clarity_rows = <{$clarity_rows}>;
+    var diamond_cut_rows = <{$diamond_cut_rows}>;
+
+    var getTemp = (function (color_rows, clarity_rows, diamond_cut_rows) {
+
+        var color_select_html = '';
+        color_rows.each(function(color){
+            color_select_html += '<option value="' + color + '">' + color + '</option>'
+        });
+        color_select_html = '<select name="color[]">'+ color_select_html +'</select>';
+
+        var clarity_select_html = '';
+        clarity_rows.each(function(clarity){
+            clarity_select_html += '<option value="' + clarity + '">' + clarity + '</option>'
+        });
+        clarity_select_html = '<select name="clarity[]">'+ clarity_select_html +'</select>';
+
+        var diamond_cut_select_html = '';
+        diamond_cut_rows.each(function(diamond_cut){
+            diamond_cut_select_html += '<option value="' + diamond_cut + '">' + diamond_cut + '</option>'
+        });
+        diamond_cut_select_html = '<select name="diamond_cut[]">'+ diamond_cut_select_html +'</select>';
+
+        return function tr() {
+
+            var tr =
+                `
+                    <td align="right" nowrap="nowrap">主石重段：</td>
+                    <td>
+                        <span class="range-op">≥</span>
+                        <input type="text" name="min_main[]" size=10 vtype="required&&unsigned"/>~
+                        <input type="text" name="max_main[]" size=6 vtype="required&&unsigned"/>
+                        <span class="range-op">＜</span>
+                        <span style="color:red;">*</span>
+                    </td>
+
+                    <td align="right">显示主石重：</td>
+                    <td>
+                        <input type="text" name="main_weight[]" vtype="required&&unsigned" size=6/>
+                        <span style="color:red;">*</span>
+                    </td>
+
+                    <td align="right">颜色：</td>
+                    <td>
+                        ` + color_select_html + `
+                        <span style="color:red;">*</span>
+                    </td>
+
+                    <td align="right">净度：</td>
+                    <td>
+                        ` + clarity_select_html + `
+                        <span style="color:red;">*</span>
+                    </td>
+
+                    <td align="right">切工：</td>
+                    <td>
+                        ` + diamond_cut_select_html + `
+                        <span style="color:red;">*</span>
+                    </td>
+
+                    <td align="right">标签价：</td>
+                    <td>
+                        <input type="text" name="tag_price[]" vtype="required&&unsigned" size=6/>
+                        <span style="color:red;">*</span>
+                        <a href="#" onclick="del(this)"><{img src="bundle/delecate.gif" app="desktop" key="state" class="pointer btn-delete-item"}></a>
+                    </td>
+                `;
+            return tr;
+        };
+
+    })(color_rows, clarity_rows, diamond_cut_rows);
+
+
+    $('add_btn').addEvent('click', function (e) {
+        new Element('tr', {html: getTemp()}).inject($('spec_body'));
+    });
+
+    $E(".btn_mold").addEvent('click', function (e) {
+        var url = '?app=desktop&act=alertpages&goto=' + encodeURIComponent("index.php?app=goldentra&ctl=admin_mold&act=index&singleselect=1");
+        Ex_Loader('modedialog', function () {
+            new finderDialog(url, {
+                params: {
+                    url: 'index.php?app=goldentra&ctl=admin_mold&act=getMoldByCode',
+                    name: 'm_id',
+                    type: 'radio'
+                }, handle: 'mold_code', width: 1000, height: 500
+            });
+        });
+    });
+
+    function del(e) {
+        e.getParent('tr').remove();
+    }
+
+    $('add_btn').fireEvent('click');
+</script>

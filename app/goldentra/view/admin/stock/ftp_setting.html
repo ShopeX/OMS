@@ -1,0 +1,185 @@
+<div class="tableform">
+    <h3>全量库存 FTP 配置</h3>
+    <p class="notice">
+        用于定时任务 <code>goldentrastockftp</code>（每日 0:30 拉取 SAP 放置的当日库存文件，如 <code>Stock20260715152204_01.csv</code>）及后台「FTP全量导入」。
+        读取完成后自动移至备份目录（QAS → QAS-ARCHIVE，PRD → PRD-ARCHIVE）。后台保存的配置优先级最高。
+        远程文件示例：<code><{$cfg.ftp_remote_dir}>/<{$sample_file}></code>
+    </p>
+    <form method="post" action="index.php?app=goldentra&ctl=admin_stock_ftp&act=index" id="ftp-setting-form">
+        <table width="100%" cellspacing="0" cellpadding="0" class="gridlist">
+            <tbody>
+            <tr>
+                <th width="160">FTP 服务器</th>
+                <td><input type="text" name="ftp_host" value="<{$cfg.ftp_host}>" vtype="required" style="width:360px;" /></td>
+            </tr>
+            <tr>
+                <th>FTP 用户名</th>
+                <td><input type="text" name="ftp_user" value="<{$cfg.ftp_user}>" vtype="required" style="width:360px;" /></td>
+            </tr>
+            <tr>
+                <th>FTP 密码</th>
+                <td>
+                    <input type="password" name="ftp_pass" value="<{$cfg.ftp_pass_display}>" style="width:360px;" autocomplete="new-password" />
+                    <span class="notice">留空或 ****** 表示不修改已保存密码</span>
+                </td>
+            </tr>
+            <tr>
+                <th>远程目录</th>
+                <td><input type="text" name="ftp_remote_dir" value="<{$cfg.ftp_remote_dir}>" vtype="required" style="width:360px;" />
+                    <span class="notice">测试环境 /SAPOMS/QAS，生产 /SAPOMS/PRD</span>
+                </td>
+            </tr>
+            <tr>
+                <th>远程备份目录</th>
+                <td><input type="text" name="ftp_remote_archive_dir" value="<{$cfg.ftp_remote_archive_dir}>" style="width:360px;" placeholder="留空自动推导" />
+                    <span class="notice">留空则 QAS → QAS-ARCHIVE，PRD → PRD-ARCHIVE</span>
+                </td>
+            </tr>
+            <tr>
+                <th>文件命名</th>
+                <td>
+                    <select name="file_naming" id="file-naming" style="width:200px;">
+                        <option value="dated" <{if $cfg.file_naming!='fixed'}>selected<{/if}>>按日期（如 StockYYYYMMDD*.csv）</option>
+                        <option value="fixed" <{if $cfg.file_naming=='fixed'}>selected<{/if}>>指定文件名</option>
+                    </select>
+                </td>
+            </tr>
+            <tr id="row-file-prefix" <{if $cfg.file_naming=='fixed'}>style="display:none;"<{/if}>>
+                <th>文件名前缀</th>
+                <td>
+                    <input type="text" name="file_prefix" value="<{$cfg.file_prefix}>" style="width:200px;" placeholder="Stock" />
+                    + YYYYMMDD + *.csv
+                    <span class="notice">示例：<{$sample_file}>，当日所有匹配文件均会导入</span>
+                </td>
+            </tr>
+            <tr id="row-file-name" <{if $cfg.file_naming!='fixed'}>style="display:none;"<{/if}>>
+                <th>指定文件名</th>
+                <td>
+                    <input type="text" name="file_name" value="<{$cfg.file_name}>" style="width:360px;" placeholder="如 test0630.csv" />
+                    <span class="notice">固定读取该文件，不追加日期</span>
+                </td>
+            </tr>
+            <tr>
+                <th>SAP 共享目录</th>
+                <td><input type="text" name="sap_oms_dir" value="<{$cfg.sap_oms_dir}>" style="width:480px;" />
+                    <span class="notice">SAP 挂载根目录，如 /mnt/SAPOMS；存在则优先于 FTP 下载</span>
+                </td>
+            </tr>
+            <tr>
+                <th>SAP 备份目录</th>
+                <td><input type="text" name="sap_oms_archive_dir" value="<{$cfg.sap_oms_archive_dir}>" style="width:480px;" placeholder="留空自动推导" />
+                    <span class="notice">留空则按远程目录自动映射，如 /mnt/SAPOMS/QAS-ARCHIVE</span>
+                </td>
+            </tr>
+            <tr>
+                <th>本地下载目录</th>
+                <td><input type="text" name="local_dir" value="<{$cfg.local_dir}>" style="width:480px;" />
+                    <span class="notice">留空则使用 data/posSyncFiles/serial</span>
+                </td>
+            </tr>
+            <tr>
+                <th>批量 INSERT 行数</th>
+                <td><input type="text" name="insert_chunk" value="<{$cfg.insert_chunk}>" style="width:120px;" />
+                    <span class="notice">百万级建议 3000~5000</span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="table-action">
+            <{button label="保存" type="button" id="btn-save"}>
+            <{button label="测试连接" type="button" id="btn-test" class="btn-secondary"}>
+        </div>
+    </form>
+    <div id="test-result" style="margin-top:12px;display:none;"></div>
+</div>
+
+<script>
+(function(){
+    var form = $('ftp-setting-form');
+    var btnSave = $('btn-save');
+    var fileNaming = $('file-naming');
+    var rowPrefix = $('row-file-prefix');
+    var rowFileName = $('row-file-name');
+    var jsonHeaders = {
+        'Content-Type': 'application/json',
+        'X-Requested-By': 'shopex-ui',
+        'X-Requested-With': 'XMLHttpRequest'
+    };
+
+    function toggleFileNamingRows() {
+        var fixed = fileNaming.get('value') === 'fixed';
+        rowPrefix.setStyle('display', fixed ? 'none' : '');
+        rowFileName.setStyle('display', fixed ? '' : 'none');
+    }
+    fileNaming.addEvent('change', toggleFileNamingRows);
+
+    function collectFormData() {
+        var data = {};
+        form.getElements('input, select, textarea').each(function(el){
+            var type = el.type;
+            if (!el.name || el.disabled || type == 'submit' || type == 'reset' || type == 'file' || type == 'image') {
+                return;
+            }
+            if ((type == 'radio' || type == 'checkbox') && !el.checked) {
+                return;
+            }
+            data[el.name] = el.get('value');
+        });
+        return data;
+    }
+
+    btnSave.addEvent('click', function(){
+        btnSave.disabled = true;
+        new Request({
+            url: 'index.php?app=goldentra&ctl=admin_stock_ftp&act=index',
+            method: 'post',
+            urlEncoded: false,
+            headers: jsonHeaders,
+            data: JSON.encode(collectFormData()),
+            onSuccess: function(text){
+                var ct = this.getHeader('Content-type') || '';
+                if (ct.indexOf('text/jcmd') >= 0) {
+                    var res = JSON.decode(text);
+                    if (res.success) {
+                        MessageBox.success(res.success);
+                    } else if (res.error) {
+                        MessageBox.error(res.error);
+                    }
+                    return;
+                }
+                MessageBox.success('保存成功');
+            },
+            onFailure: function(){
+                MessageBox.error('保存失败，请稍后重试');
+            },
+            onComplete: function(){
+                btnSave.disabled = false;
+            }
+        }).send();
+    });
+
+    $('btn-test').addEvent('click', function(){
+        var payload = collectFormData();
+        payload._test_ftp = '1';
+        new Request.JSON({
+            url: 'index.php?app=goldentra&ctl=admin_stock_ftp&act=index',
+            method: 'post',
+            urlEncoded: false,
+            headers: jsonHeaders,
+            data: JSON.encode(payload),
+            onSuccess: function(res){
+                var box = $('test-result');
+                box.setStyle('display', 'block');
+                if (res && res.success) {
+                    box.set('html', '<span style="color:green;">' + res.message + '</span>');
+                } else {
+                    box.set('html', '<span style="color:red;">' + (res && res.message ? res.message : '测试失败') + '</span>');
+                }
+            },
+            onFailure: function(){
+                $('test-result').setStyle('display', 'block').set('html', '<span style="color:red;">请求失败</span>');
+            }
+        }).send();
+    });
+})();
+</script>

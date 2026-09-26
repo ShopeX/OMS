@@ -51,6 +51,10 @@ class ome_ctl_admin_branch extends desktop_controller
         $this->begin($this->url);
         $oBranch = $this->app->model("branch");
         $_POST['stock_threshold'] = $_POST['stock_threshold'] ? $_POST['stock_threshold'] : 0;
+        
+        // logistics_limit_time
+        $_POST['logistics_limit_time'] = $_POST['logistics_limit_time'] ? intval($_POST['logistics_limit_time']) : 0;
+        
             $data                     = $_POST;
             unset($data['area_conf']);
             if (!$data['branch_id'] && $_POST['wms_id'] == '') {

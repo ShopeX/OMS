@@ -111,6 +111,21 @@ $db['iso_items']=array (
     'in_list' => true,
     'default_in_list' => true,
     ),
+
+    'sn'           => array(
+      'type'            => 'text',
+      'editable'        => false,
+      'in_list'         => true,
+      'default_in_list' => true,
+      'label'           => '唯一码',
+    ),
+    'sn_list'      => array(
+      'type'            => 'text',
+      'editable'        => false,
+      'in_list'         => true,
+      'default_in_list' => true,
+      'label'           => '唯一码列表',
+    ),
   ),
   'index' =>
   array (

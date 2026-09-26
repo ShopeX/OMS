@@ -185,9 +185,48 @@ class erpapi_shop_matrix_taobao_response_aftersalev2 extends erpapi_shop_respons
     }
 
     protected function _formatAddItemList($sdf, $convert=array()) {
+        if ($sdf['order']['tran_type'] == 'archive') {
+            return $this->formatArchiveitemlist($sdf, $convert);
+        }
         $convert = $this->item_convert_field;
 
         return parent::_formatAddItemList($sdf, $convert);
+    }
+
+    /**
+     * 归档订单：按 oid 关联 archive.order_objects，返回以 object bn 为键的明细
+     */
+    public function formatArchiveitemlist($sdf, $convert)
+    {
+        $refund_item_list = $sdf['refund_item_list']['return_item'];
+        if (empty($refund_item_list)) {
+            return array();
+        }
+
+        $archiveOrderObjectMdl = app::get('archive')->model('order_objects');
+        $oids = array_column($refund_item_list, 'oid');
+        $filter = array('oid' => $oids);
+        if ($sdf['order']['order_id']) {
+            $filter['order_id'] = $sdf['order']['order_id'];
+        }
+        $object = $archiveOrderObjectMdl->getList('order_id,oid,bn,quantity,obj_id', $filter);
+        $object = array_column($object, null, 'oid');
+
+        $arrItem = array();
+        foreach ($refund_item_list as $item) {
+            if ($object[$item['oid']]['bn']) {
+                $item['bn'] = $object[$item['oid']]['bn'];
+            }
+            if ($arrItem[$item['bn']]) {
+                $arrItem[$item['bn']]['num'] += $item['num'];
+            } else {
+                $arrItem[$item['bn']] = $item;
+            }
+            if ($object[$item['oid']]['obj_id']) {
+                $arrItem[$item['bn']]['obj_id'][] = $object[$item['oid']]['obj_id'];
+            }
+        }
+        return $arrItem;
     }
 
     protected function _refundApplyAdditional($sdf) {
@@ -263,6 +302,10 @@ class erpapi_shop_matrix_taobao_response_aftersalev2 extends erpapi_shop_respons
     {
         //平台状态值
         $status = strtoupper($sdf['status']);
+
+        if ($sdf['order']['tran_type'] == 'archive') {
+            $sdf['archive'] = '1';
+        }
         
         //format
         $sdf = parent::_returnProductAddSdf($sdf);

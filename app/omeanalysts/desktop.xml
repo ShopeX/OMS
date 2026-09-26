@@ -40,6 +40,7 @@
         <!--仓储物流分析-->
         <permission id="analysis_orderDiscounts">订单优惠明细统计</permission>
         <permission id="analysis_refundNoreturn">退款未退货统计</permission>
+        <permission id="analysis_salestatistics">退货率统计</permission>
     </permissions>
 
 
@@ -75,7 +76,7 @@
             <menu controller='ome_analysis' action='aftersale' permission='analysis_aftersale' display='true' order='1000705'>退货统计</menu>            
             <menu permission='analysis_export' display='false'>报表导出</menu>
             <menu controller='ome_analysis' action='refundNoreturn' permission='analysis_refundNoreturn' display='true' order='1000706'>退款未退货统计</menu>
-            <menu controller='ome_salestatistics' action='salestatistics' permission='analysis_salestatistics' display='true' order='1000704'>退货率统计</menu>
+            <menu controller='ome_salestatistics' action='index' permission='analysis_salestatistics' display='true' order='1000707'>退货率统计</menu>
         </menugroup>
     </workground>
 	<workground name="系统设置" id="setting_tools"  order="1100" icon="icon-xitongshezhi-01">

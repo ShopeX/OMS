@@ -26,8 +26,8 @@ class invoice_mdl_order extends dbeav_model
     ];
 
     //是否有导出配置
-     var $has_export_cnf = true;
-	 public $defaultOrder = array('id', 'DESC');
+    var $has_export_cnf = true;
+    public $defaultOrder = array('id', 'DESC');
     
     /**
      * 须加密字段
@@ -61,6 +61,58 @@ class invoice_mdl_order extends dbeav_model
         '物流公司'  => 'logi_name',
         '运单号'       => 'logi_no',
     );
+    
+    /**
+     * 是否需要真实 count。
+     * 高级筛选/快捷搜索会把条件写入 finder.filter.value，并在 refresh 时拼进 POST；
+     * 普通 Tab 浏览、翻页通常只有 _finder、items 等系统字段。
+     *
+     * @param mixed $filter
+     * @return bool
+     */
+    private function _needRealFinderCount($filter)
+    {
+        if (is_array($filter) && !empty($filter['advance'])) {
+            return true;
+        }
+        if (isset($_REQUEST['filter']) && is_array($_REQUEST['filter']) && !empty($_REQUEST['filter']['advance'])) {
+            return true;
+        }
+
+        $skip = array(
+            '_finder' => 1,
+            'items' => 1,
+            'page' => 1,
+            'plimit' => 1,
+            'finder_plimit' => 1,
+            'action' => 1,
+            '_token' => 1,
+        );
+
+        foreach ((array) $_POST as $key => $value) {
+            if (isset($skip[$key]) || strpos($key, '_finder') === 0) {
+                continue;
+            }
+            if ($value === '' || $value === null) {
+                continue;
+            }
+            if (is_array($value)) {
+                $hasValue = false;
+                foreach ($value as $v) {
+                    if ($v !== '' && $v !== null) {
+                        $hasValue = true;
+                        break;
+                    }
+                }
+                if (!$hasValue) {
+                    continue;
+                }
+            }
+            return true;
+        }
+
+        return false;
+    }
 
     /*------------------------------------------------------ */
     //-- 用户信息
@@ -87,6 +139,7 @@ class invoice_mdl_order extends dbeav_model
             default:
                 $this->oSchema['csv'][$filter] = array(
                     '*:订单号' => 'order_bn',
+                    '*:订单创建时间' => 'order_create_time',
                     '*:订单确认状态' => 'process_status',
                     '*:来源店铺' => 'shop_name',
                     '*:发票类型' => 'type_id',
@@ -158,11 +211,18 @@ class invoice_mdl_order extends dbeav_model
         foreach($list as $key => $row)
         {
             #来源店铺
-            $sql_shop  = "SELECT b.name FROM ".DB_PREFIX."ome_orders as a 
-                   LEFT JOIN ".DB_PREFIX."ome_shop as b ON a.shop_id=b.shop_id 
+            $sql_shop  = "SELECT a.createtime, b.name FROM ".DB_PREFIX."ome_orders as a
+                   LEFT JOIN ".DB_PREFIX."ome_shop as b ON a.shop_id=b.shop_id
                    WHERE a.order_id='".$row['order_id']."'";
-            $shop_name  = $db->select($sql_shop);
-            $row['shop_name']   = $shop_name[0]['name'];
+            $order_info = $db->selectrow($sql_shop);
+            if (!$order_info) {
+                $sql_shop = "SELECT a.createtime, b.name FROM ".DB_PREFIX."archive_orders as a
+                   LEFT JOIN ".DB_PREFIX."ome_shop as b ON a.shop_id=b.shop_id
+                   WHERE a.order_id='".$row['order_id']."'";
+                $order_info = $db->selectrow($sql_shop);
+            }
+            $row['shop_name'] = $order_info['name'];
+            $row['order_create_time'] = $order_info['createtime'];
             
             #批次号(第四段)
             $delivery_arr   = array();
@@ -177,6 +237,7 @@ class invoice_mdl_order extends dbeav_model
             
             $rowVal = array();
             $rowVal['*:订单号']        = "\t".$row['order_bn'];
+            $rowVal['*:订单创建时间']   = ($row['order_create_time'] ? date('Y-m-d H:i', $row['order_create_time']) : '');
             $rowVal['*:订单确认状态']   = $process_status[$row['process_status']];
             $rowVal['*:来源店铺']       = $row['shop_name'];
             $rowVal['*:发票类型']       = $type_id[$row['type_id']];
@@ -509,5 +570,49 @@ HTML;
             $res = $rs[0];
         }
         return $rs[0];
+    }
+    
+    /**
+     * 开票方式
+     *
+     * @param $mode
+     * @param $list
+     * @param $row
+     * @return void
+     */
+    public function modifier_mode($mode, $list, $row)
+    {
+        $mode_name = '普通发票';
+        if($row['mode'] == '1'){
+            $mode_name = '数电发票';
+        }
+        
+        return $mode_name;
+    }
+    
+    /**
+     * 发票类型
+     *
+     * @param $mode
+     * @param $list
+     * @param $row
+     * @return void
+     */
+    public function modifier_type_id($type_id, $list, $row)
+    {
+        // mode
+        if($row['mode'] == '1'){
+            $type_name = '数电增值税电子普通发票';
+            if($type_id == '1'){
+                $type_name = '数电增值税电子专用发票';
+            }
+        }else{
+            $type_name = '普通发票';
+            if($type_id == '1'){
+                $type_name = '专用发票';
+            }
+        }
+        
+        return $type_name;
     }
 }

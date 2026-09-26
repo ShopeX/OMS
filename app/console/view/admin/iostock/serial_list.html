@@ -1,0 +1,50 @@
+<div class="tableform">
+    <div class="division">
+        <{if $pager.total > 0}>
+        <div style="margin-bottom:8px;color:#666;">
+            共 <{$pager.total}> 条唯一码，第 <{$pager.page}> / <{$pager.total_pages}> 页（每页 <{$pager.page_size}> 条）
+            <{if $pager.has_prev}>
+            &nbsp;<a href="<{$pager.prev_url}>" <{if $pager.update_target}>target="{update:'<{$pager.update_target}>'}"<{/if}>>上一页</a>
+            <{/if}>
+            <{if $pager.has_next}>
+            &nbsp;<a href="<{$pager.next_url}>" <{if $pager.update_target}>target="{update:'<{$pager.update_target}>'}"<{/if}>>下一页</a>
+            <{/if}>
+        </div>
+        <{/if}>
+        <table class="gridlist" border="0" cellspacing="0" cellpadding="0">
+            <thead>
+                <tr>
+                    <{foreach from=$columns item=col}>
+                    <th><{$col.label}></th>
+                    <{/foreach}>
+                </tr>
+            </thead>
+            <tbody>
+                <{if $rows}>
+                <{foreach from=$rows item=row}>
+                <tr>
+                    <{foreach from=$column_keys item=key}>
+                    <td><{$row[$key]}></td>
+                    <{/foreach}>
+                </tr>
+                <{/foreach}>
+                <{else}>
+                <tr>
+                    <td colspan="<{$column_count}>" style="text-align:center;color:#999;">暂无唯一码明细</td>
+                </tr>
+                <{/if}>
+            </tbody>
+        </table>
+        <{if $pager.total > $pager.page_size}>
+        <div style="margin-top:8px;color:#666;">
+            <{if $pager.has_prev}>
+            <a href="<{$pager.prev_url}>" <{if $pager.update_target}>target="{update:'<{$pager.update_target}>'}"<{/if}>>上一页</a>
+            <{/if}>
+            &nbsp;第 <{$pager.page}> / <{$pager.total_pages}> 页&nbsp;
+            <{if $pager.has_next}>
+            <a href="<{$pager.next_url}>" <{if $pager.update_target}>target="{update:'<{$pager.update_target}>'}"<{/if}>>下一页</a>
+            <{/if}>
+        </div>
+        <{/if}>
+    </div>
+</div>

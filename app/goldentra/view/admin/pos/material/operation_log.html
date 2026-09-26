@@ -1,0 +1,28 @@
+<{capture name="header"}>
+    <link href="../apps/wms/statics/wms.css" rel="stylesheet" type="text/css">       
+<{/capture}>
+
+<div class="division">
+    <h4>操作记录</h4>
+    <table cellspacing="0" class="gridlist" cellpadding="0" border="0" width="100%">
+        <thead>
+            <tr>
+                <th >操作时间</th>
+                <th >操作员</th>
+                <th >操作类型</th>
+                <th >操作内容</th>
+            </tr>
+        </thead>
+        <tbody>
+            <{foreach from=$log item=item}>
+            <tr>
+                <td ><{$item.operate_time}></td>
+                <td ><{$item.op_name}></td>
+                <td ><{$item.operation}></td>
+                <td ><{$item.memo}></td>
+            </tr>
+            <{/foreach}>
+        </tbody>
+    </table>
+</div>
+

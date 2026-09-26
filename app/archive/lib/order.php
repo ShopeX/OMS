@@ -772,6 +772,8 @@ class archive_order{
 
         $orderIdstr = "'".implode("','",$orderIds)."'";
 
+        // 仅终态进归档表；未完结留在 sdb_ome_refund_apply，
+        // 随后 _delete_original_data→archive_bill 会打 archive=1（不删行，避免漏数）。
         $applyList = $this->db->select("select `apply_id` FROM sdb_ome_refund_apply WHERE `order_id` in(".$orderIdstr.") AND `status` in('3','4')");
 
         if($applyList){
@@ -867,7 +869,7 @@ class archive_order{
 
             if($reship_result){
                 $itemkeys = '`item_id`,`reship_id`,`obj_id`,`bn`,`product_name`,`product_id`,`num`,`price`,`branch_id`,`op_id`,`return_type`,`defective_num`,`normal_num`';
-                $item_sql = "INSERT INTO sdb_archive_reship_items(".$itemkeys.") SELECT ".$itemkeys." FROM sdb_ome_reship_items WHERE `reship_id` in(".$reshipIdstr.")";
+                $item_sql = "INSERT INTO sdb_archive_reship_items(".$itemkeys.") SELECT ".$itemkeys." FROM sdb_ome_reship_items WHERE `reship_id` in(".$reshipIdstr.") AND `is_del`='false'";
                
                 $item_result = $this->db->exec($item_sql);
                 if (!$item_result) {

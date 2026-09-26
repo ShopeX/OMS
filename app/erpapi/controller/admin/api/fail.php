@@ -1,20 +1,5 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/**
  * 失败请求
  *
  * @category
@@ -30,7 +15,6 @@ class erpapi_ctl_admin_api_fail extends desktop_controller
      * @return void
      * @author
      **/
-
     function retry(){
         $params = array(
             'title' =>'失败请求',
@@ -80,8 +64,8 @@ class erpapi_ctl_admin_api_fail extends desktop_controller
 
         $apiModel = app::get('erpapi')->model('api_fail');
         $total = $apiModel->count($filter);
-        if($total > 100){
-            echo('每次最多可执行100条记录!');
+        if($total > 500){
+            echo('每次最多可执行500条记录!');
             exit;
         }
 
@@ -114,8 +98,8 @@ class erpapi_ctl_admin_api_fail extends desktop_controller
         $apiModel = app::get('erpapi')->model('api_fail');
         $apiRow = $apiModel->getList('*', $filter, 0, 1);
         $apiRow = $apiRow[0];
-
-        $msg = '';
+        
+        $err_msg = '';
         $result = array(
                     'rsp' => 'fail',
                     'id' => $apiRow['id'],
@@ -127,11 +111,18 @@ class erpapi_ctl_admin_api_fail extends desktop_controller
             echo json_encode($result);
             exit;
         }
-
+        
+        // 设置为失败状态，让手工可以重试
+        if($apiRow['status'] == 'running'){
+            $apiModel->update(array('status'=>'fail'),array('id'=>$apiRow['id']));
+        }
+        
         //发起请求
         $rs = kernel::single('erpapi_autotask_task_retryapi')->process($apiRow, $err_msg);
         if ($rs === true){
             $result['rsp']    = 'succ';
+        }else{
+            $result['err_msg'] = $err_msg;
         }
 
         echo json_encode($result);

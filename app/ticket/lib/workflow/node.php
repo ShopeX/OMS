@@ -6,6 +6,109 @@
  * @version 2025.07.10
  */
 class ticket_workflow_node extends ticket_abstract {
+    public function decodeJsonField($value)
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if (is_array($value)) {
+            return $value;
+        }
+        $decoded = json_decode($value, true);
+        return is_array($decoded) ? $decoded : null;
+    }
+
+    public function encodeJsonField($value)
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if (is_string($value)) {
+            return $value;
+        }
+        return json_encode($value, JSON_UNESCAPED_UNICODE);
+    }
+
+    public function normalizeNodeAlias(array $nodeData, $fallback = '')
+    {
+        $alias = isset($nodeData['node_alias']) ? trim($nodeData['node_alias']) : '';
+        if ($alias === '' && $fallback !== '') {
+            return $fallback;
+        }
+        if ($alias === '') {
+            throw new LogicException('节点缺少别名，请在前端确保 node_alias 字段已设置');
+        }
+        return $alias;
+    }
+
+    public function normalizeNodePosition(array $nodeData, $field, $fallback = null)
+    {
+        if (isset($nodeData[$field]) && $nodeData[$field] !== '' && $nodeData[$field] !== null) {
+            return is_numeric($nodeData[$field]) ? (float)$nodeData[$field] : $fallback;
+        }
+        if (isset($nodeData['position']) && is_array($nodeData['position'])) {
+            $axis = $field === 'position_x' ? 'x' : 'y';
+            if (isset($nodeData['position'][$axis]) && $nodeData['position'][$axis] !== '') {
+                return is_numeric($nodeData['position'][$axis]) ? (float)$nodeData['position'][$axis] : $fallback;
+            }
+        }
+        return $fallback;
+    }
+
+    public function buildConditionColumns(array $nodeData, $sceneType)
+    {
+        $isCondition = ($nodeData['node_type'] ?? '') === 'condition';
+        $trueAlias = $this->normalizeBranchAlias($nodeData, 'condition_true_next_alias', 'true');
+        $falseAlias = $this->normalizeBranchAlias($nodeData, 'condition_false_next_alias', 'false');
+        if (!$isCondition) {
+            return array(
+                'condition_rules' => null,
+                'condition_branch_labels' => null,
+                'condition_field_source' => null,
+                'condition_true_next_alias' => $nodeData['condition_true_next_alias'] ?? $trueAlias,
+                'condition_false_next_alias' => $nodeData['condition_false_next_alias'] ?? $falseAlias,
+            );
+        }
+
+        return array(
+            'condition_rules' => $this->encodeJsonField($nodeData['condition_rules'] ?? null),
+            'condition_branch_labels' => $this->encodeJsonField($nodeData['condition_branch_labels'] ?? null),
+            'condition_field_source' => $nodeData['condition_field_source'] ?? ('scene:' . $sceneType),
+            'condition_true_next_alias' => $nodeData['condition_true_next_alias'] ?? $trueAlias,
+            'condition_false_next_alias' => $nodeData['condition_false_next_alias'] ?? $falseAlias,
+        );
+    }
+
+    protected function normalizeBranchAlias(array $nodeData, $fieldKey, $branchKey)
+    {
+        $alias = isset($nodeData[$fieldKey]) ? trim($nodeData[$fieldKey]) : '';
+        if ($alias !== '') {
+            return $alias;
+        }
+        if (empty($nodeData['condition_branch_labels'])) {
+            return null;
+        }
+        $labels = $nodeData['condition_branch_labels'];
+        if (is_string($labels)) {
+            $decoded = json_decode($labels, true);
+            if (is_array($decoded)) {
+                $labels = $decoded;
+            }
+        }
+        if (!is_array($labels)) {
+            return null;
+        }
+        $branchData = $labels[$branchKey] ?? null;
+        if (!is_array($branchData)) {
+            return null;
+        }
+        $candidate = $branchData['target_node_alias'] ?? $branchData['target_alias'] ?? null;
+        if ($candidate && trim($candidate) !== '') {
+            return trim($candidate);
+        }
+        return null;
+    }
+
     /**
      * 验证数据
      *
@@ -41,14 +144,7 @@ class ticket_workflow_node extends ticket_abstract {
 //            $error_msg = '节点顺序必须填写';
 //            return $this->error($error_msg);
 //        }
-        
-        if($params['node_type'] == 'approval'){
-            $params['step_order'] = 2;
-        }elseif($params['node_type'] == 'cc'){
-            $params['step_order'] = 3;
-        }elseif($params['node_type'] == 'end'){
-            $params['step_order'] = 4;
-        }else{
+        if(empty($params['step_order'])){
             $params['step_order'] = 1;
         }
         
@@ -139,37 +235,10 @@ class ticket_workflow_node extends ticket_abstract {
         }
         
         if(empty($saveData['assignee_id'])){
-            $error_msg = '审批人无效';
-            return $this->error($error_msg);
+            $saveData['assignee_id'] = 0;
+            $saveData['assignee_name'] = '';
         }
         
-        // 检测审批人是否已经被其他审批节点占用
-        $filter = [
-            'node_type' => $saveData['node_type'],
-            'template_id' => $saveData['template_id'],
-        ];
-        
-        if($saveData['id']){
-            $filter['id|noequal'] = $saveData['id'];
-        }
-        
-        $existNodeRow = $mdl->getList('id,node_name,node_type', $filter, 0, 1);
-        if($existNodeRow){
-            $error_msg = '审批节点['. $saveData['node_type'] .'] + 模板['.$data['template_name'].']已经存在，不允许重复添加';
-            return $this->error($error_msg);
-        }
-        
-        // 检测审批人是否已经被其他审批节点占用
-        $filter = [
-            'template_id' => $saveData['template_id'],
-            'assignee_id' => $saveData['assignee_id'],
-            'step_order|noequal' => $saveData['step_order']
-        ];
-        $existNodeRow = $mdl->getList('id,node_name,node_type', $filter, 0, 1);
-        if($existNodeRow){
-            $error_msg = '审批人['.$saveData['assignee_name'].']已经被['. $existNodeRow[0]['node_name'] .']占用，请检查';
-            return $this->error($error_msg);
-        }
         
         // insert or update
         if($saveData['id']){
@@ -251,6 +320,12 @@ class ticket_workflow_node extends ticket_abstract {
         $userMdl = app::get('desktop')->model('users');
         
         $userList = $userMdl->getList('user_id,name', ['status'=>1], 0, -1);
+        
+        // BPM用户
+        $userList[9999999] = [
+            'user_id' => '9999999',
+            'name' => 'BPM',
+        ];
         
         return $userList;
     }

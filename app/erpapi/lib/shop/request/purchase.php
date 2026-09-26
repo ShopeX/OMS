@@ -367,36 +367,45 @@ class erpapi_shop_request_purchase extends erpapi_shop_request_abstract {
      */
     public function createDelivery($param)
     {
-        if(empty($param['po_no']) || empty($param['delivery_no']) || empty($param['warehouse']))
-        {
-            return false;
+        if(empty($param['po_no']) || empty($param['delivery_no']) || empty($param['warehouse'])) {
+            $error_msg = '无效的请求出仓单参数!';
+            return $this->error($error_msg);
         }
 
-        if(empty($param['arrival_time']) || empty($param['carrier_name']) || empty($param['carrier_code']))
-        {
-            return false;
+        if(empty($param['arrival_time']) || empty($param['carrier_name']) || empty($param['carrier_code'])){
+            $error_msg = '无效的请求出仓单参数。';
+            return $this->error($error_msg);
         }
         
+        // check
+        if(empty($param['delivery_warehouse'])){
+            $error_msg = '供应商发货仓库必须传值!';
+            return $this->error($error_msg);
+        }
+        
+        // params
         $vop_param = array (
             'createPoDeliveryReq' => array (
-                'po_nos'             => explode(',',$param['po_no']),
-                'logistics_no'       => $param['logistics_no'] ?: $param['delivery_no'],
-                // 'delivery_warehouse' => $param['delivery_warehouse'],
-                'warehouse'          => $param['warehouse'],
-                'delivery_time'      => $param['delivery_time'],
-                'arrival_time'       => $param['arrival_time'],
-                'carrier_code'       => $param['carrier_code'],
+                'po_nos'             => explode(',',$param['po_no']), // po单号列表
+                'logistics_no'       => $param['logistics_no'] ?: $param['delivery_no'], // 运单号
+                'warehouse'          => $param['warehouse'], // 送货仓库
+                'delivery_time'      => $param['delivery_time'], // 送货时间，示例值：2026-08-01 10:00:00
+                'arrival_time'       => $param['arrival_time'], // 要求到货时间(必须是当天或者明天)；
+                'carrier_code'       => $param['carrier_code'], // 承运商编码
                 'delivery_method'    => $param['delivery_method'],
                 // 'store_sn'           => $param['store_sn'],
                 // 'jit_type'           => $param['jit_type'],
                 // 'is_air_embargo'     => $param['is_air_embargo'],
             ),
         );
-
-
+        
+        // 供应商发货仓库(如果是承运商=唯品会，则必填)
+        $vop_param['createPoDeliveryReq']['delivery_warehouse'] = $param['delivery_warehouse'];
+        
+        // 是否航空禁运,0-不禁运，1-禁运，默认为0，对于承运商为唯品会时，必填
+        $vop_param['createPoDeliveryReq']['is_air_embargo'] = ($param['is_air_embargo'] ? $param['is_air_embargo'] : '0');
+        
         if (kernel::single('purchase_purchase_stockout')->is_vopcp($param['carrier_code'])) {
-            $vop_param['createPoDeliveryReq']['delivery_warehouse'] = $param['delivery_warehouse'];
-            $vop_param['createPoDeliveryReq']['is_air_embargo']     = $param['is_air_embargo'];
             $vop_param['createPoDeliveryReq']['arrival_time']       = '';
             $vop_param['createPoDeliveryReq']['delivery_method']    = '';
         }
@@ -523,33 +532,45 @@ class erpapi_shop_request_purchase extends erpapi_shop_request_abstract {
     public function editDelivery($param)
     {
         $stockout_no    = $param['stockout_no'];
+        
+        // unset
         unset($param['stockout_no']);
         
-        if(empty($stockout_no) || empty($param['storage_no']) || empty($param['warehouse']))
-        {
-            return false;
+        // check
+        if(empty($stockout_no)){
+            $error_msg = '出库单号不能为空，请检查!';
+            return $this->error($error_msg);
         }
         
+        if(empty($param['storage_no']) || empty($param['warehouse'])){
+            $error_msg = '入库单号、送货仓库，不能为空!';
+            return $this->error($error_msg);
+        }
+        
+        if(empty($param['delivery_warehouse'])){
+            $error_msg = '供应商发货仓库不能为空，请检查!';
+            return $this->error($error_msg);
+        }
+        
+        // params
         $vop_param = array (
             'editDeliveryReq' => array (
-                'storage_no'         => $param['storage_no'],
-                'logistics_no'       => $param['delivery_no'],
-                // 'delivery_warehouse' => $param[''],
-                'warehouse'          => $param['warehouse'],
-                'delivery_time'      => $param['delivery_time'],
+                'storage_no'         => $param['storage_no'], // 入库单号
+                'logistics_no'       => $param['delivery_no'], // 运单号
+                'delivery_warehouse' => $param['delivery_warehouse'], // 供应商发货仓库(如果是承运商=唯品会，则必填)
+                'warehouse'          => $param['warehouse'], // 送货仓库 (如果是承运商=唯品会，则必填)
+                'delivery_time'      => $param['delivery_time'], // 送货时间
                 // 'arrival_time'       => $param[''],
-                'carrier_code'       => $param['carrier_code'],
+                'carrier_code'       => $param['carrier_code'], // 承运商编码
                 // 'delivery_method'    => $param[''],
                 // 'store_sn'           => $param[''],
                 // 'is_air_embargo'     => $param[''],
             ),
         );
-
-        if (kernel::single('purchase_purchase_stockout')->is_vopcp($param['carrier_code'])) {
-            $vop_param['editDeliveryReq']['delivery_warehouse'] = $param['delivery_warehouse'];
-            $vop_param['editDeliveryReq']['is_air_embargo']     = $param['is_air_embargo'];
-        }
-
+        
+        // 是否航空禁运,0-不禁运，1-禁运，默认为0，对于承运商为唯品会时，必填
+        $vop_param['editDeliveryReq']['is_air_embargo']     = ($param['is_air_embargo'] ? $param['is_air_embargo'] : '0');
+        
         //组织参数
         $vop_param    = $this->_format_api_params('editPoDeliveryV2', 0, $vop_param);
         
@@ -738,14 +759,24 @@ class erpapi_shop_request_purchase extends erpapi_shop_request_abstract {
         $rsp          = $response['rsp'];
         $delivery     = array();
         
-        if($rsp == 'succ')
-        {
-            $data          = json_decode($response['data'], true);
-            $data          = json_decode($data['msg'], true);
-            $dataList      = $data['result']['carriers'];
+        if($rsp == 'succ' && isset($response['data'])){
+            $data = array();
+            if($response['data'] && is_string($response['data'])){
+                $data = json_decode($response['data'], true);
+            }elseif($response['data']){
+                $data = $response['data'];
+            }
             
-            if($dataList)
-            {
+            if(isset($data['msg']) && $data['msg']){
+                if(is_string($data['msg'])){
+                    $data = json_decode($data['msg'], true);
+                }else{
+                    $data = $data['msg'];
+                }
+            }
+            
+            $dataList = isset($data['result']['carriers']) ? $data['result']['carriers'] : array();
+            if($dataList) {
                 $stockLib        = kernel::single('purchase_purchase_stockout');
                 
                 foreach ($dataList as $key => $val)

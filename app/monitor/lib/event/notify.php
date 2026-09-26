@@ -235,4 +235,47 @@ class monitor_event_notify
         
         return true;
     }
+
+    /**
+     * 根据订单解析店铺传参（模板占位符 shop_type / shop_name）
+     *
+     * @param array $order 含 shop_id、shop_type，或 order_id
+     * @return array{shop_type:string,shop_name:string}
+     */
+    public function buildOrderShopParams($order)
+    {
+        $result = array(
+            'shop_type' => '',
+            'shop_name' => '',
+        );
+        if (!is_array($order)) {
+            return $result;
+        }
+
+        if (empty($order['shop_id']) && !empty($order['order_id'])) {
+            $order = app::get('ome')->model('orders')->db_dump(
+                array('order_id' => $order['order_id']),
+                'shop_id,shop_type'
+            );
+        }
+        if (empty($order['shop_id'])) {
+            return $result;
+        }
+
+        $shopRow = app::get('ome')->model('shop')->db_dump(
+            array('shop_id' => $order['shop_id']),
+            'name'
+        );
+        $result['shop_name'] = !empty($shopRow['name']) ? trim((string) $shopRow['name']) : '';
+
+        $shopType = isset($order['shop_type']) ? (string) $order['shop_type'] : '';
+        if ($shopType !== '' && class_exists('ome_shop_type')) {
+            $typeLabel = trim((string) ome_shop_type::shop_name($shopType));
+            $result['shop_type'] = $typeLabel !== '' ? $typeLabel : $shopType;
+        } else {
+            $result['shop_type'] = $shopType;
+        }
+
+        return $result;
+    }
 }

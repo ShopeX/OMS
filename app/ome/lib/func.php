@@ -1,21 +1,11 @@
 <?php
+
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
+ * OME公共函数库
+ * @copyright Copyright (c) 2010, shopex. inc
+ * @author dongdong
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
  */
-
-
 class ome_func
 {
     /**
@@ -1428,5 +1418,122 @@ class ome_func
         }
         
         return $result;
+    }
+    
+    /**
+     * 解析 Excel 单元格为 Unix 时间戳（支持字符串日期与 Excel 序列日期）
+     * 另支持年/月/日斜杠写法（如 2026/5/1 0:00:00），避免 PHP strtotime 将 / 按 m/d/y 误判
+     * 纯日期（Excel 整数日、2026-05-08、2026/05/08）按默认时区当日 00:00:00 落库，避免 Excel 序列按 UTC 午夜多出 8 小时
+     *
+     * @param mixed $raw
+     * @return int|false
+     */
+    public function parseDateTimeCell($raw)
+    {
+        if ($raw === '' || $raw === null) {
+            return false;
+        }
+        
+        if (is_numeric($raw) && floatval($raw) > 20000 && floatval($raw) < 600000) {
+            $days = floatval($raw);
+            $tsUtcLinear = intval(round(($days - 25569) * 86400));
+            if ($tsUtcLinear > 0) {
+                $whole = floor($days);
+                $isWholeDay = (abs($days - $whole) < 1e-8);
+                if ($isWholeDay) {
+                    $ymd = gmdate('Y-m-d', $tsUtcLinear);
+                    $t = self::parseLocalDateTimeImmutable('Y-m-d|', $ymd);
+                    if ($t !== false) {
+                        return $t;
+                    }
+                }
+                $ymdHis = gmdate('Y-m-d H:i:s', $tsUtcLinear);
+                $t = self::parseLocalDateTimeImmutable('Y-m-d H:i:s|', $ymdHis);
+                if ($t !== false) {
+                    return $t;
+                }
+                return false;
+            }
+        }
+        
+        $s = is_string($raw) ? trim($raw) : (string) $raw;
+        if ($s === '') {
+            return false;
+        }
+        
+        // Y/m/d [H:i:s]：规范为 Y-m-d H:i:s，在默认时区解析
+        if (preg_match('/^(\d{4})\/(\d{1,2})\/(\d{1,2})(?:\s+(\d{1,2}):(\d{1,2}):(\d{1,2}))?$/', $s, $m)) {
+            $h = isset($m[4]) ? intval($m[4]) : 0;
+            $i = isset($m[5]) ? intval($m[5]) : 0;
+            $sec = isset($m[6]) ? intval($m[6]) : 0;
+            $norm = sprintf(
+                '%04d-%02d-%02d %02d:%02d:%02d',
+                intval($m[1]),
+                intval($m[2]),
+                intval($m[3]),
+                $h,
+                $i,
+                $sec
+            );
+            $t = self::parseLocalDateTimeImmutable('Y-m-d H:i:s|', $norm);
+            if ($t !== false) {
+                return $t;
+            }
+            return false;
+        }
+        
+        if (preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})$/', $s, $m)) {
+            $y = intval($m[1]);
+            $mo = intval($m[2]);
+            $d = intval($m[3]);
+            if (checkdate($mo, $d, $y)) {
+                $norm = sprintf('%04d-%02d-%02d', $y, $mo, $d);
+                $t = self::parseLocalDateTimeImmutable('Y-m-d|', $norm);
+                if ($t !== false) {
+                    return $t;
+                }
+            }
+            return false;
+        }
+        
+        $t = strtotime($s);
+        if ($t === false) {
+            return false;
+        }
+        
+        return $t;
+    }
+    
+    /**
+     * 在默认时区将日期时间字符串解析为 Unix 时间戳（避免仅日期被当作 UTC 午夜再偏移 +8 等问题）
+     *
+     * @param string $format DateTimeImmutable::createFromFormat 格式
+     * @param string $datetimeString
+     * @return int|false
+     */
+    protected static function parseLocalDateTimeImmutable($format, $datetimeString)
+    {
+        $tzName = date_default_timezone_get();
+        if ($tzName === false || $tzName === '') {
+            $tzName = 'Asia/Shanghai';
+        }
+        
+        try {
+            $tz = new \DateTimeZone($tzName);
+        } catch (\Exception $e) {
+            $tz = new \DateTimeZone('Asia/Shanghai');
+        }
+        
+        $dt = \DateTimeImmutable::createFromFormat($format, $datetimeString, $tz);
+        if ($dt === false) {
+            return false;
+        }
+        
+        $errs = \DateTimeImmutable::getLastErrors();
+        if (is_array($errs) && (($errs['warning_count'] ?? 0) > 0 || ($errs['error_count'] ?? 0) > 0)) {
+            return false;
+        }
+        
+        return $dt->getTimestamp();
     }
 }

@@ -1,27 +1,11 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-class logistics_ctl_admin_rule extends desktop_controller {
+    class logistics_ctl_admin_rule extends desktop_controller {
         var $workground = 'setting_tools';
         var $defaultWorkground = 'setting_tools';
 
         /**
-         * 显示仓库
-         */
+        *显示仓库
+        */
         function index(){
             $this->ruleList();
         }
@@ -66,7 +50,7 @@ class logistics_ctl_admin_rule extends desktop_controller {
 
         /**
          * 选择仓库
-         * 
+         *
          * @return void
          * @author 
          */
@@ -150,7 +134,7 @@ class logistics_ctl_admin_rule extends desktop_controller {
             unset($dly_corp);
             $this->pagedata['branch_id'] = $branch_id;
             //店铺列表
-            $this->pagedata['shops'] = app::get('ome')->model('shop')->getList('name,shop_id', array(), 0, -1, 'name ASC');
+            $this->pagedata['shops'] = app::get('ome')->model('shop')->getList('name,shop_id', array('s_type'=>'1'), 0, -1, 'name ASC');
             $mdl_rule_shop = app::get('logistics')->model('rule_shop');
             $rs_has_shops = $mdl_rule_shop->getList("*",array("branch_id"=>$branch_id));
             if (!empty($rs_has_shops)){//同一个仓库已用店铺不可再选
@@ -169,8 +153,8 @@ class logistics_ctl_admin_rule extends desktop_controller {
         }
 
         /**
-         * 获取仓库规则信息
-         */
+        *获取仓库规则信息
+        */
         function getBranchRule(){
             $branch_id = $_GET['branch_id'];
             if($branch_id){
@@ -217,8 +201,8 @@ class logistics_ctl_admin_rule extends desktop_controller {
             }
         }
         /**
-         * 查询规则名称是否存在
-         */
+        * 查询规则名称是否存在
+        */
         function checkRuleName(){
             $rule_name = trim($_GET['rule_name']);
             $branch_id = $_GET['branch_id'];
@@ -228,8 +212,8 @@ class logistics_ctl_admin_rule extends desktop_controller {
             }
         }
         /**
-         * 复制仓库规则
-         */
+        * 复制仓库规则
+        */
         function copyRule(){
             if (!$_POST['rule_id'] || count($_POST['rule_id']) > 1) {
                 die('只能选一条规则进行复用');
@@ -250,7 +234,7 @@ class logistics_ctl_admin_rule extends desktop_controller {
 
         /**
          * summary
-         * 
+         *
          * @return void
          * @author 
          */
@@ -292,8 +276,8 @@ class logistics_ctl_admin_rule extends desktop_controller {
         }
 
         /**
-         * 解绑仓库规则
-         */
+        * 解绑仓库规则
+        */
         function unbindRule(){
             // if($_POST['oper']=='edit'){
             //     $this->begin('index.php?app=logistics&ctl=admin_rule&act=ruleList&branch_id='.$_POST['branch_id'].'&_finder[finder_id]='.$_GET['finder_id'].'');
@@ -323,7 +307,7 @@ class logistics_ctl_admin_rule extends desktop_controller {
 
         /**
          * summary
-         * 
+         *
          * @return void
          * @author 
          */
@@ -343,17 +327,17 @@ class logistics_ctl_admin_rule extends desktop_controller {
         }
 
         /**
-         * 删除一级地区确认
+        * 删除一级地区确认
 
-         */
+        */
         function confirmDeleteRule(){
             $this->display('admin/confirmDeleteRule.html');
         }
 
 
         /**
-         * 删除规则
-         */
+        *删除规则
+        */
         function doDeleteRule(){
             $this->begin();
             $data = $_POST;

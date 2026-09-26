@@ -46,10 +46,6 @@ class erpapi_shop_matrix_luban_response_order extends erpapi_shop_response_order
         'author_cost_amount' => '作者（达人）承担金额',
     ];
     
-    /**
-     * _canAccept
-     * @return mixed 返回值
-     */
     public function _canAccept()
     {
         $presalesetting = app::get('ome')->getConf('ome.order.presale');
@@ -345,45 +341,42 @@ class erpapi_shop_matrix_luban_response_order extends erpapi_shop_response_order
             }
 
             // 国补
+            // 国补
             if ($sku_order_tag_ui = $this->_ordersdf['extend_field']['sku_order_tag_ui']) {
                 $this->_ordersdf['guobu_info'] = [];
-                foreach ($sku_order_tag_ui as $_oid => $_sotag) {
-                    if ($_sotag['key'] == 'gov_subsidy') {
-                        $this->_ordersdf['guobu_info']['use_gov_subsidy_new'] = true;
-                        $this->_ordersdf['guobu_info']['guobu_type'][] = 1; // 支付立减 (临时给支付立减类型)
+                if ($this->_ordersdf['coupon_field']) {
+                    $this->_ordersdf['guobu_info']['coupon_field'] = $this->_ordersdf['coupon_field'];
+                }
+                foreach ($this->_ordersdf['order_objects'] as $k => $_object) {
+                    foreach ($sku_order_tag_ui[$_object['oid']] as $_oid => $_sotag) {
+                        if ($_sotag['key'] == 'gov_subsidy') {
+                            $this->_ordersdf['guobu_info']['use_gov_subsidy_new'] = true;
+                            $this->_ordersdf['guobu_info']['guobu_type'][]        = 1; // 支付立减 (临时给支付立减类型)
+                        }
+                    }
+
+                    foreach ($_object['order_items'] as $_item) {
+                        if (isset($_item['extend_item_list']['gov_subsidy_detail']) && $_item['extend_item_list']['gov_subsidy_detail']) {
+                            if ($_item['extend_item_list']['gov_subsidy_detail']['product_tag'] == 'government_subsidy_multis') {
+                                $this->_ordersdf['guobu_info']['use_gov_subsidy_new'] = true;
+                                $this->_ordersdf['guobu_info']['guobu_type'][]        = 4; // 一品卖多地
+                            }
+
+                            $this->_ordersdf['guobu_info']['gov_subsidy_detail'][$_object['oid']][] = $_item['extend_item_list']['gov_subsidy_detail'];
+                        }
+                        // 国补 唯一码获取
+                        if (isset($_item['extend_item_list']['serial_no_info']) && $_item['extend_item_list']['serial_no_info']) {
+                            $this->_ordersdf['guobu_info']['serial_no_info'] = $_item['extend_item_list']['serial_no_info'];
+                        }
                     }
                 }
-
-                if ($this->_ordersdf['guobu_info']) {
-                    if ($this->_ordersdf['coupon_field']) {
-                        $this->_ordersdf['guobu_info']['coupon_field'] = $this->_ordersdf['coupon_field'];
+                if ($this->_ordersdf['pmt_orders']) {
+                    if ($this->_ordersdf['pmt_orders']['pmt_campaign_type'] && $this->_ordersdf['pmt_orders']['pmt_campaign_type'] == '416') {
+                        $this->_ordersdf['guobu_info']['pmt_campaign_type']      = $this->_ordersdf['pmt_orders']['pmt_campaign_type'];
+                        $this->_ordersdf['guobu_info']['gov_subsidy_amount_new'] = $this->_ordersdf['pmt_orders']['pmt_amount'] / 100; // 对应的补贴金额,单位是分
                     }
-                    foreach ($this->_ordersdf['order_objects'] as $k => $_object) {
-                        foreach ( $_object['order_items'] as  $_item ){
-                            if (isset($_item['extend_item_list']['gov_subsidy_detail']) && $_item['extend_item_list']['gov_subsidy_detail']) {
-                                if ($_item['extend_item_list']['gov_subsidy_detail']['product_tag'] == 'government_subsidy_multis') {
-                                    $this->_ordersdf['guobu_info']['use_gov_subsidy_new'] = true;
-                                    $this->_ordersdf['guobu_info']['guobu_type'][] = 4; // 一品卖多地
-                                }
-
-                                $this->_ordersdf['guobu_info']['gov_subsidy_detail'][$_object['oid']][] = $_item['extend_item_list']['gov_subsidy_detail'];
-                            }
-                            // 国补 唯一码获取
-                            if (isset($_item['extend_item_list']['serial_no_info']) && $_item['extend_item_list']['serial_no_info']) {
-                                $this->_ordersdf['guobu_info']['serial_no_info'] = $_item['extend_item_list']['serial_no_info'];
-                            }
-                        }
-                    }
-                    if ($this->_ordersdf['pmt_orders']) {
-                        if ($this->_ordersdf['pmt_orders']['pmt_campaign_type'] && $this->_ordersdf['pmt_orders']['pmt_campaign_type'] == '416') {
-                            $this->_ordersdf['guobu_info']['pmt_campaign_type'] = $this->_ordersdf['pmt_orders']['pmt_campaign_type'];
-                            $this->_ordersdf['guobu_info']['gov_subsidy_amount_new'] = $this->_ordersdf['pmt_orders']['pmt_amount']/100; // 对应的补贴金额,单位是分
-                        }
-                    }
-
                 }
             }
-
             //最晚发货时间
             if($this->_ordersdf['extend_field']['exp_ship_time']){
                 $this->_ordersdf['latest_delivery_time'] = strtotime($this->_ordersdf['extend_field']['exp_ship_time']);
@@ -448,23 +441,21 @@ class erpapi_shop_matrix_luban_response_order extends erpapi_shop_response_order
         if (isset($this->_ordersdf['coupon_field'])) {
             $couponData = $this->_ordersdf['coupon_field'];
             $coupon = [];
-            
-            // 检查是否有运费
-            $shippingCost = isset($this->_ordersdf['shipping']['cost_shipping']) ? (float)$this->_ordersdf['shipping']['cost_shipping'] : 0;
-            $shippingDeducted = false; // 标记运费是否已扣除，确保只扣除一次
-            
-            // 构建oid到divide_order_fee的映射
-            $oidDivideOrderFeeMap = array();
-            if (isset($this->_ordersdf['order_objects']) && is_array($this->_ordersdf['order_objects'])) {
-                foreach ($this->_ordersdf['order_objects'] as $orderObject) {
-                    if (isset($orderObject['oid']) && isset($orderObject['divide_order_fee'])) {
-                        $oidDivideOrderFeeMap[$orderObject['oid']] = (float)$orderObject['divide_order_fee'];
+            $orderObjectsByOid = array();
+            $orderObjectsByGoodsId = array();
+            if (!empty($this->_ordersdf['order_objects']) && is_array($this->_ordersdf['order_objects'])) {
+                foreach ($this->_ordersdf['order_objects'] as $obj) {
+                    if (!empty($obj['oid'])) {
+                        $orderObjectsByOid[$obj['oid']] = $obj;
+                    }
+                    if (!empty($obj['goods_id'])) {
+                        $orderObjectsByGoodsId[$obj['goods_id']] = $obj;
                     }
                 }
             }
-            
             foreach ($couponData as $key => $value)
             {
+                $materialInfo = $this->_resolveCouponMaterialInfo($value, $orderObjectsByOid, $orderObjectsByGoodsId);
                 //type
                 foreach ($value as $k => $v)
                 {
@@ -477,8 +468,8 @@ class erpapi_shop_matrix_luban_response_order extends erpapi_shop_response_order
                     $coupon[] = array(
                         'num'           => $value['item_num'],
                         'oid'           => $value['oid'],
-                        'material_bn'   => '',
-                        'material_name' => '',
+                        'material_bn'   => $materialInfo['material_bn'],
+                        'material_name' => $materialInfo['material_name'],
                         'type'          => $k,
                         'type_name'     => (string)$this->couponTypeName[$k],
                         'amount'        => $v,
@@ -495,8 +486,8 @@ class erpapi_shop_matrix_luban_response_order extends erpapi_shop_response_order
                 $realPayData = [
                     'num'           => $value['item_num'],
                     'oid'           => $value['oid'],
-                    'material_bn'   => '',
-                    'material_name' => '',
+                    'material_bn'   => $materialInfo['material_bn'],
+                    'material_name' => $materialInfo['material_name'],
                     'type'          => 'calcActuallyPay',
                     'type_name'     => '实付金额',
                     'amount'        => $realPay,
@@ -632,7 +623,26 @@ class erpapi_shop_matrix_luban_response_order extends erpapi_shop_response_order
                     'order_id'=>$this->_tgOrder['order_id'],
                     'source_status' => $this->_ordersdf['source_status']
                 );
-                kernel::single('invoice_order_front_router', 'b2c')->operateTax($arr_create_invoice);
+                
+                // 发票来源
+                $invoice_source = 'b2c';
+                
+                // 注册service，获取发票来源
+                foreach(kernel::servicelist('ome.service.invoice.analysis.prepose') as $object)
+                {
+                    if(method_exists($object, 'get_invoice_source')){
+                        // 获取项目上定制的发票来源
+                        $custom_invoice_source = $object->get_invoice_source();
+                        if($custom_invoice_source){
+                            $invoice_source = $custom_invoice_source;
+                        }
+                    }
+                }
+                
+                // 发票来源
+                $arr_create_invoice['invoice_source'] = $invoice_source;
+                
+                kernel::single('invoice_order_front_router', $invoice_source)->operateTax($arr_create_invoice);
             }
         
             //买家确认收货时间
@@ -860,5 +870,27 @@ class erpapi_shop_matrix_luban_response_order extends erpapi_shop_response_order
             $this->_ordersdf['cost_item'] = $this->_ordersdf['cost_item'] + $campaignAmount;
             $this->_ordersdf['pmt_goods'] = $this->_ordersdf['pmt_goods'] + $campaignAmount;
         }
+    }
+
+    /**
+     * 优惠明细物料信息：参照京东，从 order_objects 取 bn/name
+     *
+     * @param array $couponRow
+     * @param array $orderObjectsByOid
+     * @param array $orderObjectsByGoodsId
+     * @return array
+     */
+    protected function _resolveCouponMaterialInfo($couponRow, $orderObjectsByOid, $orderObjectsByGoodsId)
+    {
+        $obj = null;
+        if (!empty($couponRow['oid']) && isset($orderObjectsByOid[$couponRow['oid']])) {
+            $obj = $orderObjectsByOid[$couponRow['oid']];
+        } elseif (!empty($couponRow['sku_id']) && isset($orderObjectsByGoodsId[$couponRow['sku_id']])) {
+            $obj = $orderObjectsByGoodsId[$couponRow['sku_id']];
+        }
+        return array(
+            'material_bn'   => ($obj && isset($obj['bn'])) ? (string)$obj['bn'] : '',
+            'material_name' => ($obj && isset($obj['name'])) ? (string)$obj['name'] : '',
+        );
     }
 }

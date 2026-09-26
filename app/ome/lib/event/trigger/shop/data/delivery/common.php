@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
  * 获取数据(以下处理数据都已非合单为单位)
  *
@@ -309,12 +308,21 @@ class ome_event_trigger_shop_data_delivery_common
             $item_sendnum = intval($order_item['sendnum']);
             
             if ($value['item_type'] == 'pkg') {
-                $number = $order_objects[$value['order_obj_id']]['quantity']*$value['number']/$order_item['nums'];
+                // 公式：捆绑发货数量 = 子订单数量 * 本行发货数 / 基础物料数量
+                $item_nums = isset($order_item['nums']) ? floatval($order_item['nums']) : 0;
+                $obj_quantity = isset($order_objects[$value['order_obj_id']]['quantity'])
+                    ? floatval($order_objects[$value['order_obj_id']]['quantity']) : 0;
+                if ($item_nums > 0) {
+                    $number = $obj_quantity * floatval($value['number']) / $item_nums;
+                } else {
+                    // 基础物料数量异常为 0 时，避免 DivisionByZeroError，回退本行发货数
+                    $number = floatval($value['number']);
+                }
                 
                 // 公式：子订单已发货数量 = (子订单数量 * 基础物料已发货数量) / 基础物料数量
                 // 先乘后除可以减少精度损失，使用 floor() 确保向下取整为整数
-                if ($order_item['nums'] > 0 && isset($order_objects[$value['order_obj_id']]['quantity'])) {
-                    $obj_sendnum = intval($order_objects[$value['order_obj_id']]['quantity'] / $order_item['nums'] * $item_sendnum);
+                if ($item_nums > 0 && $obj_quantity > 0) {
+                    $obj_sendnum = intval($obj_quantity / $item_nums * $item_sendnum);
                 } else {
                     $obj_sendnum = 0;
                 }
@@ -871,7 +879,11 @@ class ome_event_trigger_shop_data_delivery_common
         }
         
         $deliveryBillModel = app::get('ome')->model('delivery_bill');
-        $deliveryBillList = $deliveryBillModel->getList('logi_no,delivery_id,courier_name,courier_phone,phone_type,privacy_num_validity_seconds',array('delivery_id'=>$deliveryIds));
+        // 仅子运单参与平台回传；主单 bill_kind=main 由业务单独落库，不混在子单列表里
+        $deliveryBillList = $deliveryBillModel->getList(
+            'logi_no,delivery_id,courier_name,courier_phone,phone_type,privacy_num_validity_seconds',
+            array('delivery_id' => $deliveryIds, 'bill_kind' => 'child')
+        );
         
         foreach ($deliveryBillList as $key => $value) {
             $delivery_bill_detail[$value['delivery_id']][] = $value;
@@ -962,38 +974,106 @@ class ome_event_trigger_shop_data_delivery_common
         foreach ($this->__deliverys as $delivery) {
             $parentIdList[$delivery['delivery_id']] = $delivery['parent_id'] == 0 ? $delivery['delivery_id'] : $delivery['parent_id'];
             $deliveryList[$delivery['delivery_id']] = $this->_get_delivery_items_detail($delivery['delivery_id']);
-            
         }
 
-        $dlyItemsSerialObj    = app::get('ome')->model('product_serial_history');
-        $rows = $dlyItemsSerialObj->getList('bn,serial_number,imei_number', array('bill_type' => '1','bill_id'=>$parentIdList), 0, -1);
-        $product_serial = [];
-        foreach ($rows as $row) {
-            $product_serial[$row['bn']]['sn'][$row['serial_number']] = $row['serial_number'];
-            $product_serial[$row['bn']]['imei'][$row['serial_number']] = $row['imei_number'];
+        // 从机器中心 material_sn_flow 表读取数据
+        $snFlowMdl = app::get('machinecenter')->model('material_sn_flow');
+        $snMdl = app::get('machinecenter')->model('material_sn');
+        
+        // 获取所有需要查询的发货单ID（包括父发货单）
+        $allDeliveryIds = array_unique(array_values($parentIdList));
+        
+        if (empty($allDeliveryIds)) {
+            return [];
         }
-        foreach($deliveryList as $d){
-            foreach($d as $v) {
-                if($product_serial[$v['bn']]) {
-                    $i = $v['number'];
-                    if($i < 1) {
-                        continue;
-                    }
-                    foreach($product_serial[$v['bn']]['sn'] as $pk => $pv) {
-                        unset($product_serial[$v['bn']]['sn'][$pk]);
-                        $this->__product_serial_sn_imei[$v['delivery_id']][$v['product_id']]['sn'][] = $pv;
-                        $this->__product_serial_sn_imei[$v['delivery_id']][$v['product_id']]['imei'][$pk] = $product_serial[$v['bn']]['imei'][$pk];
-                        unset($product_serial[$v['bn']]['imei'][$pk]);
-                        $i--;
-                        if($i < 1) {
+        
+        // 查询 material_sn_flow 表
+        $snFlowRows = $snFlowMdl->getList('material_bn,original_id,imei_number,sn_id', array('original_type' => 'delivery', 'original_id' => $allDeliveryIds), 0, -1);
+        
+        if (empty($snFlowRows)) {
+            return [];
+        }
+        
+        // 收集所有的 sn_id，批量查询 material_sn 表获取 sn
+        $snIds = array_filter(array_column($snFlowRows, 'sn_id'));
+        $snMap = [];
+        if (!empty($snIds)) {
+            $snRows = $snMdl->getList('id,sn', array('id' => $snIds), 0, -1);
+            foreach ($snRows as $snRow) {
+                $snMap[$snRow['id']] = $snRow['sn'];
+            }
+        }
+        
+        // 按 material_bn 和 original_id 分组
+        $product_serial = [];
+        foreach ($snFlowRows as $row) {
+            $bn = $row['material_bn'];
+            $deliveryId = $row['original_id'];
+            $snId = $row['sn_id'];
+            $sn = isset($snMap[$snId]) ? $snMap[$snId] : '';
+            $imei = $row['imei_number'] ?: '';
+            
+            if (!$sn) {
+                continue;
+            }
+            
+            if (!isset($product_serial[$bn])) {
+                $product_serial[$bn] = [];
+            }
+            if (!isset($product_serial[$bn][$deliveryId])) {
+                $product_serial[$bn][$deliveryId] = ['sn' => [], 'imei' => []];
+            }
+            $product_serial[$bn][$deliveryId]['sn'][$sn] = $sn;
+            $product_serial[$bn][$deliveryId]['imei'][$sn] = $imei;
+        }
+        
+        // 遍历发货单明细，分配 SN 和 IMEI
+        foreach($deliveryList as $deliveryId => $items) {
+            $parentDeliveryId = $parentIdList[$deliveryId];
+            foreach($items as $v) {
+                $bn = $v['bn'];
+                $productId = $v['product_id'];
+                $number = $v['number'];
+                
+                // 查找对应 material_bn 的 SN 数据（优先从父发货单查找）
+                $snData = null;
+                if (isset($product_serial[$bn][$parentDeliveryId])) {
+                    $snData = $product_serial[$bn][$parentDeliveryId];
+                } elseif (isset($product_serial[$bn][$deliveryId])) {
+                    $snData = $product_serial[$bn][$deliveryId];
+                }
+                
+                if ($snData && !empty($snData['sn']) && $number > 0) {
+                    $i = $number;
+                    // 确定数据来源的 deliveryId（用于后续移除）
+                    $sourceDeliveryId = isset($product_serial[$bn][$parentDeliveryId]) ? $parentDeliveryId : $deliveryId;
+                    
+                    foreach($snData['sn'] as $sn => $snValue) {
+                        if ($i <= 0) {
                             break;
                         }
+                        // 初始化数组
+                        if (!isset($this->__product_serial_sn_imei[$deliveryId][$productId])) {
+                            $this->__product_serial_sn_imei[$deliveryId][$productId] = ['sn' => [], 'imei' => []];
+                        }
+                        // 添加 SN
+                        $this->__product_serial_sn_imei[$deliveryId][$productId]['sn'][] = $snValue;
+                        // 添加 IMEI（如果存在）
+                        if (isset($snData['imei'][$sn])) {
+                            $this->__product_serial_sn_imei[$deliveryId][$productId]['imei'][$sn] = $snData['imei'][$sn];
+                        }
+                        // 从原数组中移除，避免重复分配
+                        if (isset($product_serial[$bn][$sourceDeliveryId])) {
+                            unset($product_serial[$bn][$sourceDeliveryId]['sn'][$sn]);
+                            unset($product_serial[$bn][$sourceDeliveryId]['imei'][$sn]);
+                        }
+                        $i--;
                     }
                 }
             }
         }
 
-        return $this->__product_serial_sn_imei[$v['delivery_id']] ? : [];
+        return $this->__product_serial_sn_imei[$delivery_id] ? : [];
     }
 
     final protected function _get_product_serial_sn_imei_sdf($delivery_id)
@@ -1315,6 +1395,8 @@ class ome_event_trigger_shop_data_delivery_common
             $deliveryList[$delivery['delivery_id']] = $this->_get_delivery_items_detail($delivery['delivery_id']);
             
         }
+
+        $order    = $this->__delivery_orders[$delivery_id];
         
         //查所有的包裹信息
         $packages = app::get('ome')->model('delivery_package')->getList('*', array(
@@ -1324,6 +1406,18 @@ class ome_event_trigger_shop_data_delivery_common
         $newPackages = [];
         foreach ($packages as $k => $v) {
             $v['number']                                        = (int)$v['number'];
+
+            // 转物流公司编码
+            if ($v['logi_bn'] && !in_array($order['shop_type'], array('taobao','tmall'))) {
+                $wmsxpress = app::get('wmsmgr')->model('express_relation')->db_dump([
+                    'wms_express_bn' => $v['logi_bn']
+                ],'sys_express_bn');
+
+                if ($wmsxpress['sys_express_bn']) {
+                    $v['logi_bn'] = $wmsxpress['sys_express_bn'];
+                }
+            }
+
             $newPackages[$v['delivery_id']][$v['product_id']][] = $v;
         }
         foreach ($deliveryList as $key => $items) {
@@ -1381,6 +1475,7 @@ class ome_event_trigger_shop_data_delivery_common
         
         //按SKU商品累加退款金额
         $refundOidList = array();
+        $refundOidBnList = array();
         foreach ($refundList as $key => $val)
         {
             $oid = $val['oid'];
@@ -1401,6 +1496,14 @@ class ome_event_trigger_shop_data_delivery_common
                 $refundOidList[$oid] += $val['refunded'];
             }else{
                 $refundOidList[$oid] = $val['refunded'];
+            }
+
+            if($val['bn']){
+                if(isset($refundOidBnList[$oid][$val['bn']])){
+                    $refundOidBnList[$oid][$val['bn']] += $val['refunded'];
+                }else{
+                    $refundOidBnList[$oid][$val['bn']] = $val['refunded'];
+                }
             }
         }
         
@@ -1479,14 +1582,15 @@ class ome_event_trigger_shop_data_delivery_common
             
             //删除已经退款的oid子订单
             if($deleteOidList[$oid]){
-                //换货/改SKU：同oid下可能存在已退款旧子单与有效新子单，以发货明细关联的obj_id为准
-                $orderObjId = $itemVal['order_obj_id'];
-                if ($orderObjId && isset($objectByObjId[$orderObjId])) {
-                    $linkedObj = $objectByObjId[$orderObjId];
-                    if ($linkedObj['delete'] == 'false' && !in_array($linkedObj['pay_status'], array('4', '5'))) {
-                        continue;
-                    }
-                }
+                //@todo：下面这段代码，会导致抖音订单主单退款完成，关联的赠品子订单oid无法删除；
+//                //换货/改SKU：同oid下可能存在已退款旧子单与有效新子单，以发货明细关联的obj_id为准
+//                $orderObjId = $itemVal['order_obj_id'];
+//                if ($orderObjId && isset($objectByObjId[$orderObjId])) {
+//                    $linkedObj = $objectByObjId[$orderObjId];
+//                    if ($linkedObj['delete'] == 'false' && !in_array($linkedObj['pay_status'], array('4', '5'))) {
+//                        continue;
+//                    }
+//                }
                 unset($this->__sdf['delivery_items'][$itemKey]);
             }
         }

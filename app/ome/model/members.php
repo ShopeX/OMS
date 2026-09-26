@@ -29,7 +29,7 @@ class ome_mdl_members extends dbeav_model{
         'name'   => 'simple',
         'email'  => 'simple',
         'addr'   => 'simple',
-        'zip'    => 'simple',
+        // 'zip'    => 'simple',
     );
 
     /**

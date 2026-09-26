@@ -27,24 +27,18 @@ class erpapi_shop_matrix_taobao_response_order extends erpapi_shop_response_orde
     protected $_update_accept_dead_order = true;
     /**
      * 订单obj明细唯一标识
-     * 
+     *
      * @var string
-     * */
+     **/
     public $object_comp_key = 'bn-oid-obj_type';
 
     /**
      * 订单item唯一标识
-     * 
+     *
      * @var string
-     * */
+     **/
     public $item_comp_key = 'bn-shop_product_id-item_type';
 
-
-        /**
-     * business_flow
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
 
     public function business_flow($sdf)
     {
@@ -172,7 +166,7 @@ class erpapi_shop_matrix_taobao_response_order extends erpapi_shop_response_orde
         // 是否请求平台获取实付金额
         //@todo：喵速达订单，不需要请求平台获取实付金额;
         $is_request_payment = true;
-        if(in_array($label_code, ['SOMS_ASCP'])){
+        if(in_array($label_code, ['SOMS_ASCP']) || $this->_ordersdf['trade_from'] == 'miaozhu'){
             $is_request_payment = false;
         }
         
@@ -404,11 +398,15 @@ class erpapi_shop_matrix_taobao_response_order extends erpapi_shop_response_orde
             // 国补 - 淘宝直销
             if ($gov_subsidy = $this->_ordersdf['extend_field']['gov_subsidy']) {
 
-                if ($gov_subsidy['use_gov_subsidy_new'] == 1) {
+                if ($gov_subsidy['use_gov_subsidy'] == 1 && empty($gov_subsidy['use_gov_subsidy_new'])) {
 
                     $this->_ordersdf['guobu_info']['use_gov_subsidy_new'] = true;
                     $this->_ordersdf['guobu_info']['guobu_type'][] = 1; // 支付立减
-
+                    
+                    // 最终政府补贴优惠金额，支付立减和下单立减都有该字段(建议用该字段判断政府补贴优惠信息)。
+                    if(isset($gov_subsidy['gov_subsidy_amount_exact'])){
+                        $this->_ordersdf['guobu_info']['gov_subsidy_amount_new'] = floatval($gov_subsidy['gov_subsidy_amount_exact']) / 100;
+                    }
                 } elseif (!$gov_subsidy['use_gov_subsidy_new'] && $gov_subsidy['gov_subsidy_amount_new']>0) {
 
                     $this->_ordersdf['guobu_info']['use_gov_subsidy_new'] = true;
@@ -427,7 +425,7 @@ class erpapi_shop_matrix_taobao_response_order extends erpapi_shop_response_orde
                     }
                     
                     // 检查是否为天猫优品订单
-                    if ($gov_subsidy['gov_main_subject'] && strpos($gov_subsidy['gov_main_subject'], 'FIN_TMYPT') === 0) {
+                    if ($gov_subsidy['gov_main_subject'] && strpos($gov_subsidy['gov_main_subject'], 'TMYP') !== false) {
                         $this->_ordersdf['guobu_info']['guobu_type'][] = 2048; // 天猫优品
                     }
                     
@@ -494,6 +492,15 @@ class erpapi_shop_matrix_taobao_response_order extends erpapi_shop_response_orde
                         }
                     }
 
+                }
+                
+                // 天猫优品国补打标记
+                //@todo：这里是淘宝平台，复制天猫平台逻辑，为了测试淘宝个人店铺，也能打上：天猫优品国补；
+                if ($gov_subsidy['gov_main_subject'] && strpos($gov_subsidy['gov_main_subject'], 'TMYP') !== false) {
+                    $this->_ordersdf['guobu_info']['tmyp_info'] = [
+                        'is_tmyp_order' => true,
+                        'supplier' => $gov_subsidy['gov_main_subject'], // 供应商编码
+                    ];
                 }
             }
             // 国补 - 淘宝分销
@@ -954,10 +961,6 @@ class erpapi_shop_matrix_taobao_response_order extends erpapi_shop_response_orde
 
     }
 
-    /**
-     * _canAccept
-     * @return mixed 返回值
-     */
     public function _canAccept()
     {
         if($this->__channelObj->channel['business_type']=='zx' && in_array($this->_ordersdf['order_source'],array('tbdx','tbjx'))) {

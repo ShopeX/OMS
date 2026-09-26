@@ -115,6 +115,7 @@ $db['order_front_items'] = array(
     'index'   => array(
         'idx_at_time'       => array('columns' => array('at_time')),
         'idx_up_time'       => array('columns' => array('up_time')),
+        'source_item_id'    => array('columns' => array('source_item_id')),
     ),
     'engine'  => 'innodb',
     'commit'  => '预发票表明细表',

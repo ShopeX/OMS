@@ -23,8 +23,9 @@ class ome_order_timing {
      * @return mixed 返回值
      */
     public function confirm($arrOrderId) {
+        $holdOrderBns = [];
         $combine_select = app::get('ome')->getConf('ome.combine.select');
-        $orders = app::get('ome')->model('orders')->getList('order_id, order_combine_hash, order_combine_idx, pay_status, is_cod, createtime, paytime, shop_id, order_bn', array('order_id' => $arrOrderId), 0, -1, 'createtime ASC');
+        $orders = app::get('ome')->model('orders')->getList('order_id, order_combine_hash, order_combine_idx, pay_status, is_cod, createtime, paytime, shop_id, order_bn,timing_confirm', array('order_id' => $arrOrderId), 0, -1, 'createtime ASC');
         foreach ($orders as $key => $row) {
             if($combine_select== '1') {
                 list($row['order_combine_hash'],$row['order_combine_idx']) = array(md5($row['order_bn'].'-'.$row['shop_id']),sprintf("%u",crc32($row['order_bn'].'-'.$row['shop_id'])));
@@ -32,7 +33,28 @@ class ome_order_timing {
             $idx = sprintf('%s||%s', $row['order_combine_hash'], $row['order_combine_idx']);
             $orderGroup[$idx]['orders'][$key] = $row['order_id'];
             $orderGroup[$idx]['cnt'] += 1;
+            
+            // 是否定时审单（hold单）
+            if($row['timing_confirm'] > 0){
+                $temp_order_id = $row['order_id'];
+                $holdOrderBns[$temp_order_id] = $row['order_bn'];
+            }
         }
+        
+        // hold单是否自动审核
+        if($holdOrderBns){
+            if(app::get('ome')->getConf('ome.order.timing.auto') === 'Off'){
+                $operationLogMdl = app::get('ome')->model('operation_log');
+                
+                // log
+                $log_msg = '[hold单是否自动审核]配置未开启，不能自动审核。';
+                foreach ($holdOrderBns as $temp_order_id => $temp_order_bn)
+                {
+                    $operationLogMdl->write_log('order_preprocess@ome', $temp_order_id, $log_msg);
+                }
+            }
+        }
+        
         //合并订单条数限制
         $orderAuto = new omeauto_auto_combine();
         $orderGroup = $orderAuto->_restrictCombineLimit($orderGroup);

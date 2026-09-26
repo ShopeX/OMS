@@ -281,6 +281,13 @@ class ome_finder_orders
         }
         $render->pagedata['show_sale_price'] = $showSalePrice;
         
+        //原价权限验证
+        $showOriginalPrice = true;
+        if (!kernel::single('desktop_user')->has_permission('original_price')) {
+            $showOriginalPrice = false;
+        }
+        $render->pagedata['show_original_price'] = $showOriginalPrice;
+        
         $render->pagedata['order'] = $order_detail;
         if(in_array($_GET['act'],array('confirm','abnormal'))){
             $render->pagedata['operate'] = true;
@@ -426,7 +433,26 @@ class ome_finder_orders
                 $arr_create_invoice['title']    = $memeberInfo['title'];
                 $arr_create_invoice['ship_tax'] = $memeberInfo['ship_tax'];
             }
-            kernel::single('invoice_order_front_router', 'b2c')->operateTax($arr_create_invoice);
+            
+            // 发票来源
+            $invoice_source = 'b2c';
+            
+            // 注册service，获取发票来源
+            foreach(kernel::servicelist('ome.service.invoice.analysis.prepose') as $object)
+            {
+                if(method_exists($object, 'get_invoice_source')){
+                    // 获取项目上定制的发票来源
+                    $custom_invoice_source = $object->get_invoice_source();
+                    if($custom_invoice_source){
+                        $invoice_source = $custom_invoice_source;
+                    }
+                }
+            }
+            
+            // 发票来源
+            $arr_create_invoice['invoice_source'] = $invoice_source;
+            
+            kernel::single('invoice_order_front_router', $invoice_source)->operateTax($arr_create_invoice);
         }
     }
 
@@ -457,6 +483,7 @@ class ome_finder_orders
         $item_list = $oOrder->getItemList($order_id,true);
         $item_list = ome_order_func::add_getItemList_colum($item_list);
         ome_order_func::order_sdf_extend($item_list);
+        $item_list = ome_order_func::attachOrderObjectPayStatusLabels($item_list);
         
         $is_consign = false;
         
@@ -510,6 +537,12 @@ class ome_finder_orders
         $showSalePrice = true;
         if (!kernel::single('desktop_user')->has_permission('sale_price')) {
             $showSalePrice = false;
+        }
+
+        //原价权限判断
+        $showOriginalPrice = true;
+        if (!kernel::single('desktop_user')->has_permission('original_price')) {
+            $showOriginalPrice = false;
         }
 
         if($orders['shop_type'] == 'vop'){
@@ -675,6 +708,7 @@ class ome_finder_orders
         $render->pagedata['is_hold_time'] = $is_hold_time;
         $render->pagedata['is_presale_status'] = $is_presale_status;
         $render->pagedata['show_sale_price'] = $showSalePrice;
+        $render->pagedata['show_original_price'] = $showOriginalPrice;
         $render->pagedata['order'] = $orders;
         $render->pagedata['couponList'] = $couponList;
         $render->pagedata['maxHoldTime'] = kernel::single('omeauto_auto_hold')->getMaxHoldTime();
@@ -879,6 +913,14 @@ class ome_finder_orders
         }else{
             $is_hqepay_on = true;
         }
+        $finder_id = !empty($_GET['finder_id']) ? $_GET['finder_id'] : (isset($_GET['_finder']['finder_id']) ? $_GET['_finder']['finder_id'] : '');
+        $finder_vid = isset($_GET['finder_vid']) ? $_GET['finder_vid'] : '';
+        if ($finder_id) {
+            if (!isset($_SESSION['authority']) || !is_array($_SESSION['authority'])) {
+                $_SESSION['authority'] = array();
+            }
+            $_SESSION['authority'][$finder_id] = $finder_id;
+        }
         foreach($delivery as $k=>$v){
             //判断是否第三方
             $branch_list = $oBranch->getList('branch_id', array('wms_id'=>$wms_id,'branch_id'=>$v['branch_id']), 0, -1);
@@ -886,7 +928,9 @@ class ome_finder_orders
                 $delivery[$k]['selfwms'] = 1;
             }
             $delivery[$k]['create_time'] = date('Y-m-d H:i:s',$v['create_time']);
-            $delivery[$k]['delivery_bn'] = '<a class="lnk" target="_blank" href="index.php?app=desktop&act=alertpages&goto='.urlencode('index.php?app=ome&ctl=admin_order&act=getDelivery&p[0]='.$v['delivery_id'].'&finder_id='.$_GET['_finder']['finder_id']).'">'.$v['delivery_bn'].'</a>';
+            $delivery_url = 'index.php?app=ome&ctl=admin_order&act=getDelivery&p[0]='.$v['delivery_id']
+                .'&finder_id='.$finder_id.'&finder_vid='.$finder_vid.'&_finder[finder_id]='.$finder_id;
+            $delivery[$k]['delivery_bn'] = '<a class="lnk" target="_blank" href="index.php?app=desktop&act=alertpages&finder_id='.$finder_id.'&finder_vid='.$finder_vid.'&goto='.urlencode($delivery_url).'">'.$v['delivery_bn'].'</a>';
         }
         
         //同城配
@@ -945,21 +989,40 @@ class ome_finder_orders
                 }
             }
         }
-
-        //获取发货单明细为子单号的数据
+        
+        // 获取发货单明细为子单号的数据（分开查询，避免按 delivery_bn JOIN 过慢）
         $_deliveryPackageList = array();
         if($delivery_ids){
-            $sql = "SELECT d.delivery_id,d.delivery_bn,cde.original_delivery_bn FROM sdb_ome_delivery d 
-                        LEFT JOIN sdb_console_delivery_extension AS cde ON d.delivery_bn = cde.delivery_bn
-                        WHERE  d.delivery_id IN(". implode(',', $delivery_ids) .")";
-            $tempList = $oDelivery->db->select($sql);
-            if($tempList){
-                foreach($tempList as $key => $val){
-                    $_deliveryPackageList[$val['delivery_id']] = $val;
+            $sql = "SELECT delivery_id,delivery_bn FROM sdb_ome_delivery WHERE delivery_id IN(". implode(',', $delivery_ids) .")";
+            $deliveryRows = $oDelivery->db->select($sql);
+            $deliveryBnMap = array();
+            $deliveryBns = array();
+            if($deliveryRows){
+                foreach($deliveryRows as $row){
+                    $deliveryBnMap[$row['delivery_bn']] = $row['delivery_id'];
+                    $deliveryBns[] = $oDelivery->db->quote($row['delivery_bn']);
+                    $_deliveryPackageList[$row['delivery_id']] = array(
+                        'delivery_id' => $row['delivery_id'],
+                        'delivery_bn' => $row['delivery_bn'],
+                        'original_delivery_bn' => '',
+                    );
+                }
+            }
+            
+            if($deliveryBns){
+                $sql = "SELECT delivery_bn,original_delivery_bn FROM sdb_console_delivery_extension WHERE delivery_bn IN(". implode(',', $deliveryBns) .")";
+                $extRows = $oDelivery->db->select($sql);
+                if($extRows){
+                    foreach($extRows as $row){
+                        if(isset($deliveryBnMap[$row['delivery_bn']])){
+                            $delivery_id = $deliveryBnMap[$row['delivery_bn']];
+                            $_deliveryPackageList[$delivery_id]['original_delivery_bn'] = $row['original_delivery_bn'];
+                        }
+                    }
                 }
             }
         }
-
+        
         //发货单明细关联订单对象表，达人ID，达人名称
         $_orderObjectsInfo = array();
         if($order_id){
@@ -1326,6 +1389,7 @@ EOF;
 
 
 EOF;
+        
         #订单编辑同步状态
         $shop_id = $row['shop_id'];
         $order_bn = $row['order_bn'];
@@ -1379,20 +1443,36 @@ EOF;
 
             if (($row[$this->col_prefix.'pay_status'] == 1 || $row[$this->col_prefix.'pay_status'] == 4 || ($row[$this->col_prefix.'is_cod'] == 'true' && ($row[$this->col_prefix.'pay_status'] == 0 || $row[$this->col_prefix.'pay_status'] == 3)) || ($row[$this->col_prefix.'pay_status'] == 3 && $row[$this->col_prefix.'step_trade_status'] == 'FRONT_PAID_FINAL_NOPAID' && kernel::single('ome_order_func')->checkPresaleOrder())|| kernel::single('ome_order')->canDeliveryFromBillLabel($labelCode) ) && in_array($row[$this->col_prefix.'process_status'], array('unconfirmed', 'confirmed','splitting')) && $row[$this->col_prefix.'ship_status'] == '0')
             {
+                // 扩展按钮服务
+                $extendButtonList = [];
+                
+                // 调色
+                if ($extend_button_service = kernel::servicelist('ome.service.order.operate.finder')) {
+                    foreach ($extend_button_service as $object => $instance)
+                    {
+                        if (method_exists($instance, 'set_color_button')) {
+                            $extend_button_str = $instance->set_color_button($row, $find_id);
+                            if($extend_button_str){
+                                $extendButtonList[] = $extend_button_str;
+                            }
+                        }
+                    }
+                }
+                
                 if ($row[$this->col_prefix.'confirm'] == 'N' && !in_array($row[$this->col_prefix.'process_status'],array('splited','cancel','remain_cancel')) && $row[$this->col_prefix.'status'] == 'active' && $row[$this->col_prefix.'is_not_combine'] == 0){
                     if($row[$this->col_prefix.'shop_type'] == '360buy' && $row[$this->col_prefix.'source'] == 'matrix') {
-                        return $button_batch . ' | ' . $button_platform_split;
+                        return $button_batch . ' | ' . $button_platform_split . ($extendButtonList ? ' | ' . implode(' | ', $extendButtonList) : '');
                     }
                     
-                    return $button_batch;
+                    return $button_batch. ($extendButtonList ? ' | ' . implode(' | ', $extendButtonList) : '');
                 }
 
                 if (!in_array($row[$this->col_prefix.'process_status'],array('splited','unconfirmed','cancel','remain_cancel')) && $row[$this->col_prefix.'status'] == 'active' && $row[$this->col_prefix.'is_not_combine'] == 0){
                     if($row[$this->col_prefix.'shop_type'] == '360buy' && $row[$this->col_prefix.'source'] == 'matrix') {
-                        return $button_batch . ' | ' . $button_platform_split;
+                        return $button_batch . ' | ' . $button_platform_split. ($extendButtonList ? ' | ' . implode(' | ', $extendButtonList) : '');
                     }
                     
-                    return $button_batch;
+                    return $button_batch. ($extendButtonList ? ' | ' . implode(' | ', $extendButtonList) : '');
                 }
             }
             elseif (($row[$this->col_prefix.'pay_status'] == 1 || $row[$this->col_prefix.'is_cod'] == 'true') && $row[$this->col_prefix.'process_status'] == 'splitting' && ($row[$this->col_prefix.'ship_status'] == '2' || $row[$this->col_prefix.'ship_status'] == '3'))
@@ -1529,11 +1609,15 @@ EOF;
         //$mark_text = $oObj->dump($order_id,'mark_text');
         $mark_text = $row[$this->col_prefix.'mark_text'];
         $mark_text = kernel::single('ome_func')->format_memo($mark_text);
+        $tmp_mark = '';
+        $html = '';
         foreach ((array)$mark_text as $k=>$v){
             $html .= $v['op_content'].' '.$v['op_time'].' by '.$v['op_name']."<br />";
+            $tmp_mark .= $v['op_content'].'-'.$v['op_time'].'-by-'.$v['op_name'].';';
         }
+        $tmp_mark = str_replace("\n", " ", $tmp_mark);
         $html = strip_tags(htmlspecialchars($html));
-        return "<div onmouseover='bindFinderColTip(event)' rel='{$html}'>".strip_tags(htmlspecialchars($mark_text[$k]['op_content']))."<div>";
+        return "<div onmouseover='bindFinderColTip(event)' rel='{$html}'>".strip_tags(htmlspecialchars($tmp_mark))."<div>";
     }
 
     //新增
@@ -2176,6 +2260,20 @@ EOF;
             }
             $history[$k]['operate_time'] = date('Y-m-d H:i:s',$v['operate_time']);
             
+            $finder_id = $_GET['_finder']['finder_id'];
+            $finder_vid = $_GET['_finder']['finder_vid'];
+            
+            // 替换指定的URL
+            if (strpos($history[$k]['memo'], 'app=ome&ctl=admin_receipts_print') !== false) {
+                if(strpos($history[$k]['memo'], 'finder_id=') === false){
+                    $history[$k]['memo'] = str_replace('app=ome&ctl=admin_receipts_print', 'app=ome&ctl=admin_receipts_print&finder_id='. $finder_id, $history[$k]['memo']);
+                }
+                
+                if(strpos($history[$k]['memo'], 'finder_vid=') === false){
+                    $history[$k]['memo'] = str_replace('app=ome&ctl=admin_receipts_print', 'app=ome&ctl=admin_receipts_print&finder_vid='. $finder_vid, $history[$k]['memo']);
+                }
+            }
+            
             // 为长文本准备数据，HTML由模板处理
             $memo = $history[$k]['memo'];
             $memoLength = mb_strlen($memo);
@@ -2299,6 +2397,20 @@ EOF;
                 $history[$k]['flag'] ='false';
             }
             $history[$k]['operate_time'] = date('Y-m-d H:i:s',$v['operate_time']);
+            
+            $finder_id = $_GET['_finder']['finder_id'];
+            $finder_vid = $_GET['_finder']['finder_vid'];
+            
+            // 替换指定的URL
+            if (strpos($history[$k]['memo'], 'app=ome&ctl=admin_receipts_print') !== false) {
+                if(strpos($history[$k]['memo'], 'finder_id=') === false){
+                    $history[$k]['memo'] = str_replace('app=ome&ctl=admin_receipts_print', 'app=ome&ctl=admin_receipts_print&finder_id='. $finder_id, $history[$k]['memo']);
+                }
+                
+                if(strpos($history[$k]['memo'], 'finder_vid=') === false){
+                    $history[$k]['memo'] = str_replace('app=ome&ctl=admin_receipts_print', 'app=ome&ctl=admin_receipts_print&finder_vid='. $finder_vid, $history[$k]['memo']);
+                }
+            }
             
             // 为长文本准备数据，HTML由模板处理
             $memo = $history[$k]['memo'];

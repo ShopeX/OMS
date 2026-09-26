@@ -1,0 +1,80 @@
+<form method="post" id="zahlart-form" action="index.php?app=goldentra&ctl=admin_zahlart&act=save&finder_id=<{$env.get.finder_id}>">
+    <div class="tableform">
+        <div class="division">
+            <table border="0" cellspacing="0" cellpadding="0" class="gridlist">
+                <tr>
+                    <td align="right" nowrap="nowrap">店铺：</td>
+                    <td>
+                        <{if $row.id}>
+                            <{$row.shop_name}>（<{$row.shop_bn}>）
+                            <input type="hidden" name="shop_id" value="<{$row.shop_id}>">
+                        <{else}>
+                            <{input type='object' object='shop@ome' name='shop_id' value=$row.shop_id required='required'}>
+                        <{/if}>
+                        <span style="color:red;">*</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="right" nowrap="nowrap">支付方式编码：</td>
+                    <td>
+                        <input type="text" name="zahlart" value="<{$row.zahlart}>" maxlength="4" vtype="required" class="x-input" style="width:120px;">
+                        <span style="color:red;">*</span>
+                        <span class="notice-inline">对应 SAP ZAHLART，如 ZP39</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="right" nowrap="nowrap">支付方式说明：</td>
+                    <td><input type="text" name="zahlart_name" value="<{$row.zahlart_name}>" class="x-input" style="width:220px;"></td>
+                </tr>
+                <tr>
+                    <td align="right" nowrap="nowrap">状态：</td>
+                    <td>
+                        <label><input type="radio" name="disabled" value="false" <{if $row.disabled != 'true'}>checked<{/if}>> 启用</label>
+                        <label style="margin-left:12px;"><input type="radio" name="disabled" value="true" <{if $row.disabled == 'true'}>checked<{/if}>> 禁用</label>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="right" nowrap="nowrap">备注：</td>
+                    <td><input type="text" name="memo" value="<{$row.memo}>" class="x-input" style="width:320px;"></td>
+                </tr>
+            </table>
+        </div>
+        <div class="table-action">
+            <{button type="button" id="zahlart-save-btn" label="保 存"}>
+            <{button type="button" class="btn-secondary" label="关 闭" isclosedialogbtn="true"}>
+        </div>
+    </div>
+    <input type="hidden" name="id" value="<{$row.id}>">
+    <input type="hidden" name="finder_id" value="<{$env.get.finder_id}>">
+</form>
+<script>
+$('zahlart-save-btn').addEvent('click', function (e) {
+    var _this = this;
+    var form = this.getParent('form');
+    form.store('target', {
+        onRequest: function () {
+            _this.disabled = true;
+        },
+        onComplete: function (jsontext) {
+            try {
+                var json = JSON.decode(jsontext);
+                if (typeof (json.error) != 'undefined') {
+                    _this.disabled = false;
+                } else {
+                    _this.disabled = true;
+                    if (finderGroup['<{$env.get.finder_id}>']) {
+                        finderGroup['<{$env.get.finder_id}>'].refresh.delay(400, finderGroup['<{$env.get.finder_id}>']);
+                    }
+                    var dlg = $('zahlart-save-btn').getParent('.dialog');
+                    if (dlg && dlg.retrieve('instance')) {
+                        dlg.retrieve('instance').close();
+                    }
+                }
+            } catch (err) {
+                _this.disabled = false;
+            }
+        }
+    });
+    form.fireEvent('submit', e);
+});
+</script>

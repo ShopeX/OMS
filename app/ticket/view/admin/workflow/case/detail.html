@@ -34,6 +34,7 @@
         <th>审批场景类型：</th>
         <td>
           <{if $data.scene_type == 'add_gift'}>加赠<{/if}>
+          <{if $data.scene_type == 'approve_orders'}>补发单审批<{/if}>
         </td>
         <th>审核状态：</th>
         <td>
@@ -42,15 +43,16 @@
           <{if $data.status == 'approved'}>同意<{/if}>
           <{if $data.status == 'rejected'}>拒绝<{/if}>
           <{if $data.status == 'cancelled'}>取消<{/if}>
+          <{if $data.status == 'source_cancelled'}>原单据已取消<{/if}>
         </td>
         <th>流程模板ID：</th>
         <td><{$data.template_id}></td>
       </tr>
-      <tr>
+      <tr style="display: none;">
         <th>提交人ID：</th>
-        <td><{$data.submitter_id}></td>
+        <td><{$data.bpm_submitter}></td>
         <th>提交人姓名：</th>
-        <td><{$data.submitter_name}></td>
+        <td><{$data.bpm_approver}></td>
         <th>当前节点ID：</th>
         <td><{$data.current_node_id}></td>
       </tr>
@@ -64,6 +66,7 @@
           <{if $data.assignee_type == 'user'}>用户<{/if}>
           <{if $data.assignee_type == 'role'}>角色<{/if}>
           <{if $data.assignee_type == 'dept'}>部门<{/if}>
+          <{if $data.assignee_type == 'bpm'}>BPM<{/if}>
         </td>
       </tr>
       <tr>
@@ -71,14 +74,26 @@
         <td><{$data.assignee_id}></td>
         <th>审批人姓名：</th>
         <td><{$data.assignee_name}></td>
+        <th>BPM状态：</th>
+        <td><{$data.bpm_status|default:'-'}></td>
+      </tr>
+      <tr>
+        <th>BPM实例号：</th>
+        <td><{$data.bpm_instance_no|default:'-'}></td>
+        <th>审批金额：</th>
+        <td><{$data.order_retail_amount|default:'0.000'}></td>
         <th></th>
         <td></td>
+      </tr>
+      <tr>
+        <th>审批原因：</th>
+        <td colspan="5">&nbsp;<{$data.reason}></td>
       </tr>
     </table>
   </div>
   
   <{if $data.items_context}>
-  <h4>订单赠品明细列表</h4>
+  <h4>订单明细列表</h4>
   <div class="goods-spec-cell" id='goods-spec-product'>
     <{if $data.items_list && is_array($data.items_list) && count($data.items_list) > 0}>
       <table class="gridlist">

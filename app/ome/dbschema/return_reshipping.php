@@ -279,6 +279,13 @@ $db['return_reshipping'] = array(
             'label' => '外部修改时间',
             'order' => 260,
         ),
+        'merchant_mark' => array(
+            'type' => 'text',
+            'editable' => true,
+            'comment' => '商家备注，创建补发订单时写入订单 mark_text',
+            'label' => '商家备注',
+            'order' => 265,
+        ),
         'at_time' => array(
             'type' => 'TIMESTAMP',
             'default' => 'CURRENT_TIMESTAMP',
@@ -366,6 +373,24 @@ $db['return_reshipping'] = array(
             'label' => '扩展字段',
             'order' => 350,
         ),
+        'sub_source'             => array(
+            'type'     => 'varchar(50)',
+            'default'  => 'matrix',
+            'editable' => false,
+            'label'    => '来源类型',
+            'in_list'  => true,
+        ),
+        'original_bn'      => array(
+            'type'            => 'varchar(255)',
+            'label'           => '关联单号',
+            'searchtype'      => 'nequal',
+            'default_in_list' => true,
+            'in_list'         => true,
+        ),
+        'original_id'      => array(
+            'type'    => 'int unsigned',
+            'comment' => '原始单据id',
+        ),
     ),
     'index' => array(
         'ind_reshipping_bn' => array(
@@ -398,6 +423,16 @@ $db['return_reshipping'] = array(
         'ind_order_bn' => array(
             'columns' => array(
                 0 => 'order_bn',
+            ),
+        ),
+        'ind_original_bn' => array(
+            'columns' => array(
+                0 => 'original_bn',
+            ),
+        ),
+        'ind_original_id' => array(
+            'columns' => array(
+                0 => 'original_id',
             ),
         ),
     ),

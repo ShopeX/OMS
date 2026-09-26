@@ -405,23 +405,44 @@ class console_reship{
     }
 
     public function batchOrderRefundToLJRK($dlyIds) {
-        foreach($dlyIds as $dlyId) {
-            $this->orderRefundToLJRK($dlyId);
+        $results = array();
+        foreach ((array) $dlyIds as $dlyId) {
+            try {
+                $results[$dlyId] = $this->orderRefundToLJRK($dlyId);
+            } catch (Throwable $e) {
+                $msg = sprintf(
+                    '拦截任务异常: %s (%s:%s)',
+                    $e->getMessage(),
+                    $e->getFile(),
+                    $e->getLine()
+                );
+                $results[$dlyId] = array(false, array(
+                    'msg' => $msg,
+                    'retry' => true,
+                    'exception' => get_class($e),
+                    'file' => $e->getFile() . ':' . $e->getLine(),
+                ));
+                $this->_writeLjrkFailLog(0, (int) $dlyId, $msg);
+            }
         }
+        return $results;
     }
 
     public function orderRefundToLJRK($dlyId) {
         $dlyInfo = app::get('ome')->model('delivery')->db_dump(['delivery_id'=>$dlyId], 'delivery_id,branch_id,logi_no,logi_name,process,logi_status');
         if(empty($dlyInfo)) {
-            return [false, ['msg'=>'缺少发货单']];
+            return [false, ['msg'=>'缺少发货单', 'retry'=>false]];
         }
         if($dlyInfo['process'] != 'true') {
-            return [false, ['msg'=>'未发货']];
+            return [false, ['msg'=>'未发货', 'retry'=>false]];
         }
         if($dlyInfo['logi_status'] == '7') {
-            return [false, ['msg'=>'已被拦截']];
+            return [false, ['msg'=>'已被拦截', 'retry'=>false]];
         }
         $didItems = app::get('ome')->model('delivery_items_detail')->getList('*', ['delivery_id'=>$dlyId]);
+        if (empty($didItems)) {
+            return [false, ['msg'=>'发货单缺少明细', 'retry'=>true]];
+        }
         $tgOrder = app::get('ome')->model('orders')->getList('pay_status,order_type,shop_type', ['order_id'=>array_column($didItems, 'order_id')]);
         $refundApply = app::get('ome')->model('refund_apply')->getList('apply_id,bool_type,product_data,tag_type,order_id', array('order_id' => array_column($didItems, 'order_id'), 'status' => '4'));
         $needLJ =  false;
@@ -459,16 +480,56 @@ class console_reship{
             }
         }
         if(!$needLJ) {
-            return [false, ['msg'=>'不需要拦截']];
+            return [false, ['msg'=>'不需要拦截', 'retry'=>false]];
         }
+        $serviceResult = $this->dispatchRefundPackageReship($dlyInfo, $refundItemId, $orderQZ);
+        if ($serviceResult !== null) {
+            return $serviceResult;
+        }
+
         $orderDidItems = [];
         foreach($didItems as $v) {
             $orderDidItems[$v['order_id']][] = $v;
         }
+        $allOk = true;
+        $needRetry = false;
+        $msgs = array();
         foreach($orderDidItems as $order_id => $v) {
             $dlyInfo['qz_refund'] = in_array($order_id, $orderQZ);
-            $this->oneOrderRefundToLJRK($v, $dlyInfo, $refundItemId);
+            list($ok, $ret) = $this->oneOrderRefundToLJRK($v, $dlyInfo, $refundItemId);
+            if (!$ok) {
+                $allOk = false;
+                $msgs[] = isset($ret['msg']) ? $ret['msg'] : '拦截失败';
+                if (!empty($ret['retry'])) {
+                    $needRetry = true;
+                }
+            }
         }
+        if ($allOk) {
+            return [true, ['msg'=>'操作完成', 'retry'=>false]];
+        }
+        return [false, ['msg'=>implode('; ', $msgs), 'retry'=>$needRetry]];
+    }
+
+    protected function dispatchRefundPackageReship(
+        array $delivery,
+        array $refundItemIds,
+        array $forcedRefundOrderIds
+    ) {
+        $service = kernel::service('ome.service.reship.refund.package');
+        if (!$service) {
+            return null;
+        }
+        if (!method_exists($service, 'createRefundPackageReships')) {
+            return null;
+        }
+
+        return $service->createRefundPackageReships(
+            $this,
+            $delivery,
+            $refundItemIds,
+            $forcedRefundOrderIds
+        );
     }
 
     public function qzRefundToLJRK($refundApply){
@@ -476,6 +537,20 @@ class console_reship{
         $arrProduct = unserialize($refundApply['product_data']);
         if (!is_array($arrProduct)) {
             return [false, ['msg' => '退款单缺少商品明细']];
+        }
+        
+        // 使用Service检查是否允许生成拦截退货单
+        if ($servicelist = kernel::servicelist('ome.service.reship.finish.after')) {
+            foreach ($servicelist as $objectKey => $instance)
+            {
+                if(method_exists($instance,'checkCreateLanjieReship')){
+                    $checkResult = $instance->checkCreateLanjieReship($refundApply['order_id']);
+                    if(isset($checkResult['rsp']) && $checkResult['rsp'] == 'fail'){
+                        $error_msg = 'Service检查创建拦截退货单：'. $checkResult['error_msg'];
+                        return [false, ['msg'=>$error_msg]];
+                    }
+                }
+            }
         }
         
         // 获取退款商品ID数组
@@ -523,78 +598,123 @@ class console_reship{
         return $this->oneOrderRefundToLJRK($didItems, $dlyInfo, $refundItemId);
     }
 
+    /**
+     * 单订单退款转拦截入库退货单
+     * @return array [bool $ok, array $data] $data含 msg；失败时含 retry(bool)
+     */
     public function oneOrderRefundToLJRK($didItems, $dlyInfo, $refundItemId){
-        $tgOrder = app::get('ome')->model('orders')->db_dump(['order_id'=>array_column($didItems, 'order_id')], '*');
-        $opInfo     = kernel::single('ome_func')->get_system();
-        $insertData = array(
-            'reship_bn'        => $dlyInfo['reship_bn'] ? : 'LJ'.$tgOrder['order_id'].$dlyInfo['delivery_id'],
-            'shop_id'          => $tgOrder['shop_id'],
-            'shop_type'        => $tgOrder['shop_type'],
-            'order_id'         => $tgOrder['order_id'],
-            'member_id'        => $tgOrder['member_id'],
-            'logi_name'        => $dlyInfo['logi_name'],
-            'logi_no'          => $dlyInfo['logi_no'],
-            'logi_id'          => $tgOrder['logi_id'],
-            'ship_name'        => $tgOrder['ship_name'],
-            'ship_area'        => $tgOrder['ship_area'],
-            'delivery'         => $tgOrder['shipping'],
-            'ship_addr'        => $tgOrder['ship_addr'],
-            'ship_zip'         => $tgOrder['ship_zip'],
-            'ship_tel'         => $tgOrder['ship_tel'],
-            'ship_email'       => $tgOrder['ship_email'],
-            'ship_mobile'      => $tgOrder['ship_mobile'],
-            'is_protect'       => $tgOrder['is_protect'],
-            'delivery_id'      => $dlyInfo['delivery_id'],
-            'branch_id'        => $dlyInfo['branch_id'],
-            'return_logi_name' => $dlyInfo['logi_name'],
-            'return_logi_no'   => $dlyInfo['logi_no'],
-            't_begin'          => time(),
-            'op_id'            => $opInfo['op_id'],
-            'flag_type'        => ome_reship_const::__LANJIE_RUKU,
-            'org_id'           => $tgOrder['org_id'],
-        );
-        if($dlyInfo['qz_refund']) {
-            $insertData['flag_type'] = $insertData['flag_type'] | ome_reship_const::__QZ_REFUND_CODE;
-        }
-        $shop_info = app::get('ome')->model('shop')->getShopInfo($insertData['shop_id']);
-        // 经销店铺的单据，delivery_mode冗余到售后申请表
-        if ($shop_info['delivery_mode'] == 'jingxiao') {
-            $insertData['delivery_mode'] = $shop_info['delivery_mode'];
-        }
+        $reshipId = 0;
+        $reshipBn = '';
+        $deliveryId = isset($dlyInfo['delivery_id']) ? (int) $dlyInfo['delivery_id'] : 0;
+        $oOperation_log = app::get('ome')->model('operation_log');
 
-        $modelReship = app::get('ome')->model('reship');
-        $rs          = $modelReship->insert($insertData);
-        if (!$rs) {
-            return [false, ['msg' => '退货单新建失败'.$modelReship->db->errorinfo()]];
-        }
-        $objs = app::get('ome')->model('order_objects')->getList('obj_id, oid', ['order_id'=>$tgOrder['order_id']]);
-        $objs = array_column($objs, null, 'obj_id');
-        $orderItems = app::get('ome')->model('order_items')->getList('*', ['order_id'=>$tgOrder['order_id']]);
-        $orderItems = array_column($orderItems, null, 'item_id');
-        $reshipItems = array();
-        $tmoney = $had_refund = 0;
-        foreach ($didItems as $item) {
-            if($item['number'] > 0) {
+        try {
+            $tgOrder = app::get('ome')->model('orders')->db_dump(['order_id'=>array_column($didItems, 'order_id')], '*');
+            if (empty($tgOrder) || empty($tgOrder['order_id'])) {
+                return [false, ['msg' => '订单不存在', 'retry' => false]];
+            }
+            $opInfo     = kernel::single('ome_func')->get_system();
+            $reshipBn   = $dlyInfo['reship_bn'] ? : 'LJ'.$tgOrder['order_id'].$dlyInfo['delivery_id'];
+            $insertData = array(
+                'reship_bn'        => $reshipBn,
+                'shop_id'          => $tgOrder['shop_id'],
+                'shop_type'        => $tgOrder['shop_type'],
+                'order_id'         => $tgOrder['order_id'],
+                'member_id'        => $tgOrder['member_id'],
+                'logi_name'        => $dlyInfo['logi_name'],
+                'logi_no'          => $dlyInfo['logi_no'],
+                'logi_id'          => $tgOrder['logi_id'],
+                'ship_name'        => $tgOrder['ship_name'],
+                'ship_area'        => $tgOrder['ship_area'],
+                'delivery'         => $tgOrder['shipping'],
+                'ship_addr'        => $tgOrder['ship_addr'],
+                'ship_zip'         => $tgOrder['ship_zip'],
+                'ship_tel'         => $tgOrder['ship_tel'],
+                'ship_email'       => $tgOrder['ship_email'],
+                'ship_mobile'      => $tgOrder['ship_mobile'],
+                'is_protect'       => $tgOrder['is_protect'],
+                'delivery_id'      => $dlyInfo['delivery_id'],
+                'branch_id'        => $dlyInfo['branch_id'],
+                'return_logi_name' => $dlyInfo['logi_name'],
+                'return_logi_no'   => $dlyInfo['logi_no'],
+                't_begin'          => time(),
+                'op_id'            => $opInfo['op_id'],
+                'flag_type'        => ome_reship_const::__LANJIE_RUKU,
+                'org_id'           => $tgOrder['org_id'],
+            );
+            if($dlyInfo['qz_refund']) {
+                $insertData['flag_type'] = $insertData['flag_type'] | ome_reship_const::__QZ_REFUND_CODE;
+            }
+            $shop_info = app::get('ome')->model('shop')->getShopInfo($insertData['shop_id']);
+            // 经销店铺的单据，delivery_mode冗余到售后申请表
+            if ($shop_info['delivery_mode'] == 'jingxiao') {
+                $insertData['delivery_mode'] = $shop_info['delivery_mode'];
+            }
+
+            $modelReship = app::get('ome')->model('reship');
+            // 已存在同号单：有明细视为成功；无明细可重试补写（避免唯一键后永久空壳）
+            $existReship = $modelReship->db_dump(array('reship_bn' => $reshipBn, 'shop_id' => $insertData['shop_id']), 'reship_id,reship_bn');
+            if ($existReship) {
+                $existItem = app::get('ome')->model('reship_items')->db_dump(array('reship_id' => $existReship['reship_id']), 'item_id');
+                if ($existItem) {
+                    return [true, ['msg' => '拦截单已存在', 'retry' => false, 'reship_id' => $existReship['reship_id']]];
+                }
+                $reshipId = (int) $existReship['reship_id'];
+                $insertData['reship_id'] = $reshipId;
+            } else {
+                $rs = $modelReship->insert($insertData);
+                if (!$rs) {
+                    $err = $modelReship->db->errorinfo();
+                    return [false, ['msg' => '退货单新建失败'.$err, 'retry' => true]];
+                }
+                $reshipId = (int) (!empty($insertData['reship_id']) ? $insertData['reship_id'] : $rs);
+                if ($reshipId <= 0) {
+                    throw new Exception('退货单新建成功但未获取到reship_id');
+                }
+                $insertData['reship_id'] = $reshipId;
+            }
+
+            $objs = app::get('ome')->model('order_objects')->getList('obj_id, oid', ['order_id'=>$tgOrder['order_id']]);
+            $objs = array_column($objs, null, 'obj_id');
+            $orderItems = app::get('ome')->model('order_items')->getList('*', ['order_id'=>$tgOrder['order_id']]);
+            $orderItems = array_column($orderItems, null, 'item_id');
+            $reshipItems = array();
+            $tmoney = $had_refund = 0;
+            foreach ($didItems as $item) {
+                if (!($item['number'] > 0)) {
+                    continue;
+                }
                 $order_item_id = $item['order_item_id'];
-                $obj_id = $orderItems[$order_item_id]['obj_id'];
-                $price = sprintf('%.2f', $orderItems[$order_item_id]['divide_order_fee'] / $orderItems[$order_item_id]['nums']);
-                if($item['number'] ==  $orderItems[$order_item_id]['nums']) {
-                    $amount = $orderItems[$order_item_id]['divide_order_fee'];
+                if (!isset($orderItems[$order_item_id])) {
+                    throw new Exception('订单明细不存在 order_item_id=' . $order_item_id);
+                }
+                if ($item['bn'] === null || $item['bn'] === '') {
+                    throw new Exception('发货明细bn为空 order_item_id=' . $order_item_id);
+                }
+                $oi = $orderItems[$order_item_id];
+                $obj_id = $oi['obj_id'];
+                $nums = floatval($oi['nums']);
+                if ($nums <= 0) {
+                    throw new Exception('订单明细nums异常 order_item_id=' . $order_item_id . ' nums=' . $oi['nums']);
+                }
+                $price = sprintf('%.2f', floatval($oi['divide_order_fee']) / $nums);
+                if ($item['number'] == $oi['nums']) {
+                    $amount = $oi['divide_order_fee'];
                 } else {
                     $amount = sprintf('%.2f', $price * $item['number']);
                 }
                 $reshipItems[] = array(
-                    'reship_id'    => $insertData['reship_id'],
+                    'reship_id'    => $reshipId,
                     'op_id'        => $opInfo['op_id'],
                     'bn'           => $item['bn'],
                     'num'          => $item['number'],
                     'price'        => $price,
                     'amount'        => $amount,
                     'branch_id'    => $dlyInfo['branch_id'],
-                    'product_name' => $orderItems[$order_item_id]['name'],
+                    'product_name' => $oi['name'],
                     'product_id'   => $item['product_id'],
                     'order_item_id' => $order_item_id,
-                    'oid'           => $objs[$obj_id]['oid'],
+                    'oid'           => isset($objs[$obj_id]['oid']) ? $objs[$obj_id]['oid'] : (isset($item['oid']) ? $item['oid'] : ''),
                     'order_object_id'=> $obj_id,
                 );
                 $tmoney += $amount;
@@ -602,52 +722,102 @@ class console_reship{
                     $had_refund += $amount;
                 }
             }
-        }
-        if($reshipItems) {
+            if (!$reshipItems) {
+                $memo = '退款订单发货新建退货拦截单，缺少退货明细';
+                $this->_writeLjrkFailLog($reshipId, $deliveryId, $memo);
+                return [false, ['msg'=>'缺少退货明细', 'retry'=>true, 'reship_id'=>$reshipId]];
+            }
+
             $modelItem = app::get('ome')->model('reship_items');
             $sql       = ome_func::get_insert_sql($modelItem, $reshipItems);
-            $modelItem->db->exec($sql);
-        } else { 
-            $oOperation_log = app::get('ome')->model('operation_log');
-            $memo           = '退款订单发货新建退货拦截单，缺少退货明细';
-            $oOperation_log->write_log('reship@ome', $insertData['reship_id'], $memo);
-            return [false, ['msg'=>'缺少退货明细']];
-        }
-        $upData = [
-            'totalmoney' => $tmoney - $had_refund,
-            'tmoney' => $tmoney,
-            'had_refund' => $had_refund
-        ];
-        $modelReship->update($upData, ['reship_id' => $insertData['reship_id']]);
-        # 操作日志
-        $oOperation_log = app::get('ome')->model('operation_log');
-        $memo           = '退款订单发货新建退货拦截单';
-        $oOperation_log->write_log('reship@ome', $insertData['reship_id'], $memo);
-        foreach(kernel::servicelist('ome.service.reship.create.after') as $object) {
-            if(method_exists($object, 'after_create')){
-                $object->after_create($insertData['reship_id']);
+            if (empty($sql)) {
+                throw new Exception('生成明细SQL失败');
             }
-        }
-        $insertData = array_merge($insertData, $upData);
-        $this->reshipToReturn($insertData);
-        //退换货自动审批(系统-->退换货自动审核设置-->是否启用退换货自动审批)
-        $is_auto_approve = app::get('ome')->getConf('return.auto_approve');
-        if($is_auto_approve == 'on'){
-            $reshipLib = kernel::single('ome_reship');
-            $rs = $reshipLib->confirm_reship(array(
-                'reship_id' => $insertData['reship_id'],
-                'status'    => '1',
-                'is_anti'   => false,
-                'exec_type' => 1,
-            ), $msg, $is_rollback);
-            if(!$rs) {
-                app::get('ome')->model('operation_log')->write_log('reship@ome', $insertData['reship_id'], '自动审核失败:'.$msg);
+            $execRs = $modelItem->db->exec($sql);
+            if (!$execRs) {
+                $err = $modelItem->db->errorinfo();
+                $memo = '拦截单明细写入失败: ' . ($err ? $err : 'exec返回失败');
+                $this->_writeLjrkFailLog($reshipId, $deliveryId, $memo);
+                return [false, ['msg'=>$memo, 'retry'=>true, 'reship_id'=>$reshipId]];
             }
+
+            $upData = [
+                'totalmoney' => $tmoney - $had_refund,
+                'tmoney' => $tmoney,
+                'had_refund' => $had_refund
+            ];
+            $modelReship->update($upData, ['reship_id' => $reshipId]);
+            # 操作日志
+            $memo = '退款订单发货新建退货拦截单';
+            $oOperation_log->write_log('reship@ome', $reshipId, $memo);
+            foreach(kernel::servicelist('ome.service.reship.create.after') as $object) {
+                if(method_exists($object, 'after_create')){
+                    $object->after_create($reshipId);
+                }
+            }
+            $insertData = array_merge($insertData, $upData);
+            $this->reshipToReturn($insertData);
+            //退换货自动审批(系统-->退换货自动审核设置-->是否启用退换货自动审批)
+            $is_auto_approve = app::get('ome')->getConf('return.auto_approve');
+            if($is_auto_approve == 'on'){
+                $reshipLib = kernel::single('ome_reship');
+                $msg = '';
+                $is_rollback = false;
+                $rs = $reshipLib->confirm_reship(array(
+                    'reship_id' => $reshipId,
+                    'status'    => '1',
+                    'is_anti'   => false,
+                    'exec_type' => 1,
+                ), $msg, $is_rollback);
+                if(!$rs) {
+                    $oOperation_log->write_log('reship@ome', $reshipId, '自动审核失败:'.$msg);
+                }
+            }
+            $err = '';
+            $label_code = 'SOMS_MREFUND';
+            kernel::single('ome_bill_label')->markBillLabel($tgOrder['order_id'], '', $label_code, 'order', $err, 0);
+
+            if ($deliveryId > 0) {
+                $logiNo = isset($dlyInfo['logi_no']) ? trim((string) $dlyInfo['logi_no']) : '';
+                kernel::single('ome_return_reshipping')->updateDeliveryPackageApplyNumFromLanJieReship($deliveryId, $logiNo);
+            }
+
+            return [true, ['msg'=>'操作完成', 'retry'=>false, 'reship_id'=>$reshipId]];
+        } catch (Throwable $e) {
+            $memo = sprintf(
+                '拦截单明细写入失败: %s (%s:%s)',
+                $e->getMessage(),
+                $e->getFile(),
+                $e->getLine()
+            );
+            $this->_writeLjrkFailLog($reshipId, $deliveryId, $memo);
+            return [false, [
+                'msg' => $memo,
+                'retry' => true,
+                'reship_id' => $reshipId,
+                'exception' => get_class($e),
+                'file' => $e->getFile() . ':' . $e->getLine(),
+            ]];
         }
-        $err = '';
-        $label_code = 'SOMS_MREFUND';
-        kernel::single('ome_bill_label')->markBillLabel($tgOrder['order_id'], '', $label_code, 'order', $err, 0);
-        return [true, ['msg'=>'操作完成']];
+    }
+
+    /**
+     * 拦截失败写操作日志：优先退货单，其次发货单（后台可查）
+     */
+    protected function _writeLjrkFailLog($reshipId, $deliveryId, $memo)
+    {
+        $logMdl = app::get('ome')->model('operation_log');
+        try {
+            if ($reshipId > 0) {
+                $logMdl->write_log('reship@ome', $reshipId, $memo);
+                return;
+            }
+            if ($deliveryId > 0) {
+                $logMdl->write_log('delivery_back@ome', $deliveryId, $memo);
+            }
+        } catch (Throwable $e) {
+            // 忽略日志写入异常，避免掩盖原错误
+        }
     }
 
     public function reshipToReturn($reship) {

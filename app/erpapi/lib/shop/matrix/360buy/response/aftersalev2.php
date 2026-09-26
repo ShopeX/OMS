@@ -131,6 +131,9 @@ class erpapi_shop_matrix_360buy_response_aftersalev2 extends erpapi_shop_respons
                             }
                         }
                     }
+                    if ($tag_type == '价保退款' && !empty($sdf['refund_item_list']['return_item'][0]['oid'])) {
+                        $sdf['oid'] = $sdf['refund_item_list']['return_item'][0]['oid'];
+                    }
                 }
             }
         }
@@ -226,22 +229,9 @@ class erpapi_shop_matrix_360buy_response_aftersalev2 extends erpapi_shop_respons
         return $ret;
     }
 
-   #重新计算单价($refundItems 以bn作主键的数组 捆绑商品使用捆绑商品的bn)
+    #重新计算单价($refundItems 以bn作主键的数组 捆绑商品使用捆绑商品的bn)
     protected function _calculateAddPrice($refundItems, $sdf) {
-        if ($sdf['order']['tran_type'] == 'archive'){
-            $db = kernel::database();
-            foreach($refundItems as $k=>$v){
-                $order_item = $db->selectrow("SELECT sendnum,item_id,price FROM sdb_archive_order_items WHERE order_id=".$sdf['order']['order_id']." AND bn='".$v['bn']."'");
-                $refundItems[$k]['sendNum'] = $order_item['sendnum'];
-                $refundItems[$k]['order_item_id'] = $order_item['item_id'];
-
-            }
-            return $refundItems;
-        }
-        if(empty($refundItems)) {
-            return array();
-        }
-
+        // 归档订单统一走父类：从 archive objects/items 分摊金额并补齐 product_id
         return parent::_calculateAddPrice($refundItems, $sdf);
     }
 
@@ -249,9 +239,12 @@ class erpapi_shop_matrix_360buy_response_aftersalev2 extends erpapi_shop_respons
         $reship_items = array();
 
         $rows = app::get('ome')->model('return_product_items')->getList('product_id,bn,name,num,price,amount,order_item_id',array('return_id'=>$sdf['return_product']['return_id']));
-        $itemMdl   = app::get('ome')->model('order_items');
+        $isArchive = ($sdf['order']['tran_type'] == 'archive' || $sdf['archive'] == '1' || $sdf['return_product']['archive'] == '1');
+        $itemTable = $isArchive ? 'sdb_archive_order_items' : 'sdb_ome_order_items';
+        $deleteSql = $isArchive ? '' : " and `delete`='false'";
+        $itemMdl   = $isArchive ? app::get('archive')->model('order_items') : app::get('ome')->model('order_items');
         foreach ($rows as $value) {
-            $item = $itemMdl->db->selectrow("SELECT sum(sendnum) as sendnum FROM sdb_ome_order_items WHERE order_id=".$sdf['order']['order_id']." and product_id=".$value['product_id']." and `delete`='false'");
+            $item = $itemMdl->db->selectrow("SELECT sum(sendnum) as sendnum FROM ".$itemTable." WHERE order_id=".$sdf['order']['order_id']." and product_id=".$value['product_id'].$deleteSql);
             $reship_items[] = array (
                 'product_id' => $value['product_id'],
                 'bn'         => $value['bn'],
@@ -304,6 +297,9 @@ class erpapi_shop_matrix_360buy_response_aftersalev2 extends erpapi_shop_respons
     public function formatArchiveitemlist($sdf, $convert){
 
         $refund_item_list = $sdf['refund_item_list']['return_item'];
+        if (empty($refund_item_list)) {
+            return array();
+        }
         $items = array();
         $skuObj = app::get('inventorydepth')->model('shop_skus');
         foreach($refund_item_list as $v){
@@ -313,18 +309,18 @@ class erpapi_shop_matrix_360buy_response_aftersalev2 extends erpapi_shop_respons
             $sku_detail = $skuObj->db->selectrow("SELECT shop_product_bn FROM sdb_inventorydepth_shop_skus WHERE shop_sku_id='".$item_id."' AND shop_id='".$sdf['shop_id']."'");
             if ($sku_detail){
                 $productData = kernel::single('material_basic_select')->dump('material_name,material_bn,bm_id',array('material_bn'=>$sku_detail['shop_product_bn']));
-           
-            
-                $items[] = array(
-
-                    'bn'            =>  $sku_detail['shop_product_bn'],
-                    'product_id'    =>  $productData['product_id'],
-                    'name'          =>  $productData['name'],
-                    'price'         =>  $sdf['refund_fee'],
-                    //'sendNum'       =>  $order_item['sendnum'],
-                    
-                    'num'           =>  $v['num'],
-                );
+                $bn = $sku_detail['shop_product_bn'];
+                if ($items[$bn]) {
+                    $items[$bn]['num'] += $v['num'];
+                } else {
+                    $items[$bn] = array(
+                        'bn'            =>  $bn,
+                        'product_id'    =>  $productData['bm_id'],
+                        'name'          =>  $productData['material_name'],
+                        'price'         =>  $sdf['refund_fee'],
+                        'num'           =>  $v['num'],
+                    );
+                }
             }
             
         }

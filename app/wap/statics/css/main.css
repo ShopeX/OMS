@@ -25,10 +25,18 @@
 
 .login-layer form {
     margin-bottom: 0;
+    padding: 0 1.25rem;
 }
 
 .login-layer ul {
     margin-bottom: 0;
+}
+
+.login-layer .form-row .grid-1.login-input-wrap {
+    position: relative;
+    cursor: text;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 
 .login-layer .form-row [class^=icon-] {
@@ -37,15 +45,35 @@
     position: absolute;
     margin-left: 5px;
     line-height: 44px;
+    pointer-events: none;
+    z-index: 1;
 }
 
 .login-layer .form-row input {
     padding-left: 30px;
+    font-size: 1rem;
+    position: relative;
+    z-index: 2;
+    -webkit-user-select: text;
+    user-select: text;
 }
 
 .login-layer .logo {
     width: 35%;
     margin: 0 auto 30px;
+}
+
+.login-layer .login-submit-row {
+    margin-top: 1.5rem;
+    margin-bottom: 0;
+}
+
+.login-layer .login-submit-row .but_login {
+    width: 100%;
+    border-radius: 4px;
+    font-size: 1rem;
+    line-height: 2.75rem;
+    padding: 0;
 }
 
 .footer {

@@ -30,7 +30,9 @@ class taoexlib_ctl_admin_account extends desktop_controller {
     	if (unserialize($account)) {
 //    		免登			
 			$param = unserialize($account);
+			$url = taoexlib_utils::get_book_url($param);
 			$info = taoexlib_utils::get_user_info($param);	
+			$this->pagedata['frameurl'] = $url;
 			$this->pagedata['account'] = $param;
 			$this->pagedata['info'] = (array)$info;
 			$this->pagedata['warningnumber'] = $this->app->getConf('taoexlib.message.warningnumber');
@@ -39,13 +41,13 @@ class taoexlib_ctl_admin_account extends desktop_controller {
         else {
 			$this->pagedata['regEmail'] = taoexlib_utils::regEmail();
 			$this->page('admin/bind.html');
-    	}
+        }
     }
     
     public function register() {
     	$region = $_POST['region'];
     	$region = explode(':', $_POST['region']);
-    	$regionArr = explode('/', $region[1]);
+		$regionArr = explode('/', $region[1]);
 		
     	$this->begin('index.php?app=taoexlib&ctl=admin_account');
     	if (!trim(trim($_POST['email']))) {
@@ -135,12 +137,12 @@ class taoexlib_ctl_admin_account extends desktop_controller {
     		$msg = $result->msg;
     		$this->end(false, $msg ? $msg : '注册失败！');
     	}
-    }
+	}
 	
 	public function bind() {
 	    $this->begin('index.php?app=taoexlib&ctl=admin_account');
     	if (!trim(trim($_POST['bindemail']))) {
-    		$this->end(false, 'email不能为空！');
+			$this->end(false, 'email不能为空！');
     	}
     	
     	if (!trim($_POST['bindpassword'])) {

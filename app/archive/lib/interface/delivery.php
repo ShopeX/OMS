@@ -124,8 +124,8 @@ class archive_interface_delivery{
             if($delivery){
                 foreach($delivery as $k=>$v){
                     if(isset($v['branch_id'])){
-                      $branch = $this->get_branchname($v['branch_id']);
-                      $delivery[$k]['branch_name'] = $branch['name'];
+                      // get_branchname 已返回仓名字符串（同 get_delivery），勿再当数组取 ['name']
+                      $delivery[$k]['branch_name'] = $this->get_branchname($v['branch_id']);
                     }
                 }
            
@@ -139,10 +139,16 @@ class archive_interface_delivery{
     }
     
     function get_branchname($branch_id){
-        if (!self::$branchs[$branch_id]){
+        if (!isset(self::$branchs[$branch_id])){
             $branchObj = app::get('ome')->model('branch');
-            $branch = $branchObj->Get_name($branch_id);
-            self::$branchs[$branch_id] = $branch;
+            // 展示用：跳过子账号仓权限过滤，避免归档退发货记录发货仓库为空
+            $branch = $branchObj->dump(array(
+                'branch_id' => $branch_id,
+                'check_permission' => 'false',
+            ), 'name');
+            self::$branchs[$branch_id] = (is_array($branch) && isset($branch['name']))
+                ? $branch['name']
+                : '';
         }
         return self::$branchs[$branch_id];
     }

@@ -25,20 +25,49 @@
  */
 class ome_event_trigger_shop_delivery
 {
+    /**
+     * 最近一次 _getDelivery 跳过原因
+     * @var string
+     */
+    protected $_getDeliverySkipReason = '';
+
+    /**
+     * 强制读主库获取发货单（兼容 PolarDB 代理读写分离）
+     *
+     * @param int $delivery_id
+     * @return array
+     */
     protected function _getDelivery($delivery_id){
-        $deliveryFilter = array('delivery_id'=>$delivery_id,'parent_id'=>'0');
+        $this->_getDeliverySkipReason = '';
+        $delivery_id = intval($delivery_id);
         $deliveryModel = app::get('ome')->model('delivery');
-        $deliveryinfo = $deliveryModel->db_dump($deliveryFilter);
-        if (!$deliveryinfo) return array();
+
+        // 发货后立刻回写：开启 force_master，后续 getList/select 自动加 FORCE_MASTER
+        $deliveryModel->db->force_master(true);
+
+        $rows = $deliveryModel->getList('*', array('delivery_id' => $delivery_id, 'parent_id' => '0'), 0, 1);
+        $deliveryinfo = $rows ? $rows[0] : array();
+        if (!$deliveryinfo) {
+            $this->_getDeliverySkipReason = 'delivery_not_found';
+            return array();
+        }
 
         // 回写节点
         if($deliveryinfo['process'] != 'true') {
             $rb = app::get('ome')->getConf('ome.delivery.back_node');
             if ($rb == 'check') {
-                if($deliveryinfo['verify'] != 'true') return array();
+                if($deliveryinfo['verify'] != 'true') {
+                    $this->_getDeliverySkipReason = 'back_node_check_verify_false';
+                    return array();
+                }
             } elseif ($rb == 'print') {
-                if ( $deliveryinfo['expre_status'] != 'true' ) return array();
+                if ( $deliveryinfo['expre_status'] != 'true' ) {
+                    $this->_getDeliverySkipReason = 'back_node_print_expre_false';
+                    return array();
+                }
             } else {
+                // 发货后回写：process 尚未为 true（常见于写后读从库/代理旧快照）
+                $this->_getDeliverySkipReason = 'process_not_true';
                 return array();
             }
         }
@@ -46,21 +75,111 @@ class ome_event_trigger_shop_delivery
         $shipmentLogModel = app::get('ome')->model('shipment_log');
         $deliverySuccOrderBn = $shipmentLogModel->getList('orderBn', array('deliveryCode'=>$deliveryinfo['logi_no'], 'status'=>'succ'));
         $deliveryinfo['dly_succ_order'] = array_column($deliverySuccOrderBn, 'orderBn');
-        // 发货单对应的订单
+
         $deliveryOrderModel = app::get('ome')->model('delivery_order');
-        $deliveryOrderList = $deliveryOrderModel->getList('order_id',array('delivery_id'=>$delivery_id));
+        $deliveryOrderList = $deliveryOrderModel->getList('order_id', array('delivery_id' => $delivery_id));
 
         $order_ids = array();
-        foreach ($deliveryOrderList as $key => $value) {
-            $order_ids[] = $value['order_id'];
+        foreach ((array)$deliveryOrderList as $value) {
+            if (!empty($value['order_id'])) {
+                $order_ids[] = $value['order_id'];
+            }
         }
 
-        $orderModel = app::get('ome')->model('orders');
-        $orderList = $orderModel->getList('*',array('order_id'=>$order_ids));
+        $orderList = array();
+        if ($order_ids) {
+            $orderList = app::get('ome')->model('orders')->getList('*', array('order_id' => $order_ids));
+        }
+        if (!$orderList) {
+            $this->_getDeliverySkipReason = 'order_data_empty';
+            return array();
+        }
 
         $deliveryinfo['orders']         = $orderList;
         $deliveryinfo['delivery_order'] = $deliveryOrderList;
         return $deliveryinfo;
+    }
+
+    /**
+     * 按 ome.delivery.back_node 配置决定是否 misc_task 重试
+     * - 发货后回写：process_not_true / order_data_empty
+     * - 打印回写：back_node_print_expre_false
+     * - 校验回写：back_node_check_verify_false
+     * 其它原因只记日志，不入队
+     *
+     * @param int $delivery_id
+     * @param string $reason
+     * @return void
+     */
+    protected function _scheduleDeliveryConfirmRetry($delivery_id, $reason)
+    {
+        $delivery_id = intval($delivery_id);
+        if ($delivery_id <= 0) {
+            return;
+        }
+
+        $reason = $reason ? $reason : 'unknown';
+        $opLog = app::get('ome')->model('operation_log');
+        $backNode = app::get('ome')->getConf('ome.delivery.back_node');
+
+        // 配置与可重试原因一一对应，避免打印/校验节点误入发货后重试
+        if ($backNode == 'print') {
+            $allowReasons = array('back_node_print_expre_false');
+        } elseif ($backNode == 'check') {
+            $allowReasons = array('back_node_check_verify_false');
+        } else {
+            // 发货后回写：process 未就绪 / 关联订单未读到
+            $allowReasons = array('process_not_true', 'order_data_empty');
+        }
+
+        if (!in_array($reason, $allowReasons, true)) {
+            $opLog->write_log('delivery_modify@ome', $delivery_id, '发货回写跳过:'.$reason);
+            return;
+        }
+
+        $deliveryOrders = app::get('ome')->model('delivery_order')->getList('order_id', array('delivery_id' => $delivery_id));
+        if (!$deliveryOrders) {
+            $opLog->write_log('delivery_modify@ome', $delivery_id, '发货回写跳过:'.$reason);
+            return;
+        }
+
+        $miscTask = app::get('ome')->model('misc_task');
+        $execTime = time() + 60;
+        $enqueued = false;
+
+        foreach ($deliveryOrders as $row) {
+            if (empty($row['order_id'])) {
+                continue;
+            }
+            $orderId = intval($row['order_id']);
+
+            // 已在队列则不重复入队，避免刷日志 / 反复推迟
+            $exist = $miscTask->db_dump(array(
+                'obj_id'   => $orderId,
+                'obj_type' => 'delivery_confirm_retry',
+            ), 'id');
+            if ($exist) {
+                continue;
+            }
+
+            $miscTask->saveMiscTask(array(
+                'obj_id'      => $orderId,
+                'obj_type'    => 'delivery_confirm_retry',
+                'exec_time'   => $execTime,
+                'extend_info' => json_encode(array(
+                    'reason'      => $reason,
+                    'delivery_id' => $delivery_id,
+                    'back_node'   => $backNode ? $backNode : 'consign',
+                ), JSON_UNESCAPED_UNICODE),
+            ));
+            $enqueued = true;
+        }
+
+        if ($enqueued) {
+            $opLog->write_log('delivery_modify@ome', $delivery_id, '发货状态回写暂未完成，系统将自动重试');
+        } else {
+            $opLog->write_log('delivery_modify@ome', $delivery_id, '发货回写跳过:'.$reason);
+        }
     }
 
     public function delivery_confirm_send_fromsub($delivery_id) {
@@ -78,6 +197,13 @@ class ome_event_trigger_shop_delivery
     {
         $deliveryModel = app::get('ome')->model('delivery');
         $delivery = $this->_getDelivery($delivery_id);
+
+        // 未取到可回写发货单：按 back_node 配置决定是否入 misc_task
+        if (empty($delivery) || empty($delivery['delivery_id'])) {
+            $reason = $this->_getDeliverySkipReason ? $this->_getDeliverySkipReason : 'delivery_empty';
+            $this->_scheduleDeliveryConfirmRetry($delivery_id, $reason);
+            return ['rsp'=>'fail', 'msg'=>'发货回写条件未满足:'.$reason];
+        }
 
         if (empty($delivery['logi_no'])) {
             // 提货物流允许 logi_no 为空，运单号由平台接口返回
@@ -257,7 +383,10 @@ class ome_event_trigger_shop_delivery
                     ->init($deliveryList,$delivery_orders)
                     ->get_sdf($curDelivery['delivery_id']);
 
-        if (!$sdf) return;
+        if (!$sdf) {
+            // 业务策略跳过（赠品/拆单等）：不写操作日志，避免小时补/重试反复刷日志
+            return;
+        }
 
         if ($retry) kernel::single('erpapi_router_request')->set('shop',$curDelivery['shop_id'])->delivery_add($sdf);
         kernel::single('erpapi_router_request')->set('shop',$curDelivery['shop_id'])->delivery_logistics_update($sdf);

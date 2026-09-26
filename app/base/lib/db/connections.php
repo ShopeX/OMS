@@ -28,6 +28,20 @@ class base_db_connections extends base_db_abstract implements base_interface_db
     protected $_ro_lnk = null;
     protected $_use_transaction = false;
     private $_hchsafe_sql = array();
+    /** @var bool SELECT 强制主库（当前请求内有效） */
+    protected $_force_master = false;
+
+    /**
+     * 开启后续 SELECT 自动加 FORCE_MASTER hint（当前请求内保持）
+     *
+     * @param bool $flag
+     * @return $this
+     */
+    public function force_master($flag = true)
+    {
+        $this->_force_master = (bool) $flag;
+        return $this;
+    }
 
     public function exec($sql , $skipModifiedMark=false, $db_lnk=null){
 
@@ -73,6 +87,12 @@ class base_db_connections extends base_db_abstract implements base_interface_db
     }//End Function
 
     public function select($sql, $skipModifiedMark=false){
+        if ($this->_force_master && is_string($sql) && $sql !== '' && stripos($sql, 'FORCE_MASTER') === false) {
+            if (preg_match('/^\s*(SELECT|EXPLAIN)\b/i', $sql)) {
+                $sql = '/*FORCE_MASTER*/ ' . $sql;
+            }
+        }
+
         if($this->_rw_lnk){
             $db_lnk = &$this->_rw_lnk;
         }else{

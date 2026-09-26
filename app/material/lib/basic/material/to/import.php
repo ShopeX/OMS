@@ -1,21 +1,5 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/**
  * 基础物料的队列任务导入最终执行Lib类
  *
  * @author kamisama.xia@gmail.com
@@ -41,8 +25,9 @@ class material_basic_material_to_import {
         $basicMaterialConfObj = app::get('material')->model('basic_material_conf');
 
         $basicMaterialConfObjSpe    = app::get('material')->model('basic_material_conf_special');
-
         $dataSdf               = $params['sdfdata'];
+        $opInfo                = !empty($params['opInfo']) ? $params['opInfo'] : null;
+        $importLogLib          = kernel::single('material_basic_material');
         $createSalesByBmIds    = array();//自动生成销售物料的基础物料bm_id
 
         foreach ($dataSdf as $v){
@@ -174,30 +159,27 @@ class material_basic_material_to_import {
                     $props['modelnm'] = $modelnm;
                 }
                 
-                if($v['custom']){
-
-                    foreach($v['custom'] as $ck=>$cv){
-                        if($cv){
-                            $props[$ck] = $cv;
-                        }
+                if ($v['custom']) {
+                    $customcolsLib = kernel::single('material_customcols');
+                    foreach ($customcolsLib->normalizeImportCustomProps($v['custom']) as $ck => $cv) {
+                        $props[$ck] = $cv;
                     }
                 }
 
-                if($props){
+                if ($props) {
                     $propsMdl = app::get('material')->model('basic_material_props');
+                    $customcolsLib = isset($customcolsLib) ? $customcolsLib : kernel::single('material_customcols');
 
-                    $propsdata = array();
-
-                    foreach($props as $pk=>$pv){
-
-                        if($pv){
-                            $propsdata = array(
-                                'bm_id'         =>  $importData['bm_id'],
-                                'props_col'     =>  $pk,
-                                'props_value'   =>  $pv,
-                            );
-                            $propsMdl->save($propsdata);
+                    foreach ($props as $pk => $pv) {
+                        if (!$customcolsLib->isPropValueSavable($pv)) {
+                            continue;
                         }
+                        $propsdata = array(
+                            'bm_id'       => $importData['bm_id'],
+                            'props_col'   => $pk,
+                            'props_value' => $pv,
+                        );
+                        $propsMdl->save($propsdata);
                     }
                 }
 
@@ -208,6 +190,12 @@ class material_basic_material_to_import {
                 {
                     $createSalesByBmIds[]    = $importData['bm_id'];
                 }
+                $importLogLib->writeImportLog(
+                    'basic_material_import@wms',
+                    $importData['bm_id'],
+                    '批量导入新增基础物料：' . $importData['material_bn'] . ' ' . $importData['material_name'],
+                    $opInfo
+                );
             }else{
                 $m = $importObj->db->errorinfo();
                 if(!empty($m)){

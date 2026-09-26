@@ -1,0 +1,100 @@
+<div class="tableform">
+    <div class="division">
+        <p>将指定日期库存 CSV（如 <code>Stock20260728*.csv</code>）导入任务加入异步队列 <code>goldentrastockftp</code>，由后台下载解析并自动排队比对。无需勾选列表。</p>
+        <table width="100%" cellspacing="0" cellpadding="0" style="margin-top:10px;">
+            <tr>
+                <th align="right" width="100" style="padding:6px 8px;">库存文件日期：</th>
+                <td style="padding:6px 8px;">
+                    <input type="date" id="gt-ftp-file-date" name="file_date" value="<{$default_file_date}>" style="width:180px; height:28px;"/>
+                    <span style="color:#999; margin-left:8px;">默认今天，可改历史日期</span>
+                </td>
+            </tr>
+        </table>
+        <div id="gt-ftp-msg" style="margin-top:10px; line-height:1.6; color:#666;">确认后点击「加入队列」。</div>
+        <div style="margin-top:16px; text-align:center;">
+            <{button label="加入队列" type="button" class="btn-primary" id="gt-ftp-start"}>
+        </div>
+    </div>
+</div>
+<script>
+(function () {
+    var btn = $('gt-ftp-start');
+    var msg = $('gt-ftp-msg');
+    var dateInput = $('gt-ftp-file-date');
+    var running = false;
+
+    function normalizeDate(val) {
+        val = (val || '').trim();
+        if (!val) {
+            return '';
+        }
+        if (/^\d{8}$/.test(val)) {
+            return val;
+        }
+        if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+            return val.replace(/-/g, '');
+        }
+        var digits = val.replace(/\D/g, '');
+        return /^\d{8}$/.test(digits) ? digits : '';
+    }
+
+    btn.addEvent('click', function () {
+        if (running) {
+            return;
+        }
+        var fileDate = normalizeDate(dateInput ? dateInput.get('value') : '');
+        if (!fileDate) {
+            msg.setStyles({color: 'red'}).set('html', '请填写有效的库存文件日期');
+            return;
+        }
+        if (!window.confirm('确定将 ' + fileDate + ' 的 FTP 全量导入加入队列？')) {
+            return;
+        }
+        running = true;
+        btn.set('disabled', true).addClass('disabled');
+        msg.setStyles({color: '#666'}).set('html', '正在加入队列（日期 ' + fileDate + '）…');
+
+        new Request({
+            url: 'index.php?app=goldentra&ctl=admin_stock_sync&act=doFtpImport',
+            method: 'post',
+            data: {file_date: fileDate},
+            onSuccess: function (text) {
+                var res = {};
+                try {
+                    res = JSON.decode(text) || {};
+                } catch (e) {
+                    res = {success: false, msg: text || '返回数据解析失败'};
+                }
+                if (res.success) {
+                    msg.setStyles({color: 'green'}).set('html', res.msg || '加入队列成功');
+                    if (window.MessageBox) {
+                        MessageBox.success(res.msg || '加入队列成功');
+                    }
+                    if (window.finderGroup) {
+                        Object.each(window.finderGroup, function (f) {
+                            if (f && f.refresh) {
+                                f.refresh();
+                            }
+                        });
+                    }
+                } else {
+                    msg.setStyles({color: 'red'}).set('html', res.msg || '加入队列失败');
+                    if (window.MessageBox) {
+                        MessageBox.error(res.msg || '加入队列失败');
+                    }
+                    btn.set('disabled', false).removeClass('disabled');
+                    running = false;
+                }
+            },
+            onFailure: function () {
+                msg.setStyles({color: 'red'}).set('html', '请求失败，请稍后重试');
+                if (window.MessageBox) {
+                    MessageBox.error('加入队列失败，请稍后重试');
+                }
+                btn.set('disabled', false).removeClass('disabled');
+                running = false;
+            }
+        }).send();
+    });
+})();
+</script>

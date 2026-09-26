@@ -346,6 +346,16 @@ class wms_delivery_check{
             return '无此物流运单号';
         }
 
+        foreach (kernel::servicelist('wms.service.delivery.consign.check') as $service) {
+            if (!method_exists($service, 'checkConsign')) {
+                continue;
+            }
+            $serviceMsg = '';
+            if ($service->checkConsign($dly, $serviceMsg) === false) {
+                return $serviceMsg ? $serviceMsg : '发货单不满足项目发货条件';
+            }
+        }
+
         //检查发货单明细的货品是否在盘点
         if($dly['delivery_items']){
             foreach($dly['delivery_items'] as $ik=>$iv){

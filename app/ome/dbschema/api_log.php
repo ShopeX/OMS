@@ -31,7 +31,7 @@ $db['api_log'] = array(
         'createtime'      => array(
             'type'            => 'time',
             'label'           => '发起同步时间',
-            'width'           => 130,
+            'width'           => 160,
             'editable'        => false,
             'in_list'         => true,
             'default_in_list' => true,
@@ -48,7 +48,7 @@ $db['api_log'] = array(
             'filterdefault'   => true,
             'searchtype'      => 'nequal',
             'label'           => '单据号',
-            'width'           => 180,
+            'width'           => 230,
             'order'           => '3',
             'panel_id'        => 'api_log_finder_top',
         ),
@@ -79,7 +79,7 @@ $db['api_log'] = array(
             'filtertype'      => 'yes',
             'filterdefault'   => true,
             'label'           => '状态',
-            'width'           => 60,
+            'width'           => 90,
             'panel_id'        => 'api_log_finder_top',
         ),
         'worker'          => array(
@@ -137,6 +137,7 @@ $db['api_log'] = array(
             'in_list'  => true,
             'default_in_list' => true,
             'label' => '信息',
+            'width' => 320,
         ),
         'log_type'        => array(
             'type'     => 'varchar(32)',
@@ -155,7 +156,7 @@ $db['api_log'] = array(
             'filtertype'      => 'yes',
             'filterdefault'   => true,
             'label'           => '同步类型',
-            'width'           => 70,
+            'width'           => 90,
         ),
         'error_lv'        => array(
             'type'          => 'varchar(32)',
@@ -217,7 +218,7 @@ $db['api_log'] = array(
         'last_modified'   => array(
             'label'           => '最后重试时间',
             'type'            => 'last_modify',
-            'width'           => 130,
+            'width'           => 160,
             'editable'        => false,
             'in_list'         => true,
             'default_in_list' => true,
@@ -228,7 +229,7 @@ $db['api_log'] = array(
             'editable'        => false,
             'in_list'         => true,
             'default_in_list' => true,
-            'width'           => 70,
+            'width'           => 90,
         ),
         'url' =>
             array (

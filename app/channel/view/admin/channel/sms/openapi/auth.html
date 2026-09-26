@@ -1,0 +1,38 @@
+<table width="100%" cellspacing="0" cellpadding="0" border="0" >
+    <tbody>
+    <tr>
+      <th> 节点：</th>
+      <td>
+        <{input id='node_id' type='text' style='width: 120px;' name='channel[node_id]' value=$channel.node_id}>
+      </td>
+    </tr>
+      <tr>
+        <th ><em class="c-red">*</em>节点类型：</th>
+        <td>
+          <{input type='select' name='channel[node_type]' id="openapi_platform" vtype='required' rows=$platform_list valueColumn='value' labelColumn='label' value=$channel.node_type}>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <div id="openapi_platform_config"></div>
+  <script type="text/javascript">
+    var channel_type = "<{$channel_type}>";
+    var adapter = "<{$adapter}>";
+    <{if $channel.channel_id }>
+    var channel_id = "<{$channel.channel_id}>";
+    <{/if}>
+  
+  $("openapi_platform").addEvents({
+    'change':function(e){
+      let url = 'index.php?app=channel&&ctl=admin_channel&act=platformconfig&p[0]=' + channel_type + '&p[1]=' + adapter + '&p[2]=' + this.value;
+      if (channel_id != undefined) {
+        url += '&p[3]=' + channel_id;
+      }
+  
+      W.page(url,{update:$('openapi_platform_config'),clearUpdateMap:false});
+    },
+    'domready':function(e){
+      this.fireEvent('change',e);
+    }
+  });
+  </script>

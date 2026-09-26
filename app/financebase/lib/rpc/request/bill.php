@@ -71,6 +71,10 @@ class financebase_rpc_request_bill{
 	{
 		if(!$params['shop_id'] || !$params['node_id'] || !$params['node_type']) return array ();
 
+        if (!empty($params['biz_type']) && $params['biz_type'] === '360buy_bills') {
+            return $this->bill_360buy_bills($params);
+        }
+
         $zip_dir = DATA_DIR.'/financebase/settlement';
 
         if(!is_dir($zip_dir)) utils::mkdir_p($zip_dir);
@@ -325,5 +329,338 @@ class financebase_rpc_request_bill{
         $result['downloadurl']       = true;
         $result['bill_download_url'] = $download_url;
         return $result;
+    }
+
+    /**
+     * 京东商家账单明细（360buy_bills）：矩阵 listbills 分页拉取合并落 CSV，再走 billAssign→financebase_data_bill_360buy_bills。
+     *
+     * @param array $params shop_id、channel_id、node_id、node_type、biz_type；可选 page_size、extra。
+     *                       时间：可同时传 startTime、endTime（优先）；否则须传 bill_date，按整日区间（同钱包 bill_360buy 的 start_date/end_date）。
+     * @return array downloadurl=false、csv_files、rsp
+     */
+    private function bill_360buy_bills($params)
+    {
+        if (empty($params['shop_id']) || empty($params['channel_id']) || empty($params['node_id']) || empty($params['node_type'])) {
+            return array(
+                'downloadurl' => false,
+                'rsp'           => 'fail',
+                'err_msg'       => '缺少 shop_id/channel_id/node_id/node_type',
+                'csv_files'     => array(),
+            );
+        }
+
+        $zip_dir = DATA_DIR . '/financebase/settlement';
+        if (!is_dir($zip_dir)) {
+            utils::mkdir_p($zip_dir);
+        }
+
+        $title = array(
+            'orderId'       => '订单编号',
+            'detailNo'      => '单据编号',
+            'rfBusiType'    => '单据类型',
+            'skuId'         => '商品编号',
+            'outTradeNo'    => '商户订单号',
+            'skuName'       => '商品名称',
+            'skuNum'        => '商品数量',
+
+            'feeName'       => '费用项',
+            'bal'           => '金额',
+            'currency'      => '币种',
+            'yfys'          => '商家应收/应付',
+            'billStatus'    => '账单状态',
+            'happenTime'    => '费用发生时间',
+            'deliveredTime' => '订单妥投时间',
+            'finishTime'    => '费用结算时间',
+            'remark'        => '备注',
+            'venderId'      => '店铺号',
+
+            'direction'     => '收支方向',
+
+            'billDate'      => '对账日期',
+        );
+
+        $pageSize = intval($params['page_size'] ?? 200);
+
+        $allList    = array();
+        $cursor     = '';
+        $maxRounds  = 2000;
+        $round      = 0;
+        $firstRound = true;
+
+        do {
+            $round++;
+            $pageParams              = $params;
+            $pageParams['cursor']    = $cursor;
+            $pageParams['page_size'] = (string) $pageSize;
+
+            $res = $this->_jdTradeStatementFetch($pageParams);
+            if (($res['rsp'] ?? '') !== 'succ') {
+                return array(
+                    'downloadurl' => false,
+                    'rsp'         => 'fail',
+                    'err_msg'     => isset($res['err_msg']) ? $res['err_msg'] : '京东商家账单拉取失败',
+                    'csv_files'   => array(),
+                );
+            }
+
+            $list = $this->_extractStatementDetailRows(isset($res['payload']) ? $res['payload'] : null);
+            $nextCursor = isset($res['next_cursor']) ? (string) $res['next_cursor'] : '';
+
+            if ($firstRound && empty($list) && $nextCursor === '') {
+                return array(
+                    'downloadurl' => false,
+                    'rsp'         => 'succ',
+                    'csv_files'   => array(),
+                    'err_msg'     => '京东商家账单无记录',
+                );
+            }
+
+            if (!empty($list)) {
+                $allList = array_merge($allList, $list);
+            }
+
+            $cursor = $nextCursor;
+            $firstRound = false;
+
+            if ($cursor === '') {
+                break;
+            }
+        } while ($round < $maxRounds);
+
+        if ($round >= $maxRounds && $cursor !== '') {
+            return array(
+                'downloadurl' => false,
+                'rsp'         => 'fail',
+                'err_msg'     => '京东商家账单游标分页超过上限次数',
+                'csv_files'   => array(),
+            );
+        }
+
+        if (!$allList) {
+            return array(
+                'downloadurl' => false,
+                'rsp'         => 'succ',
+                'csv_files'   => array(),
+                'err_msg'     => '京东商家账单无记录',
+            );
+        }
+
+        $file = $zip_dir . '/' . md5(KV_PREFIX . serialize(array('360buy_bills', $params, microtime(true)))) . '.csv';
+        $fp   = fopen($file, 'w');
+        if (!$fp) {
+            return array(
+                'downloadurl' => false,
+                'rsp'         => 'fail',
+                'err_msg'     => '无法写入本地账单文件',
+                'csv_files'   => array(),
+            );
+        }
+
+        fputcsv($fp, array_values($title));
+
+        foreach ($allList as $value) {
+            if (!is_array($value)) {
+                continue;
+            }
+            $fields = array();
+            foreach ($title as $k => $n) {
+                switch ($k) {
+                    case 'rfBusiType':
+                        $rfBusiType = array(
+                            '1001' => '订单',
+                            '1002' => '售后服务单',
+                            '1003' => '取消退款单',
+                            '1102' => '非销售单',
+                        );
+                        $fields[] = isset($rfBusiType[$value[$k]]) ? $rfBusiType[$value[$k]] : (isset($value[$k]) ? $value[$k] : '');
+                        break;
+                    case 'billStatus':
+                        // 账单状态 billStatus（int）：1 待结算，2 已结算，3 无需结算
+                        $billStatusMap = array(
+                            1 => '待结算',
+                            2 => '已结算',
+                            3 => '无需结算',
+                        );
+                        $raw = isset($value[$k]) ? $value[$k] : '';
+                        $code = is_numeric($raw) ? (int) $raw : $raw;
+                        $fields[] = isset($billStatusMap[$code])
+                            ? $billStatusMap[$code]
+                            : ($raw !== '' && $raw !== null ? $raw : '');
+                        break;
+                    case 'finishTime':
+                    case 'deliveredTime':
+                    case 'happenTime':
+                        $fields[] = !empty($value[$k]) ? date('Y-m-d H:i:s', substr(strval($value[$k]), 0, -3)) : '';
+                        break;
+                    case 'yfys':
+                        $fields[] = isset($value['direction']) && $value['direction'] == '1' ? '应收' : '应付';
+                        break;
+                    case 'direction':
+                        $fields[] = isset($value[$k]) && $value[$k] == '1' ? '收入' : '支出';
+                        break;
+                    case 'bal':
+                        // 接口拉数：金额带符号写入 CSV（direction=1 收入为正，否则为负）
+                        $bal  = isset($value[$k]) && $value[$k] !== '' ? (float) $value[$k] : 0;
+                        $sign = (isset($value['direction']) && $value['direction'] == '1') ? 1 : -1;
+                        $fields[] = sprintf('%.3f', $sign * abs($bal));
+                        break;
+                    default:
+                        $fields[] = isset($value[$k]) ? $value[$k] : '';
+                        break;
+                }
+            }
+            fputcsv($fp, $fields);
+        }
+        fclose($fp);
+
+        return array(
+            'downloadurl' => false,
+            'rsp'         => 'succ',
+            'csv_files'   => array($file),
+            'err_msg'     => '',
+        );
+    }
+
+    /**
+     * 京东矩阵账单：listbills_query（statement.get）游标分页 cursor / paginationData.nextCursor（仅 bill_360buy_bills）
+     *
+     * @param array $params
+     * @return array rsp、err_msg、payload（失败或无数据时 payload 为 null）
+     */
+    private function _jdTradeStatementFetch($params)
+    {
+        if (empty($params['shop_id']) || empty($params['channel_id']) || empty($params['node_id']) || empty($params['node_type'])) {
+            return array(
+                'rsp'     => 'fail',
+                'err_msg' => '缺少 shop_id/channel_id/node_id/node_type',
+                'payload' => null,
+            );
+        }
+
+        // 优先：同时传入 startTime、endTime（与 bill_360buy 钱包段 params 一致）。否则按 bill_date 整日，同 bill_360buy 的 start_date/end_date（当日 0 点～当日 +86399 秒）
+        $startTime = strtotime($params['startTime'] ?? '');
+        $endTime   = strtotime($params['endTime'] ?? '');
+        if ($startTime && $endTime) {
+            // 使用传入时间区间
+        } else {
+            $bill_ts = strtotime($params['bill_date'] ?? '');
+            if (!$bill_ts) {
+                return array(
+                    'rsp'     => 'fail',
+                    'err_msg' => '缺少或无效的 bill_date（未同时传入 startTime、endTime 时必须提供 bill_date）',
+                    'payload' => null,
+                );
+            }
+            $startTime = $bill_ts;
+            $endTime   = $bill_ts + 86399;
+        }
+        $query_params               = array();
+        $query_params['startTime'] = (string) ($startTime * 1000);
+        $query_params['endTime']   = (string) ($endTime * 1000);
+        $query_params['billStatus']     = '2';
+        $query_params['type']       = '3';
+
+        if (!empty($params['extra']) && is_array($params['extra'])) {
+            $query_params = array_merge($query_params, $params['extra']);
+        }
+
+        if (!empty($params['page_size'])) {
+            $query_params['pageSize'] = $params['page_size'];
+        }
+
+        $query_params['cursor'] = array_key_exists('cursor', $params) ? (string) $params['cursor'] : '';
+
+        $result = kernel::single('erpapi_router_request')->set('ipay', $params['channel_id'])->listbills_query($query_params);
+
+        if (empty($result) || (isset($result['rsp']) && $result['rsp'] !== 'succ')) {
+            return array(
+                'rsp'     => 'fail',
+                'err_msg' => isset($result['err_msg']) ? $result['err_msg'] : (isset($result['msg']) ? $result['msg'] : '请求失败'),
+                'payload' => null,
+                'next_cursor' => '',
+            );
+        }
+
+        $payload = isset($result['data']) ? $result['data'] : null;
+        if (is_string($payload)) {
+            $decoded = json_decode($payload, true);
+            if (is_array($decoded)) {
+                if (isset($decoded['msg']) && is_string($decoded['msg'])) {
+                    $inner = json_decode($decoded['msg'], true);
+                    $payload = is_array($inner) ? $inner : $decoded;
+                } else {
+                    $payload = $decoded;
+                }
+            }
+        }
+
+        $payloadArr = is_array($payload) ? $payload : array();
+
+        return array(
+            'rsp'         => 'succ',
+            'err_msg'     => '',
+            'payload'     => $payload,
+            'next_cursor' => $this->_extractStatementNextCursor($payloadArr),
+        );
+    }
+
+    private function _extractStatementNextCursor($payload)
+    {
+        if (empty($payload['paginationData']) || !is_array($payload['paginationData'])) {
+            return '';
+        }
+        $nc = $payload['paginationData']['nextCursor'] ?? '';
+        return $nc !== null && $nc !== '' ? (string) $nc : '';
+    }
+
+    /**
+     * 从矩阵账单接口返回结构中取出明细行列表（与 huifu_verify 解析 result 类似）
+     *
+     * @param mixed $payload
+     * @return array
+     */
+    private function _extractStatementDetailRows($payload)
+    {
+        if (!is_array($payload)) {
+            return array();
+        }
+
+        foreach (array('data', 'list', 'rows', 'result', 'statementList', 'billList', 'statement_list') as $k) {
+            if (!empty($payload[$k]) && is_array($payload[$k])) {
+                $list = $payload[$k];
+                if ($this->_isAssocRowList($list)) {
+                    return array_values($list);
+                }
+            }
+        }
+
+        if ($this->_isAssocRowList($payload)) {
+            return array_values($payload);
+        }
+
+        return array();
+    }
+
+    /**
+     * @param array $list
+     * @return bool
+     */
+    private function _isAssocRowList($list)
+    {
+        if (!is_array($list) || empty($list)) {
+            return false;
+        }
+        $first = reset($list);
+        if (!is_array($first)) {
+            return false;
+        }
+        $keys = array_keys($list);
+        foreach ($keys as $i => $k) {
+            if ($i !== $k) {
+                return true;
+            }
+        }
+
+        return !empty($first) && array_keys($first) !== range(0, count($first) - 1);
     }
 }

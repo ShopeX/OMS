@@ -420,6 +420,13 @@ class ome_ctl_admin_setting extends desktop_controller{
         if(!isset($setData['ome_delivery_hqepay'])){
             $setData['ome_delivery_hqepay'] = 'true';
         }
+        #物流跟踪来源默认快递鸟
+        if(!isset($setData['ome_logistics_track_provider']) || $setData['ome_logistics_track_provider'] === ''){
+            $setData['ome_logistics_track_provider'] = 'kdn';
+        }
+        if(!isset($setData['ome_logistics_track_sf_env']) || $setData['ome_logistics_track_sf_env'] === ''){
+            $setData['ome_logistics_track_sf_env'] = 'prod';
+        }
 
         $this->pagedata['settingTabs'] = $settingTabs;
         $this->pagedata['setData'] = $setData;
@@ -1073,4 +1080,4 @@ class ome_ctl_admin_setting extends desktop_controller{
 
         $this->end(true);
     }
-}
+}

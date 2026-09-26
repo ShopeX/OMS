@@ -1,23 +1,14 @@
-<!--
-  Copyright 2012-2026 ShopeX (https://www.shopex.cn)
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
--->
-
 <div class="form-layout">
   <!--  <h3><{$title}></h3>-->
   <form action="index.php?app=ome&ctl=admin_order&act=doAddNormalOrder" method="post" id="newOrderForm">
     <input type="hidden" name="branch_id" value="<{$branch.branch_id}>" />
+    <input type="hidden" id="source_order_bn" value="<{$source_order_bn|escape:'html'}>" />
+    <input type="hidden" id="source_order_type" value="<{$source_order_type|escape:'html'}>" />
+    <input type="hidden" id="source_bufa_reason" value="<{$source_bufa_reason|escape:'html'}>" />
+    <input type="hidden" name="source_app" value="<{$source_app|escape:'html'}>" />
+    <input type="hidden" name="source_ctl" value="<{$source_ctl|escape:'html'}>" />
+    <input type="hidden" name="source_act" value="<{$source_act|escape:'html'}>" />
+    <input type="hidden" name="order_center_view" value="<{$order_center_view|escape:'html'}>" />
 
     <div class="form-layout-block order-num-input" style="margin-bottom:0px;">
       <h3>订单类型</h3>
@@ -42,7 +33,12 @@
     <div class="form-layout-block" id="bufa_reason" style="margin-top:20px;display: none">
       <h3>补发原因</h3>
       <div class="form-layout-fields">
-        补发原因：<input type="text" name="order[bufa_reason]" size="90" maxlength="200"/>
+        补发原因：<input type="text" name="order[bufa_reason]" id="bufa_reason_input" size="90" maxlength="200"/>
+        <div class="bufa-reason-tags" style="padding-left: 20px;">
+          <span class="bufa-reason-tag" data-value="拦截入库补发">拦截入库补发</span>
+          <span class="bufa-reason-tag" data-value="退货入库补发">退货入库补发</span>
+          <!-- <span class="bufa-reason-tag" data-value="零元订单补发">零元订单补发</span> -->
+        </div>
       </div>
     </div>
 
@@ -244,6 +240,12 @@
     }
   });
   $('normalpresaletype').fireEvent('change',{stop:$empty});
+  $$('.bufa-reason-tag').addEvent('click', function(){
+    if($('bufa_reason_input')){
+      $('bufa_reason_input').set('value', this.getProperty('data-value'));
+      $('bufa_reason_input').focus();
+    }
+  });
 
   // 订单类
   var Order = {
@@ -394,6 +396,19 @@
 
 
   (function(){
+    var sourceOrderBn = $('source_order_bn') ? $('source_order_bn').value.trim() : '';
+    var sourceOrderType = $('source_order_type') ? $('source_order_type').value.trim() : '';
+    var sourceBufaReason = $('source_bufa_reason') ? $('source_bufa_reason').value.trim() : '';
+
+    if (sourceOrderType) {
+      $('normalpresaletype').set('value', sourceOrderType);
+      $('normalpresaletype').fireEvent('change',{stop:$empty});
+    }
+
+    if (sourceBufaReason) {
+      $('bufa_reason_input').set('value', sourceBufaReason);
+    }
+
     function setOrderInfo(ret){
       $E('input[name=disc]').set('value', ret.discount);
       $E('input[name=discount]').set('value', ret.discount);
@@ -458,7 +473,7 @@
       $E('#proNode input').fireEvent('blur');
     }
     $('similar_order_search_button').addEvent('click', function(){
-      var url='?app=desktop&act=alertpages&goto='+encodeURIComponent("index.php?app=ome&ctl=admin_order&act=finderOrders&singleselect=1");
+      var url='index.php?app=desktop&act=alertpages&goto='+encodeURIComponent("index.php?app=ome&ctl=admin_order&act=finderOrders&singleselect=1");
       Ex_Loader('modedialog',function() {
         new finderDialog(url,{params:{url:'index.php?app=ome&ctl=admin_order&act=getOrder',name:'order_id'},width:1000,height:500,onCallback:function(ret){
             if(ret && ret!='null'){
@@ -486,6 +501,7 @@
             obj.spec_info = '捆绑';
             obj.product_id = order_objects[k].goods_id;
             obj.sm_id = order_objects[k].goods_id;
+            obj.original_obj_id = order_objects[k].obj_id || 0;
             list.push(obj);
           }else{
             for(i in order_objects[k].order_items){
@@ -501,6 +517,7 @@
               // item.product_id = itemObj.product_id;
               item.product_id = order_objects[k].goods_id;
               item.sm_id = order_objects[k].goods_id;
+              item.original_obj_id = order_objects[k].obj_id || 0;
               // item.store_minus_freeze = itemObj.store_minus_freeze;
               item.store = itemObj.store_minus_freeze;
               list.push(item);
@@ -549,6 +566,7 @@
 
               //商品数据
               store = [];
+              lineIdCounter = 0;
               var list = handleProductData(ret.order_info.order_objects);
               init(list);
               //设置订单信息
@@ -559,6 +577,11 @@
         }).send();
       }
     });
+
+    if (sourceOrderBn) {
+      $('similar_order_bn').set('value', sourceOrderBn);
+      $('similar_order_confirm_button').fireEvent('click');
+    }
 
     $('add_mem_sel').addEvent('change',function(){
       $('ipt_data').name = this.get('value');
@@ -631,7 +654,24 @@
 
     }
 
-    var callurl='index.php?app=ome&ctl=admin_order&act=getSalesMaterialByAddNormalOrder', store=[];
+    var callurl='index.php?app=ome&ctl=admin_order&act=getSalesMaterialByAddNormalOrder', store=[], lineIdCounter=0;
+    function genLineId(){
+      return 'line_' + (++lineIdCounter);
+    }
+    function syncLineIdCounter(data){
+      data.each(function(d){
+        var m = d.line_id && String(d.line_id).match(/^line_(\d+)$/);
+        if(m){
+          var n = m[1].toInt();
+          if(n > lineIdCounter) lineIdCounter = n;
+        }
+      });
+    }
+    function ensureLineId(item){
+      if(!item.sm_id && item.product_id) item.sm_id = item.product_id;
+      if(!item.line_id) item.line_id = genLineId();
+      if(!$chk(item.original_obj_id)) item.original_obj_id = 0;
+    }
     var callurlpkg='index.php?app=ome&ctl=admin_pkg&act=getPkgGoods', store=[];
     var options={
       'getVar':'bn',
@@ -694,8 +734,8 @@
     //   </tr>';
 
     // tpl='<tr key="{sm_id}" id="sm_{sm_id}">\
-    var tpl='<tr key="{product_id}" id="goods_{product_id}">\
-            <td>{sales_material_bn}</td>\
+    var tpl='<tr key="{line_id}" id="goods_{line_id}">\
+            <td>{sales_material_bn}<input type="hidden" value="{sm_id}" key="sm_id" tname="sm_id[_PRIMARY_]" /><input type="hidden" value="{original_obj_id}" key="original_obj_id" tname="original_obj_id[_PRIMARY_]" /></td>\
             <td class="material-name">{sales_material_name}</td>\
             <td style="text-align:center;">{store}</td>\
             <td style="text-align:center;"><input type="text" value="{num}"  key="num" vtype="unsignedint" tname="num[_PRIMARY_]" size="6"></td>\
@@ -706,7 +746,7 @@
 
 
     function createProduct(data){
-      pag=new PageData(tpl,data,{'updateMain':$('proNode'),'pageNum':200,PRIMARY_ID:'product_id',
+      pag=new PageData(tpl,data,{'updateMain':$('proNode'),'pageNum':200,PRIMARY_ID:'line_id',
         'onShow':function(){
           var _this=this;
           $$('#proNode input[type]').addEvent('change',function(e){
@@ -863,18 +903,10 @@
     });
 
     function init(rs){
-      var tmparr=findProduct(rs,'product_id');
-      store.unshift.apply(store,tmparr.reverse());
+      syncLineIdCounter(store);
+      rs.each(function(item){ ensureLineId(item); });
+      store.unshift.apply(store, rs.reverse());
       createProduct(store,tpl);
-    }
-    function findProduct(arr,PRIMARY){
-      if(!store.length)return arr;
-      store.each(function(a){
-        arr.each(function(b){
-          if(a[PRIMARY]==b[PRIMARY])arr.erase(b);
-        });
-      });
-      return arr;
     }
 
     $$('input[name=disc],input[name=cost_shipping]').addEvent('change',function(){
@@ -913,6 +945,25 @@
 </script>
 
 <style>
+  .bufa-reason-tags {
+    margin-top: 8px;
+  }
+  .bufa-reason-tag {
+    display: inline-block;
+    margin-right: 8px;
+    margin-bottom: 8px;
+    padding: 2px 10px;
+    border: 1px solid #d9d9d9;
+    border-radius: 12px;
+    background: #f7f7f7;
+    cursor: pointer;
+    color: #333;
+  }
+  .bufa-reason-tag:hover {
+    border-color: #3b7cff;
+    color: #3b7cff;
+    background: #eef4ff;
+  }
   .content-container {
     background: #EEF5F9;
     box-sizing: border-box;

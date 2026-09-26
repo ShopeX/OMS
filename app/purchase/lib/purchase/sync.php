@@ -59,12 +59,30 @@ class purchase_purchase_sync
             
             return false;
         }
-
-        $branch = kernel::single('ome_branch')->getBranchInfo($iso['branch_id'],'branch_bn');
-        $branch_rel = app::get('ome')->model('branch_relation')->dump(array ('branch_id'=>$iso['branch_id'],'type' => 'vopjitx'));
-        $iso['branch_bn'] = $branch_rel['relation_branch_bn'] ? $branch_rel['relation_branch_bn'] : $branch['branch_bn'];
-
-        $this->_isoInfo    = $iso;
+        
+        // branch_id
+        $iso['branch_id'] = intval($iso['branch_id']);
+        
+        // 获取仓库信息
+        $branchInfo = kernel::single('ome_branch')->getBranchInfo($iso['branch_id'], 'branch_bn');
+        
+        // 获取仓库关联的供应商发货仓库
+        $relBranchInfo = app::get('ome')->model('branch_relation')->dump(array('branch_id'=>$iso['branch_id'], 'type'=>'vopjitx'), '*');
+        if(empty($relBranchInfo['relation_branch_bn'])){
+            $error_msg = '创建JIT出库单时，没有配置【平台仓库编码配置-->唯品会JITX编码】，请检查配置。';
+            
+            $this->_logObj->write_log('check_stockout_bills@ome', $iso['stockout_id'], $error_msg);
+            
+            return false;
+        }
+        
+        // 仓库编码
+        $iso['branch_bn'] = $branchInfo['branch_bn'];
+        
+        // 供应商发货仓库编码
+        $iso['relation_branch_bn'] = $relBranchInfo['relation_branch_bn'];
+        
+        $this->_isoInfo = $iso;
         
         //关联拣货单(注意：多个拣货单可合并成一个出库单)
         $sql         = "SELECT b.bill_id, b.pick_no, b.po_id, b.po_bn, b.to_branch_bn FROM sdb_purchase_pick_stockout AS a 
@@ -149,11 +167,14 @@ class purchase_purchase_sync
     {
         set_time_limit(0);
         
-        $warehouse        = $this->_isoInfo['to_branch_bn'];
+        $warehouse = $this->_isoInfo['to_branch_bn'];
         
         //送货批次和要求到货时间
         $delivery_time    = $this->_isoInfo['delivery_time'] .':00';//加入秒
         $arrival_time     = $this->_isoInfo['arrival_time'] .':00';//加入秒
+        
+        // 供应商发货仓库编码
+        $delivery_warehouse = $this->_isoInfo['relation_branch_bn'];
         
         //修改出仓单信息
         $param    = array(
@@ -167,7 +188,7 @@ class purchase_purchase_sync
                 'delivery_method'=>$this->_isoInfo['dly_mode'],//配送方式
                 'carrier_code'=>$this->_isoInfo['carrier_code'],//承运商编码
                 'is_air_embargo' => $this->_isoInfo['is_air_embargo'],
-                'delivery_warehouse' => $this->_isoInfo['branch_bn'],
+                'delivery_warehouse' => $delivery_warehouse, // 供应商发货仓库(如果是承运商=唯品会，则必填)
         );
         
         //超时请求3次

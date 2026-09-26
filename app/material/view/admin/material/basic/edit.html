@@ -35,7 +35,7 @@
 </style>
 <link href="../../../../app/desktop/statics/perfect/main.css" rel="stylesheet" type="text/css">
 <div class="form-layout content-container">
-    <form method="post" id="fm1" action="index.php?app=material&ctl=admin_material_basic&act=toEdit" enctype="multipart/form-data">
+    <form method="post" id="fm1" isCloseDialog="true" action="index.php?app=material&ctl=admin_material_basic&act=toEdit" enctype="multipart/form-data">
         <input type="hidden" name="bm_id" value="<{$material_info.bm_id}>">
         <div class="form-layout-block">
             <h3>编辑基础物料</h3>
@@ -310,10 +310,7 @@
             <div class="form-layout-fields">
 
                 <{foreach from=$customcols  item=customcol}>
-                <div class="form-field">
-                    <span class="form-field-label"><{$customcol.col_name}>：</span>
-                    <input class="form-input"  type="text" name="props[<{$customcol.col_key}>]" value="<{$customcol.col_value}>"  />
-                </div>
+                <{include file="admin/material/basic/customcol_field.html" app="material" customcol=$customcol}>
                 <{/foreach}>
                 
             </div>
@@ -438,9 +435,9 @@
                 </div>
             </div>
         </div>
-        <div id="cc"  class="form-actions">
-            <button class="btn-primary" id="material-save-btn">保存</button>
-            <{button type="button" class="btn-secondary" id="return-btn" label="返 回" onclick="location.href=window.frameElement.src;"}>
+        <div id="cc" class="noprint table-action form-layout-block">
+            <{button type="button" id="material-save-btn" label="保 存"}> &nbsp;
+            <{button type="button" class="btn-secondary" id="return-btn" label="关 闭" onclick="javascript:void(window.close());"}>
         </div>
     </form>
 </div>
@@ -635,6 +632,33 @@
                     }
                 }
 
+                // multipart 成功时 wpage.doCommand 会 page(redirect) 把列表嵌进弹窗；置位 __skipDesktopSplashInnerRedirect 跳过内层跳转，
+                // 关闭与刷新由 isCloseDialog 注册的原 onComplete 处理（见 desktop statics js coms wpage.js）。
+                var target = form.retrieve('target') || {};
+                var prevOnComplete = target.onComplete;
+                target.onRequest = function(){
+                    window.__skipDesktopSplashInnerRedirect = true;
+                    _this.disabled=true;
+                };
+                target.onComplete = function(jsontext){
+                    window.__skipDesktopSplashInnerRedirect = false;
+                    if (typeof prevOnComplete === 'function') {
+                        prevOnComplete(jsontext);
+                    }
+                    try{
+                        var json = JSON.decode(jsontext);
+                        if (json && typeof json.error != 'undefined'){
+                            _this.disabled=false;
+                        }else{
+                            _this.disabled=true;
+                            // multipart 走 iframe 时 isCloseDialog 注册的关闭链可能不执行，与销售物料编辑一致显式关窗并刷新列表
+                            if (opener && opener.finderGroup && opener.finderGroup['<{$env.get.finder_id}>']) {
+                                opener.finderGroup['<{$env.get.finder_id}>'].refresh.delay(100, opener.finderGroup['<{$env.get.finder_id}>']);
+                            }
+                            setTimeout(function(){ window.close(); }, 200);
+                        }
+                    }catch(e){}
+                };
                 if(pag){
                     // 在提交前，先从实际的input元素中读取最新的值并创建隐藏input字段
                     // 这样在multipart/form-data提交时能正常工作
@@ -672,47 +696,11 @@
                             }
                         });
                     }
-                    
-                    // 同时保留原有的extraData方式（作为备用）
-                    var data = pag.toHideInput($('dataNode').getElement('tr'));
-                    form.store('target',{extraData:data,
-                        onRequest:function(){
-                            _this.disabled=true;
-                        },
-                        onComplete:function(jsontext){
-                            try{
-                                var json = JSON.decode(jsontext);
-                                if (typeof(json.error)!='undefined'){
-                                    _this.disabled=false;
-                                }else{
-                                    _this.disabled=true;
-                                    if(opener.finderGroup['<{$env.get.finder_id}>']) opener.finderGroup['<{$env.get.finder_id}>'].refresh.delay(100,opener.finderGroup['<{$env.get.finder_id}>']).chain(function(){
-                                        window.close()
-                                    });
-                                }
-                            }catch(e){}
-                        }
-                    });
+                    target.extraData = pag.toHideInput($('dataNode').getElement('tr'));
                 }else{
-                    form.store('target',{
-                        onRequest:function(){
-                            _this.disabled=true;
-                        },
-                        onComplete:function(jsontext){
-                            try{
-                                var json = JSON.decode(jsontext);
-                                if (typeof(json.error)!='undefined'){
-                                    _this.disabled=false;
-                                }else{
-                                    _this.disabled=true;
-                                    if(opener.finderGroup['<{$env.get.finder_id}>']) opener.finderGroup['<{$env.get.finder_id}>'].refresh.delay(100,opener.finderGroup['<{$env.get.finder_id}>']).chain(function(){
-                                        window.close()
-                                    });
-                                }
-                            }catch(e){}
-                        }
-                    });
+                    delete target.extraData;
                 }
+                form.store('target', target);
                 form.fireEvent('submit',e);
             });
         });

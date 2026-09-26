@@ -744,7 +744,7 @@ $db['delivery']=array (
     array (
       'type' => 'varchar(30)',
       'default' => '0',
-      'label' => '京东订单号',
+      'label' => '外部发货单号',
       'editable' => false,
       'width' => 110,
       'in_list' => true,

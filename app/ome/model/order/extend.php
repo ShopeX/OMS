@@ -1,27 +1,24 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class ome_mdl_order_extend extends dbeav_model {
 
-    /**
-     * 添加RouterNum
-     * @param mixed $orderId ID
-     * @return mixed 返回值
-     */
+    public function insert(&$data)
+    {
+        $this->_stripExtendFieldEmoji($data);
+        return parent::insert($data);
+    }
+
+    public function update($data, $filter = array(), $mustUpdate = null)
+    {
+        $this->_stripExtendFieldEmoji($data);
+        return parent::update($data, $filter, $mustUpdate);
+    }
+
+    public function save(&$data, $mustUpdate = null)
+    {
+        $this->_stripExtendFieldEmoji($data);
+        return parent::save($data, $mustUpdate);
+    }
+
     public function addRouterNum($orderId) {
         $extend_detail = $this->db->selectrow("SELECT order_id FROM sdb_ome_order_extend WHERE order_id='".$orderId."'");
         if ($extend_detail){
@@ -32,12 +29,6 @@ class ome_mdl_order_extend extends dbeav_model {
         $this->db->exec($sql);
     }
 
-    /**
-     * 更新BoolExtendStatus
-     * @param mixed $orderId ID
-     * @param mixed $boolStatus boolStatus
-     * @return mixed 返回值
-     */
     public function updateBoolExtendStatus($orderId, $boolStatus) {
         if($boolStatus > 0) {
         	$extend_detail = $this->db->selectrow("SELECT order_id FROM sdb_ome_order_extend WHERE order_id='".$orderId."'");
@@ -49,5 +40,31 @@ class ome_mdl_order_extend extends dbeav_model {
             
             $this->db->exec($sql);
         }
+    }
+
+    /**
+     * 入库前去掉 emoji 等 4 字节 UTF-8（库表实际非 utf8mb4 时避免 Incorrect string value）
+     */
+    private function _stripExtendFieldEmoji(&$data)
+    {
+        if (!is_array($data) || !isset($data['extend_field']) || $data['extend_field'] === '' || $data['extend_field'] === null) {
+            return;
+        }
+        if (is_array($data['extend_field'])) {
+            $json = json_encode($data['extend_field'], JSON_UNESCAPED_UNICODE);
+            $json = $this->_remove4ByteChars($json);
+            $decoded = json_decode($json, true);
+            $data['extend_field'] = ($decoded !== null) ? $decoded : $json;
+        } else {
+            $data['extend_field'] = $this->_remove4ByteChars((string) $data['extend_field']);
+        }
+    }
+
+    private function _remove4ByteChars($str)
+    {
+        if ($str === '' || $str === null) {
+            return $str;
+        }
+        return preg_replace('/[\x{10000}-\x{10FFFF}]/u', '', $str);
     }
 }

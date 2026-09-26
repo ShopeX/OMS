@@ -38,6 +38,10 @@ class erpapi_wms_response_delivery extends erpapi_wms_response_abstract
         $batch_logi_no = preg_replace('/\s/', '', trim($params['logi_no']));
         $batch_logi_no = array_filter(explode(';', $batch_logi_no));
         $logi_no       = array_pop($batch_logi_no);
+        if (empty($logi_no) && in_array($params['status'], array('TMSCANCELFAILED', 'TMSCANCELED', 'TMSCANCELSUCCESS'), true)) {
+            $logi_no = preg_replace('/\s/', '', trim($params['expressCode']));
+        }
+        $logi_no = (string) $logi_no;
 
         if ($this->__channelObj->wms['adapter'] != 'selfwms' && $params['status'] == 'DELIVERY' && $params['logistics'] && !$logi_no) {
             $this->__apilog['result']['msg'] = '缺少运单号';
@@ -83,6 +87,30 @@ class erpapi_wms_response_delivery extends erpapi_wms_response_abstract
             $data['out_delivery_bn'] = $params['out_delivery_bn'];
         }
 
+        if ($params['status'] === 'TMSCANCELFAILED') {
+            $updated = $this->_updateInterceptBillStatus($data['delivery_bn'], $logi_no, $params['oid'], 'intercept_fail');
+            if ($updated) {
+                $this->_sendInterceptFailNotify($data['delivery_bn'], $logi_no, $data['memo'], $data['operate_time']);
+            }
+            return array(
+                'delivery_bn' => $data['delivery_bn'],
+                'status'      => 'intercept_fail',
+                'logi_no'     => $logi_no,
+                'memo'        => $data['memo'],
+                'operate_time'=> $data['operate_time'],
+            );
+        }
+        if ($params['status'] === 'TMSCANCELED' || $params['status'] === 'TMSCANCELSUCCESS') {
+            $this->_updateInterceptBillStatus($data['delivery_bn'], $logi_no, $params['oid'], 'intercept_succ');
+            return array(
+                'delivery_bn' => $data['delivery_bn'],
+                'status'      => 'intercept_succ',
+                'logi_no'     => $logi_no,
+                'memo'        => $data['memo'],
+                'operate_time'=> $data['operate_time'],
+            );
+        }
+
         switch ($params['status']) {
             case 'CLOSE':
             case 'FAILED':
@@ -124,9 +152,77 @@ class erpapi_wms_response_delivery extends erpapi_wms_response_abstract
 
                 $delivery_items[$val['product_bn']]['bn']  = $val['product_bn'];
                 $delivery_items[$val['product_bn']]['num'] = (int) $delivery_items[$val['product_bn']]['num'] + (int) $val['num'];
+                
+                // 处理 sn_list
                 if(is_array($val['sn_list']) && $val['sn_list']['sn']) {
                     $sn_list = is_array($val['sn_list']['sn']) ? $val['sn_list']['sn'] : [$val['sn_list']['sn']];
                     $delivery_items[$val['product_bn']]['sn_list'] = $delivery_items[$val['product_bn']]['sn_list'] ? array_merge($delivery_items[$val['product_bn']]['sn_list'], $sn_list) : $sn_list;
+                }
+                
+                // 处理 imeiList：与 sn_list 同级（都在 $val 顶层），用 sn 作为键组织 imeiList
+                if(isset($val['imeiList']) && $val['imeiList']) {
+                    if (!isset($delivery_items[$val['product_bn']]['imeiList'])) {
+                        $delivery_items[$val['product_bn']]['imeiList'] = [];
+                    }
+                    
+                    // 处理 extSnList 结构：imeiList 包含 extSnList 数组，每个元素有 sn 和 imei
+                    if (is_array($val['imeiList']) && isset($val['imeiList']['extSnList']) && is_array($val['imeiList']['extSnList'])) {
+                        foreach ($val['imeiList']['extSnList'] as $extSn) {
+                            if (isset($extSn['sn']) && isset($extSn['imei'])) {
+                                $sn = $extSn['sn'];
+                                $imei = $extSn['imei'];
+                                if (!isset($delivery_items[$val['product_bn']]['imeiList'][$sn])) {
+                                    $delivery_items[$val['product_bn']]['imeiList'][$sn] = [];
+                                }
+                                // imei 可能是数组或字符串
+                                if (is_array($imei)) {
+                                    $delivery_items[$val['product_bn']]['imeiList'][$sn] = array_merge($delivery_items[$val['product_bn']]['imeiList'][$sn], $imei);
+                                } else {
+                                    $delivery_items[$val['product_bn']]['imeiList'][$sn][] = $imei;
+                                }
+                            }
+                        }
+                    } elseif (is_array($val['imeiList'])) {
+                        // 如果 imeiList 是关联数组（以 sn 为键），直接合并
+                        $isAssoc = array_keys($val['imeiList']) !== range(0, count($val['imeiList']) - 1);
+                        
+                        if ($isAssoc) {
+                            // 关联数组：以 sn 为键，直接合并
+                            foreach ($val['imeiList'] as $sn => $imeiData) {
+                                $imeiForSn = is_array($imeiData) ? $imeiData : [$imeiData];
+                                if (!isset($delivery_items[$val['product_bn']]['imeiList'][$sn])) {
+                                    $delivery_items[$val['product_bn']]['imeiList'][$sn] = [];
+                                }
+                                $delivery_items[$val['product_bn']]['imeiList'][$sn] = array_merge($delivery_items[$val['product_bn']]['imeiList'][$sn], $imeiForSn);
+                            }
+                        } else {
+                            // 简单数组：按顺序分配给对应的 sn
+                            if (isset($val['sn_list']['sn'])) {
+                                $sn_list = is_array($val['sn_list']['sn']) ? $val['sn_list']['sn'] : [$val['sn_list']['sn']];
+                                foreach ($val['imeiList'] as $index => $imei) {
+                                    if (isset($sn_list[$index])) {
+                                        $sn = $sn_list[$index];
+                                        if (!isset($delivery_items[$val['product_bn']]['imeiList'][$sn])) {
+                                            $delivery_items[$val['product_bn']]['imeiList'][$sn] = [];
+                                        }
+                                        $delivery_items[$val['product_bn']]['imeiList'][$sn][] = $imei;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // 如果 imeiList 是字符串，分配给第一个 SN
+                        if (isset($val['sn_list']['sn'])) {
+                            $sn_list = is_array($val['sn_list']['sn']) ? $val['sn_list']['sn'] : [$val['sn_list']['sn']];
+                            if (!empty($sn_list)) {
+                                $firstSn = $sn_list[0];
+                                if (!isset($delivery_items[$val['product_bn']]['imeiList'][$firstSn])) {
+                                    $delivery_items[$val['product_bn']]['imeiList'][$firstSn] = [];
+                                }
+                                $delivery_items[$val['product_bn']]['imeiList'][$firstSn][] = $val['imeiList'];
+                            }
+                        }
+                    }
                 }
 
                 if ($val['batch']) {
@@ -190,6 +286,102 @@ class erpapi_wms_response_delivery extends erpapi_wms_response_abstract
             }
         }
         return $data;
+    }
+
+    protected function _updateInterceptBillStatus($deliveryBn, $logiNo, $packageBn, $interceptStatus)
+    {
+        $deliveryBn = trim((string) $deliveryBn);
+        $logiNo = trim((string) $logiNo);
+        $packageBn = trim((string) $packageBn);
+        $interceptStatus = trim((string) $interceptStatus);
+        if ($deliveryBn === '' || $interceptStatus === '') {
+            return false;
+        }
+
+        $delivery = app::get('ome')->model('delivery')->db_dump(array('delivery_bn' => $deliveryBn), 'delivery_id');
+        if (empty($delivery['delivery_id'])) {
+            return false;
+        }
+
+        $billModel = app::get('ome')->model('delivery_bill');
+        $filter = array('delivery_id' => $delivery['delivery_id']);
+        if ($logiNo !== '') {
+            $filter['logi_no'] = $logiNo;
+        } elseif ($packageBn !== '') {
+            $filter['package_bn'] = $packageBn;
+        } else {
+            return false;
+        }
+        if (!$billModel->count($filter)) {
+            return false;
+        }
+
+        $billModel->update(array('intercept_status' => $interceptStatus), $filter);
+        return true;
+    }
+
+    /**
+     * WMS 回传拦截失败（TMSCANCELFAILED）预警
+     *
+     * @param string $deliveryBn
+     * @param string $logiNo
+     * @param string $memo
+     * @param string $operateTime
+     */
+    protected function _sendInterceptFailNotify($deliveryBn, $logiNo, $memo = '', $operateTime = '')
+    {
+        try {
+            $deliveryBn = trim((string) $deliveryBn);
+            $logiNo = trim((string) $logiNo);
+            if ($deliveryBn === '') {
+                return;
+            }
+
+            $deliveryInfo = app::get('ome')->model('delivery')->db_dump(
+                array('delivery_bn' => $deliveryBn),
+                'delivery_id,delivery_bn,branch_id,shop_type,shop_id'
+            );
+            if (empty($deliveryInfo)) {
+                return;
+            }
+
+            $branchInfo = app::get('ome')->model('branch')->db_dump(
+                array('branch_id' => $deliveryInfo['branch_id']),
+                'name,email'
+            );
+
+            $detail_list = '';
+            $items = app::get('ome')->model('delivery_items')->getList(
+                'bn,product_name,number',
+                array('delivery_id' => $deliveryInfo['delivery_id'])
+            );
+            if (!empty($items)) {
+                foreach ($items as $index => $item) {
+                    $seq = $index + 1;
+                    $detail_list .= "\r\n<br/>序号：<font color=\"warning\">{$seq}</font>，物料号：<font color=\"warning\">{$item['bn']}</font>，物料名称：<font color=\"warning\">{$item['product_name']}</font>，数量：<font color=\"warning\">{$item['number']}</font>";
+                }
+            } else {
+                $detail_list = "\r\n<br/>（无发货明细）";
+            }
+
+            $shopInfo = app::get('ome')->model('shop')->dump($deliveryInfo['shop_id'], 'name');
+            $notifyParams = array(
+                'delivery_bn'  => $deliveryInfo['delivery_bn'],
+                'logi_no'      => $logiNo,
+                'shop_type'    => ome_shop_type::shop_name($deliveryInfo['shop_type']),
+                'shop_name'    => $shopInfo['name'] ?? '',
+                'branch_name'  => $branchInfo['name'] ?? '',
+                'detail_list'  => $detail_list,
+                'memo'         => $memo !== '' ? $memo : '无',
+                'operate_time' => $operateTime !== '' ? $operateTime : date('Y-m-d H:i:s'),
+            );
+            if (!empty($branchInfo['email'])) {
+                $notifyParams['receiver'] = explode(',', $branchInfo['email']);
+            }
+
+            kernel::single('monitor_event_notify')->addNotify('delivery_intercept_fail', $notifyParams, true);
+        } catch (Exception $e) {
+        }
     }
 
     protected function _dealWMSParams($params) {

@@ -34,11 +34,13 @@ class ome_finder_return_reshipping
 
         // 获取补寄申请商品明细
         $items = $reshippingItemsModel->getList('*', array('reshipping_id' => $reshipping_id));
+        $items = kernel::single('ome_return_reshipping')->decorateReshippingItemsForView($items, $reshipping);
         $render->pagedata['items'] = $items;
 
-        // 获取补寄确认商品明细
+        // 获取补寄确认商品明细（与申请行金额对齐；历史未落库时在展示层按 item_id 补全）
         $reshippingItemsDetailModel = app::get('ome')->model('return_reshipping_items_detail');
         $itemsDetail = $reshippingItemsDetailModel->getList('*', array('reshipping_id' => $reshipping_id));
+        $itemsDetail = kernel::single('ome_reshipping')->enrichItemsDetailFromItems($items, $itemsDetail);
         $render->pagedata['items_detail'] = $itemsDetail;
 
         // 状态映射

@@ -31,11 +31,20 @@ class erpapi_channel_sms extends erpapi_channel_abstract
 
     public function init($node_id,$channel_id)
     {
-        $param = unserialize($channel_id);
-        if (!$param) { return false; }
-        $this->__adapter = '';
-        $this->__platform = '';
-        $this->channel['account'] = $param;
+        $channel = app::get('channel')->model('channel')->db_dump($channel_id, '*');
+        if (!$channel || $channel['channel_type'] != 'sms' || $channel['disabled'] == 'true') { return false; }
+
+        $adapter = app::get('channel')->model('adapter')->db_dump(array('channel_id' => $channel_id), '*');
+        if (!$adapter || !$adapter['config']) { return false; }
+
+        $account = unserialize($adapter['config']);
+        if (!$account) { return false; }
+
+        $this->__adapter = $adapter['adapter'];
+        $this->__platform = $channel['node_type'];
+        $this->channel = $channel;
+        $this->channel['channel_id'] = $channel_id;
+        $this->channel['account'] = $account;
         return true;
     }
 }

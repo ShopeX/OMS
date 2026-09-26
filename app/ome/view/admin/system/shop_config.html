@@ -53,7 +53,24 @@
                 </tbody>
             </table>
         </div>
+        <{elseif $shop.node_type == 'weimobv'}>
+        <div class="division">
+            <h4>店铺基本配置</h4>
+            <br>
+            <table  width="100%" cellspacing="0" cellpadding="0" border="0" >
+                <tbody>
+                <tr>
+                    <th style="vertical-align: top;">清除平台指定仓：</th>
+                    <td>
+                        <input type="radio" name="config[clear_plate_branch]" value="true" <{if $shop.config.clear_plate_branch == 'true'}>checked="checked"<{/if}>> 清除平台指定仓
+                        <input type="radio" name="config[clear_plate_branch]" value="false" <{if !$shop.config.clear_plate_branch || $shop.config.clear_plate_branch == 'false'}>checked="checked"<{/if}>> 不清除平台指定仓
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
         <{/if}>
+
         <div class="table-action">
             <{button label="保存" type="submit"}>
         </div>

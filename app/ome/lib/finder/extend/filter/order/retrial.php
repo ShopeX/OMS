@@ -18,12 +18,16 @@ class ome_finder_extend_filter_order_retrial
         }
 
         $organization_permissions = kernel::single('desktop_user')->get_organization_permission();
-
-        $shop_filter = array();
-        if($organization_permissions)
-        {
+        
+        // 线上店铺列表（按是否常用店铺进行排序）
+        $shop_filter = array(
+            's_type' => '1',
+        );
+        
+        if($organization_permissions){
             $shop_filter['user_org_id'] = $organization_permissions;
         }
+        
         $shop_list = app::get('ome')->model('shop')->getList('shop_id,name', $shop_filter, 0, -1, 'name ASC');
         $shop_options = array_column((array) $shop_list, 'name', 'shop_id');
 

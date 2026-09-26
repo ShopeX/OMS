@@ -1,20 +1,5 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/**
  * 订单业务逻辑处理
  * @access public
  * @copyright www.shopex.cn 2010.12.16
@@ -95,6 +80,11 @@ class ome_order_order{
         
         //订单归档
         $order_update['archive'] = 1;
+        //对齐发货完成写 status=finish（不含京东先用后付）：非货到付款直接完成；货到付款需已支付
+        $is_cod = isset($order_detail['shipping']['is_cod']) ? $order_detail['shipping']['is_cod'] : 'false';
+        if (($is_cod == 'false') || ($is_cod == 'true' && $order_detail['pay_status'] == '1')) {
+            $order_update['status'] = 'finish';
+        }
         
         $filter = array('order_id'=>$order_id);
         

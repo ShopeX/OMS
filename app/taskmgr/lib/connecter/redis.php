@@ -69,7 +69,16 @@ class taskmgr_connecter_redis extends taskmgr_connecter_abstract implements task
 
         $this->_redismq_connect = new Redis();
         try {
-            $conn_res = $this->_redismq_connect->pconnect($config['HOST'], $config['PORT']);
+            $host = $config['HOST'];
+            $port = (int) $config['PORT'];
+            if ($this->_redisTlsEnabledFromConfig($config)) {
+                $connectTimeout = isset($config['CONNECT_TIMEOUT']) ? (float) $config['CONNECT_TIMEOUT'] : 2.0;
+                $readTimeout = isset($config['READ_TIMEOUT']) ? (float) $config['READ_TIMEOUT'] : 2.0;
+                $ctx = $this->_redisTlsStreamContextFromConfig($config);
+                $conn_res = $this->_redismq_connect->pconnect($host, $port, $connectTimeout, null, 0, $readTimeout, $ctx);
+            } else {
+                $conn_res = $this->_redismq_connect->pconnect($host, $port);
+            }
 
             if(!$conn_res){
                 return false;
@@ -208,6 +217,52 @@ class taskmgr_connecter_redis extends taskmgr_connecter_abstract implements task
 
             return true;
         }
+    }
+
+    /**
+     * 配置项 TLS 是否开启（CONNECT 参数：TLS / USE_TLS，1|true|on 等）
+     *
+     * @param array $config
+     * @return bool
+     */
+    protected function _redisTlsEnabledFromConfig(array $config)
+    {
+        $v = null;
+        if (isset($config['TLS'])) {
+            $v = $config['TLS'];
+        } elseif (isset($config['USE_TLS'])) {
+            $v = $config['USE_TLS'];
+        }
+        if ($v === null) {
+            return false;
+        }
+        if ($v === true || $v === 1) {
+            return true;
+        }
+        if (is_string($v)) {
+            $v = strtolower(trim($v));
+            return $v === '1' || $v === 'true' || $v === 'yes' || $v === 'on';
+        }
+        return false;
+    }
+
+    /**
+     * TLS stream context；可配置 STREAM_CONTEXT 数组，否则使用默认校验策略
+     *
+     * @param array $config
+     * @return array
+     */
+    protected function _redisTlsStreamContextFromConfig(array $config)
+    {
+        if (!empty($config['STREAM_CONTEXT']) && is_array($config['STREAM_CONTEXT'])) {
+            return $config['STREAM_CONTEXT'];
+        }
+        return array(
+            'stream' => array(
+                'verify_peer' => true,
+                'verify_peer_name' => true,
+            ),
+        );
     }
 
 }

@@ -8,10 +8,16 @@
 class ticket_ctl_admin_workflow_flow extends desktop_controller {
     var $title = '审批流API';
     var $workground = 'ticket_center';
-    
+    private $workflowNodeLib;
+    private $workflowSceneLib;
+    private $workflowLoggerLib;
+
     public function __construct($app)
     {
         parent::__construct($app);
+        $this->workflowNodeLib = kernel::single('ticket_workflow_node');
+        $this->workflowSceneLib = kernel::single('ticket_workflow_scene');
+        $this->workflowLoggerLib = kernel::single('ticket_workflow_logger');
     }
 
     /**
@@ -24,9 +30,9 @@ class ticket_ctl_admin_workflow_flow extends desktop_controller {
             // 定义场景类型（写死）
             $sceneTypes = [
                 [
-                    'scene_type' => 'add_gift',
-                    'scene_name' => '加赠',
-                    'scene_memo' => '加赠商品审批流程'
+                    'scene_type' => 'approve_orders',
+                    'scene_name' => '补发单审批',
+                    'scene_memo' => '补发单审批流程'
                 ]
             ];
             
@@ -95,17 +101,25 @@ class ticket_ctl_admin_workflow_flow extends desktop_controller {
             
             // 格式化节点数据
             $nodes = [];
-            foreach($nodeList as $node){
-                $nodes[] = [
-                    'node_id' => $node['id'],
-                    'node_name' => $node['node_name'],
-                    'node_type' => $node['node_type'],
-                    'step_order' => $node['step_order'],
-                    'assignee_type' => $node['assignee_type'],
-                    'assignee_id' => $node['assignee_id'],
-                    'assignee_name' => $node['assignee_name']
-                ];
-            }
+        foreach($nodeList as $node){
+            $nodes[] = [
+                'node_id' => $node['id'],
+                'node_alias' => $node['node_alias'],
+                'node_name' => $node['node_name'],
+                'node_type' => $node['node_type'],
+                'step_order' => $node['step_order'],
+                'position_x' => $node['position_x'],
+                'position_y' => $node['position_y'],
+                'assignee_type' => $node['assignee_type'],
+                'assignee_id' => $node['assignee_id'],
+                'assignee_name' => $node['assignee_name'],
+                'condition_rules' => $this->workflowNodeLib->decodeJsonField($node['condition_rules']),
+                'condition_branch_labels' => $this->workflowNodeLib->decodeJsonField($node['condition_branch_labels']),
+                'condition_field_source' => $node['condition_field_source'] ?? '',
+                'condition_true_next_alias' => $node['condition_true_next_alias'] ?? '',
+                'condition_false_next_alias' => $node['condition_false_next_alias'] ?? ''
+            ];
+        }
             
             // 组装返回数据
             $result = [
@@ -181,6 +195,8 @@ class ticket_ctl_admin_workflow_flow extends desktop_controller {
             $is_edit = !empty($data['template_id']);
             $old_template_data = null; // 用于存储更新前的数据
             
+            $sceneType = $data['scene_type'];
+
             if(!$is_edit){
                 // 新建模板
                 // 生成模板编号
@@ -207,8 +223,13 @@ class ticket_ctl_admin_workflow_flow extends desktop_controller {
                         'step_order' => $nodeData['step_order'] ?? 1,
                         'assignee_type' => $nodeData['assignee_type'] ?? 'user',
                         'assignee_id' => $nodeData['assignee_id'] ?? 0,
-                        'assignee_name' => $nodeData['assignee_name'] ?? ''
+                        'assignee_name' => $nodeData['assignee_name'] ?? '',
+                        'node_alias' => $this->workflowNodeLib->normalizeNodeAlias($nodeData),
+                        'position_x' => $this->workflowNodeLib->normalizeNodePosition($nodeData, 'position_x'),
+                        'position_y' => $this->workflowNodeLib->normalizeNodePosition($nodeData, 'position_y'),
                     ];
+
+                    $insertNodeData = array_merge($insertNodeData, $this->workflowNodeLib->buildConditionColumns($nodeData, $sceneType));
                     
                     $insertResult = $nodeMdl->insert($insertNodeData);
                     if(!$insertResult){
@@ -232,14 +253,14 @@ class ticket_ctl_admin_workflow_flow extends desktop_controller {
                 }
                 
                 // 精细处理节点更新
-                $this->updateWorkflowNodes($template_id, $data['nodes'], $old_nodes, $db);
+                $this->updateWorkflowNodes($template_id, $data['nodes'], $old_nodes, $db, $sceneType);
             }
             
             // 提交事务
             $db->commit($tran);
             
             // 记录操作日志
-            $this->recordWorkflowLog($template_id, $data, $old_template_data, $is_edit);
+            $this->workflowLoggerLib->recordTemplateLog($template_id, $data, $old_template_data, $is_edit);
             
             $this->returnJson([], true, '保存审批流成功');
             
@@ -266,9 +287,31 @@ class ticket_ctl_admin_workflow_flow extends desktop_controller {
             
             // 根据审批人类型返回不同数据
             if($assignee_type == 'user'){
+                $userList = [];
+                
+                // 是否定制
+                $is_custom_flag = false;
+                
+                // 注册Service，调用定制开发票方法
+                foreach(kernel::servicelist('nipponpaint.service.bufa.approval.assignee') as $object)
+                {
+                    if(method_exists($object, 'getOperatorList')){
+                        $params = [];
+                        $customResult = $object->getOperatorList($params);
+                        if(isset($customResult['rsp']) && $customResult['rsp'] == 'succ'){
+                            // flag
+                            $is_custom_flag = true;
+                            
+                            // 获取用户列表
+                            $userList = $customResult['data'];
+                        }
+                    }
+                }
+                
                 // 获取用户列表
-                $userMdl = app::get('desktop')->model('users');
-                $userList = $userMdl->getList('user_id,name', ['status'=>1], 0, -1);
+                if(!$is_custom_flag){
+                    $userList = kernel::single('ticket_workflow_node')->getOperatorList();
+                }
                 
                 // 格式化数据
                 $assigneeList = [];
@@ -305,10 +348,37 @@ class ticket_ctl_admin_workflow_flow extends desktop_controller {
         }
     }
 
+    public function getConditionFields() {
+        try {
+            $input = file_get_contents('php://input');
+            $data = json_decode($input, true);
+            if (empty($data)) {
+                $data = $_POST;
+            }
+
+            $scene_type = $data['scene_type'] ?? '';
+            if (empty($scene_type)) {
+                $this->returnJson([], false, '场景类型不能为空');
+            }
+
+            $config = $this->workflowSceneLib->getConditionFields($scene_type);
+            $result = array(
+                'scene_type' => $scene_type,
+                'field_source' => $config['field_source'],
+                'fields' => $config['fields'],
+            );
+            $message = empty($config['fields']) ? '当前场景暂无可用条件字段' : '获取条件字段成功';
+
+            $this->returnJson($result, true, $message);
+        } catch (Exception $e) {
+            $this->returnJson([], false, '获取条件字段失败：' . $e->getMessage());
+        }
+    }
+
     /**
      * 精细处理节点更新（增删改）
      */
-    private function updateWorkflowNodes($template_id, $new_nodes, $old_nodes, $db)
+    private function updateWorkflowNodes($template_id, $new_nodes, $old_nodes, $db, $scene_type)
     {
         $nodeMdl = app::get('ticket')->model('workflow_node');
         $caseMdl = app::get('ticket')->model('workflow_case');
@@ -371,8 +441,12 @@ class ticket_ctl_admin_workflow_flow extends desktop_controller {
                     'step_order' => $new_node['step_order'] ?? 1,
                     'assignee_type' => $new_node['assignee_type'] ?? 'user',
                     'assignee_id' => $new_node['assignee_id'] ?? 0,
-                    'assignee_name' => $new_node['assignee_name'] ?? ''
+                    'assignee_name' => $new_node['assignee_name'] ?? '',
+                    'node_alias' => $this->workflowNodeLib->normalizeNodeAlias($new_node, $old_nodes_map[$node_id]['node_alias'] ?? ''),
+                    'position_x' => $this->workflowNodeLib->normalizeNodePosition($new_node, 'position_x', $old_nodes_map[$node_id]['position_x'] ?? null),
+                    'position_y' => $this->workflowNodeLib->normalizeNodePosition($new_node, 'position_y', $old_nodes_map[$node_id]['position_y'] ?? null)
                 ];
+            $updateNodeData = array_merge($updateNodeData, $this->workflowNodeLib->buildConditionColumns($new_node, $scene_type));
                 
                 $updateResult = $nodeMdl->update($updateNodeData, ['id' => $node_id]);
                 if($updateResult === false){
@@ -398,8 +472,12 @@ class ticket_ctl_admin_workflow_flow extends desktop_controller {
                     'step_order' => $new_node['step_order'] ?? 1,
                     'assignee_type' => $new_node['assignee_type'] ?? 'user',
                     'assignee_id' => $new_node['assignee_id'] ?? 0,
-                    'assignee_name' => $new_node['assignee_name'] ?? ''
+                    'assignee_name' => $new_node['assignee_name'] ?? '',
+                    'node_alias' => $this->workflowNodeLib->normalizeNodeAlias($new_node),
+                    'position_x' => $this->workflowNodeLib->normalizeNodePosition($new_node, 'position_x'),
+                    'position_y' => $this->workflowNodeLib->normalizeNodePosition($new_node, 'position_y')
                 ];
+                $insertNodeData = array_merge($insertNodeData, $this->workflowNodeLib->buildConditionColumns($new_node, $scene_type));
                 
                 $insertResult = $nodeMdl->insert($insertNodeData);
                 if(!$insertResult){
@@ -409,40 +487,4 @@ class ticket_ctl_admin_workflow_flow extends desktop_controller {
             }
         }
     }
-
-    /**
-     * 记录审批流操作日志
-     */
-    private function recordWorkflowLog($template_id, $data, $old_template_data, $is_edit = false)
-    {
-        // 获取操作日志模型
-        $omeLogMdl = app::get('ome')->model('operation_log');
-        
-        // 准备日志数据
-        $log_key = $is_edit ? 'ticket_workflow_edit@ticket' : 'ticket_workflow_add@ticket';
-        $operation_type = $is_edit ? '编辑' : '新建';
-        
-        // 构建memo信息
-        $memo = "审批流{$operation_type}：模板名称={$data['template_name']}，场景类型={$data['scene_type']}，节点数量=" . count($data['nodes']);
-        
-        // 记录日志
-        $log_id = $omeLogMdl->write_log($log_key, $template_id, $memo);
-        
-        // 生成操作快照
-        if ($log_id) {
-            $shootMdl = app::get('ome')->model('operation_log_snapshoot');
-            
-            // snapshoot是更新前的数据，updated是更新后的数据
-            $snapshoot = $is_edit && $old_template_data ? json_encode($old_template_data, JSON_UNESCAPED_UNICODE) : '';
-            $updated = json_encode($data, JSON_UNESCAPED_UNICODE);
-            
-            $tmp = [
-                'log_id' => $log_id, 
-                'snapshoot' => $snapshoot,
-                'updated' => $updated
-            ];
-            $shootMdl->insert($tmp);
-        }
-    }
-
 }

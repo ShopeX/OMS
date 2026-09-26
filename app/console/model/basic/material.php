@@ -1,30 +1,9 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class console_mdl_basic_material extends material_mdl_basic_material
 {
     //导出的文件名
     var $export_name = '总库存列表';
     
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
     public function table_name($real = false)
     {
         if($real){
@@ -35,10 +14,6 @@ class console_mdl_basic_material extends material_mdl_basic_material
         return $table_name;
     }
     
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema()
     {
         return app::get('material')->model('basic_material')->get_schema();
@@ -46,10 +21,10 @@ class console_mdl_basic_material extends material_mdl_basic_material
     
     //额外导出字段（因finder里相关字段用了html显示 无法取到值）
     function export_extra_cols(){
-        return array(
+        return array_merge(array(
             'column_store_freeze' => array('label'=>'总冻结库存','width'=>'100','func_suffix'=>'store_freeze'),
             'column_arrive_store' => array('label'=>'在途库存','width'=>'100','func_suffix'=>'arrive_store'),
-        );
+        ), material_basic_material_master::extraCols());
     }
     function export_extra_store_freeze($rows){
         return kernel::single('ome_exportextracolumn_store_freeze')->process($rows);
@@ -108,11 +83,6 @@ class console_mdl_basic_material extends material_mdl_basic_material
         return $data;
     }
     
-    /**
-     * countStock
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function countStock($filter=null)
     {
         $sql = 'SELECT  COUNT(*) as _count FROM `'.$this->table_name(1).'` LEFT JOIN  sdb_material_basic_material_ext AS ext  ON '.$this->table_name(1).'.bm_id = ext.bm_id WHERE '.$this->_filter($filter, $this->table_name(1));
@@ -123,6 +93,9 @@ class console_mdl_basic_material extends material_mdl_basic_material
     }
     
     function _filter($filter,$tableAlias=null,$baseWhere=null){
+        if (!is_array($filter)) {
+            $filter = array();
+        }
         if($filter['material_bn'] && is_string($filter['material_bn']) && strpos($filter['material_bn'], "\n") !== false){
             $filter['material_bn'] = array_unique(array_map('trim', array_filter(explode("\n", $filter['material_bn']))));
         }
@@ -136,21 +109,11 @@ class console_mdl_basic_material extends material_mdl_basic_material
         return $sqlstr.parent::_filter($filter,$tableAlias,$baseWhere);
     }
     
-    /**
-     * fcount_csv
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function fcount_csv($filter = null)
     {
         return $this->countStock($filter);
     }
     
-    /**
-     * 获取ExportTitle
-     * @param mixed $fields fields
-     * @return mixed 返回结果
-     */
     public function getExportTitle($fields)
     {
         $newColumn = array();
@@ -172,17 +135,6 @@ class console_mdl_basic_material extends material_mdl_basic_material
     }
     
     //根据查询条件获取导出数据
-    /**
-     * 获取ExportDataByCustom
-     * @param mixed $fields fields
-     * @param mixed $filter filter
-     * @param mixed $has_detail has_detail
-     * @param mixed $curr_sheet curr_sheet
-     * @param mixed $start start
-     * @param mixed $end end
-     * @param mixed $op_id ID
-     * @return mixed 返回结果
-     */
     public function getExportDataByCustom($fields, $filter, $has_detail, $curr_sheet, $start, $end, $op_id)
     {
         

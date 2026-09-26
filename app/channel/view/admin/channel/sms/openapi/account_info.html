@@ -1,0 +1,89 @@
+<div class="tableform">
+    <table border="0" cellspan="0" colspan="0" style="background: none repeat scroll 0 0 #EAEEF4;">
+        <tr>
+            <td width="25%">
+                <table border="0" cellspan="0" colspan="0">
+                    <tr>
+                        <td width="40%" align="right">ShopEx通行证Id:</td>
+                        <td width="60%" align="left"><{$account['entid']}></td>
+                    </tr>
+                </table>
+            </td>
+            <td width="25%">
+                <table border="0" cellspan="0" colspan="0">
+                    <tr>
+                        <td width="40%" align="right">Email:</td>
+                        <td width="60%" align="left"><{$account['email']}></td>
+                    </tr>
+                </table>
+            </td>
+            <td width="25%">
+                <table border="0" cellspan="0" colspan="0">
+                    <tr>
+                        <td width="40%" align="right">状态:</td>
+                        <td width="60%" align="left"><{if $info['res'] == 'fail'}><{$info['info']}><{elseif $info['info']->account_info->active == 1}>正常<{else}>未激活<{/if}></td>
+                    </tr>
+                </table>
+            </td>
+            <td width="25%">
+                <form action="index.php?app=channel&ctl=admin_channel&act=shopex_sms_unbind" method="post" id="enterpriseUnbind">
+                    <input type="hidden" name="channel_id" value="<{$channel_id}>" />
+                    <input type="hidden" name="finder_id" value="<{$finder_id}>" />
+                    <{button type="button" label="解除绑定" id="unbind"}>
+                </form>
+            </td>
+        </tr>
+        <{ if $info['res'] == 'succ'}>
+        <tr>
+            <td width="25%">
+                <table border="0" cellspan="0" colspan="0">
+                    <tr>
+                        <td width="40%" align="right">当月可用短信:</td>
+                        <td width="60%" align="left"><{$info['info']->month_residual}>条</td>
+                    </tr>
+                </table>
+            </td>
+            <td width="25%">
+                <table border="0" cellspan="0" colspan="0">
+                    <tr>
+                        <td width="40%" align="right">全部可用短信:</td>
+                        <td width="60%" align="left"><{if $info['info']->all_residual<$warningnumber}><font style="color:#FF0000; font-weight:bold;">还剩<{$info['info']->all_residual}>条，尽快充值！</font><{else}><{$info['info']->all_residual}>条<{/if}></td>
+                    </tr>
+                </table>
+            </td>
+            <td width="25%">&nbsp;</td>
+            <td width="25%">&nbsp;</td>
+        </tr>
+        <{/if }>
+    </table>
+</div>
+<div class="tableform"><iframe frameborder="0" src="<{$frameurl}>" width="100%" height="400px;" ></iframe></div>
+
+<script type="text/javascript">
+    (function(){
+        var _form = $('enterpriseUnbind');
+        var btn = $('unbind');
+        _form.store('target', {
+            onComplete:function(){
+            },
+            onSuccess:function(response){
+                var hash_res_obj = JSON.decode(response);
+                if (hash_res_obj.success != undefined && hash_res_obj.success != ""){
+                    var finderId = '<{$finder_id}>';
+                    if(finderId && window.finderGroup && window.finderGroup[finderId]){
+                        window.finderGroup[finderId].refresh();
+                    }
+
+                    var dialog = btn.getParent('.dialog');
+                    if(dialog && dialog.retrieve('instance')){
+                        dialog.retrieve('instance').close();
+                    }
+                }
+            }
+        });
+
+        btn.addEvent('click',function(){
+            _form.fireEvent('submit',{stop:$empty});
+        });
+    })();
+</script>

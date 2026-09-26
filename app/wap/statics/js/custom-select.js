@@ -340,11 +340,30 @@ class CustomSelect {
     }
   }
   
+  isInCommonModal() {
+    return !!(this.container && this.container.closest('#commonModal'));
+  }
+
+  setModalSelectExpanded(expanded) {
+    if (!this.isInCommonModal()) {
+      return;
+    }
+    const modalContainer = this.container.closest('#commonModal')?.querySelector('.modal-container');
+    const fieldWrap = this.container.closest('.select-field-wrap');
+    if (modalContainer) {
+      modalContainer.classList.toggle('modal-select-open', expanded);
+    }
+    if (fieldWrap) {
+      fieldWrap.classList.toggle('select-field-wrap--expanded', expanded);
+    }
+  }
+
   open() {
     if (this.options.disabled || this.isOpen) return;
     
     this.isOpen = true;
     this.container.classList.add('open');
+    this.setModalSelectExpanded(true);
     
     // 触发回调
     if (this.options.onOpen) {
@@ -353,6 +372,15 @@ class CustomSelect {
     
     // 滚动到选中项
     this.scrollToSelected();
+
+    if (this.isInCommonModal()) {
+      requestAnimationFrame(() => {
+        const optionsEl = this.container.querySelector('.custom-select-options');
+        if (optionsEl) {
+          optionsEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      });
+    }
   }
   
   close() {
@@ -360,6 +388,7 @@ class CustomSelect {
     
     this.isOpen = false;
     this.container.classList.remove('open');
+    this.setModalSelectExpanded(false);
     
     // 触发回调
     if (this.options.onClose) {

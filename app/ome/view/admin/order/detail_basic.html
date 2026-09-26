@@ -1,18 +1,3 @@
-<!--
-  Copyright 2012-2026 ShopeX (https://www.shopex.cn)
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
--->
 <{if $order.process_status neq 'is_retrial'}>
     <{if $operate && (($order.ship_status neq '1' && $order.ship_status neq '3' && $order.ship_status neq '4'&& $order.shipping.is_cod eq 'false') || ($order.pay_status neq '1' && $order.ship_status neq '3' && $order.ship_status neq '4'&& $order.shipping.is_cod eq 'true') || ($order.pay_status neq '1' && $order.ship_status neq '3' && $order.ship_status neq '4'&& $use_before_payed eq 'true') || ($order.process_status eq 'splitting' && $order.ship_status eq '3'))}>
     <{include file="admin/order/order_button.html"}>
@@ -445,13 +430,13 @@
               result = JSON.decode(json);
               if(result.rsp == 'succ'){
                 if(result.error_msg){
-                  alert("复制收货人错误：" + result.error_msg);
+                  notifyCopyError("复制收货人错误：" + result.error_msg);
                   return false;
                 }else{
                   ship_info = result.ship_info;
                 }
               } else{
-                alert("复制收货人失败：" + result.error_msg);
+                notifyCopyError("复制收货人失败：" + result.error_msg);
                 return false;
               }
             }
@@ -459,42 +444,61 @@
         
         // 复制收货人信息到粘贴板
         if(ship_info){
-          copyTextToClipboard(ship_info);
-          alert('复制成功');
+          copyTextToClipboard(ship_info,
+            function () { notifyCopySuccess('复制成功'); },
+            function () { notifyCopyError('复制失败，请手动复制'); }
+          );
         }else{
-          alert('没有收货人信息');
+          notifyCopyError('没有收货人信息');
         }
     });
 
 })();
 
-function copyTextToClipboard(text)
+function notifyCopySuccess(message) {
+  if (window.MessageBox && typeof MessageBox.success === 'function') {
+    MessageBox.success(message);
+    return;
+  }
+  alert(message);
+}
+
+function notifyCopyError(message) {
+  if (window.MessageBox && typeof MessageBox.error === 'function') {
+    MessageBox.error(message);
+    return;
+  }
+  alert(message);
+}
+
+function copyTextToClipboard(text, onSuccess, onError)
 {
-    // 检查剪贴板API是否可用
     if (navigator.clipboard) {
       navigator.clipboard.writeText(text).then(function() {
-        console.log('文本已复制到剪贴板');
+        if (onSuccess) onSuccess();
       }, function(err) {
         console.error('复制失败', err);
+        if (onError) onError(err);
       });
     } else {
-      // 兼容老版本浏览器，使用旧的document.execCommand方法（已废弃）
       var textArea = document.createElement("textarea");
       textArea.value = text;
-    
-      // 避免滚动到页面顶部
       document.body.appendChild(textArea);
       textArea.focus();
       textArea.select();
-    
+
       try {
         var successful = document.execCommand('copy');
-        var msg = successful ? '成功' : '失败';
-        console.log('文本复制' + msg);
+        if (successful) {
+          if (onSuccess) onSuccess();
+        } else {
+          if (onError) onError();
+        }
       } catch (err) {
         console.error('复制失败', err);
+        if (onError) onError(err);
       }
-    
+
       document.body.removeChild(textArea);
     }
 }

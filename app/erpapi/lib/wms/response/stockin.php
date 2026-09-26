@@ -96,6 +96,12 @@ class erpapi_wms_response_stockin extends erpapi_wms_response_abstract
                 'orderLineNo'   => $val['orderLineNo'],
             ];
             
+            // 处理 sn_list - 参照 nespresso_master（空字符串时不能当数组取下标）
+            if (is_array($val['sn_list']) && !empty($val['sn_list']['sn'])) {
+                $sn_list = is_array($val['sn_list']['sn']) ? $val['sn_list']['sn'] : [$val['sn_list']['sn']];
+                $stockin_items[$val['product_bn']]['sn_list'] = $stockin_items[$val['product_bn']]['sn_list'] ? array_merge($stockin_items[$val['product_bn']]['sn_list'], $sn_list) : $sn_list;
+            }
+            
             if($val['batch']) {
                 $v = $val['batch'];
                 // 如果是多维数组
@@ -201,4 +207,4 @@ class erpapi_wms_response_stockin extends erpapi_wms_response_abstract
             $wriMdl->db->exec($sql);
         }
     }
-}
+}

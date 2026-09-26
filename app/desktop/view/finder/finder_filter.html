@@ -166,9 +166,15 @@
         function reset(el){
             el.getElements('input[type=text]').each(function(item){ item.value=''; });
             el.getElements('textarea[type=textarea]').each(function(item){item.value = '';});
-            el.getElements('select').each(function(item){ 
-                if(!item.getElements('option')[0].selected){ 
-                    item.value = item.getElements('option')[0].value;
+            el.getElements('select').each(function(item){
+                var options = item.getElements('option');
+                if(!options.length){ return; }
+                var isMulti = item.getProperty('multiple') || item.getAttribute('data-search') === 'fuzzy-search';
+                if(isMulti){
+                    options.each(function(opt){ opt.selected = false; });
+                    try{ item.selectedIndex = -1; }catch(e){}
+                }else if(!options[0].selected){
+                    item.value = options[0].value;
                     item.fireEvent('change');
                 }
             });
@@ -178,26 +184,20 @@
                     label.set('html',label.get('rel') || '').getNext('input[type=hidden]').set('value','');
                 });
             }
-            
-            // 处理tail.select组件
-            el.getElements('select[data-search="fuzzy-search"]').each(function(select){
+
+            // 同步清空 tail.select UI（勿调用无参 update，会因 item 为空抛错）
+            var clearTailSelect = function(select){
                 var tailId = select.getAttribute('data-tail-select');
-                if(tailId && tail.select.inst[tailId]){
+                if(tailId && window.tail && tail.select && tail.select.inst[tailId]){
                     var tailInstance = tail.select.inst[tailId];
                     tailInstance.options.all('unselect');
-                    tailInstance.update();
+                    if(tailInstance.updateLabel){
+                        tailInstance.updateLabel();
+                    }
                 }
-            });
-            
-            // 处理其他可能的tail.select组件
-            el.getElements('select[data-search="true"]').each(function(select){
-                var tailId = select.getAttribute('data-tail-select');
-                if(tailId && tail.select.inst[tailId]){
-                    var tailInstance = tail.select.inst[tailId];
-                    tailInstance.options.all('unselect');
-                    tailInstance.update();
-                }
-            });
+            };
+            el.getElements('select[data-search="fuzzy-search"]').each(clearTailSelect);
+            el.getElements('select[data-search="true"]').each(clearTailSelect);
         }
 
     }();
@@ -281,7 +281,15 @@
     if (fuzzySearch.length > 0) {
         fuzzySearch.each(function (v) {
             var option = $(v).getElement('option');
-            if (option.value == '') {
+            if (v.get('multiple')) {
+                // 多选：去掉空「全部」，避免提交出 IN (,2)
+                $$(v.getElements('option')).each(function (opt) {
+                    opt.selected = false;
+                    if (opt.value === '' || opt.value === '_NULL_') {
+                        opt.destroy();
+                    }
+                });
+            } else if (option && option.value == '') {
                 $(option).set({
                     text: '全部',
                     value: '',

@@ -400,6 +400,10 @@ class material_basic_material_stock_freeze{
                     continue;
                 } else {
                     $error_msg = '添加冻结流水失败';
+                    
+                    // insert error
+                    $error_msg .= kernel::database()->errorinfo();
+                    
                     return false;
                 }
             }

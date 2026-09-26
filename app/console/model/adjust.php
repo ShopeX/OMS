@@ -320,6 +320,101 @@ class console_mdl_adjust extends dbeav_model {
         return $data;
     }
 
+    /**
+     * 导出唯一码平铺明细（snlists Sheet）
+     */
+    public function getexportsnlists($field, $filter, $offset = 0, $limit = -1, $first_sheet = false)
+    {
+        if (empty($filter['id'])) {
+            return array();
+        }
+
+        $adjustIds = $filter['id'];
+        if (!is_array($adjustIds)) {
+            $adjustIds = array($adjustIds);
+        }
+
+        $columnDefs = console_adjust_serial::getColumnDefinitions();
+        $columnKeys = array_keys($columnDefs);
+
+        $title = array('*:调整单单号');
+        foreach ($columnDefs as $def) {
+            $title[] = $def['label'];
+        }
+
+        $adjustList = $this->getList('id,adjust_bn', array('id' => $adjustIds), 0, -1);
+        if (empty($adjustList)) {
+            if ($first_sheet) {
+                return array($this->buildExportCsvTitleLine($title));
+            }
+            return array();
+        }
+
+        $itemsByAdjust = array();
+        $adjustItemsObj = app::get('console')->model('adjust_items');
+        $adjustItems = $adjustItemsObj->getList('*', array('adjust_id' => $adjustIds), 0, -1);
+        foreach ((array) $adjustItems as $item) {
+            $itemsByAdjust[$item['adjust_id']][] = $item;
+        }
+
+        $data = array();
+        foreach ($adjustList as $adjust) {
+            $items = !empty($itemsByAdjust[$adjust['id']]) ? $itemsByAdjust[$adjust['id']] : array();
+            if (empty($items)) {
+                continue;
+            }
+            $rows = console_adjust_serial::buildRowsFromAdjustItems($items);
+            foreach ($rows as $row) {
+                $data[] = $this->buildExportSnListLine($adjust['adjust_bn'], $row, $columnKeys);
+            }
+        }
+
+        if ($first_sheet) {
+            array_unshift($data, $this->buildExportCsvTitleLine($title));
+        }
+
+        return $data;
+    }
+
+    protected function buildExportCsvTitleLine(array $title)
+    {
+        $encoded = array();
+        foreach ($title as $label) {
+            $encoded[] = mb_convert_encoding((string) $label, 'GBK', 'UTF-8');
+        }
+
+        return implode(',', $encoded);
+    }
+
+    protected function buildExportSnListLine($adjustBn, array $row, array $columnKeys)
+    {
+        $fields = array($this->encodeExportCsvField($adjustBn));
+        foreach ($columnKeys as $key) {
+            $fields[] = $this->encodeExportCsvField(isset($row[$key]) ? $row[$key] : '');
+        }
+
+        return $this->joinExportCsvFields($fields);
+    }
+
+    protected function encodeExportCsvField($value)
+    {
+        return mb_convert_encoding((string) $value, 'GBK', 'UTF-8');
+    }
+
+    protected function joinExportCsvFields(array $fields)
+    {
+        $out = array();
+        foreach ($fields as $field) {
+            $str = (string) $field;
+            if (strpos($str, ',') !== false || strpos($str, '"') !== false || strpos($str, "\n") !== false) {
+                $str = '"' . str_replace('"', '""', $str) . '"';
+            }
+            $out[] = $str;
+        }
+
+        return implode(',', $out);
+    }
+
     function modifier_iso_status($row){
         if($row == 'check'){
             return "是";

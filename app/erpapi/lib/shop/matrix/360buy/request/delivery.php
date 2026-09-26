@@ -35,24 +35,17 @@ class erpapi_shop_matrix_360buy_request_delivery extends erpapi_shop_request_del
         'w06106'=>'正在出库中', 
     );
 
-    /**
-     * confirm
-     * @param mixed $sdf sdf
-     * @param mixed $queue queue
-     * @return mixed 返回值
-     */
-
     public function confirm($sdf,$queue=false)
     {
         // 检测是否为国补订单，如果是国补并且有sn码，回传sn码再通知发货
         if ($sdf['serial_number']) {
 
             $order_id = $sdf['orderinfo']['order_id'];
-            $isGuobu  = kernel::single('ome_bill_label')->getBillLabelInfo($order_id, 'order', 'SOMS_GB');
+            $isGuobu  = kernel::single('ome_bill_label')->isGuobu($order_id);
 
             $serial_number_arr = $imei_number_arr = [];
             $shop_product_id = '';
-            if ($isGuobu) {
+           // if ($isGuobu) {
                 $delivery_bm_id = [];
                 foreach ($sdf['delivery_items'] as $_delivery_items) {
                     if ($_delivery_items['bm_id']) {
@@ -67,7 +60,7 @@ class erpapi_shop_matrix_360buy_request_delivery extends erpapi_shop_request_del
                         break;
                     }
                 }
-            }
+            //}
 
             if ($serial_number_arr && $shop_product_id) {
                 $serial_params = [
@@ -78,6 +71,7 @@ class erpapi_shop_matrix_360buy_request_delivery extends erpapi_shop_request_del
                     'serial_number_arr' =>  $serial_number_arr,
                     'imei_number_arr'   =>  $imei_number_arr,
                     'order_source'      =>  $sdf['orderinfo']['order_source'],
+                    'order_id'          =>  $sdf['orderinfo']['order_id'],
                 ];
                 $res = kernel::single('erpapi_router_request')->set('shop',$this->__channelObj->channel['shop_id'])->order_serial_sync($serial_params);
                 // if ($res['rsp'] != 'succ') {
@@ -229,7 +223,7 @@ class erpapi_shop_matrix_360buy_request_delivery extends erpapi_shop_request_del
                     $packageList[$logi_no] = array(
                         'company_code' => $sdf['logi_type'],
                         'company_name' => $sdf['logi_name'],
-                        'out_sid' => $packageInfo['logi_no'],
+                        'out_sid' => ($packageInfo['logi_no'] ? $packageInfo['logi_no'] : $logi_no),
                         'goods' => array(),
                     );
                     if($sdf['logi_type'] == 'OTHER' || $sdf['logi_type'] == 'virtual_delivery'){

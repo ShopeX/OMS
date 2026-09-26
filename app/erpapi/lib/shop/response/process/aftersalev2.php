@@ -21,6 +21,14 @@
  */
 class erpapi_shop_response_process_aftersalev2 {
 
+    /**
+     * 退款申请：价格异常校验结果（不落库 addon，仅本次 _refundApplySdfToData → _dealRefundApply 闭环使用）
+     * keys: calc_ok, price_abnormal, calc_paid, refund_fee, detail
+     *
+     * @var array
+     */
+    protected $_refundApplyPriceAbnormalMeta = array();
+
     public function add($sdf) {
        
         switch($sdf['response_bill_type']) {
@@ -88,6 +96,23 @@ class erpapi_shop_response_process_aftersalev2 {
                 $refundApply = array_merge($refundApply, $upData);
                 $oOperation_log->write_log('refund_apply@ome', $refundApply['apply_id'], $memo);
             }
+            // 申请退款金额与按 oid 实付分摊金额不一致：打标 SOMS_PRICEABNORMAL（见 $_refundApplyPriceAbnormalMeta）
+            $paMeta = $this->_refundApplyPriceAbnormalMeta;
+            if (!empty($paMeta['price_abnormal'])) {
+                $err = '';
+                $priceAbnormalDesc = $this->_buildRefundApplyPriceAbnormalLabelDesc($paMeta);
+                $extendJson = '';
+                if ($priceAbnormalDesc !== '') {
+                    $extendJson = json_encode(array('price_abnormal' => $priceAbnormalDesc), JSON_UNESCAPED_UNICODE);
+                }
+                kernel::single('ome_bill_label_refundapply')->mark(
+                    (int) $refundApply['apply_id'],
+                    'SOMS_PRICEABNORMAL',
+                    0,
+                    $extendJson,
+                    $err
+                );
+            }
             $must_pause = true;
             if($sdf['bool_type'] & ome_refund_bool_type::__PROTECTED_CODE){
                 $must_pause = false;
@@ -134,7 +159,24 @@ class erpapi_shop_response_process_aftersalev2 {
             $this->_dealTableAdditional($sdf['table_additional'], $idBn);
             $memo = '创建退款申请单,状态：' . $sdf['status'].$sdf['memo'];
             $oOperation_log->write_log('refund_apply@ome',$insertData['apply_id'],$memo);
-            
+            // 申请退款金额与按 oid 实付分摊金额不一致：打标 SOMS_PRICEABNORMAL（见 $_refundApplyPriceAbnormalMeta）
+            $paMeta = $this->_refundApplyPriceAbnormalMeta;
+          
+            if (!empty($paMeta['price_abnormal'])) {
+                $err = '';
+                $priceAbnormalDesc = $this->_buildRefundApplyPriceAbnormalLabelDesc($paMeta);
+                $extendJson = '';
+                if ($priceAbnormalDesc !== '') {
+                    $extendJson = json_encode(array('price_abnormal' => $priceAbnormalDesc), JSON_UNESCAPED_UNICODE);
+                }
+                kernel::single('ome_bill_label_refundapply')->mark(
+                    (int) $insertData['apply_id'],
+                    'SOMS_PRICEABNORMAL',
+                    0,
+                    $extendJson,
+                    $err
+                );
+            }
             //[抖音]兼容退货单修改为仅退款单
             if(in_array($insertData['shop_type'],['luban'])){
                 $lubanLib = kernel::single('ome_reship_luban');
@@ -143,7 +185,9 @@ class erpapi_shop_response_process_aftersalev2 {
             }
             
         }
-        kernel::single('ome_refund_apply')->updateOrderObjectsPayStatusByItemIds($insertData['apply_id']);
+        if (!empty($idBn['apply_id'])) {
+            kernel::single('ome_refund_apply')->updateOrderObjectsPayStatusByItemIds($idBn['apply_id']);
+        }
 
         //识别是否天猫退款触发AG接口
         $noticeParams = array_merge($sdf, $idBn);
@@ -171,9 +215,179 @@ class erpapi_shop_response_process_aftersalev2 {
         return $refund_refer;
     }
 
+    /**
+     * 是否按退款占比跳过发起拦截
+     * 规则：退款 >= 子单单价*80% → 拦截；否则不拦截
+     * 例：A*2、单价50、小计100 → 阈值=100/2*0.8=40；退款>=40拦，&lt;40不拦
+     * 子单金额对齐 _autoEditorder：优先 divide_order_fee，无实付用 sale_price
+     *
+     * @param array $sdf
+     * @param array $refundApply
+     * @return bool true=不发起拦截；false=走 lanjieDelivery
+     */
+    private function _isRefundLessThanPaidRatio($sdf, $refundApply)
+    {
+        $orderId = 0;
+        if (!empty($sdf['order']['order_id'])) {
+            $orderId = intval($sdf['order']['order_id']);
+        } elseif (!empty($refundApply['order_id'])) {
+            $orderId = intval($refundApply['order_id']);
+        }
+
+        $refundMoney = '0';
+        if (isset($sdf['refund_fee']) && $sdf['refund_fee'] !== '' && $sdf['refund_fee'] !== null) {
+            $refundMoney = (string) $sdf['refund_fee'];
+        } elseif (isset($refundApply['money'])) {
+            $refundMoney = (string) $refundApply['money'];
+        }
+        if ($orderId <= 0 || bccomp($refundMoney, '0', 3) <= 0) {
+            return false;
+        }
+
+        $itemList = null;
+        if (!empty($sdf['refund_item_list']) && is_array($sdf['refund_item_list'])) {
+            $itemList = $sdf['refund_item_list'];
+        } elseif (!empty($refundApply['product_data'])) {
+            $itemList = @unserialize($refundApply['product_data']);
+            if (!is_array($itemList)) {
+                $itemList = null;
+            }
+        }
+
+        // 1) 按 oid 取 order_objects
+        $oids = array();
+        if (!empty($sdf['oid']) && (string) $sdf['oid'] !== '0') {
+            $oids[trim((string) $sdf['oid'])] = true;
+        }
+        if (is_array($itemList)) {
+            foreach ($itemList as $val) {
+                if (empty($val['oid']) || (string) $val['oid'] === '0') {
+                    continue;
+                }
+                $oids[trim((string) $val['oid'])] = true;
+            }
+        }
+        if (!empty($refundApply['oid']) && (string) $refundApply['oid'] !== '0') {
+            foreach (explode(',', (string) $refundApply['oid']) as $oid) {
+                $oid = trim($oid);
+                if ($oid !== '' && $oid !== '0') {
+                    $oids[$oid] = true;
+                }
+            }
+        }
+        $oids = array_keys($oids);
+
+        $objects = array();
+        if ($oids) {
+            $oidSql = array();
+            foreach ($oids as $oid) {
+                $oidSql[] = "'" . addslashes((string) $oid) . "'";
+            }
+            $sql = 'SELECT obj_id,oid,quantity,divide_order_fee,sale_price FROM sdb_ome_order_objects'
+                . ' WHERE order_id=' . intval($orderId)
+                . ' AND oid IN (' . implode(',', $oidSql) . ')';
+            $objects = kernel::database()->select($sql);
+        }
+
+        // 2) oid 未命中时，用明细 obj_id / order_item_id → order_objects
+        if (empty($objects) && is_array($itemList)) {
+            $objIds = array();
+            $itemIds = array();
+            foreach ($itemList as $val) {
+                if (!empty($val['obj_id'])) {
+                    foreach ((array) $val['obj_id'] as $objId) {
+                        $objId = intval($objId);
+                        if ($objId > 0) {
+                            $objIds[$objId] = $objId;
+                        }
+                    }
+                }
+                if (!empty($val['order_item_id'])) {
+                    $itemIds[intval($val['order_item_id'])] = intval($val['order_item_id']);
+                }
+            }
+            if ($itemIds) {
+                $itemRows = kernel::database()->select(
+                    'SELECT DISTINCT obj_id FROM sdb_ome_order_items WHERE order_id=' . intval($orderId)
+                    . ' AND item_id IN (' . implode(',', array_map('intval', $itemIds)) . ')'
+                );
+                foreach ((array) $itemRows as $row) {
+                    if (!empty($row['obj_id'])) {
+                        $objIds[intval($row['obj_id'])] = intval($row['obj_id']);
+                    }
+                }
+            }
+            if ($objIds) {
+                $objects = kernel::database()->select(
+                    'SELECT obj_id,oid,quantity,divide_order_fee,sale_price FROM sdb_ome_order_objects WHERE order_id=' . intval($orderId)
+                    . ' AND obj_id IN (' . implode(',', array_map('intval', $objIds)) . ')'
+                );
+            }
+        }
+
+        if (empty($objects)) {
+            return false;
+        }
+
+        // 子单小计 / 购买数量 = 单价；阈值 = 单价 * 80%
+        $paidSum = '0';
+        $qtySum = 0;
+        foreach ((array) $objects as $obj) {
+            $paidSum = bcadd($paidSum, $this->_orderObjectPaidAmount($obj), 3);
+            $qty = isset($obj['quantity']) ? intval($obj['quantity']) : 0;
+            $qtySum += ($qty > 0 ? $qty : 1);
+        }
+        if (bccomp($paidSum, '0', 3) <= 0 || $qtySum <= 0) {
+            return false;
+        }
+
+        $unitPaid = bcdiv($paidSum, (string) $qtySum, 3);
+        $threshold = bcmul($unitPaid, '0.8', 3);
+
+        // 退款 < 单价*80% → 不拦；>= → 拦
+        return bccomp($refundMoney, $threshold, 3) < 0;
+    }
+
+    /**
+     * 子单可比对金额（同 _autoEditorder：有实付用 divide_order_fee，否则用 sale_price）
+     *
+     * @param array $obj order_objects 行
+     * @return string
+     */
+    private function _orderObjectPaidAmount($obj)
+    {
+        $divide = isset($obj['divide_order_fee']) ? (string) $obj['divide_order_fee'] : '0';
+        if (bccomp($divide, '0', 3) > 0) {
+            return $divide;
+        }
+        $salePrice = isset($obj['sale_price']) ? (string) $obj['sale_price'] : '0';
+        return bccomp($salePrice, '0', 3) > 0 ? $salePrice : '0';
+    }
+
+    /**
+     * 是否价保退款（单据种类「保」）
+     *
+     * @param array $sdf
+     * @return bool
+     */
+    private function _isRefundPriceProtect($sdf)
+    {
+        return !empty($sdf['bool_type'])
+            && kernel::single('ome_refund_bool_type')->isPriceProtectRefund($sdf['bool_type']);
+    }
+
     private function _refundApplySdfToData($sdf)
     {
         $refund_refer = $this->_getRefundRefer($sdf);
+
+        // 价格异常 Meta：单独数组，不写入 addon
+        $this->_refundApplyPriceAbnormalMeta = array(
+            'calc_ok' => false,
+            'price_abnormal' => 0,
+            'calc_paid' => '0.00',
+            'refund_fee' => isset($sdf['refund_fee']) ? (string) $sdf['refund_fee'] : '',
+            'detail' => array(),
+        );
         
         //oid子单过滤掉重复的oid
         //@todo：之前代码中--PKG组合商品退款时会保存多个oid; 本次只是过滤了重复的oid子单;
@@ -181,6 +395,22 @@ class erpapi_shop_response_process_aftersalev2 {
         $oids = array_unique($oids);
         $oids = implode(',', $oids);
         
+        // addon：仅保留原约定 refund_bn（与历史数据一致）
+        $orderId = isset($sdf['order']['order_id']) ? (int) $sdf['order']['order_id'] : 0;
+        $isArchive = ($sdf['order']['tran_type'] == 'archive' || $sdf['archive'] == '1');
+        list($calcSucc, $calcPaid, $calcDetail) = $this->_calcRefundApplyPaidByOids($orderId, (array) $sdf['refund_item_list'], $isArchive);
+        if ($calcSucc) {
+            $refundFee = isset($sdf['refund_fee']) ? (string) $sdf['refund_fee'] : '0';
+            $this->_refundApplyPriceAbnormalMeta['calc_ok'] = true;
+            $this->_refundApplyPriceAbnormalMeta['calc_paid'] = $calcPaid;
+            $this->_refundApplyPriceAbnormalMeta['refund_fee'] = $refundFee;
+            $this->_refundApplyPriceAbnormalMeta['detail'] = $calcDetail;
+            // 价保退款金额与分摊实付口径不同，不打「退款价格异常」
+            $this->_refundApplyPriceAbnormalMeta['price_abnormal'] = $this->_isRefundPriceProtect($sdf)
+                ? 0
+                : ($this->_moneyNotEqual($calcPaid, $refundFee) ? 1 : 0);
+        }
+
         //data
         $data = array(
             'order_id'        => $sdf['order']['order_id'],
@@ -195,7 +425,7 @@ class erpapi_shop_response_process_aftersalev2 {
             'create_time'     => $sdf['created']?:time(),
             'status'          => $sdf['status'],
             'shop_id'         => $sdf['shop_id'],
-            'addon'           => serialize(array('refund_bn'=>$sdf['refund_bn'])),
+            'addon'           => serialize(array('refund_bn' => $sdf['refund_bn'])),
             'source'          => 'matrix',
             'shop_type'       => $sdf['shop_type'],
             'outer_lastmodify'=> $sdf['modified'],
@@ -244,19 +474,201 @@ class erpapi_shop_response_process_aftersalev2 {
         
         // OMS已发货的售前仅退款，发货拦截
         if ($sdf['refund_refer'] != 'aftersale' && $sdf['order']['ship_status'] == '1') {
-            if($this->_isShangzeFreeReturn($sdf)){
-                // 商责退运费禁止拦截
-            }else{
-                // 拦截发货单
-                ome_delivery_notice::cancelYJDF($data['order_id'], $bmIds);
-            }
+            ome_delivery_notice::cancelYJDF($data['order_id'], $bmIds);
         }
-        
         if ($sdf['order_source']) {
             $data['order_source'] = $sdf['order_source'];
         }
         
         return $data;
+    }
+
+    /**
+     * 按 refund_item_list 的 oid 去重后计算可退实付：sum((divide_order_fee-refund_money)/quantity*apply_num)
+     * divide_order_fee、refund_money 取自 sdb_ome_order_objects（子单分摊实付、已退金额）
+     *
+     * @param int   $orderId
+     * @param array $refundItemList 每项至少含 oid,num 或 apply_num
+     * @return array [bool success, string paidAmount(2dp), array detail]
+     */
+    private function _calcRefundApplyPaidByOids($orderId, array $refundItemList, $isArchive = false)
+    {
+        $orderId = (int) $orderId;
+        if ($orderId <= 0 || empty($refundItemList)) {
+            return array(false, '0.00', array());
+        }
+
+        // oid 去重：重复 oid 只取第一个
+        $byOid = array();
+        foreach ($refundItemList as $it) {
+            $oid = isset($it['oid']) ? trim((string) $it['oid']) : '';
+            if ($oid === '' || isset($byOid[$oid])) {
+                continue;
+            }
+            // 以平台申请数量 apply_num 作为计算口径；没有时回退到 num
+            $applyNum = $it['apply_num'] ?? ($it['num'] ?? 0);
+            $applyNum = is_numeric($applyNum) ? (float) $applyNum : 0;
+            $byOid[$oid] = array('oid' => $oid, 'apply_num' => $applyNum);
+        }
+        if (empty($byOid)) {
+            return array(false, '0.00', array());
+        }
+
+        $oids = array_keys($byOid);
+        if ($isArchive) {
+            $objMdl = app::get('archive')->model('order_objects');
+        } else {
+            $objMdl = app::get('ome')->model('order_objects');
+        }
+        $rows = $objMdl->getList('oid,divide_order_fee,refund_money,quantity', array('order_id' => $orderId, 'oid|in' => $oids), 0, -1);
+        if (empty($rows)) {
+            return array(false, '0.00', array());
+        }
+        $objByOid = array();
+        foreach ($rows as $r) {
+            $oid = isset($r['oid']) ? trim((string) $r['oid']) : '';
+            if ($oid === '') {
+                continue;
+            }
+            $objByOid[$oid] = $r;
+        }
+
+        $total = '0.00';
+        $detail = array();
+        foreach ($byOid as $oid => $it) {
+            if (!isset($objByOid[$oid])) {
+                $detail[] = array('oid' => $oid, 'skip' => 'order_objects_not_found');
+                continue;
+            }
+            $divide = isset($objByOid[$oid]['divide_order_fee']) ? (string) $objByOid[$oid]['divide_order_fee'] : '0';
+            $refundMoney = isset($objByOid[$oid]['refund_money']) ? (string) $objByOid[$oid]['refund_money'] : '0';
+            // 子单剩余可退实付 = 分摊实付 - 已退款金额（order_objects.refund_money）
+            $netDivide = $this->_moneySub($divide, $refundMoney);
+            $qtyRaw = isset($objByOid[$oid]['quantity']) ? $objByOid[$oid]['quantity'] : 0;
+            $qty = is_numeric($qtyRaw) ? (float) $qtyRaw : 0;
+            if ($qty <= 0) {
+                $detail[] = array('oid' => $oid, 'skip' => 'quantity_invalid', 'quantity' => $qtyRaw);
+                continue;
+            }
+            $num = (float) $it['apply_num'];
+            $unit = $this->_moneyDiv($netDivide, (string) $qty);
+            $line = $this->_moneyMul($unit, (string) $num);
+            $total = $this->_moneyAdd($total, $line);
+            $detail[] = array(
+                'oid' => $oid,
+                'divide_order_fee' => $divide,
+                'refund_money' => $refundMoney,
+                'net_divide_order_fee' => $netDivide,
+                'quantity' => $qty,
+                'apply_num' => $num,
+                'unit' => $unit,
+                'line' => $line,
+            );
+        }
+
+        return array(true, $this->_moneyFmt($total), $detail);
+    }
+
+    private function _moneyFmt($v)
+    {
+        $v = is_numeric($v) ? (float) $v : 0.0;
+        return sprintf('%.2f', $v);
+    }
+
+    private function _moneyAdd($a, $b)
+    {
+        if (function_exists('bcadd')) {
+            return bcadd((string) $a, (string) $b, 6);
+        }
+        return (string) (((float) $a) + ((float) $b));
+    }
+
+    /**
+     * 金额相减，结果不小于 0（避免已退大于分摊导致单价为负）
+     *
+     * @param string|float $a
+     * @param string|float $b
+     * @return string
+     */
+    private function _moneySub($a, $b)
+    {
+        if (function_exists('bcsub')) {
+            $r = bcsub((string) $a, (string) $b, 6);
+            return bccomp($r, '0', 6) < 0 ? '0' : $r;
+        }
+        $r = (float) $a - (float) $b;
+        return $r < 0 ? '0' : (string) $r;
+    }
+
+    private function _moneyMul($a, $b)
+    {
+        if (function_exists('bcmul')) {
+            return bcmul((string) $a, (string) $b, 6);
+        }
+        return (string) (((float) $a) * ((float) $b));
+    }
+
+    private function _moneyDiv($a, $b)
+    {
+        if ((string) $b === '0' || (float) $b == 0.0) {
+            return '0';
+        }
+        if (function_exists('bcdiv')) {
+            return bcdiv((string) $a, (string) $b, 6);
+        }
+        return (string) (((float) $a) / ((float) $b));
+    }
+
+    private function _moneyNotEqual($a, $b)
+    {
+        $aa = $this->_moneyFmt($a);
+        $bb = $this->_moneyFmt($b);
+        if (function_exists('bccomp')) {
+            return bccomp($aa, $bb, 2) !== 0;
+        }
+        return abs(((float) $aa) - ((float) $bb)) >= 0.01;
+    }
+
+    /**
+     * 退款价格异常说明文案（写入 bill_label.extend_info JSON price_abnormal，列表悬停展示，宜控制在约 150 字内）
+     * calc_paid：按 oid 汇总 (divide_order_fee-refund_money)/quantity*apply_num，与平台 refund_fee 比较见 _moneyNotEqual
+     *
+     * @param array $meta $_refundApplyPriceAbnormalMeta
+     * @return string
+     */
+    private function _buildRefundApplyPriceAbnormalLabelDesc(array $meta)
+    {
+        $paid = isset($meta['calc_paid']) ? $this->_moneyFmt($meta['calc_paid']) : '';
+        $fee = isset($meta['refund_fee']) ? $this->_moneyFmt($meta['refund_fee']) : '';
+        $detail = isset($meta['detail']) && is_array($meta['detail'])
+            ? $meta['detail'] : array();
+
+        $units = array();
+        foreach ($detail as $row) {
+            if (empty($row['oid']) || !isset($row['unit']) || isset($row['skip'])) {
+                continue;
+            }
+            $units[] = $row['oid'] . ':' . $this->_moneyFmt($row['unit']);
+            if (count($units) >= 4) {
+                break;
+            }
+        }
+        $unitStr = implode(',', $units);
+
+        $s = '实付金额:' . $paid . '申请:' . $fee . '单价:' . $unitStr;
+
+        $maxLen = 150;
+        if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+            if (mb_strlen($s, 'UTF-8') > $maxLen) {
+                return mb_substr($s, 0, $maxLen - 3, 'UTF-8') . '...';
+            }
+            return $s;
+        }
+        if (strlen($s) > $maxLen) {
+            return substr($s, 0, $maxLen - 3) . '...';
+        }
+
+        return $s;
     }
 
     private function _dealTableAdditional($tableAdditional, $idBn) {
@@ -306,6 +718,23 @@ class erpapi_shop_response_process_aftersalev2 {
             }
             kernel::database()->commit($trans);
             $refundApply = $sdf['refund_apply'] = $applyData;
+            // 申请退款金额与按 oid 实付分摊金额不一致：打标 SOMS_PRICEABNORMAL（见 $_refundApplyPriceAbnormalMeta）
+            $paMeta = $this->_refundApplyPriceAbnormalMeta;
+            if (!empty($paMeta['price_abnormal']) && !empty($refundApply['apply_id'])) {
+                $err = '';
+                $priceAbnormalDesc = $this->_buildRefundApplyPriceAbnormalLabelDesc($paMeta);
+                $extendJson = '';
+                if ($priceAbnormalDesc !== '') {
+                    $extendJson = json_encode(array('price_abnormal' => $priceAbnormalDesc), JSON_UNESCAPED_UNICODE);
+                }
+                kernel::single('ome_bill_label_refundapply')->mark(
+                    (int) $refundApply['apply_id'],
+                    'SOMS_PRICEABNORMAL',
+                    0,
+                    $extendJson,
+                    $err
+                );
+            }
         }
         if(empty($refundApply['reship_id']) && app::get('ome')->model('reship')->db_dump(['reship_bn'=>$refundApply['refund_apply_bn'],'is_check|notin'=>array('5','7')], 'reship_id')) {
             return array('rsp'=>'fail', 'msg'=>'该退款单存在退货单，不能完成');
@@ -319,11 +748,13 @@ class erpapi_shop_response_process_aftersalev2 {
             return array('rsp'=>'fail', 'msg'=>'退款单创建失败');
         }
         if ($refundApply) {
-            $refund_refer = $this->_getRefundRefer($sdf);
             $filter = array(
                 'apply_id' => $refundApply['apply_id'],
             );
-            $updateData = array('status' => '4','refunded' => $sdf['refund_fee'], 'refund_refer' => $refund_refer, 'cs_status' => $sdf['cs_status']);
+            $updateData = array('status' => '4','refunded' => $sdf['refund_fee'], 'cs_status' => $sdf['cs_status']);
+            if (empty($refundApply['reship_id'])) {
+                $updateData['refund_refer'] = $this->_getRefundRefer($sdf);
+            }
             app::get('ome')->model('refund_apply')->update($updateData,$filter);
             $refundApply = array_merge($refundApply, $updateData);
             app::get('ome')->model('operation_log')->write_log('refund_apply@ome', $refundApply['apply_id'], '退款成功');
@@ -378,7 +809,7 @@ class erpapi_shop_response_process_aftersalev2 {
             kernel::single('inventorydepth_stock')->storeNeedUpdateSku($sdf['order']['order_id'], $sdf['shop_id']);
         }
         
-        if ($refundApply['refund_refer'] == '1' || $sdf['tmall_has_finished_return_product']) {
+        if ($refundApply['refund_refer'] == '1' || $sdf['tmall_has_finished_return_product'] || $sdf['has_finished_return_product']) {
             kernel::single('sales_aftersale')->generate_aftersale($refundApply['apply_id'],'refund');
         }
         
@@ -408,14 +839,35 @@ class erpapi_shop_response_process_aftersalev2 {
         if($orderInfo['pay_status'] == '5' && $orderInfo['ship_status'] == '2'){
             kernel::single('ome_order_order')->fullRefund_order_revoke($sdf['order']['order_id']);
         }
-        //售后仅退款转售前退款做发货单拦截
-        if($sdf['refund_to_returnProduct'] && $refundApply['apply_id']) {
-            $label_code = 'SOMS_MREFUND';
-            $err = '';
-            if($sdf['order']['sync'] != 'succ') {
-                kernel::single('ome_bill_label')->markBillLabel($sdf['order']['order_id'], '', $label_code, 'order', $err, 0);
+        //售后仅退款转售前退款做发货单拦截（含PDD赠品子单转主单且oid已发货）
+        if(($sdf['refund_to_returnProduct'] || (!empty($sdf['gift_tid_to_main']) && isset($sdf['oid_ship_status']) && (string)$sdf['oid_ship_status'] === '1')) && $refundApply['apply_id']) {
+            // 退款 < 子单单价*80%：不发起拦截；>= 才拦
+            if ($this->_isRefundLessThanPaidRatio($sdf, $refundApply)) {
+                // 未拦截：refund_to_returnProduct 曾强制 refund_refer=0(售前)，改回售后(1)并补生成售后单
+                if (!empty($sdf['refund_to_returnProduct']) && (string)$refundApply['refund_refer'] === '0') {
+                    app::get('ome')->model('refund_apply')->update(
+                        array('refund_refer' => '1'),
+                        array('apply_id' => $refundApply['apply_id'])
+                    );
+                    $refundApply['refund_refer'] = '1';
+                    // 上方 generate_aftersale 因当时 refund_refer=0 未执行；已由 finished_return_product 触发过的不再补
+                    if (empty($sdf['tmall_has_finished_return_product']) && empty($sdf['has_finished_return_product'])) {
+                        kernel::single('sales_aftersale')->generate_aftersale($refundApply['apply_id'], 'refund');
+                    }
+                }
+                app::get('ome')->model('operation_log')->write_log(
+                    'refund_apply@ome',
+                    $refundApply['apply_id'],
+                    '退款金额小于子单单价80%不发起拦截'
+                );
+            } else {
+                $label_code = 'SOMS_MREFUND';
+                $err = '';
+                if($sdf['order']['sync'] != 'succ') {
+                    kernel::single('ome_bill_label')->markBillLabel($sdf['order']['order_id'], '', $label_code, 'order', $err, 0);
+                }
+                kernel::single('ome_order_refund')->lanjieDelivery($refundApply['apply_id']);
             }
-            kernel::single('ome_order_refund')->lanjieDelivery($refundApply['apply_id']);
         }
         //退款未退货
         $this->_refundNoreturn($sdf,$refundApply);
@@ -440,7 +892,6 @@ class erpapi_shop_response_process_aftersalev2 {
     /**
      * 单独只创建退款申请单、退款单,不编辑订单明细、也不更新订单金额
      * @todo：平台订单全额退款、已取消，同分同秒推送过来，OMS只更新订单为全额退款或取消订单，未创建退款单;
-     * 商责免费退统一走本方法：postFIL 非空自动完成；为空只建申请单；均不改订单金额
      *
      * @param $sdf
      * @return string[]
@@ -452,16 +903,9 @@ class erpapi_shop_response_process_aftersalev2 {
             return $this->_hadRefund($sdf);
         }
         
-        $modelRefundApply = app::get('ome')->model('refund_apply');
-        $operateLogMdl = app::get('ome')->model('operation_log');
-        
-        // 是否商责免费退（退运费）单据
-        $isShangzeFreeReturn = $this->_isShangzeFreeReturn($sdf);
-        $platformRefunded = $isShangzeFreeReturn && !empty($sdf['shangze_platform_refunded']);
-        
         $refund_bn = $sdf['refund_bn'];
         $shop_id = $sdf['shop_id'];
-        $msg = $isShangzeFreeReturn ? '商责退运费处理' : '仅创建退款单、退款申请单';
+        $msg = '仅创建退款单、退款申请单';
         
         //reship
         $reshipInfo = app::get('ome')->model('reship')->db_dump(['reship_bn'=>$refund_bn, 'shop_id'=>$shop_id]);
@@ -477,16 +921,11 @@ class erpapi_shop_response_process_aftersalev2 {
         
         //先创建退款申请单
         if(empty($refundApply)) {
-            //避免退款单和退款申请单并发，退款申请单写入后事务未提交，这里单据查不到
+            $modelRefundApply = app::get('ome')->model('refund_apply');
+            #避免退款单和退款申请单并发，退款申请单写入后事务未提交，这里单据查不到
             $trans = kernel::database()->beginTransaction();
             //data
             $applyData = $this->_refundApplySdfToData($sdf);
-            
-            // 商责免费退（退运费）单据
-            if ($isShangzeFreeReturn) {
-                $applyData['tag_type'] = ome_order_platform_taobao_aftersale::TAG_TYPE_SHANGZE;
-                $applyData['addon'] = serialize($this->_buildRefundApplyAddon($sdf));
-            }
             
             //insert
             $insertRes = $modelRefundApply->insert($applyData);
@@ -495,37 +934,6 @@ class erpapi_shop_response_process_aftersalev2 {
             }
             kernel::database()->commit($trans);
             $refundApply = $sdf['refund_apply'] = $applyData;
-            
-            // 商责免费退（退运费）单据
-            if ($isShangzeFreeReturn) {
-                $operateLogMdl->write_log(
-                    'refund_apply@ome',
-                    $refundApply['apply_id'],
-                    $platformRefunded ? '商责退运费创建并自动完成（不更新订单金额）' : '商责退运费创建申请单（平台未退完，不更新订单金额）'
-                );
-            }
-        } elseif ($isShangzeFreeReturn) {
-            // 已存在申请单：补写 tag_type / addon
-            $modelRefundApply->update([
-                'tag_type' => ome_order_platform_taobao_aftersale::TAG_TYPE_SHANGZE,
-                'addon' => serialize($this->_buildRefundApplyAddon($sdf)),
-                'outer_lastmodify' => $sdf['modified'],
-                'cs_status' => $sdf['cs_status'],
-                'money' => $sdf['refund_fee'],
-                'memo' => $sdf['reason'],
-            ], ['apply_id' => $refundApply['apply_id']]);
-        }
-
-        // 商责未退完：只建/更新申请单，不创建 refunds、不完成、不改订单
-        if ($isShangzeFreeReturn && !$platformRefunded) {
-            if (!empty($sdf['table_additional']) && !empty($refundApply['apply_id'])) {
-                $this->_dealTableAdditional($sdf['table_additional'], [
-                    'apply_id' => $refundApply['apply_id'],
-                    'refund_apply_bn' => $refundApply['refund_apply_bn'],
-                ]);
-            }
-            $msg .= "&nbsp;&nbsp;退款申请单[{$refundApply['refund_apply_bn']}]已保存（等待平台退款完成）";
-            return array('rsp'=>'succ', 'msg'=>$msg);
         }
         
         //创建退款单
@@ -542,19 +950,10 @@ class erpapi_shop_response_process_aftersalev2 {
                 'apply_id' => $refundApply['apply_id'],
             );
             $updateData = array('status' => '4','refunded' => $sdf['refund_fee'], 'cs_status' => $sdf['cs_status']);
-            
-            // 商责免费退（退运费）单据
-            if ($isShangzeFreeReturn) {
-                $updateData['tag_type'] = ome_order_platform_taobao_aftersale::TAG_TYPE_SHANGZE;
-                $updateData['addon'] = serialize($this->_buildRefundApplyAddon($sdf));
-            }
-            
-            // update
-            $modelRefundApply->update($updateData, $filter);
+            app::get('ome')->model('refund_apply')->update($updateData, $filter);
             
             //logs
-            $logMemo = $isShangzeFreeReturn ? '商责退运费自动完成（不更新订单金额）' : '仅创建退款单成功';
-            $operateLogMdl->write_log('refund_apply@ome', $refundApply['apply_id'], $logMemo);
+            app::get('ome')->model('operation_log')->write_log('refund_apply@ome', $refundApply['apply_id'], '仅创建退款单成功');
             
             $msg .= "&nbsp;&nbsp;更新退款申请单[{$refundApply['refund_apply_bn']}]为已退款状态";
         }
@@ -570,8 +969,7 @@ class erpapi_shop_response_process_aftersalev2 {
         }
         
         //自动编辑订单：主要更新[已经拆分]状态订单object层明细为已退款状态,并且打异常标识;
-        // 商责退运费：不编辑订单
-        if(!$isShangzeFreeReturn && in_array($sdf['order']['process_status'], ['splitting', 'splited'])){
+        if(in_array($sdf['order']['process_status'], ['splitting', 'splited'])){
             $error_msg = '';
             $is_abnormal = false;
             $isResultEdit = $this->_autoEditorder($sdf, $error_msg, $is_abnormal);
@@ -579,22 +977,26 @@ class erpapi_shop_response_process_aftersalev2 {
                 $msg .= '&nbsp;&nbsp;'. $error_msg;
             }
         }
-        
-        //售后仅退款转售前退款做发货单拦截（商责退运费禁止拦截）
-        if(!$isShangzeFreeReturn && $sdf['refund_to_returnProduct'] && $refundApply['apply_id']) {
-            $label_code = 'SOMS_MREFUND';
-            $err = '';
-            if($sdf['order']['sync'] != 'succ') {
-                kernel::single('ome_bill_label')->markBillLabel($sdf['order']['order_id'], '', $label_code, 'order', $err, 0);
+        //售后仅退款转售前退款做发货单拦截
+        if($sdf['refund_to_returnProduct'] && $refundApply['apply_id']) {
+            // 退款 < 子单单价*80%：不发起拦截；>= 才拦
+            if ($this->_isRefundLessThanPaidRatio($sdf, $refundApply)) {
+                app::get('ome')->model('operation_log')->write_log(
+                    'refund_apply@ome',
+                    $refundApply['apply_id'],
+                    '退款金额小于子单单价80%不发起拦截'
+                );
+            } else {
+                $label_code = 'SOMS_MREFUND';
+                $err = '';
+                if($sdf['order']['sync'] != 'succ') {
+                    kernel::single('ome_bill_label')->markBillLabel($sdf['order']['order_id'], '', $label_code, 'order', $err, 0);
+                }
+                kernel::single('ome_order_refund')->lanjieDelivery($refundApply['apply_id']);
             }
-            kernel::single('ome_order_refund')->lanjieDelivery($refundApply['apply_id']);
         }
         kernel::single('monitor_notice_refund_apply')->erpapi_refund($refundApply['apply_id']);
-        
-        if (!$isShangzeFreeReturn) {
-            kernel::single('ome_refund_apply')->updateOrderObjectsPayStatusByItemIds($refundApply['apply_id']);
-        }
-        
+        kernel::single('ome_refund_apply')->updateOrderObjectsPayStatusByItemIds($refundApply['apply_id']);
         // 增加service扩展点，允许外部service在退款成功后做自定义处理
         $services = kernel::servicelist('ome.service.refund.apply.accept.refund.after');
         if ($services) {
@@ -698,10 +1100,17 @@ class erpapi_shop_response_process_aftersalev2 {
             //insert
             $rs = $modelReturnProduct->insert($insertData);
             if(!$rs) {
-                return array('rsp'=>'fail', 'msg'=>'售后申请单新建失败');
+                $dbErr = $modelReturnProduct->db->errorinfo();
+                return array('rsp'=>'fail', 'msg'=>'售后申请单新建失败'.($dbErr ? ':'.$dbErr : ''));
             }
             
-            $this->_insertReturnProductItems($returnProductItems, $insertData['return_id']);
+            $itemRs = $this->_insertReturnProductItems($returnProductItems, $insertData['return_id']);
+            if(!$itemRs) {
+                $dbErr = $modelReturnProduct->db->errorinfo();
+                $failMsg = '售后申请单明细写入失败'.($dbErr ? ':'.$dbErr : '');
+                app::get('ome')->model('operation_log')->write_log('return@ome', $insertData['return_id'], $failMsg);
+                return array('rsp'=>'fail', 'msg'=>$failMsg);
+            }
             
             if($sdf['return_type']=='jdchange'){
                 $this->saveChangeItems($sdf, $insertData['return_id']);
@@ -954,8 +1363,18 @@ class erpapi_shop_response_process_aftersalev2 {
         }
         $modelItem = app::get('ome')->model('return_product_items');
         $sql = ome_func::get_insert_sql($modelItem, $returnProductItems);
+        if (empty($sql)) {
+            return false;
+        }
         $rs = $modelItem->db->exec($sql);
-        return $rs['rs'];
+        if (!$rs) {
+            return false;
+        }
+        // exec 成功时一般返回 array('rs'=>resource|true)；兼容直接 true
+        if (is_array($rs) && array_key_exists('rs', $rs)) {
+            return (bool) $rs['rs'];
+        }
+        return true;
     }
 
     private function _returnProductUpdateStatus($sdf) {
@@ -984,7 +1403,14 @@ class erpapi_shop_response_process_aftersalev2 {
                 
                 app::get('ome')->model('return_product_items')->delete(array('return_id'=>$returnProduct['return_id']));
                 
-                $this->_insertReturnProductItems($returnProductItems, $returnProduct['return_id']);
+                $itemRs = $this->_insertReturnProductItems($returnProductItems, $returnProduct['return_id']);
+                if(!$itemRs) {
+                    kernel::database()->rollBack();
+                    $dbErr = $modelReturnProduct->db->errorinfo();
+                    $failMsg = '重置售后申请单明细写入失败'.($dbErr ? ':'.$dbErr : '');
+                    $operateLog->write_log('return@ome', $returnProduct['return_id'], $failMsg);
+                    return array('rsp'=>'fail', 'msg'=>$failMsg);
+                }
                 $operateLog->write_log('return@ome', $returnProduct['return_id'], '退款原因、金额或版本变化，重置售后申请单');
                 
                 if($sdf['reship']) {
@@ -1061,7 +1487,18 @@ class erpapi_shop_response_process_aftersalev2 {
                     $this->_dealReship($sdf);
                 } else  {
                     if (!$sdf['reship']['return_logi_no']) {
-                        $this->_updateReshipLogistics($sdf);
+                        $updateLogiResult = $this->_updateReshipLogistics($sdf);
+                        //补物流成功后自动审批（对齐 case6/_dealReship；勿写入 _updateReshipLogistics 以免叠队列）
+                        if ($updateLogiResult
+                            && app::get('ome')->getConf('return.auto_approve') == 'on'
+                            && $sdf['reship']['is_check'] == '0'
+                        ) {
+                            $queue_error_msg = '';
+                            kernel::single('ome_reship')->batch_reship_queue(
+                                $sdf['reship']['reship_id'],
+                                $queue_error_msg
+                            );
+                        }
                     }
                     if($sdf['platform_status']){
                         //更新平台售后状态
@@ -1426,7 +1863,15 @@ class erpapi_shop_response_process_aftersalev2 {
                 //退换货自动审批(系统-->退换货自动审核设置-->是否启用退换货自动审批)
                 $is_auto_approve = app::get('ome')->getConf('return.auto_approve');
                 if($is_auto_approve == 'on' && $cancelReshipFLag !== true){
-                    $result = $reshipLib->batch_reship_queue($sdf['reship']['reship_id']);
+                    $queue_error_msg = '';
+                    $result = $reshipLib->batch_reship_queue($sdf['reship']['reship_id'], $queue_error_msg);
+                    if($result === false){
+                        // log
+                        $operateLog->write_log('reship@ome', $sdf['reship']['reship_id'], '队列自动审核失败：'. $queue_error_msg);
+                    }else{
+                        // log
+                        $operateLog->write_log('reship@ome', $sdf['reship']['reship_id'], '队列自动审核!');
+                    }
                 }
                 
                 //请求WMS更新顾客退货物流单号
@@ -1470,7 +1915,7 @@ class erpapi_shop_response_process_aftersalev2 {
             if($is_update_platform_status){
                 $updateSdf = array('platform_status'=>$sdf['platform_status']);
                 if($sdf['jsrefund_flag']){
-                    $updateSdf['jsrefund_flag'] = $sdf['jsrefund_flag'];
+                    $updateSdf['jsrefund_flag'] = '1';
                 }
                 $modelReship->update($updateSdf, array('reship_id'=>$sdf['reship']['reship_id']));
                 
@@ -1588,6 +2033,11 @@ class erpapi_shop_response_process_aftersalev2 {
             }
         }
         
+        $logi_no = trim((string)$sdf['delivery_logistics_no']);
+        if ($logi_no === '') {
+            $logi_no = $tgOrder['logi_no'];
+        }
+        
         //data
         $data = array(
             'reship_bn'     => $reship_bn,
@@ -1596,7 +2046,7 @@ class erpapi_shop_response_process_aftersalev2 {
             'delivery_id'   => $returnProduct['delivery_id'],
             'member_id'     => $tgOrder['member_id'],
             'logi_name'     => $sdf['logi_name'],
-            'logi_no'       => $tgOrder['logi_no'],
+            'logi_no'       => $logi_no,
             'logi_id'       => $tgOrder['logi_id'],
             'ship_name'     => $tgOrder['ship_name'],
             'ship_area'     => $tgOrder['ship_area'],
@@ -1622,7 +2072,7 @@ class erpapi_shop_response_process_aftersalev2 {
             'platform_status' => $sdf['platform_status'], //平台售后单状态
             'shop_type'       => $sdf['shop_type'], //店铺类型
             // 'reason'        => $sdf['reason'],
-            'jsrefund_flag'   => ($sdf['jsrefund_flag'] ? $sdf['jsrefund_flag'] : '0'), //极速退款标识
+            'jsrefund_flag'   => ($sdf['jsrefund_flag'] ? '1' : '0'), //极速退款标识（reship 仅允许 0/1）
             'refund_shipping_fee'   => $sdf['refund_shipping_fee'] ?: 0, //退运费金额
         );
         
@@ -2680,36 +3130,7 @@ class erpapi_shop_response_process_aftersalev2 {
         }
         return [true, '运费扣除完成'];
     }
-    
-    /**
-     * 组装退款申请单 addon（含商责免费退扩展字段）
-     *
-     * @param array $sdf
-     * @return array
-     */
-    private function _buildRefundApplyAddon($sdf)
-    {
-        $addon = ['refund_bn' => $sdf['refund_bn']];
-        
-        if (!empty($sdf['shangze_addon']) && is_array($sdf['shangze_addon'])) {
-            $addon = array_merge($addon, $sdf['shangze_addon']);
-        }
-        
-        if (!empty($sdf['is_shangze_free_return'])) {
-            $addon['is_shangze_free_return'] = $sdf['is_shangze_free_return'];
-        }
-        
-        return $addon;
-    }
-    
-    /**
-     * 是否商责免费退（退运费）单据
-     *
-     * @param array $sdf
-     * @return bool
-     */
-    private function _isShangzeFreeReturn($sdf)
-    {
-        return kernel::single('ome_order_platform_taobao_aftersale')->isShangzeFreeReturnSdf($sdf);
-    }
+
+
+
 }

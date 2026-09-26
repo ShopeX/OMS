@@ -25,6 +25,14 @@ class ome_mdl_return_product extends dbeav_model
     //这是导出文件的名称
     var $export_name = '售后申请单';
     
+    // 子来源(0、默认，1、订单，2、发货单，3、售后申请单)
+    private $subSourceTypes = array (
+        '0' => '默认',
+        '1' => '订单',
+        '2' => '发货单',
+        '3' => '售后申请单'
+    );
+    
     public function _filter($filter,$tableAlias=null,$baseWhere=null)
     {
         $where = '';
@@ -1350,7 +1358,22 @@ class ome_mdl_return_product extends dbeav_model
         }
         return $row;
     }
-
+    
+    /**
+     * 子来源
+     *
+     * @param $row
+     * @return mixed|string
+     */
+    public function modifier_sub_source($row)
+    {
+        if($this->subSourceTypes[$row]){
+            return $this->subSourceTypes[$row];
+        }else{
+            return '其它';
+        }
+    }
+    
     /**
      * 售后原因
      * @param

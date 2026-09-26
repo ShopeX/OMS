@@ -1,26 +1,10 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class ome_system_setting{
     /**
      * 配置项
-     * 
+     *
      * @var string
-     * */
+     **/
     private $_setting_tab = array(
         array('name' => '订单配置', 'file_name' => 'admin/system/setting/tab_order.html', 'app' => 'ome', 'order' => 1),
         array('name' => '仓储采购', 'file_name' => 'admin/system/setting/tab_storage.html', 'app' => 'ome', 'order' => 10),
@@ -32,19 +16,11 @@ class ome_system_setting{
         array('name' => '其他配置', 'file_name' => 'admin/system/setting/tab_other.html', 'app'=>'ome', 'order' => 100),
     );
 
-        /**
-     * 获取_setting_tab
-     * @return mixed 返回结果
-     */
     public function get_setting_tab()
     {
         return $this->_setting_tab;
     }
 
-    /**
-     * view
-     * @return mixed 返回值
-     */
     public function view(){
         $settings = $this->all_settings();
         foreach($settings as $set){
@@ -61,10 +37,6 @@ class ome_system_setting{
         return $html;
     }
 
-    /**
-     * all_settings
-     * @return mixed 返回值
-     */
     public function all_settings(){
         $all_settings =array(
             'ome.branch.mode',
@@ -91,6 +63,11 @@ class ome_system_setting{
             'ome.delivery.method',
             'ome.delivery.wuliubao',
             'ome.delivery.hqepay',
+            'ome.logistics.track.provider', // 物流跟踪来源 kdn|sf，默认 kdn
+            'ome.logistics.track.sf.partner_id', // 顺丰顾客编码
+            'ome.logistics.track.sf.check_word', // 顺丰校验码
+            'ome.logistics.track.sf.url',        // 顺丰接口URL（可选）
+            'ome.logistics.track.sf.env',        // prod|sbox
             'ome.order.mark',
             'ome.combine.member_id',            // 新增合并购买人
             'ome.combine.shop_id',              // 合并店铺
@@ -179,6 +156,7 @@ class ome_system_setting{
             'stockdump.auto.finish', // 库内转储，同wms仓是否自动完成
             'ome.get.all.status.order',//获取全状态订单
             'ome.combine.manual.merge', //是否手工合单
+            'ome.order.timing.auto', // hold单是否自动审核
             'ome.order.get.payment', //获取实付
             'ome.call.mobile.group', //报备外呼主叫号码组
         );
@@ -194,21 +172,12 @@ class ome_system_setting{
         return $all_settings;
     }
 
-    /**
-     * 获取BranchMode
-     * @return mixed 返回结果
-     */
     public function getBranchMode(){
         $oBranch = app::get('ome')->model('branch');
         $con = count( $oBranch->Get_branchlist());
         return $con;
     }
 
-    /**
-     * 保存Conf
-     * @param mixed $settings settings
-     * @return mixed 返回操作结果
-     */
     public function saveConf($settings)
     {
         $all_settings = $this->all_settings();
@@ -222,10 +191,6 @@ class ome_system_setting{
         }
     }
 
-    /**
-     * 获取_setting_data
-     * @return mixed 返回结果
-     */
     public function get_setting_data()
     {
         $setData = array();

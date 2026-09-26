@@ -37,7 +37,7 @@ class invoice_event_trigger_einvoice extends invoice_event_response
         //开票配置信息
         $rs         = kernel::single('invoice_func')->get_order_setting($shop_id, $data['mode']);
         $rs_setting = $rs[0];
-    
+        
         #电子发票,没有开票信息设置的，不创建
         if ($data['mode'] == 1 && empty($rs_setting)) {
             $error_msg = '当前店铺没有配置电子发票开票信息';
@@ -406,9 +406,31 @@ class invoice_event_trigger_einvoice extends invoice_event_response
 
         if (!in_array($invoice['sync'], array('3','6'))) return array('rsp'=>'fail','msg'=>'尚未同步开票结果');
 
+        // 京东：订单未签收不允许上传，失败留给 api_fail 下次重试
+        $shop = app::get('ome')->model('shop')->db_dump($invoice['shop_id'], 'node_type');
+        if ($shop['node_type'] == '360buy') {
+            $order = app::get('ome')->model('orders')->db_dump($invoice['order_id'], 'end_time');
+            if (empty($order['end_time'])) {
+                return array('rsp' => 'fail', 'msg' => '京东订单未签收，暂不可上传');
+            }
+        }
+
         $sdf = kernel::single('invoice_event_trigger_data_router')->set_shop_id($invoice['shop_id'])->getUploadParams($invoice,$electronic);
 
         if (!$sdf) return false;
+        
+        // 注册Service，判断是否支持合并开发票
+        foreach(kernel::servicelist('ome.service.invoice.index.action') as $object)
+        {
+            if(method_exists($object, 'check_upload_invoice_platform')){
+                $checkResult = $object->check_upload_invoice_platform($invoice);
+                if(isset($checkResult['rsp']) && $checkResult['rsp'] == 'succ'){
+                    if(isset($checkResult['data']['is_allow_update_succ']) && $checkResult['data']['is_allow_update_succ'] == 'true'){
+                        return array('rsp'=>'succ', 'msg'=>$checkResult['data']['msg']);
+                    }
+                }
+            }
+        }
         
         $result = kernel::single('erpapi_router_request')->set('shop',$invoice['shop_id'])->invoice_upload($sdf, $sync);
         

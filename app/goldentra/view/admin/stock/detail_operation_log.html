@@ -1,0 +1,29 @@
+<div class="division">
+    <h4>库存处理操作日志</h4>
+    <table cellspacing="0" class="gridlist" cellpadding="0" border="0" width="100%">
+        <thead>
+            <tr>
+                <th>操作时间</th>
+                <th>操作员</th>
+                <th>操作类型</th>
+                <th>操作内容</th>
+            </tr>
+        </thead>
+        <tbody>
+            <{if $logs}>
+            <{foreach from=$logs item=item}>
+            <tr>
+                <td><{$item.operate_time}></td>
+                <td><{$item.op_name}></td>
+                <td><{$item.operation}></td>
+                <td><{$item.memo}></td>
+            </tr>
+            <{/foreach}>
+            <{else}>
+            <tr>
+                <td colspan="4" class="notice">暂无操作日志</td>
+            </tr>
+            <{/if}>
+        </tbody>
+    </table>
+</div>

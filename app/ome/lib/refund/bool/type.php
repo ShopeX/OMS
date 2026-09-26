@@ -1,19 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 class ome_refund_bool_type
 {
@@ -23,18 +8,16 @@ class ome_refund_bool_type
     const __ZERO_INTERCEPT = 0x0002;
     //手工确认为仅退款
     const __ONLY_REFUND = 0x0004;
+    //价格异常退款单
+    const __PRICEABNORMAL_CODE = 0x0008;
     
     private $boolStatus = array(
         self::__PROTECTED_CODE => array('identifier'=>'保', 'text'=>'价保退款单', 'color'=>'RED', 'search'=>'true'),
         self::__ZERO_INTERCEPT => array('identifier'=>'拦', 'text'=>'零秒退快递拦截', 'color'=>'#F183A0', 'search'=>'true'),
         self::__ONLY_REFUND => array('identifier'=>'仅', 'text'=>'手工确认为仅退款', 'color'=>'blue', 'search'=>'true'),
+        self::__PRICEABNORMAL_CODE => array('identifier'=>'价', 'text'=>'价格异常退款单', 'color'=>'yellow', 'search'=>'true'),
     );
     
-    /**
-     * 获取BoolTypeText
-     * @param mixed $num num
-     * @return mixed 返回结果
-     */
     public function getBoolTypeText($num = null)
     {
         if ($num) {
@@ -43,11 +26,6 @@ class ome_refund_bool_type
         return $this->boolStatus;
     }
     
-    /**
-     * 获取BoolTypeIdentifier
-     * @param mixed $boolType boolType
-     * @return mixed 返回结果
-     */
     public function getBoolTypeIdentifier($boolType)
     {
         $str = '';

@@ -68,20 +68,37 @@ class Modal {
 
         let inputHtml = ''
         if (type === 'input') {
-          inputHtml = `
+          const inputId = `modal-input-${name}-${Date.now()}`
+          const inputEl = `
         <input type="text" 
-               class="modal-input" 
+               id="${inputId}"
+               class="modal-input${append ? ' modal-input--append' : ''}" 
                name="${name}" 
                placeholder="${placeholder}"
+               autocomplete="off"
+               autocorrect="off"
+               autocapitalize="off"
+               enterkeyhint="done"
                ${required ? 'required' : ''}>
       `
           if (append) {
-            inputHtml += append;
+            inputHtml = `
+        <div class="input-field-wrap input-with-append flex-row align-center">
+          ${inputEl}
+          ${append}
+        </div>
+      `
+          } else {
+            inputHtml = `
+        <div class="input-field-wrap">
+          ${inputEl}
+        </div>
+      `
           }
           return `
-      <div class="modal-form-item">
-        <div class="input-box flex-row align-center justify-between">
-          <label>${label}${required ? ' <span style="color: red">*</span>' : ''}</label>
+      <div class="modal-form-item modal-form-item--input">
+        <div class="input-box-vertical flex-col">
+          <label class="modal-form-label" for="${inputId}">${label}${required ? ' <span class="required-mark">*</span>' : ''}</label>
           ${inputHtml}
         </div>
       </div>
@@ -115,10 +132,12 @@ class Modal {
         </select>
       `
           return `
-      <div class="modal-form-item">
-       <div class="input-box flex-row align-center justify-between">
-        <label>${label}${required ? ' <span style="color: red">*</span>' : ''}</label>
-        ${inputHtml}
+      <div class="modal-form-item modal-form-item--select">
+        <div class="select-box-vertical flex-col">
+          <label class="modal-form-label">${label}${required ? ' <span class="required-mark">*</span>' : ''}</label>
+          <div class="select-field-wrap">
+            ${inputHtml}
+          </div>
         </div>
       </div>
     `
@@ -169,6 +188,9 @@ class Modal {
     this.content.innerHTML = formContent
     this.confirmBtn.innerHTML = confirmText
     this.cancleBtn.innerHTML = cancelText
+    this.confirmBtn.style.display = 'block'
+    this.confirmBtn.disabled = false
+    this.confirmBtn.style.opacity = '1'
     this.cancleBtn.style.display = isShowCancleBtn ? 'block' : 'none'
     // 绑定确认按钮事件
     const submitForm = async (cb) => {
@@ -223,8 +245,32 @@ class Modal {
     // 初始化自定义select组件 - 解决Mac版微信小程序兼容性问题
     this.initCustomSelects();
 
+    // 扩大 iOS 输入框可点击区域，点击容器即可聚焦
+    this.initInputFocus();
+
     // 初始化图片上传
     this.initFileUpload();
+  }
+
+  initInputFocus() {
+    this.content.querySelectorAll('.modal-form-item--input .input-field-wrap').forEach((wrap) => {
+      wrap.addEventListener('click', (e) => {
+        if (e.target.closest('.scan-icon') || e.target.closest('.logi-no-confirm-btn')) {
+          return;
+        }
+        const input = wrap.querySelector('input');
+        if (!input || document.activeElement === input) {
+          return;
+        }
+        input.focus();
+        if (typeof input.setSelectionRange === 'function') {
+          const len = input.value.length;
+          try {
+            input.setSelectionRange(len, len);
+          } catch (err) {}
+        }
+      });
+    });
   }
 
   hide() {
@@ -429,13 +475,21 @@ request.interceptors.response.use(
     if (response.data.rsp != 'fail') {
       return response.data
     }
-    // 处理业务错误
-    Toast.error(response.data.msg || '请求失败')
+    const errMsg = response.data.msg || '请求失败'
+    if (typeof showToast === 'function') {
+      showToast(errMsg)
+    } else {
+      console.error(errMsg)
+    }
     return Promise.reject(response.data)
   },
   (error) => {
-    // 处理网络错误
-    Toast.error('网络请求失败，请稍后重试')
+    const errMsg = (error && error.msg) ? error.msg : '网络请求失败，请稍后重试'
+    if (typeof showToast === 'function') {
+      showToast(errMsg)
+    } else {
+      console.error(errMsg)
+    }
     return Promise.reject(error)
   }
 )
@@ -443,8 +497,11 @@ request.interceptors.response.use(
 // Toast提示组件
 const Toast = {
   error(msg) {
-    // 这里可以替换成你项目中使用的提示组件
-    console.error(msg)
+    if (typeof showToast === 'function') {
+      showToast(msg)
+    } else {
+      console.error(msg)
+    }
   }
 }
 
@@ -512,6 +569,69 @@ const toggleRemark = () => {
   }
 }
 
+/**
+ * 商品缩略图点击预览大图
+ * 用法：给 img 加上 class="js-img-preview"，或 data-preview-src
+ */
+var ImagePreview = {
+  overlay: null,
+  init: function () {
+    if (this._bound) return
+    this._bound = true
+    var self = this
+    document.addEventListener('click', function (e) {
+      var target = e.target
+      if (!target || target.tagName !== 'IMG') return
+      var previewSrc = target.getAttribute('data-preview-src')
+      if (!previewSrc && !target.classList.contains('js-img-preview')) return
+      e.preventDefault()
+      e.stopPropagation()
+      self.show(previewSrc || target.getAttribute('src') || target.src)
+    }, true)
+  },
+  ensureOverlay: function () {
+    if (this.overlay) return this.overlay
+    var overlay = document.createElement('div')
+    overlay.className = 'goods-img-preview-mask'
+    overlay.innerHTML = [
+      '<div class="goods-img-preview-box">',
+      '  <img class="goods-img-preview-img" alt="商品大图" referrerpolicy="no-referrer" />',
+      '  <button type="button" class="goods-img-preview-close" aria-label="关闭">×</button>',
+      '</div>'
+    ].join('')
+    document.body.appendChild(overlay)
+    var self = this
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay || e.target.classList.contains('goods-img-preview-close')) {
+        self.hide()
+      }
+    })
+    this.overlay = overlay
+    return overlay
+  },
+  show: function (src) {
+    if (!src) return
+    var overlay = this.ensureOverlay()
+    var img = overlay.querySelector('.goods-img-preview-img')
+    img.src = src
+    overlay.style.display = 'flex'
+    document.body.style.overflow = 'hidden'
+  },
+  hide: function () {
+    if (!this.overlay) return
+    this.overlay.style.display = 'none'
+    document.body.style.overflow = ''
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function () {
+    ImagePreview.init()
+  })
+} else {
+  ImagePreview.init()
+}
+
 // export { Modal, request, Toast, showToast }
 // 如果你想让这些在全局可用，可以添加到 window 对象
 window.Modal = Modal
@@ -521,3 +641,4 @@ window.showToast = showToast
 window.showLoading = showLoading
 window.hideLoading = hideLoading
 window.toggleRemark = toggleRemark
+window.ImagePreview = ImagePreview

@@ -69,6 +69,13 @@ class logisticsmanager_print_express{
             $printTmpl['template_select'] = json_encode(unserialize($printTmpl['template_select']));
         }
         $this->printTpl = $printTmpl;
+        if ($printTmpl['template_type'] == 'wxshipin_standard') {
+            $this->printField = array('batch_logi_no','logi_no','print_config','channel_id','delivery_id','json_packet','user_id');
+            if (!$this->_wxshipin_custom()) {
+                return false;
+            }
+            return true;
+        }
         $this->_dataToField($printTmpl['template_data']);
         if(empty($this->printField)) {
             $this->printField = array(//菜鸟打印固定部分
@@ -76,6 +83,58 @@ class logisticsmanager_print_express{
             );
             $this->printField = array_merge(json_decode($printTmpl['template_select'], true), $this->printField);
         }
+        return true;
+    }
+
+    private function _wxshipin_custom()
+    {
+        $templateSelect = @json_decode($this->printTpl['template_select'], true);
+        $customTplId = isset($templateSelect['wxshipin_custom_tpl_id']) ? intval($templateSelect['wxshipin_custom_tpl_id']) : 0;
+        if (!$customTplId) {
+            return true;
+        }
+        $templateObj = app::get('logisticsmanager')->model('express_template');
+        $customConfig = $templateObj->getWxshipinCustomConfig($this->printTpl['template_data']);
+        if (!$customConfig) {
+            $this->msg = '微信视频号标准模板缺少 custom_config，请重新同步模板后再打印';
+            return false;
+        }
+        $customTpl = $templateObj->db_dump(array('template_id' => $customTplId), 'template_id,template_type,control_type,template_data,status');
+        if (!$customTpl || $customTpl['template_type'] != 'electron' || $customTpl['control_type'] != 'lodop' || $customTpl['status'] != 'true') {
+            $this->msg = '关联的微信视频号 Lodop 自定义区模板已失效，请重新关联';
+            return false;
+        }
+        $unsupported = $templateObj->getWxshipinUnsupportedPlugins($customTpl['template_data']);
+        if ($unsupported) {
+            $this->msg = '关联的 Lodop 模板包含暂不支持的控件：' . implode('、', $unsupported);
+            return false;
+        }
+        $plugins = @unserialize($customTpl['template_data']);
+        $customData = array('fields' => array(), 'barcode_field' => '', 'qrcode_field' => '', 'has_product_info' => false);
+        foreach ((array)$plugins as $plugin) {
+            $field = isset($plugin['type']['value']) ? $plugin['type']['value'] : '';
+            if ($plugin['plugin'] == 'sp-input' && $field && $field != 'empty' && $field != 'custom') {
+                $customData['fields'][] = $field; $this->printField[] = $field;
+            } elseif ($plugin['plugin'] == 'sp-barcode' && $field && $field != 'empty' && $field != 'custom') {
+                $customData['barcode_field'] = $field; $this->printField[] = $field;
+            } elseif ($plugin['plugin'] == 'sp-qrcode' && $field && $field != 'empty' && $field != 'custom') {
+                $customData['qrcode_field'] = $field; $this->printField[] = $field;
+            } elseif ($plugin['plugin'] == 'sp-table') {
+                $customData['has_product_info'] = true; $this->printField[] = 'wxshipin_product_info';
+            }
+        }
+        $this->printField[] = 'shop_name';
+        $customData['fields'] = array_values(array_unique($customData['fields']));
+        $this->printField = array_values(array_unique($this->printField));
+        $templateVersion = substr(md5(
+            'wxshipin-renderer-v2|' . $customTpl['template_data']
+            . '|' . $customConfig['width'] . 'x' . $customConfig['height']
+        ), 0, 12);
+        $this->printTpl['custom_area_url'] = kernel::base_url(1) . '/index.php/openapi/template/getToWxshipinTpl?tpl_id=' . $customTplId
+            . '&width=' . rawurlencode($customConfig['width'])
+            . '&height=' . rawurlencode($customConfig['height'])
+            . '&v=' . $templateVersion;
+        $this->printTpl['template_select'] = json_encode($customData);
         return true;
     }
 

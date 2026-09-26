@@ -356,6 +356,12 @@
 
                         }
 
+                        // 弹窗内 isCloseDialog 表单 + multipart：splash 仍会走 doCommand，若再 page(redirect) 会把列表嵌进当前弹窗。
+                        // 由表单 onRequest 置位 window.__skipDesktopSplashInnerRedirect，关闭弹窗与刷新 finder 交给表单 onComplete。
+                        if (window.__skipDesktopSplashInnerRedirect) {
+                            window.__skipDesktopSplashInnerRedirect = false;
+                            return;
+                        }
 
                         _this.page(_v2[1], options);
 

@@ -66,11 +66,6 @@ class erpapi_shop_response_components_order_master extends erpapi_shop_response_
         
         $this->_platform->_newOrder['o2o_info']         = $this->_platform->_ordersdf['o2o_info'];
         
-        // 平台运单号
-        if ($this->_platform->_ordersdf['shipping']['shipping_id']) {
-            $this->_platform->_newOrder['logi_no']          = $this->_platform->_ordersdf['shipping']['shipping_id'];
-        }
-        
         $this->_platform->_newOrder['order_type'] = $this->_platform->_ordersdf['order_type'] ? strtolower($this->_platform->_ordersdf['order_type']) : 'normal';
 
         if (isset($this->_platform->_ordersdf['self_delivery'])) $this->_platform->_newOrder['self_delivery']        = $this->_platform->_ordersdf['self_delivery'];
@@ -177,6 +172,11 @@ class erpapi_shop_response_components_order_master extends erpapi_shop_response_
             $this->_platform->_newOrder['logi_no']          = $this->_platform->_ordersdf['shipping']['shipping_id'];
         }
         
+        // 物流公司ID（通过平台推送的物流公司编码，获取OMS的物流公司ID）
+        if (isset($this->_platform->_ordersdf['shipping']['logi_id']) && $this->_platform->_ordersdf['shipping']['logi_id']) {
+            $this->_platform->_newOrder['logi_id'] = $this->_platform->_ordersdf['shipping']['logi_id'];
+        }
+        
         //是否指定仓发货
         if ($this->_platform->_ordersdf['is_assign_store'] == 'true') {
             $this->_platform->_newOrder['is_assign_store'] = $this->_platform->_ordersdf['is_assign_store'];
@@ -270,6 +270,16 @@ class erpapi_shop_response_components_order_master extends erpapi_shop_response_
         //贸易公司ID
         if(isset($this->_platform->_ordersdf['betc_id'])){
             $this->_platform->_newOrder['betc_id'] = $this->_platform->_ordersdf['betc_id'];
+        }
+        
+        // trade_type
+        if(isset($this->_platform->_ordersdf['trade_type']) && $this->_platform->_ordersdf['trade_type']){
+            $this->_platform->_newOrder['trade_type'] = $this->_platform->_ordersdf['trade_type'];
+        }
+        
+        // t_type
+        if (isset($this->_platform->_ordersdf['t_type']) && $this->_platform->_ordersdf['t_type']){
+            $this->_platform->_newOrder['t_type'] = $this->_platform->_ordersdf['t_type'];
         }
     }
 

@@ -1,0 +1,26 @@
+<{assign var="sms_disabled" value=$channel.disabled}>
+<{if !$channel.channel_id}>
+<{assign var="sms_disabled" value="false"}>
+<{/if}>
+<table width="100%" cellspacing="0" cellpadding="0" border="0" >
+    <tbody>
+      <tr>
+        <th><em class="c-red">*</em>启用状态：</th>
+        <td>
+          <{input type="radio" name="channel[disabled]" value=$sms_disabled options=array("false"=>"启用","true"=>"停用") separator="&nbsp;"}>
+        </td>
+      </tr>
+      <{foreach from=$platform_params item=item key=key}>
+      <tr>
+        <th><{if $key!="timeMsg"}><em class="c-red">*</em><{/if}><{$item}>：</th>
+        <td>
+          <{if $key=="timeMsg"}>
+          <{input name="config[{$key}]" value=$channel.config.$key size="40"}>
+          <{else}>
+          <{input name="config[{$key}]" vtype="required" value=$channel.config.$key size="40"}>
+          <{/if}>
+        </td>
+      </tr>
+      <{/foreach}>
+    </tbody>
+  </table>

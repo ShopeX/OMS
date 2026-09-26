@@ -24,6 +24,7 @@ class ome_bill_label
 {
     // 颜色取值参考：https://plantuml.com/zh/color
     // 系统内部的请用SOMS_为开头
+    //@todo：系统内部的请用SOMS_为开头；
     public $orderLabelsPreset = [
         'deleteordergift'   => ['label_name' => '退款删赠品失败', 'label_color' => 'Thistle'],
         'priceprotect'      => ['label_name' => '价保订单', 'label_color' => 'LimeGreen'],
@@ -46,7 +47,7 @@ class ome_bill_label
         'system_bufa'       => ['label_name' => '延迟补发赠品', 'label_color' => 'DeepPink'],
         'SOMS_JDECARD'      => ['label_name' => '京东E卡', 'label_color' => 'LightSeaGreen'],
         'SOMS_BUFA_REFUND'  => ['label_name' => '补发转退款', 'label_color' => 'OrangeRed'],
-        // 系统内部的请用SOMS_为开头
+        'SOMS_BUFA_PKG'     => ['label_name' => '补寄', 'label_color' => '#B3D9FF',  'label_desc'=>'平台补寄订单'],
         'SOMS_WFP'          => ['label_name' => '晚发赔', 'label_color' => 'Green'],
         'SOMS_SHSM'         => ['label_name' => '送货上门', 'label_color' => 'Chocolate', 'label_thumb'=>'送'],
         'SOMS_ZFSHSM'       => ['label_name' => '自费送货上门', 'label_color' => 'Chocolate', 'label_thumb'=>'自费送', 'label_to_delivery' => true, 'extend_info_to_delivery' => true],
@@ -90,11 +91,51 @@ class ome_bill_label
         'SOMS_YPDS'        => ['label_name' => '百亿补贴', 'label_color' => '#FF6B6B', 'label_thumb'=>'百补'],
         'SOMS_SUPERLINK'   => ['label_name' => '超链', 'label_color' => '#FF6B6B', 'label_thumb'=>'超链'],
 
+        'SOMS_MIAOZHU' => ['label_name' => '喵住', 'label_color' => '#00BFFF', 'label_thumb'=>'天猫喵住'],
         'SOMS_TMYP' => ['label_name' => '天猫优品国补', 'label_color' => 'Coral', 'label_thumb'=>'天猫优品国补'],
+        'SOMS_SANGOU' => ['label_name' => '淘宝闪购', 'label_color' => '#FFC125', 'label_thumb'=>'淘宝闪购'],
+        
         'SOMS_LARGE_APPLIANCE' => ['label_name'=>'大家电', 'label_color'=>'#c25975', 'label_to_delivery'=>true],
+        'SOMS_COLOR_ORDER' => ['label_name'=>'调色订单', 'label_color'=>'#FF83FA', 'label_to_delivery'=>true],
         'SOMS_PICKUP'          => ['label_name' => '物流提货', 'label_color' => 'Teal'],
+        'SOMS_MAPPING_DISABLED' => ['label_name' => 'MAPPING禁用', 'label_color' => '#DC2626', 'label_thumb' => 'MAPPING禁'],
+        'SOMS_PRICE_CONVERT_OLD' => ['label_name' => '定价/计价转换（老）', 'label_color' => '#B45309', 'label_thumb' => '计价老'],
+        'SOMS_PRICE_CONVERT_NEW' => ['label_name' => '定价/计价转换（新）', 'label_color' => '#047857', 'label_thumb' => '计价新'],
+        'SOMS_PRICE_CONVERT' => ['label_name' => '定价/计价转换', 'label_color' => '#B45309', 'label_thumb' => '计价转'],
         'SOMS_URGENT_SHIP'     => ['label_name' => '加急发货', 'label_color' => 'OrangeRed', 'label_to_delivery' => true, 'label_thumb' => '加急'],
+        
+        'SOMS_PRICEABNORMAL' => ['label_name' => '退款价格异常', 'label_color'=> '#FF6B6B', 'label_thumb'=> '退款价格异常'],
+        'SOMS_ONLY_REFUND_NORMAL' => ['label_name' => '仅退款正常', 'label_color' => 'LimeGreen', 'label_thumb' => '仅退正常'],
+        'SOMS_ONLY_REFUND_ABNORMAL' => ['label_name' => '仅退款异常', 'label_color' => '#FF6B6B', 'label_thumb' => '仅退异常', 'label_desc' => '需人工处理'],
     ];
+
+    /**
+     * 基础物料 / SN 高级筛选可选标记（白名单，按 label_code）
+     */
+    public $materialSnFilterLabelCodes = array(
+        'SOMS_MAPPING_DISABLED',
+        'SOMS_PRICE_CONVERT',
+        'SOMS_PRICE_CONVERT_OLD',
+        'SOMS_PRICE_CONVERT_NEW',
+    );
+
+    /**
+     * SAP主档高级筛选可选标记（白名单，按 label_code）
+     */
+    public $goldentraMaterialFilterLabelCodes = array(
+        'SOMS_PRICE_CONVERT',
+    );
+
+    /**
+     * 订单高级筛选需排除的标记（物料/SN/主档专属）
+     */
+    public $orderFilterExcludeLabelCodes = array(
+        'SOMS_MAPPING_DISABLED',
+        'SOMS_PRICE_CONVERT_OLD',
+        'SOMS_PRICE_CONVERT_NEW',
+        'SOMS_PRICE_CONVERT',
+    );
+    
     // 小标
     public $labelValuePreset = [
         'quality_check' => [
@@ -246,6 +287,73 @@ class ome_bill_label
     ];
 
     /**
+     * 按业务场景返回高级筛选可用的标记下拉项
+     *
+     * @param string $scope basic_material | material_sn | goldentra_material | order
+     * @return array label_id => label_name
+     */
+    public function getBillLabelFilterOptions($scope)
+    {
+        $labelMdl = app::get('omeauto')->model('order_labels');
+        $options  = array();
+
+        if ($scope === 'basic_material' || $scope === 'material_sn') {
+            foreach ($this->materialSnFilterLabelCodes as $labelCode) {
+                $this->ensurePresetLabel($labelCode);
+            }
+            $rows = $labelMdl->getList(
+                'label_id,label_name',
+                array('label_code' => $this->materialSnFilterLabelCodes)
+            );
+            foreach ((array) $rows as $row) {
+                $options[$row['label_id']] = $row['label_name'];
+            }
+            return $options;
+        }
+
+        if ($scope === 'goldentra_material') {
+            foreach ($this->goldentraMaterialFilterLabelCodes as $labelCode) {
+                $this->ensurePresetLabel($labelCode);
+            }
+            $rows = $labelMdl->getList(
+                'label_id,label_name',
+                array('label_code' => $this->goldentraMaterialFilterLabelCodes)
+            );
+            foreach ((array) $rows as $row) {
+                $options[$row['label_id']] = $row['label_name'];
+            }
+            return $options;
+        }
+
+        if ($scope === 'order') {
+            $exclude = array_flip($this->orderFilterExcludeLabelCodes);
+            $rows    = $labelMdl->getList('label_id,label_name,label_code');
+            foreach ((array) $rows as $row) {
+                if (isset($exclude[$row['label_code']])) {
+                    continue;
+                }
+                $options[$row['label_id']] = $row['label_name'];
+            }
+        }
+
+        return $options;
+    }
+
+    /**
+     * 确保系统预设标记已写入 order_labels
+     *
+     * @param string $labelCode
+     */
+    protected function ensurePresetLabel($labelCode)
+    {
+        if (empty($this->orderLabelsPreset[$labelCode])) {
+            return;
+        }
+        $preset = $this->orderLabelsPreset[$labelCode];
+        $this->doLabel(array_merge($preset, array('label_code' => $labelCode)));
+    }
+
+    /**
      * 给单据打标签
      * @param $bill_id  单据id
      * @param $label_id   标签id
@@ -313,6 +421,7 @@ class ome_bill_label
             'create_time' => time(),
             'label_desc'  => $labelInfo['label_desc'],
         );
+      
         $billLabelMdl = app::get('ome')->model('bill_label');
         $isCheck      = $billLabelMdl->db_dump(['bill_type' => $bill_type, 'bill_id' => $bill_id, 'label_id' => $labelInfo['label_id']], 'id,label_value,extend_info');
         if (!$isCheck) {
@@ -515,7 +624,13 @@ class ome_bill_label
                 if ($params['order_id'] && $params['wms_delivery_id']) {
                     $labelOrder = $this->getLabelFromOrder($params['order_id'], 'order');
                     foreach ($labelOrder as $k => $label) {
-                        $this->markBillLabel($params['wms_delivery_id'], '', $label['label_code'], 'wms_delivery', $err, $label['label_value']);
+                        // 优先使用label_id打标签
+                        //@todo：独立项目使用的label_code未在$this->$orderLabelsPreset数组中定义，会被一直更新label_name字段值。
+                        if($label['label_id']){
+                            $this->markBillLabel($params['wms_delivery_id'], $label['label_id'], '', 'wms_delivery', $err, $label['label_value']);
+                        }else{
+                            $this->markBillLabel($params['wms_delivery_id'], '', $label['label_code'], 'wms_delivery', $err, $label['label_value']);
+                        }
                     }
                 }
                 break;
@@ -523,7 +638,13 @@ class ome_bill_label
                 if ($params['order_id'] && $params['ome_delivery_id']) {
                     $labelOrder = $this->getLabelFromOrder($params['order_id'], 'order');
                     foreach ($labelOrder as $k => $label) {
-                        $this->markBillLabel($params['ome_delivery_id'], '', $label['label_code'], 'ome_delivery', $err, $label['label_value']);
+                        // 优先使用label_id打标签
+                        //@todo：独立项目使用的label_code未在$this->$orderLabelsPreset数组中定义，会被一直更新label_name字段值。
+                        if($label['label_id']){
+                            $this->markBillLabel($params['ome_delivery_id'], $label['label_id'], '', 'ome_delivery', $err, $label['label_value']);
+                        }else{
+                            $this->markBillLabel($params['ome_delivery_id'], '', $label['label_code'], 'ome_delivery', $err, $label['label_value']);
+                        }
                     }
                 }
                 break;
@@ -588,6 +709,20 @@ class ome_bill_label
     public function isExpressMust()
     {
         return 'SOMS_EXPRESS_MUST';
+    }
+
+    /**
+     * 是否国补订单（标签 SOMS_GB）
+     *
+     * @param int|string $order_id
+     * @return bool
+     */
+    public function isGuobu($order_id)
+    {
+        if (empty($order_id)) {
+            return false;
+        }
+        return (bool) $this->getBillLabelInfo($order_id, 'order', 'SOMS_GB');
     }
 
     public function isJDZD($order_id){

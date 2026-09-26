@@ -1,0 +1,33 @@
+<{if $dataList}>
+<{foreach from=$dataList item=item}>
+<div class="list-item">
+  <div class="text-wrapper_5 flex-row justify-between">
+    <span class="text_11">订单号：</span>
+    <span class="text_12"><{$item.order_bn}></span>
+    <{if $item.pickup_status_name}>
+    <span class="status-order"><{$item.pickup_status_name}></span>
+    <{/if}>
+  </div>
+  <div class="text-wrapper_5 flex-row justify-between">
+    <span class="text_11">门店：</span>
+    <span class="text_12"><{$item.store_name}></span>
+  </div>
+  <div class="text-wrapper_5 flex-row justify-between">
+    <span class="text_11">渠道：</span>
+    <span class="text_12"><{$item.shop_type_name}></span>
+  </div>
+  <div class="text-wrapper_5 flex-row justify-between">
+    <span class="text_11">下单时间：</span>
+    <span class="text_12"><{if $item.order_createtime}><{$item.order_createtime|date:"Y-m-d H:i:s"}><{else}><{$item.create_time|date:"Y-m-d H:i:s"}><{/if}></span>
+  </div>
+  <{if $item.can_pickup_verify}>
+  <div class="hr"></div>
+  <div class="section_7 flex-row justify-end">
+    <div class="text-wrapper_12 flex-col">
+      <span class="text_38" onclick="showPickupVerifyModal('<{$item.delivery_id}>', '<{$item.order_bn}>')">去核销</span>
+    </div>
+  </div>
+  <{/if}>
+</div>
+<{/foreach}>
+<{/if}>

@@ -739,60 +739,168 @@ class ome_refund_apply
         {
             return false;
         }
-        //退款明细
-        if ($data['obj_id'] && $source == 'local' && !isset($data['product_data'])) {
-            $objList = app::get('ome')->model('order_objects')->getList('*',['order_id'=>$data['order_id']]);
-            $order_items = app::get('ome')->model('order_items')->getList('*',['order_id'=>$data['order_id']]);
-    
-            if ($order_items){
-                $tmp_items = array();
-                foreach ($order_items as $i_key=>$i_val){
+        //退款明细（local / archive：勾选 obj_id 整包，按平台口径拆到 items 子商品）
+        if ($data['obj_id'] && in_array($source, array('local', 'archive')) && !isset($data['product_data'])) {
+            if ($source == 'archive') {
+                $objList = app::get('archive')->model('order_objects')->getList('*', array('order_id' => $data['order_id']));
+                $order_items = app::get('archive')->model('order_items')->getList('*', array('order_id' => $data['order_id']));
+            } else {
+                $objList = app::get('ome')->model('order_objects')->getList('*', array('order_id' => $data['order_id']));
+                $order_items = app::get('ome')->model('order_items')->getList('*', array('order_id' => $data['order_id']));
+            }
+
+            $tmp_items = array();
+            if ($order_items) {
+                foreach ($order_items as $i_val) {
+                    if (!isset($i_val['quantity']) && isset($i_val['nums'])) {
+                        $i_val['quantity'] = $i_val['nums'];
+                    }
                     $tmp_items[$i_val['obj_id']][] = $i_val;
                 }
-                $order_items = NULL;
             }
-    
-            if ($objList){
-                foreach ($objList as $o_key=>&$o_val){
-                    $o_val['order_items'] = $tmp_items[$o_val['obj_id']];
-                }
-            }
-            $productData = [];
-            foreach ($objList as $key => $val) {
-                if ($val['delete'] == 'true' || !in_array($val['obj_id'],$data['obj_id'])) {
-                    unset($objList[$key]);
+
+            $selectedObjList = array();
+            foreach ((array) $objList as $o_val) {
+                if ($o_val['delete'] == 'true' || !in_array($o_val['obj_id'], $data['obj_id'])) {
                     continue;
                 }
-                foreach ($val['order_items'] as $itemKey => $itemVal) {
-                    $item = [];
-                    $item['order_item_id'] = $itemVal['item_id'];
-                    $item['num'] = $itemVal['nums'];
-                    $item['product_id'] = $itemVal['product_id'];
-                    $item['bn'] = $itemVal['bn'];
-                    $item['name'] = $itemVal['name'];
-                    $item['price'] = $itemVal['price'];
-                    $item['oid'] = $val['oid'];
-                    $item['item_type'] = $itemVal['item_type'];
-                    $item['obj_id'] = $itemVal['obj_id'];
-                    $item['divide_order_fee'] = $itemVal['divide_order_fee'];
-                    $productData[] = $item;
+                $o_val['order_items'] = isset($tmp_items[$o_val['obj_id']]) ? $tmp_items[$o_val['obj_id']] : array();
+                $selectedObjList[] = $o_val;
+            }
+            $objList = $selectedObjList;
+
+            // 分摊总额：与后续 money=refund_money+bcmoney 口径一致
+            $bcmoneyForPart = isset($data['bcmoney']) && $data['bcmoney'] !== '' ? $data['bcmoney'] : 0;
+            $allocateTotal = isset($data['money']) && $data['money'] !== '' && $data['money'] !== null
+                ? $data['money']
+                : ((isset($data['refund_money']) ? $data['refund_money'] : 0) + $bcmoneyForPart);
+            $allocateTotal = (string) $allocateTotal;
+
+            $orderLib = kernel::single('ome_order');
+            $productData = array();
+            $itemBns = array();
+
+            // 仅保留有有效 items 的 object，避免空明细占分摊尾差
+            $allocObjList = array();
+            foreach ($objList as $o_val) {
+                $activeItems = array();
+                foreach ((array) $o_val['order_items'] as $itemVal) {
+                    if (isset($itemVal['delete']) && $itemVal['delete'] == 'true') {
+                        continue;
+                    }
+                    if (!isset($itemVal['quantity']) && isset($itemVal['nums'])) {
+                        $itemVal['quantity'] = $itemVal['nums'];
+                    }
+                    $activeItems[] = $itemVal;
+                }
+                if (empty($activeItems)) {
+                    continue;
+                }
+                $o_val['order_items'] = $activeItems;
+                $allocObjList[] = $o_val;
+            }
+
+            // 多 object 时先按 object.divide_order_fee 切分退款额，再在 object 内按 items 贡献比拆分（对齐平台 _calculateAddPrice）
+            $objFeeSum = '0';
+            foreach ($allocObjList as $o_val) {
+                $fee = isset($o_val['divide_order_fee']) ? (string) $o_val['divide_order_fee'] : '0';
+                if (bccomp($fee, '0', 3) > 0) {
+                    $objFeeSum = bcadd($objFeeSum, $fee, 3);
                 }
             }
-            if (!empty($productData)) {
-                $orderLib = kernel::single('ome_order');
-                $options = array(
-                    'part_total'  => $data['money'] ? $data['money'] : $data['refund_money'],
-                    'part_field'  => 'amount',
-                    'porth_field' => 'divide_order_fee',
-                );
-                $productData = $orderLib->calculate_part_porth($productData, $options);
-                foreach ($productData as $k => $item) {
-                    $productData[$k]['price'] = sprintf('%.2f', $item['amount'] / $item['num']);
+
+            $objCount = count($allocObjList);
+            $objIdx = 0;
+            $remainingObjFee = $allocateTotal;
+
+            foreach ($allocObjList as $val) {
+                $objIdx++;
+                $activeItems = $val['order_items'];
+
+                if ($objIdx == $objCount) {
+                    $oidRefundFee = $remainingObjFee;
+                } elseif (bccomp($objFeeSum, '0', 3) > 0) {
+                    // 有实付基数时按占比；本行为 0（如赠品）分得 0，尾差留给最后一行
+                    if (bccomp((string) $val['divide_order_fee'], '0', 3) > 0) {
+                        $oidRefundFee = bcmul($allocateTotal, bcdiv((string) $val['divide_order_fee'], $objFeeSum, 5), 2);
+                    } else {
+                        $oidRefundFee = '0.00';
+                    }
+                    $remainingObjFee = bcsub($remainingObjFee, $oidRefundFee, 2);
+                } else {
+                    $oidRefundFee = bcdiv($allocateTotal, (string) $objCount, 2);
+                    $remainingObjFee = bcsub($remainingObjFee, $oidRefundFee, 2);
+                }
+
+                list($rateRs, $itemRates) = $orderLib->getItemRateByObject($val);
+                $itemCount = count($activeItems);
+                $itemLineI = 0;
+                $tempRefundFee = $oidRefundFee;
+
+                if ($rateRs) {
+                    foreach ($activeItems as $itemVal) {
+                        $itemLineI++;
+                        $itemId = $itemVal['item_id'];
+                        $itemRate = isset($itemRates[$itemId]) ? $itemRates[$itemId] : 0;
+                        $itemReturnNum = isset($itemVal['quantity']) ? $itemVal['quantity'] : $itemVal['nums'];
+                        if ($itemReturnNum <= 0) {
+                            $itemReturnNum = 1;
+                        }
+                        if ($itemLineI == $itemCount) {
+                            $itemReturnAmount = $tempRefundFee;
+                        } else {
+                            $itemReturnAmount = sprintf('%.2f', (float) $oidRefundFee * (float) $itemRate);
+                            $tempRefundFee = bcsub($tempRefundFee, $itemReturnAmount, 2);
+                        }
+                        $itemPrice = sprintf('%.2f', (float) $itemReturnAmount / (float) $itemReturnNum);
+                        $productData[] = array(
+                            'order_item_id' => $itemVal['item_id'],
+                            'num' => $itemReturnNum,
+                            'product_id' => $itemVal['product_id'],
+                            'bn' => $itemVal['bn'],
+                            'name' => $itemVal['name'],
+                            'price' => $itemPrice,
+                            'amount' => $itemReturnAmount,
+                            'oid' => $val['oid'],
+                            'item_type' => $itemVal['item_type'],
+                            'obj_id' => $itemVal['obj_id'],
+                        );
+                        $itemBns[] = $itemVal['bn'];
+                    }
+                } else {
+                    // 无有效贡献比时回退均摊
+                    $partItems = array();
+                    foreach ($activeItems as $itemVal) {
+                        $partItems[] = array(
+                            'order_item_id' => $itemVal['item_id'],
+                            'num' => isset($itemVal['quantity']) ? $itemVal['quantity'] : $itemVal['nums'],
+                            'product_id' => $itemVal['product_id'],
+                            'bn' => $itemVal['bn'],
+                            'name' => $itemVal['name'],
+                            'price' => $itemVal['price'],
+                            'oid' => $val['oid'],
+                            'item_type' => $itemVal['item_type'],
+                            'obj_id' => $itemVal['obj_id'],
+                            'divide_order_fee' => $itemVal['divide_order_fee'],
+                        );
+                    }
+                    $partItems = $orderLib->calculate_part_porth($partItems, array(
+                        'part_total' => $oidRefundFee,
+                        'part_field' => 'amount',
+                        'porth_field' => 'divide_order_fee',
+                    ));
+                    foreach ($partItems as $partItem) {
+                        $num = $partItem['num'] > 0 ? $partItem['num'] : 1;
+                        $partItem['price'] = sprintf('%.2f', $partItem['amount'] / $num);
+                        $productData[] = $partItem;
+                        $itemBns[] = $partItem['bn'];
+                    }
                 }
             }
-            $data['bn']  = implode(',', array_column((array)$objList, 'bn'));
-            $data['obj_id']  = implode(',', array_column((array)$objList, 'obj_id'));
-            $data['oid'] = implode(',', array_column((array)$objList, 'oid'));
+
+            $data['bn'] = implode(',', $itemBns);
+            $data['obj_id'] = implode(',', array_column((array) $objList, 'obj_id'));
+            $data['oid'] = implode(',', array_unique(array_filter(array_column((array) $objList, 'oid'))));
             $data['product_data'] = serialize($productData);
         }
 
@@ -802,9 +910,9 @@ class ome_refund_apply
         $shop_info = $shopObj->getShopInfo($orderData['shop_id']);
         $shop_type = $shop_info['shop_type'];
         
-        //普通申请单数据格式化
+        //普通申请单数据格式化（local / archive 本地新建均需把 refund_money 写入 money）
         $data['bcmoney']    = ($data['bcmoney'] ? $data['bcmoney'] : 0);
-        if($source == 'local' && isset($data['refund_money']))
+        if(in_array($source, array('local', 'archive')) && isset($data['refund_money']))
         {
             //金额
             $mathLib = kernel::single('eccommon_math');
@@ -1107,10 +1215,14 @@ class ome_refund_apply
         $applydata                  = array ();
         $applydata['apply_id']      = $apply_id;
         $applydata['status']        = 4; //已经退款
+        $applydata['refunded']      = isset($refundapply['money']) ? $refundapply['money'] : $refundapply['refund_money'];
         $applydata['last_modified'] = time();
         $refundApplyMdl->save($applydata, true);
         $opObj->write_log('refund_apply@ome', $applydata['apply_id'], "已退款成功，更新退款申请状态");
         //创建退款单
+        if (!isset($refundapply['refund_money'])) {
+            $refundapply['refund_money'] = $refundapply['money'];
+        }
         $refundapply['refund_bn']    = $refundapply['refund_apply_bn'];
         $refundapply['refund_fee']   = $refundapply['refund_money'];
         $refundapply['t_ready']      = $refundapply['create_time'];
@@ -1270,5 +1382,127 @@ class ome_refund_apply
         }
 
         return !is_bool($result);
+    }
+
+    /**
+     * 根据退换货单明细(reship_items.amount)更新 order_objects.pay_status
+     * reship_items.order_item_id -> order_items.item_id -> obj_id -> order_objects.obj_id
+     *
+     * @param int $reship_id 退换货单ID
+     * @param int|null $order_id 订单ID（可选，用于校验）
+     * @return bool
+     */
+    public function updateOrderObjectsPayStatusByReshipId($reship_id, $order_id = null)
+    {
+        if (empty($reship_id)) {
+            return false;
+        }
+
+        $reshipItemMdl = app::get('ome')->model('reship_items');
+        $orderItemMdl = app::get('ome')->model('order_items');
+        $orderObjectMdl = app::get('ome')->model('order_objects');
+
+        $items = $reshipItemMdl->getList('order_item_id,amount,obj_id', array(
+            'reship_id' => $reship_id,
+            'return_type' => 'return',
+        ));
+        if (empty($items)) {
+            return false;
+        }
+
+        $orderItemIds = array();
+        foreach ($items as $item) {
+            if (!empty($item['order_item_id'])) {
+                $orderItemIds[] = $item['order_item_id'];
+            }
+        }
+
+        $itemIdToObjId = array();
+        if (!empty($orderItemIds)) {
+            $orderItems = $orderItemMdl->getList('item_id,obj_id,order_id', array('item_id' => $orderItemIds));
+            foreach ($orderItems as $orderItem) {
+                $itemIdToObjId[$orderItem['item_id']] = $orderItem['obj_id'];
+                if (empty($order_id) && !empty($orderItem['order_id'])) {
+                    $order_id = $orderItem['order_id'];
+                }
+            }
+        }
+
+        $objRefundAmounts = array();
+        foreach ($items as $item) {
+            $amount = $item['amount'];
+            if (bccomp(strval($amount), '0', 3) <= 0) {
+                continue;
+            }
+
+            $obj_id = 0;
+            if (!empty($item['order_item_id']) && isset($itemIdToObjId[$item['order_item_id']])) {
+                $obj_id = $itemIdToObjId[$item['order_item_id']];
+            } elseif (!empty($item['obj_id'])) {
+                $obj_id = $item['obj_id'];
+            }
+            if (empty($obj_id)) {
+                continue;
+            }
+
+            if (!isset($objRefundAmounts[$obj_id])) {
+                $objRefundAmounts[$obj_id] = '0';
+            }
+            $objRefundAmounts[$obj_id] = bcadd($objRefundAmounts[$obj_id], strval($amount), 3);
+        }
+
+        if (empty($objRefundAmounts)) {
+            return false;
+        }
+
+        $updated = false;
+
+        foreach ($objRefundAmounts as $obj_id => $refund_amount) {
+            $filter = array('obj_id' => $obj_id);
+            if (!empty($order_id)) {
+                $filter['order_id'] = $order_id;
+            }
+            $orderObject = $orderObjectMdl->dump($filter, 'obj_id,order_id,divide_order_fee,pay_status');
+            if (empty($orderObject)) {
+                continue;
+            }
+            if ($orderObject['pay_status'] == '5') {
+                continue;
+            }
+
+            $divide_order_fee = strval($orderObject['divide_order_fee']);
+            if (bccomp($refund_amount, $divide_order_fee, 3) >= 0) {
+                $pay_status = 5;
+            } else {
+                $pay_status = 4;
+            }
+
+            $result = $orderObjectMdl->update(
+                array('pay_status' => $pay_status),
+                array('obj_id' => $obj_id, 'pay_status|notin' => array('5'))
+            );
+            if (!is_bool($result)) {
+                $updated = true;
+                if (empty($order_id)) {
+                    $order_id = $orderObject['order_id'];
+                }
+            }
+        }
+
+        if ($updated && !empty($order_id)) {
+            $log_msg = sprintf(
+                '极速退款根据退换货单:%s更新子单pay_status',
+                $reship_id
+            );
+            app::get('ome')->model('operation_log')->write_log('order_edit@ome', $order_id, $log_msg);
+
+            foreach (kernel::servicelist('ome.service.refund.apply.objectspaystatus.after') as $service) {
+                if (method_exists($service, 'afterUpdateOrderObjectsPayStatus')) {
+                    $service->afterUpdateOrderObjectsPayStatus($order_id);
+                }
+            }
+        }
+
+        return $updated;
     }
 }

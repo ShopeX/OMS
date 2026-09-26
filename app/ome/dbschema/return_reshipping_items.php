@@ -18,7 +18,13 @@ $db['return_reshipping_items'] = array(
         'oid' => array(
             'type' => 'varchar(50)',
             'editable' => false,
-            'comment' => '子订单号',
+            'comment' => '平台子订单号(order_objects.oid)',
+        ),
+        'order_item_id' => array(
+            'type' => 'int unsigned',
+            'editable' => false,
+            'default' => 0,
+            'comment' => '原订单明细ID(sdb_ome_order_items.item_id)',
         ),
         'sku_uuid' => array(
             'type' => 'varchar(255)',
@@ -45,6 +51,39 @@ $db['return_reshipping_items'] = array(
             'editable' => false,
             'comment' => '价格',
         ),
+      
+        'pmt_price' =>
+        array(
+          'type' => 'money',
+          'default' => '0',
+        'editable' => false,
+        'comment' => '订单行明细优惠小计',
+        ),
+        'sale_price' =>
+        array(
+          'type' => 'money',
+          'default' => '0',
+            'editable' => false,
+            'comment' => '订单行明细销售小计,公式: amount-pmt_price',
+        ),
+        'amount' =>
+        array(
+          'type' => 'money',
+          'editable' => false,
+          'comment' => '订单行明细零售小计,公式: price * nums',
+        ),
+        'divide_order_fee'  => array(
+            'type'     => 'money',
+            'editable' => false,
+            'label'    => '分摊之后的实付金额',
+            'comment' => '子单实付,公式: sale_price-part_mjz_discount',
+        ),
+        'part_mjz_discount' => array(
+            'type'     => 'money',
+            'editable' => false,
+            'label'    => '优惠分摊',
+            'comment' => '子单优惠分摊,按价格贡献比分摊pmt_order'
+        ),
         'at_time' => array(
             'type' => 'TIMESTAMP',
             'default' => 'CURRENT_TIMESTAMP',
@@ -62,6 +101,11 @@ $db['return_reshipping_items'] = array(
         'ind_reshipping_id' => array(
             'columns' => array(
                 0 => 'reshipping_id',
+            ),
+        ),
+        'ind_order_item_id' => array(
+            'columns' => array(
+                0 => 'order_item_id',
             ),
         ),
     ),

@@ -61,7 +61,12 @@ class erpapi_wms_request_reship extends erpapi_wms_request_abstract
         $callback = array(
             'class'  => get_class($this),
             'method' => 'reship_create_callback',
-            'params' => array('reship_bn' => $reship_bn, 'obj_bn' => $reship_bn, 'obj_type' => 'reship'),
+            'params' => array(
+                'reship_bn' => $reship_bn,
+                'obj_bn'    => $reship_bn,
+                'obj_type'  => 'reship',
+                'wms_name'  => (string) $this->__channelObj->wms['channel_name'],
+            ),
         );
 
         $retry = array(
@@ -141,6 +146,9 @@ class erpapi_wms_request_reship extends erpapi_wms_request_abstract
             $reshipObj->db->exec("UPDATE sdb_ome_reship SET out_iso_bn='" . $data['wms_order_code'] . "' WHERE reship_bn='" . $reship_bn . "'");
         }
         $reshipObj->update(['sync_status'=>($rsp == 'succ' ? '3' : '2'),'sync_msg'=>$err_msg], ['reship_bn'=>$reship_bn]);
+        if ($rsp != 'succ') {
+            $this->_sendReshipCreateFailNotify($reship_bn, $response, $callback_params);
+        }
         /***
          * @todo：(已咨询同事)注销此段代码;
          * $this->_getNextObjType()方法不存在,导致回调报500错误;
@@ -163,6 +171,117 @@ class erpapi_wms_request_reship extends erpapi_wms_request_abstract
         $callback_params['obj_bn']   = $reship_bn;
         $callback_params['obj_type'] = 'reship';
         return $this->callback($response, $callback_params);
+    }
+
+    /**
+     * 退货单推送 WMS 创建失败预警（异步回调 reship_create_callback，事件码 reship_create_fail_notify）
+     *
+     * @param string $reship_bn
+     * @param array  $response        WMS 回调响应，含 rsp、err_msg、res
+     * @param array  $callback_params 创建时写入的回调参数
+     */
+    protected function _sendReshipCreateFailNotify($reship_bn, $response, $callback_params = array())
+    {
+        try {
+            $fail_msg = '';
+            if (!empty($response['err_msg'])) {
+                $fail_msg = (string) $response['err_msg'];
+            } elseif (!empty($response['res'])) {
+                $fail_msg = (string) $response['res'];
+            }
+            $fail_rsp = isset($response['rsp']) ? (string) $response['rsp'] : '';
+
+            $reshipObj = app::get('ome')->model('reship');
+            $reshipInfo = $reshipObj->db_dump(
+                array('reship_bn' => $reship_bn),
+                'reship_id,reship_bn,order_id,branch_id,shop_id,shop_type'
+            );
+            if (empty($reshipInfo)) {
+                return;
+            }
+
+            $order_bn = '';
+            if (!empty($reshipInfo['order_id'])) {
+                $orderRow = app::get('ome')->model('orders')->db_dump(
+                    array('order_id' => $reshipInfo['order_id']),
+                    'order_bn'
+                );
+                $order_bn = !empty($orderRow['order_bn']) ? (string) $orderRow['order_bn'] : '';
+            }
+
+            $branch_bn = '';
+            $branch_name = '';
+            $receiver = array();
+            if (!empty($reshipInfo['branch_id'])) {
+                $branchRow = app::get('ome')->model('branch')->db_dump(
+                    array('branch_id' => $reshipInfo['branch_id']),
+                    'branch_bn,name,email'
+                );
+                if (!empty($branchRow)) {
+                    $branch_bn = (string) $branchRow['branch_bn'];
+                    $branch_name = (string) $branchRow['name'];
+                    if (!empty($branchRow['email'])) {
+                        $receiver = explode(',', $branchRow['email']);
+                    }
+                }
+            }
+
+            $shop_name = '';
+            if (!empty($reshipInfo['shop_id'])) {
+                $shopRow = app::get('ome')->model('shop')->db_dump(
+                    array('shop_id' => $reshipInfo['shop_id']),
+                    'name'
+                );
+                $shop_name = !empty($shopRow['name']) ? (string) $shopRow['name'] : '';
+            }
+
+            $shop_type_label = '';
+            if (!empty($reshipInfo['shop_type']) && class_exists('ome_shop_type')) {
+                $shop_type_label = ome_shop_type::shop_name($reshipInfo['shop_type']);
+            } elseif (!empty($reshipInfo['shop_type'])) {
+                $shop_type_label = (string) $reshipInfo['shop_type'];
+            }
+
+            $wms_name = !empty($callback_params['wms_name']) ? (string) $callback_params['wms_name'] : '';
+            if (empty($wms_name) && !empty($this->__channelObj->wms['channel_name'])) {
+                $wms_name = (string) $this->__channelObj->wms['channel_name'];
+            }
+
+            $detail_list = '';
+            $items = app::get('ome')->model('reship_items')->getList(
+                'bn,product_name,num',
+                array('reship_id' => $reshipInfo['reship_id'], 'is_del' => 'false')
+            );
+            if (!empty($items)) {
+                foreach ($items as $index => $item) {
+                    $seq = $index + 1;
+                    $detail_list .= "\r\n<br/>序号：<font color=\"warning\">{$seq}</font>，物料号：<font color=\"warning\">{$item['bn']}</font>，名称：<font color=\"warning\">{$item['product_name']}</font>，数量：<font color=\"warning\">{$item['num']}</font>";
+                }
+            } else {
+                $detail_list = "\r\n<br/>（无明细）";
+            }
+
+            $notifyParams = array(
+                'reship_bn'   => (string) $reship_bn,
+                'order_bn'    => $order_bn,
+                'branch_bn'   => $branch_bn,
+                'branch_name' => $branch_name,
+                'branch_id'   => (string) $reshipInfo['branch_id'],
+                'wms_name'    => $wms_name,
+                'shop_type'   => $shop_type_label,
+                'shop_name'   => $shop_name,
+                'fail_rsp'    => $fail_rsp,
+                'fail_msg'    => $fail_msg,
+                'detail_list' => $detail_list,
+            );
+            if (!empty($receiver)) {
+                $notifyParams['receiver'] = $receiver;
+            }
+
+            kernel::single('monitor_event_notify')->addNotify('reship_create_fail_notify', $notifyParams, true);
+        } catch (Exception $e) {
+            // 不影响主流程
+        }
     }
 
     protected function _format_reship_create_params($sdf)
@@ -329,4 +448,4 @@ class erpapi_wms_request_reship extends erpapi_wms_request_abstract
     {
         return $this->error('接口方法不存在', 'w402');
     }
-}
+}

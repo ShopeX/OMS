@@ -170,6 +170,28 @@ abstract class erpapi_wms_selfwms_request_abstract
             $failApiModel->delete(array('obj_bn'=>$sdf['outer_delivery_bn'],'obj_type'=>'delivery'));
             $consoleDlyLib->update_sync_status($deliverys['delivery_id'], 'send_succ', $msg);
             
+            // logi_no
+            $logi_no = '';
+            
+            // 唯品会JITX补寄订单，请求平台获取物流单号
+            if(in_array($sdf['shop_type'], array('vop'))) {
+                if($sdf['order_type'] == 'bufa'){
+                    $checkBufaResult = kernel::single('ome_order_platform_vop_bufa')->getVopWaybillNumber($sdf);
+                    if($checkBufaResult['rsp'] == 'succ'){
+                        $logi_no = $checkBufaResult['data']['transport_no'];
+                    }
+                }
+                
+                // 更新发货单上的物流单号
+                if($logi_no && $deliverys['delivery_id']){
+                    $deliveryObj->update(array('logi_no'=>$logi_no), array('delivery_id'=>$deliverys['delivery_id']));
+                    
+                    // log
+                    $operLogMdl = app::get('ome')->model('operation_log');
+                    $operLogMdl->write_log('delivery_modify@ome', $deliverys['delivery_id'], '请求平台获取物流单号：'.$logi_no);
+                }
+            }
+            
             // 自发货标记(selfwms自有仓储自动完成发货)
             if($sdf['is_self_shipment'] === true){
                 $wms_id = $this->__channelObj->wms['channel_id'];
@@ -180,7 +202,7 @@ abstract class erpapi_wms_selfwms_request_abstract
                 $data['delivery_bn'] = $delivery_bn; // 发货单号
                 $data['status'] = 'delivery';
                 $data['logi_id'] = $sdf['logi_id']; // 物流公司ID：直接使用发货单上的物流公司ID
-                $data['logi_no'] = $delivery_bn; // 物流单号：直接使用发货单号作为虚拟物流单号
+                $data['logi_no'] = ($logi_no ? $logi_no : $delivery_bn); // 物流单号：直接使用发货单号作为虚拟物流单号
                 
                 // delivery_items
                 if($sdf['delivery_items']){
@@ -197,7 +219,6 @@ abstract class erpapi_wms_selfwms_request_abstract
                 
                 return kernel::single('erpapi_router_response')->set_channel_id($wms_id)->set_api_name('wms.delivery.status_update')->dispatch($data);
             }
-            
         }
 
         return $rs;

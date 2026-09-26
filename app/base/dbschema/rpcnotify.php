@@ -89,6 +89,15 @@ $db['rpcnotify']=array (
       'in_list' =>true,
       'default_in_list' => true,
     ),
+    'event_type' =>
+    array(
+      'type' => 'varchar(50)',
+      'label' => app::get('base')->_('模板类型'),
+      'width' => 120,
+      'editable' => false,
+      'in_list' => true,
+      'default_in_list' => true,
+    ),
     ),
   'index' => 
   array (
@@ -106,10 +115,16 @@ $db['rpcnotify']=array (
         0 => 'notifytime',
       ),
     ),
+    'ind_event_type' =>
+    array (
+      'columns' =>
+      array (
+        0 => 'event_type',
+      ),
+    ),
   ),
     'comment' => '系统通知表',
     'engine' => 'innodb',
     'version' => '$Rev: 40912 $',
     'ignore_cache' => true,
 );
-

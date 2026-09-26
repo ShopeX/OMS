@@ -24,11 +24,10 @@ class erpapi_misc_task
 {
     /**
      * 每分钟执行
-     * 
+     *
      * @return void
      * @author
-     * */
-
+     **/
     public function minute()
     {
         $retryError = array(
@@ -94,7 +93,6 @@ class erpapi_misc_task
             $apiFailModel->retry($value);
         }
 
-
         // 仓储单据轮训查
         $retryType = array(
             'search_inpurchase',
@@ -117,19 +115,44 @@ class erpapi_misc_task
         foreach($rows as $row) {
             $apiFailModel->retry($row);
         }
-    
-        // //重试推送请求WMS失败的发货单
-        // $deliveryLib = kernel::single('console_delivery');
-        // $result = $deliveryLib->auto_retry_wms_delivery();
+        
+        // [失败重试]请求WMS推送失败的发货单
+        $deliveryLib = kernel::single('console_delivery');
+        $deliveryLib->retryRequestWmsDelivery();
     }
 
-        /**
-     * hour
-     * @return mixed 返回值
-     */
     public function hour()
     {
         $apiFailModel = app::get('erpapi')->model('api_fail');
+
+        // 电子发票上传：按小时重试（待签收等场景间隔更合理）
+        $filter = array(
+            'last_modify|sthan' => time() - 3600,
+            'last_modify|than'  => strtotime('-5 days'),
+            'obj_type'          => array('upload_invoice'),
+            'fail_times|lthan'  => '50',
+            'status'            => array('fail', 'running'),
+            'filter_sql'        => "retry_params = 'trigger_request'",
+        );
+        $rows = $apiFailModel->getList('*', $filter, 0, 200, 'last_modify ASC');
+        foreach ($rows as $key => $value) {
+            // trigger_request 走不到 retry() 的 upload_invoice 分支，按同样规则删除
+            if (false !== strpos($value['err_msg'], '订单无开票记录')
+                || false !== strpos($value['err_msg'], '不允许开票')
+                || false !== strpos($value['err_msg'], '发票不用上传给淘宝平台')) {
+                $apiFailModel->delete(array('id' => $value['id']));
+                continue;
+            }
+
+            $result = $apiFailModel->retry($value);
+            $errMsg = is_array($result) ? ($result['msg'] ? $result['msg'] : $result['err_msg']) : '';
+            if ((is_array($result) && $result['rsp'] == 'succ')
+                || false !== strpos($errMsg, '订单无开票记录')
+                || false !== strpos($errMsg, '不允许开票')
+                || false !== strpos($errMsg, '发票不用上传给淘宝平台')) {
+                $apiFailModel->delete(array('id' => $value['id']));
+            }
+        }
 
         // 物流回写重试
         $filter = array (
@@ -183,15 +206,8 @@ class erpapi_misc_task
             }
         }
         
-        // [每小时执行一次]重试推送请求WMS失败的发货单
-        $deliveryLib = kernel::single('console_delivery');
-        $deliveryLib->auto_retry_wms_delivery();
     }
 
-    /**
-     * day
-     * @return mixed 返回值
-     */
     public function day()
     {
         // 清除一个月之前的失败

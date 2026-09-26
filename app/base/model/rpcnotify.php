@@ -53,4 +53,16 @@ class base_mdl_rpcnotify extends base_db_model{
             return app::get('base')->_('已读');
         }
     }
+
+    public function modifier_event_type($type)
+    {
+        if (!$type) {
+            return '-';
+        }
+        if (app::get('monitor')->is_installed()) {
+            $eventType = kernel::single('monitor_event_template')->getEventType();
+            return isset($eventType[$type]) ? $eventType[$type] : $type;
+        }
+        return $type;
+    }
 }

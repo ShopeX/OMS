@@ -2187,7 +2187,7 @@ class ome_ctl_admin_order extends desktop_controller{
                 $this->singlepage("admin/order/confirm.html");
                 exit;
             }
-            
+
             //货到付款禁止拆单
             if($order['shipping']['is_cod'] == 'true' || ($order['shop_type'] == 'taobao' && $order['order_source'] == 'maochao') || $is_luckybag_flag){
                 $this->pagedata['split_model']  = 0;
@@ -5022,7 +5022,11 @@ class ome_ctl_admin_order extends desktop_controller{
 
         $num = $_POST['num'];
         $price = $_POST['price'];
+        $sm_ids = $_POST['sm_id'];
         if (!$num){
+            $this->end(false, '请选择商品');
+        }
+        if (!$sm_ids || count($sm_ids) != count($num)){
             $this->end(false, '请选择商品');
         }
 
@@ -5060,11 +5064,15 @@ class ome_ctl_admin_order extends desktop_controller{
         $shop_bn = $shopInfo['shop_bn'];
 
         $lucky_falg = false;
-        foreach ($num as $k => $i){
+        foreach ($num as $line_key => $i){
             //销售物料购买数量
             $obj_number = $i;
 
-            $salesMInfo = $salesMLib->getSalesMById($iorder['shop_id'],$k);
+            $sm_id = $sm_ids[$line_key];
+            if (!$sm_id){
+                $this->end(false, '请选择商品');
+            }
+            $salesMInfo = $salesMLib->getSalesMById($iorder['shop_id'], $sm_id);
             if($salesMInfo){
                 if($salesMInfo['sales_material_type'] == 5){ //多选一
                     $basicMInfos = $salesMLib->get_order_pickone_bminfo($salesMInfo['sm_id'], $obj_number,$iorder['shop_id']);
@@ -5094,15 +5102,15 @@ class ome_ctl_admin_order extends desktop_controller{
                 //如果是促销类销售物料
                 if($salesMInfo['sales_material_type'] == 2){ //促销
                     $obj_type = $item_type = 'pkg';
-                    $obj_sale_price = $price[$k]*$obj_number;
+                    $obj_sale_price = $price[$line_key]*$obj_number;
                     //item层关联基础物料平摊销售价
                     $salesMLib->calProSaleMPriceByRate($obj_sale_price, $basicMInfos);
                     $return_arr_info = $lib_ome_order->format_order_items_data($item_type,$obj_number,$basicMInfos);
                 }elseif($salesMInfo['sales_material_type'] == 5){ //多选一
                     $obj_type = $item_type = 'pko';
                     foreach($basicMInfos as &$var_basic_info){
-                        $var_basic_info["price"] = $price[$k];
-                        $var_basic_info["sale_price"] = $price[$k];
+                        $var_basic_info["price"] = $price[$line_key];
+                        $var_basic_info["sale_price"] = $price[$line_key];
                     }
                     unset($var_basic_info);
                     $return_arr_info = $lib_ome_order->format_order_items_data($item_type,$obj_number,$basicMInfos);
@@ -5122,11 +5130,11 @@ class ome_ctl_admin_order extends desktop_controller{
                     $obj_type = $obj_type ? $obj_type : 'goods';
                     $item_type = ($obj_type == 'goods') ? 'product' : $obj_type;
                     if($obj_type == 'gift'){
-                        $price[$k] = 0.00;
+                        $price[$line_key] = 0.00;
                     }
                     foreach($basicMInfos as &$var_basic_info){
-                        $var_basic_info["price"] = $price[$k];
-                        $var_basic_info["sale_price"] = $price[$k];
+                        $var_basic_info["price"] = $price[$line_key];
+                        $var_basic_info["sale_price"] = $price[$line_key];
                     }
                     unset($var_basic_info);
                     $return_arr_info = $lib_ome_order->format_order_items_data($item_type,$obj_number,$basicMInfos);
@@ -5138,13 +5146,13 @@ class ome_ctl_admin_order extends desktop_controller{
                     'goods_id' => $salesMInfo['sm_id'],
                     'bn' => $salesMInfo['sales_material_bn'],
                     'name' => $salesMInfo['sales_material_name'],
-                    'price' => $price[$k],
-                    'sale_price'=>$price[$k]*$obj_number,
-                    'amount' => $price[$k]*$obj_number,
+                    'price' => $price[$line_key],
+                    'sale_price'=>$price[$line_key]*$obj_number,
+                    'amount' => $price[$line_key]*$obj_number,
                     'quantity' => $obj_number,
                     'order_items' => $return_arr_info["order_items"],
                 );
-                $item_cost += $price[$k]*$obj_number;
+                $item_cost += $price[$line_key]*$obj_number;
                 $tostr[]=array("name"=>$salesMInfo['sales_material_name'],"num"=>$obj_number);
             }
         }
@@ -6646,23 +6654,9 @@ class ome_ctl_admin_order extends desktop_controller{
         //$regionsInfo    = $regionsObj->dump(array('region_id'=>$region_id), 'region_grade');
         //$depth           = $regionsInfo['region_grade'];
 
-        //物流公司
-        $corpTypeLib    = kernel::single('o2o_corp_type');
-        $corp_type      = $corpTypeLib->get_corp_type($corp_id);
-
         //搜索条件
         $storeObj      = app::get('o2o')->model('store');
-        $where         = '';
-
-        if($corp_type['o2o_pickup'])
-        {
-            $where    .= ' AND a.self_pick=1 ';
-        }
-        elseif($corp_type['o2o_ship'])
-        {
-            $where    .= ' AND a.distribution=1 ';
-        }
-        $where    .= ' AND a.status=1';
+        $where         = ' AND a.status=1';
 
         //判断是否安装了阿里全渠道app
         if(app::get('tbo2o')->is_installed()){
@@ -6810,10 +6804,6 @@ class ome_ctl_admin_order extends desktop_controller{
             exit;
         }
 
-        //物流公司
-        $corpTypeLib    = kernel::single('o2o_corp_type');
-        $corp_type      = $corpTypeLib->get_corp_type($corp_id);
-
         //地区级数
         $regionsObj    = app::get('eccommon')->model('regions');
         $regionsInfo   = $regionsObj->dump(array('region_id'=>$region_id), 'p_region_id, region_grade');
@@ -6828,17 +6818,7 @@ class ome_ctl_admin_order extends desktop_controller{
 
         //条件
         $storeObj      = app::get('o2o')->model('store');
-        $where         = '';
-
-        if($corp_type['o2o_pickup'])
-        {
-            $where    .= ' AND a.self_pick=1 ';
-        }
-        elseif($corp_type['o2o_ship'])
-        {
-            $where    .= ' AND a.distribution=1 ';
-        }
-        $where    .= ' AND a.status=1';
+        $where         = ' AND a.status=1';
 
         //判断是否安装了阿里全渠道app
         if(app::get('tbo2o')->is_installed()){
@@ -7104,10 +7084,6 @@ class ome_ctl_admin_order extends desktop_controller{
             exit;
         }
 
-        //物流公司类型(门店自提OR配送)
-        $corpTypeLib    = kernel::single('o2o_corp_type');
-        $corp_type      = $corpTypeLib->get_corp_type($corp_id);
-
         //门店信息
         $o2oStoreObj    = app::get('o2o')->model('store');
         $storeRow       = $o2oStoreObj->dump(array('store_bn'=>$store_bn), 'store_id, area');
@@ -7127,13 +7103,7 @@ class ome_ctl_admin_order extends desktop_controller{
         }
 
         //获取地区关联的所有门店
-        $where = '';
-        if($corp_type['o2o_pickup']){
-            $where    .= ' AND a.self_pick=1 ';
-        }elseif($corp_type['o2o_ship']){
-            $where    .= ' AND a.distribution=1 ';
-        }
-        $where    .= ' AND a.status=1';
+        $where = ' AND a.status=1';
 
         $region_grade    = 'region_' . $regionsInfo['region_grade'];
 

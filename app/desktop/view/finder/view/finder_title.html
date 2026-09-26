@@ -47,10 +47,22 @@
     <div class="frt finder-options">
         <{if $use_buildin_customcols && $is_super}>
     	<div class="span-auto">
-			<a class="lnk-customcols" title="<{t}>自定义字段<{/t}>" href="<{$url}>&action=customcols&finder_aliasname=<{$finder_aliasname}>" target="dialog::{width:700,title:'<{t}>自定义字段<{/t}>'}">
+			<a class="lnk-customcols" title="<{t}>自定义字段<{/t}>" href="<{$url}>&action=customcols&finder_aliasname=<{$finder_aliasname}>" target="dialog::{width:980,title:'<{t}>自定义字段<{/t}>'}">
 			</a>
 	   </div>
 	   <{/if}>
+
+        <{if $use_unify_order_center}>
+        <div class="span-auto" style="margin-right:20px; padding-bottom: 15px;">
+            <label for="unify-order-center-select-<{$name}>" class="f-12" style="margin-right:4px;"><{t}>切换视图：<{/t}></label>
+            <select id="unify-order-center-select-<{$name}>" class="x-input" style="min-width:168px;" onchange="if (this.value) { window.location.href = this.value; }">
+            <{foreach from=$unify_order_center_views item=uv}>
+                <option value="<{$uv.href|escape:'html'}>" <{if $uv.current}>selected="selected"<{/if}>><{$uv.label|escape:'html'}></option>
+            <{/foreach}>
+            </select>
+        </div>
+        <{/if}>
+
         <{if $use_buildin_refresh}>
     	<div class="span-auto">
     	     <a class="lnk-refresh" title="<{t}>刷新当前列表<{/t}>" onclick="<{$var_name}>.refresh();return false;" href="javascript:void(0)">

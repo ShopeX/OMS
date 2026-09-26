@@ -23,6 +23,8 @@
 
 class material_mdl_basic_material_ext extends dbeav_model{
 
+    private $customColMap;
+
     public function templateColumn(){
         $customcols = kernel::single('material_customcols')->getcolstemplate();
         $templateColumn = $this->defaulttemplateColumn;
@@ -172,19 +174,36 @@ class material_mdl_basic_material_ext extends dbeav_model{
         }
         $sdf['bm_id'] = $row['bm_id'];
 
-        if($sdf['custom']){
-            
-
-            foreach($sdf['custom'] as $ck=>$cv){
-                if($cv){
-                    $sdf['props'][$ck] = $cv;
+        if ($sdf['custom']) {
+            $customcolsLib = kernel::single('material_customcols');
+            foreach ($customcolsLib->normalizeImportCustomProps($sdf['custom']) as $ck => $cv) {
+                $sdf['props'][$ck] = $cv;
+                if(isset($customColMap[$ck])){
+                    $normalizeResult = $customcolsLib->normalizeImportValue($customColMap[$ck], $cv);
+                    if(!$normalizeResult['status']){
+                        $msg['warning'][] = '第'.$this->nums.'行：'.$normalizeResult['msg'];
+                        return false;
+                    }
+                    $cv = $normalizeResult['value'];
                 }
+                $sdf['props'][$ck] = $cv;
             }
-           
+            // custom 仅作导入中间结构，已归一化到 props，避免落库/日志出现 Array
+            unset($sdf['custom']);
         }
         $this->import_data[] = $sdf;
         
         return true;
+    }
+
+    private function getCustomColMap()
+    {
+        if($this->customColMap === null){
+            $customcols = kernel::single('material_customcols')->getcols();
+            $this->customColMap = $customcols ? array_column($customcols, null, 'col_key') : array();
+        }
+
+        return $this->customColMap;
     }
 
     function prepared_import_csv_obj($data,$mark,$tmpl,&$msg = ''){
@@ -199,6 +218,7 @@ class material_mdl_basic_material_ext extends dbeav_model{
                 
         $aP = $this->import_data;
 
+        $opInfo = kernel::single('material_basic_material')->getImportOpInfo();
         foreach(array_chunk($aP, 100) as $v){
 
             $queueData = array(
@@ -206,6 +226,7 @@ class material_mdl_basic_material_ext extends dbeav_model{
                     'start_time'=>time(),
                     'params'=>array(
                             'sdfdata'=>$v,
+                            'opInfo' => $opInfo,
                     ),
                     'worker'=>'material_mdl_basic_material_ext.import_run',
             );
@@ -222,6 +243,13 @@ class material_mdl_basic_material_ext extends dbeav_model{
         $basicObj = app::get('material')->model('basic_material');
         $confObj = app::get('material')->model('basic_material_conf');
         $salesMaterialObj           = app::get('material')->model('sales_material');
+        $opInfo = !empty($params['opInfo']) ? $params['opInfo'] : null;
+        $importLogLib = kernel::single('material_basic_material');
+        $customcolsLib = kernel::single('material_customcols');
+        $customColMeta = array();
+        foreach ($customcolsLib->getcols() as $col) {
+            $customColMeta[$col['col_key']] = $col;
+        }
 
         foreach ($params['sdfdata'] as $v) {
             $old = $this->db_dump($v['bm_id']);
@@ -235,7 +263,7 @@ class material_mdl_basic_material_ext extends dbeav_model{
                     foreach ($vv as $basick => $basicv) {
                         if($oldBasic[$basick] != $basicv) {
                             $upBasic[$basick] = $basicv;
-                            $log .= $basick . ',' . $oldBasic[$basick] . '->' . $basicv . ';';
+                            $log .= $basick . ',' . $this->formatImportLogValue($oldBasic[$basick]) . '->' . $this->formatImportLogValue($basicv) . ';';
                         }
                     }
                     if(isset($vv['cat_id']) && isset($vv['cat_path'])) {
@@ -280,29 +308,50 @@ class material_mdl_basic_material_ext extends dbeav_model{
                     foreach ($vv as $confk => $confv) {
                         if($oldConf[$confk] != $confv) {
                             $upConf[$confk] = $confv;
-                            $log .= $confk . ',' . $oldConf[$confk] . '->' . $confv . ';';
+                            $log .= $confk . ',' . $this->formatImportLogValue($oldConf[$confk]) . '->' . $this->formatImportLogValue($confv) . ';';
                         }
                     }
                     if($upConf) {
                         $confObj->update($upConf, ['bm_id'=>$v['bm_id']]);
                     }
+                } elseif ($kk == 'custom') {
+                    // 兼容历史队列：custom 已归一化到 props，跳过避免日志出现 Array
+                    continue;
                 }elseif($kk=='props'){
                     $propsMdl = app::get('material')->model('basic_material_props');
                     $propslist = $propsMdl->getlist('props_col,props_value,id',array('bm_id'=>$v['bm_id']));
 
                     $propslist = array_column($propslist, null,'props_col');
+                    $customcolsLib = kernel::single('material_customcols');
+                    $customColMap = $this->getCustomColMap();
                     foreach ($vv as $pk => $pv) {
+                        $oldExists = !empty($propslist[$pk]['id']);
+                        $oldValue = $oldExists ? (string)$propslist[$pk]['props_value'] : '';
+                        if($oldExists && $oldValue === (string)$pv){
+                            continue;
+                        }
+
                         $proconf = array(
                             'bm_id'         =>  $v['bm_id'],
                             'props_col'     =>  $pk,
                             'props_value'   =>  $pv,
                         );
-                        if($propslist[$pk]['id']){
+                        if($oldExists){
                             $proconf['id'] = $propslist[$pk]['id'];
 
                         }
 
+                        $oldPropVal = isset($propslist[$pk]['props_value']) ? $propslist[$pk]['props_value'] : '';
                         $propsMdl->save($proconf);
+                        if ((string) $oldPropVal !== (string) $pv) {
+                            $colLabel = isset($customColMeta[$pk]['col_name']) ? $customColMeta[$pk]['col_name'] : $pk;
+                            $colType = isset($customColMeta[$pk]['col_type']) ? $customColMeta[$pk]['col_type'] : '';
+                            $log .= $colLabel . ','
+                                . $this->formatImportPropLogValue($oldPropVal, $colType)
+                                . '->'
+                                . $this->formatImportPropLogValue($pv, $colType)
+                                . ';';
+                        }
                     }
 
                 } elseif($kk=='barcode'){
@@ -332,18 +381,55 @@ class material_mdl_basic_material_ext extends dbeav_model{
                     }
 
                 } elseif($old[$kk] != $vv) {
+                    // 数组字段不可直接拼进日志/落库
+                    if (is_array($vv) || is_array($old[$kk])) {
+                        continue;
+                    }
                     $upData[$kk] = $vv;
-                    $log .= $kk . ',' . $old[$kk] . '->' . $vv . ';';
+                    $log .= $kk . ',' . $this->formatImportLogValue($old[$kk]) . '->' . $this->formatImportLogValue($vv) . ';';
                 }
             }
             if(!empty($upData)) {
                 $this->update($upData, ['bm_id'=>$v['bm_id']]);
             }
             if($log != '导入更新：') {
-                app::get('ome')->model('operation_log')->write_log('basic_material_property@wms',$v['bm_id'],$log);
+                $importLogLib->writeImportLog('basic_material_property@wms', $v['bm_id'], $log, $opInfo);
             }
         }
         return false;
+    }
+
+    /**
+     * 导入操作日志值格式化（避免数组被转成 Array）
+     *
+     * @param mixed $value
+     * @return string
+     */
+    protected function formatImportLogValue($value)
+    {
+        if (is_array($value)) {
+            return json_encode($value, JSON_UNESCAPED_UNICODE);
+        }
+        if ($value === null || $value === false) {
+            return '';
+        }
+        return (string) $value;
+    }
+
+    /**
+     * 自定义属性日志展示值（radiobox：1/0 → 是/否）
+     *
+     * @param mixed  $value
+     * @param string $colType
+     * @return string
+     */
+    protected function formatImportPropLogValue($value, $colType = '')
+    {
+        if ($colType === 'radiobox') {
+            $normalized = kernel::single('material_customcols')->normalizeRadioboxValue($value);
+            return $normalized === '1' ? '是' : '否';
+        }
+        return $this->formatImportLogValue($value);
     }
 
     public function getCats($cat_name){

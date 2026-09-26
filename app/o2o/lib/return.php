@@ -22,28 +22,29 @@
 class o2o_return{
 
     /**
-     * 获取售后用门店履约订单的仓库数据
-     * $branch_id 订单履约门店仓的branch_id
-     * @return Array
+     * 获取售后退入仓候选列表
+     *
+     * @param int   $branch_id 原单发货仓 branch_id
+     * @param array $ctx       shop_id/logi_id/order_id/return_type/flag_type/source
+     * @return array
      */
-    public function get_aftersale_o2o_branch($branch_id){
-        $mdl_o2o_store = app::get('o2o')->model('store');
-        $mdl_ome_branch = app::get('ome')->model('branch');
-        $return_branch_arr = array();
-        //当前门店仓是否支持售后
-        $rs_o2o_store = $mdl_o2o_store->getlist("store_id",array("aftersales"=>"1","branch_id"=>$branch_id));
-        if(!empty($rs_o2o_store)){
-            //获取当前门店仓数据
-            $return_branch_arr = $mdl_ome_branch->getlist("branch_id,name",array('branch_id'=>$branch_id,'disabled'=>'false','b_type'=>2));
-        }
-        //获取电商仓所有数据
-        $online_branch_list = $mdl_ome_branch->getlist('branch_id,name',array('disabled'=>'false', 'b_type'=>1));
-        if (!empty($online_branch_list)){
-            foreach ($online_branch_list as $var_item){
-                $return_branch_arr[] = $var_item;
-            }
-        }
-        return $return_branch_arr;
+    public function get_aftersale_o2o_branch($branch_id, $ctx = array())
+    {
+        $ctx['delivery_branch_id'] = $branch_id;
+        $result = kernel::single('o2o_return_branch')->resolve($ctx);
+
+        return $result['branch_list'];
+    }
+
+    /**
+     * 解析退入仓（含默认 branch_id）
+     *
+     * @param array $ctx
+     * @return array
+     */
+    public function resolve_return_branch($ctx = array())
+    {
+        return kernel::single('o2o_return_branch')->resolve($ctx);
     }
     
     /**

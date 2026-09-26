@@ -1,0 +1,50 @@
+<form method="post" id="fm1" action="index.php?app=goldentra&ctl=admin_mold&act=save&finder_id=<{$env.get.finder_id}>">
+    <div class="tableform">
+        <div class="division">
+            <table border="0" cellspacing="0" cellpadding="0" class="gridlist">
+                <tr>
+                    <td align="right" nowrap="nowrap">模号：</td>
+                    <td>
+                        <input type="text" name="mold_code" size="20" value="<{$mold_detail.mold_code}>" vtype="required"/>
+                        <span style="color:red;">*</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div class="table-action">
+            <{button type="button" id="model-save-btn" label="保 存"}>
+            <{button type="button" class="btn-secondary" label="关 闭" isclosedialogbtn="true"}>
+        </div>
+    </div>
+    <input type="hidden" name="m_id" value="<{$mold_detail.m_id}>">
+    <input type="hidden" name="finder_id" value="<{$env.get.finder_id}>">
+</form>
+<script>
+$('model-save-btn').addEvent('click', function (e) {
+    var _this = this;
+    var form = this.getParent('form');
+    form.store('target', {
+        onRequest: function () {
+            _this.disabled = true;
+        },
+        onComplete: function (jsontext) {
+            try {
+                var json = JSON.decode(jsontext);
+                if (typeof (json.error) != 'undefined') {
+                    _this.disabled = false;
+                } else {
+                    _this.disabled = true;
+                    if (finderGroup['<{$env.get.finder_id}>']) {
+                        finderGroup['<{$env.get.finder_id}>'].refresh.delay(400, finderGroup['<{$env.get.finder_id}>']);
+                    }
+                    var dlg = $('model-save-btn').getParent('.dialog');
+                    if (dlg && dlg.retrieve('instance')) {
+                        dlg.retrieve('instance').close();
+                    }
+                }
+            } catch (e) {}
+        }
+    });
+    form.fireEvent('submit', e);
+});
+</script>

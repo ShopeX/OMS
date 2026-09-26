@@ -139,7 +139,7 @@ class omeauto_auto_plugin_branch extends omeauto_auto_plugin_abstract implements
             $auto_branch_id  = app::get('ome')->getConf('shop.cnauto.set.' . $val['shop_id']);
             if ($val['shop_type'] == 'taobao' && ($order_bool_type & ome_order_bool_type::__CNAUTO_CODE)) {
                 if (intval($auto_branch_id) > 0) {
-                    return array($auto_branch_id);
+                    return $this->filterRefusedBranchIds(array($auto_branch_id), $orders);
                 } else {
                     return array();
                 }
@@ -161,7 +161,7 @@ class omeauto_auto_plugin_branch extends omeauto_auto_plugin_abstract implements
 
         $branchs   = $branchObj->db->select("SELECT branch_id,name FROM sdb_ome_branch WHERE is_deliv_branch='true' AND disabled = 'false'");
         if (count($branchs) == 1) {
-            return array($branchs[0]['branch_id']);
+            return $this->filterRefusedBranchIds(array($branchs[0]['branch_id']), $orders);
         }
 
         $this->initFilters($group);
@@ -181,8 +181,41 @@ class omeauto_auto_plugin_branch extends omeauto_auto_plugin_abstract implements
         $group->setAutoBranch($autobranch);
 
         $branch_info = array_unique($branch_info);
-        return $branch_info;
+        $filteredBranchInfo = $this->filterRefusedBranchIds($branch_info, $orders);
+        if (empty($filteredBranchInfo) && !empty($branch_info)) {
+            $this->error_msg = '本订单已拒单的门店不可再分配';
+        }
+        return $filteredBranchInfo;
 
+    }
+
+    /**
+     * 过滤本订单已拒单的门店仓（与 store / storemax 审单逻辑对齐）
+     *
+     * @param array $branchIds
+     * @param array $orders
+     * @return array
+     */
+    private function filterRefusedBranchIds($branchIds, $orders)
+    {
+        if (empty($branchIds) || !app::get('o2o')->is_installed()) {
+            return (array) $branchIds;
+        }
+        $orderIds = array_column((array) $orders, 'order_id');
+        if (empty($orderIds)) {
+            return array_values((array) $branchIds);
+        }
+        $numericBranchIds = array();
+        foreach ((array) $branchIds as $branchId) {
+            if ($branchId === 'sys_appoint' || $branchId === '' || $branchId === null) {
+                continue;
+            }
+            $numericBranchIds[] = $branchId;
+        }
+        if (empty($numericBranchIds)) {
+            return (array) $branchIds;
+        }
+        return kernel::single('o2o_store')->filterBranchIdsByOrderRefuse($numericBranchIds, $orderIds);
     }
 
     /**
@@ -218,7 +251,12 @@ class omeauto_auto_plugin_branch extends omeauto_auto_plugin_abstract implements
                             if ($ship_area) {
                                 // 使用门店仓覆盖区域检测工具类，过滤出可用的门店仓
                                 $availableO2OBranchIds = kernel::single('ome_store_branch_coverage')->getAvailableBranches($o2oBranchIds, $ship_area);
-                                
+                                $availableO2OBranchIds = $o2oStoreLib->filterBranchIdsByAcceptOrderLimit($availableO2OBranchIds);
+                                if ($group) {
+                                    $orderIds = array_column($group->getOrders(), 'order_id');
+                                    $availableO2OBranchIds = $o2oStoreLib->filterBranchIdsByOrderRefuse($availableO2OBranchIds, $orderIds);
+                                }
+
                                 if (!empty($availableO2OBranchIds)) {
                                     // 只为有覆盖范围的门店仓创建规则
                                     foreach ($availableO2OBranchIds as $branchId) {
@@ -289,6 +327,24 @@ class omeauto_auto_plugin_branch extends omeauto_auto_plugin_abstract implements
     }
 
     /**
+     * 门店审单候选仓过滤（接单量 + 本订单已拒单门店）
+     *
+     * @param array|int                 $branchIds
+     * @param omeauto_auto_group_item   $group
+     * @return array
+     */
+    private function filterStoreBranchIdsForConfirm($branchIds, $group)
+    {
+        if (empty($branchIds) || !app::get('o2o')->is_installed()) {
+            return (array) $branchIds;
+        }
+
+        $orderIds = array_column($group->getOrders(), 'order_id');
+
+        return kernel::single('o2o_store')->filterBranchIdsForStoreConfirm((array) $branchIds, $orderIds);
+    }
+
+    /**
      * 根据订单信息获取是否匹配到门店仓
      *
      * @param omeauto_auto_group_item $group
@@ -298,10 +354,12 @@ class omeauto_auto_plugin_branch extends omeauto_auto_plugin_abstract implements
     {
         //判断O2O APP 是否启用
         if (app::get('o2o')->is_installed()) {
+            $storeLib = kernel::single('o2o_store');
+            $orderIds = array_column($group->getOrders(), 'order_id');
+
             //如果订单有指定门店信息，则根据指定门店设置仓库
             $storeInfo = $group->getStoreInfo();
             if ($storeInfo && $storeInfo['store_bn']) {
-                $storeLib = kernel::single('o2o_store');
                 $branchId = $storeLib->getBranchIdByStoreBn($storeInfo['store_bn']);
 
                 //如果指定了履约方式则赋值
@@ -310,29 +368,49 @@ class omeauto_auto_plugin_branch extends omeauto_auto_plugin_abstract implements
                     $group->setStoreDlyType($dlyType);
                 }
 
-                return array($branchId); //返回数组
+                // 指定门店未超限且未被本订单拒单则直接返回，否则继续按区域匹配其他门店
+                if ($branchId
+                    && !$storeLib->isAcceptOrderLimitExceeded($branchId)
+                    && !$storeLib->isBranchRefusedByOrder($branchId, $orderIds)) {
+                    return array($branchId);
+                }
             }
 
             //根据收货地区匹配覆盖门店进行配送
             $ship_area         = $group->getShipArea();
             $arrArea           = explode(':', $ship_area);
-            $filter['area_id'] = $arrArea[2];
+            $filter['area_id'] = isset($arrArea[2]) ? $arrArea[2] : '';
+
+            if (empty($filter['area_id'])) {
+                return "";
+            }
 
             $rule_type = app::get('o2o')->getConf('o2o.autostore.type');
 
-            //有存在该规则类型下的地区area_id所对应的门店仓branch_id的直接返回 无需再做匹配
-            if (isset(self::$_o2oStoreRegion[$rule_type][$filter['area_id']])) {
+            // 缓存：门店优选规则(autostore) / 门店列表覆盖区域(store_region)
+            foreach (array($rule_type, 'store_region') as $cacheRuleType) {
+                if (isset(self::$_o2oStoreRegion[$cacheRuleType][$filter['area_id']])) {
+                    $group->setStoreDlyType('o2o_ship');
 
-                //匹配到门店仓，定义当前物流公司为门店配送
-                $group->setStoreDlyType('o2o_ship');
-
-                return self::$_o2oStoreRegion[$rule_type][$filter['area_id']];
+                    return $this->filterStoreBranchIdsForConfirm(
+                        self::$_o2oStoreRegion[$cacheRuleType][$filter['area_id']],
+                        $group
+                    );
+                }
             }
 
             $filter['mode'] = $rule_type;
-            //根据地区area_id和规则类型mode所覆盖聚焦到所有的门店
+            // 优先：门店优选规则(o2o_autostore_rule)
             $error_msg = '';
             $branchIds = kernel::single('o2o_autostore')->matchStoreBranch($filter, $error_msg);
+            $cacheRuleType = $rule_type;
+
+            // 备选：门店列表 -> 覆盖区域(logisticsmanager_warehouse.region_ids)
+            if (empty($branchIds)) {
+                $branchIds = $this->_matchStoreBranchByStoreRegion($ship_area);
+                $cacheRuleType = 'store_region';
+            }
+
             if (empty($branchIds)) {
                 return "";
             }
@@ -379,13 +457,35 @@ class omeauto_auto_plugin_branch extends omeauto_auto_plugin_abstract implements
             }
 
             if ($branchIds) {
-                self::$_o2oStoreRegion[$rule_type][$filter['area_id']] = $branchIds;
+                // 缓存区域匹配结果；拒单/接单量按订单在读用时过滤
+                self::$_o2oStoreRegion[$cacheRuleType][$filter['area_id']] = $branchIds;
                 //匹配到门店仓，定义当前物流公司为门店配送
                 $group->setStoreDlyType('o2o_ship');
             }
 
-            return $branchIds;
+            return $this->filterStoreBranchIdsForConfirm($branchIds, $group);
         }
+    }
+
+    /**
+     * 按门店列表「覆盖区域」(logisticsmanager_warehouse) 匹配 O2O 门店仓
+     *
+     * @param string $ship_area
+     * @return array
+     */
+    private function _matchStoreBranchByStoreRegion($ship_area)
+    {
+        if (empty($ship_area) || !app::get('logisticsmanager')->is_installed()) {
+            return array();
+        }
+
+        $storeLib = kernel::single('o2o_store');
+        $o2oBranchIds = $storeLib->getAllO2OStoreBranchIds();
+        if (empty($o2oBranchIds)) {
+            return array();
+        }
+
+        return kernel::single('ome_store_branch_coverage')->getAvailableBranches($o2oBranchIds, $ship_area);
     }
 
     //平台指定仓库进行发货

@@ -25,7 +25,17 @@ class invoice_order_front_router {
             if (class_exists($objName)) {
                 $this->obj = kernel::single($objName);
             }
-        } catch (Exception $e) {}
+        } catch (Exception $e) {
+            // 默认加载other其它渠道
+            try {
+                $objName = 'invoice_order_front_other';
+                if (class_exists($objName)) {
+                    $this->obj = kernel::single($objName);
+                }
+            } catch (Exception $e) {
+                //error
+            }
+        }
     }
 
     #获取主表特殊信息

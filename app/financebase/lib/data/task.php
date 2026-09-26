@@ -53,7 +53,12 @@ class financebase_data_task
         $queue_mode = 'billImport';
         $shop_name  = $shopInfo[0]['name'];
         $shop_type = $task_info['queue_data']['shop_type'] ?? '';
-        $financebaseBillLib = 'financebase_data_bill_' . $shop_type;
+        $biz_type  = $task_info['queue_data']['biz_type'] ?? '';
+        $import_shop_type = $shop_type;
+        if ($biz_type === '360buy_bills') {
+            $import_shop_type = '360buy_bills';
+        }
+        $financebaseBillLib = 'financebase_data_bill_' . $import_shop_type;
         if (!ome_func::class_exists($financebaseBillLib)) {
             return [false, '处理类不存在：' . $financebaseBillLib];
         }
@@ -96,7 +101,10 @@ class financebase_data_task
                         $queueData['queue_data']['shop_name']  = $shop_name;
                         $queueData['queue_data']['bill_type']  = $bill_type;
                         $queueData['queue_data']['bill_date']  = $task_info['queue_data']['bill_date'];
-                        $queueData['queue_data']['shop_type']  = $shop_type;
+                        $queueData['queue_data']['shop_type']  = $import_shop_type;
+                        if ($biz_type !== '') {
+                            $queueData['queue_data']['biz_type'] = $biz_type;
+                        }
                         $queueData['queue_data']['offset']     = $offset;
                         $queueData['queue_data']['remote_url'] = $remote_url;
                         $queueData['queue_data']['title']      = $title; 

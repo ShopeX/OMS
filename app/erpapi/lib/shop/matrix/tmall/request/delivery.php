@@ -74,7 +74,6 @@ class erpapi_shop_matrix_tmall_request_delivery extends erpapi_shop_request_deli
      * @return void
      * @author 
      **/
-
     protected function get_confirm_params($sdf)
     {
         if ($sdf['jzpartner']) {// 家装参数
@@ -152,6 +151,9 @@ class erpapi_shop_matrix_tmall_request_delivery extends erpapi_shop_request_deli
                 $is_packages = true;
             }
         }
+
+        // 喵住接口(taobao.jzfx.logistics.offline.send)强制要求 packages
+        $isMiaozhu = !empty($sdf['orderinfo']['order_source']) && $sdf['orderinfo']['order_source'] == 'miaozhu';
         
         // 判断订单是否编辑过商品
         //@todo：只有平台子订单 oid 被删除且不存在对应未删除商品时，才算编辑过商品；
@@ -160,8 +162,8 @@ class erpapi_shop_matrix_tmall_request_delivery extends erpapi_shop_request_deli
             $isModifyGoods = kernel::single('ome_order')->isOrderGoodsModified($sdf['orderinfo']['order_id']);
         }
         
-        //[部分拆单 OR 多包裹]订单没有编辑过商品,按拆单子单回写
-        if(($sdf['is_split'] == 1 || $is_packages) && !$isModifyGoods) {
+        //[部分拆单 OR 多包裹 OR 喵住]按 packages 回写；喵住未拆单/单运单也必须带 packages
+        if((($sdf['is_split'] == 1 || $is_packages) && !$isModifyGoods) || $isMiaozhu) {
             //按多包裹
             if($packageInfo){
                 $param['packages'] = json_encode($packageInfo['packages']);
@@ -177,6 +179,9 @@ class erpapi_shop_matrix_tmall_request_delivery extends erpapi_shop_request_deli
                     $param['consign_type'] = 1; //发货类型,0:普通发货(老链路),1:普通发货(新链路)
                     $param['sync_mode'] = 'delivery_items'; //回写标记(OMS内部字段)
                 }
+            }
+            if ($isMiaozhu && $isModifyGoods) {
+                unset($param['oid_list']);
             }
         }else{
             //发货类型,0:普通发货(老链路),1:普通发货(新链路)
@@ -197,6 +202,22 @@ class erpapi_shop_matrix_tmall_request_delivery extends erpapi_shop_request_deli
                 
                 //$param['sync_mode'] = 'order_oids'; //回写标记(OMS内部字段)
             }
+        }
+
+        // 喵住：统一转成 jzfx packages（无明细时用主运单+oid 兜底）
+        if ($isMiaozhu) {
+            $packages = !empty($param['packages']) ? json_decode($param['packages'], true) : array();
+            $packages = $this->_formatMiaozhuPackages($packages, $sdf);
+            if ($packages) {
+                $param['packages'] = json_encode($packages);
+                $param['consign_type'] = 1;
+                if (empty($param['sync_mode'])) {
+                    $param['sync_mode'] = 'delivery_items';
+                }
+            } else {
+                unset($param['packages']);
+            }
+            unset($param['consign_status']);
         }
         
         return $param;
@@ -220,5 +241,74 @@ class erpapi_shop_matrix_tmall_request_delivery extends erpapi_shop_request_deli
                 $sdf['jzpartner'] = $partner;
             }
         }
+    }
+
+    /**
+     * 喵住分销发货 packages
+     * taobao.jzfx.logistics.offline.send：mail_no / company_code / goods.sub_order_id
+     * 无可用包裹时，用主运单 + oid 兜底
+     *
+     * @param array $packages
+     * @param array $sdf
+     * @return array
+     */
+    protected function _formatMiaozhuPackages($packages, $sdf = array())
+    {
+        $result = array();
+        foreach ((array)$packages as $pkg) {
+            $mail_no = '';
+            if (!empty($pkg['mail_no'])) {
+                $mail_no = $pkg['mail_no'];
+            } elseif (!empty($pkg['out_sid'])) {
+                $mail_no = $pkg['out_sid'];
+            }
+            if ($mail_no === '') {
+                continue;
+            }
+
+            $goods = array();
+            foreach ((array)$pkg['goods'] as $good) {
+                $sub_order_id = '';
+                if (!empty($good['sub_order_id'])) {
+                    $sub_order_id = $good['sub_order_id'];
+                } elseif (!empty($good['sub_tid'])) {
+                    $sub_order_id = $good['sub_tid'];
+                }
+                if ($sub_order_id === '') {
+                    continue;
+                }
+                $goods[] = array('sub_order_id' => $sub_order_id);
+            }
+            if (empty($goods)) {
+                continue;
+            }
+
+            $result[] = array(
+                'mail_no' => $mail_no,
+                'company_code' => isset($pkg['company_code']) ? $pkg['company_code'] : '',
+                'goods' => $goods,
+            );
+        }
+
+        if ($result || empty($sdf)) {
+            return $result;
+        }
+
+        // 兜底：主运单 + oid
+        $goods = array();
+        foreach ((array)$this->_getDeliveryOids($sdf) as $oid) {
+            if ($oid) {
+                $goods[] = array('sub_order_id' => $oid);
+            }
+        }
+        if ($goods && !empty($sdf['logi_no'])) {
+            $result[] = array(
+                'mail_no' => $sdf['logi_no'],
+                'company_code' => isset($sdf['logi_type']) ? $sdf['logi_type'] : '',
+                'goods' => $goods,
+            );
+        }
+
+        return $result;
     }
 }

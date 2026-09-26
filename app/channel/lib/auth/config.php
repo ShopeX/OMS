@@ -38,7 +38,12 @@ class channel_auth_config
                         ),
                         'kdn' => array(
                             'label' => '快递鸟',
-                            'desc' => '',
+                            'desc' => '物流跟踪（默认）',
+                            'params' => array(),
+                        ),
+                        'sf' => array(
+                            'label' => '顺丰',
+                            'desc' => '物流跟踪（仅查询）',
                             'params' => array(),
                         ),
                     ),
@@ -69,6 +74,30 @@ class channel_auth_config
                         ]
                     ]
                 ]
+            ],
+            'sms' => [
+                'openapi' => [
+                    'label' => '本地API直联',
+                    'desc' => '可通过API接口直接对接短信供应商',
+                    'platform' => [
+                        'shopex' => [
+                            'label' => '商派短信',
+                            'desc' => '复用商派短信发送能力',
+                            'params' => [],
+                        ],
+                        'soap' => [
+                            'label' => 'WSDL短信',
+                            'desc' => '通过WSDL SOAP接口发送短信',
+                            'params' => [
+                                'wsdl_url' => 'WSDL地址',
+                                'username' => '用户名',
+                                'password' => '密码',
+                                'companyCode' => '公司编码',
+                                'timeMsg' => '定时发送时间',
+                            ],
+                        ],
+                    ],
+                ],
             ],
     );
 
@@ -133,9 +162,9 @@ class channel_auth_config
     public function getPlatformParam($channel_type, $adapter, $platform)
     {
         $params = [];
-        if(!isset($this->__config[$channel_type]) || !isset($this->__config[$channel_type][$adapter]) || !isset($this->__config[$channel_type][$adapter][$platform])){
+        if(!isset($this->__config[$channel_type]) || !isset($this->__config[$channel_type][$adapter]) || !isset($this->__config[$channel_type][$adapter]['platform'][$platform])){
             return $params;
         }
-        return $this->__config[$channel_type][$adapter][$platform]['params'];
+        return $this->__config[$channel_type][$adapter]['platform'][$platform]['params'] ?: [];
     }
 }

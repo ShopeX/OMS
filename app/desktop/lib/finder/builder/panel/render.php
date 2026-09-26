@@ -101,8 +101,15 @@ class desktop_finder_builder_panel_render
             if($v['type']=='region'){
                 $params['app'] = 'eccommon';
             }
-
-
+            // 与高级筛选 filter/render.php、filter/top.php 保持一致
+            if ($v['filtertype'] == 'fuzzy_search') {
+                $params['data-search'] = 'fuzzy-search';
+            }
+            if ($v['filtertype'] == 'fuzzy_search_multiple') {
+                $params['data-search'] = 'fuzzy-search';
+                $params['multiple'] = 'multiple';
+                $params['name'] = $c.'[]';
+            }
 
             $inputer = $ui->input($params);
             $columns[$c]['inputer'] = $inputer;

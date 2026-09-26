@@ -1,0 +1,26 @@
+<{capture name="header"}>
+    <link href="../apps/ome/statics/ome.css" rel="stylesheet" type="text/css">       
+<{/capture}>
+<div class="division">
+    <h4>操作日志</h4>
+    <table cellspacing="0" class="gridlist" cellpadding="0" border="0" width="100%">
+        <thead>
+        <tr>
+            <th>操作时间</th>
+            <th>操作人</th>
+            <th>行为</th>
+            <th>操作内容</th>
+        </tr>
+        </thead>
+        <tbody>
+        <{foreach from=$history item=his}>
+        <tr>
+            <td><{$his.operate_time}></td>
+            <td><{$his.op_name}></td>
+            <td><{$his.operation}></td>
+            <td><{$his.memo}></td>
+        </tr>
+        <{/foreach}>
+        </tbody>
+    </table>
+</div>

@@ -1,0 +1,157 @@
+<div class="tableform" id="upload">
+    <div class="division">
+        <table border="0" cellpadding="0" cellspacing="0" class="gridlist">
+            <tr>
+                <td style="width:100px;height:30px;text-align:right;">
+                    导出模板：
+                </td>
+                <td style="text-align:left;">
+                    <a href="<{$tmpl_url}>" target="_blank">下载模板</a>
+                </td>
+            </tr>
+            <tr>
+                <td style="width:100px;height:30px;text-align:right;">
+                    导入CSV文件：
+                </td>
+                <td style="text-align:left;">
+                    <input type='file' name='import_file' id='ImportCSV' />
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="division">
+        <div id="information">
+            <h4>共<span id="total">0</span>条</h4>
+            <div style="margin-left: 5px;">
+                已处理 <span id="iTotal" style="color:#083E96">0</span> 条，
+                <span id="iSucc" style="color:green">0</span> 条成功，<span id="iFail" style="color:red">0</span> 条失败。
+            </div>
+        </div>
+
+        <div id="processBarBg" class="processBarBg">
+            <div class="processBar" id='processBar'>&nbsp;</div>
+        </div>
+
+        <div class="console">
+            <p class="csolinfo"></p>
+        </div>
+        <div id="preview"></div>
+    </div>
+
+    <textarea name="content" class="upload-content" style="display: none;"></textarea>
+</div>
+
+
+
+<{area inject='.mainFoot'}>
+    <div class="table-action">
+        <input type='hidden' id="import_type" name='import_type' value='add'/>
+        <{button label=$___desktop="导入"|t:'desktop' id="ImportBtn"  type="button"}>
+        <{button label=$___desktop="关闭"|t:'desktop' id="stopBtn"  class="btn-secondary" type="button" isCloseDialogBtn="true" }>
+    </div>
+<{/area}>
+
+<script type="text/javascript">
+(function(){
+
+    var contents = [];
+    var total = 0;
+    var iTotal = 0;
+    var iSucc = 0;
+    var iFail = 0;
+
+    $('ImportCSV').addEvent('change',function(e){
+        if (this.files[0]['type'] != 'text/csv' && this.files[0]['type'] != 'application/vnd.ms-excel') {
+          alert('只支持CSV文件导入');
+          return false;
+        }
+        var file = this.files[0];
+        if(window.FileReader) {
+            var fr = new FileReader();
+            fr.onloadend = function(e) {
+                contents = e.target.result.trim().split('\n');
+                $('preview').set('html', contents.slice(0,5).join('<br/>'));
+
+                contents.shift();
+
+                total    = contents.length;
+                $('total').set('text',total);
+
+            };
+            fr.readAsText(file, 'gbk');
+        }else{
+            alert('请使用火狐或者谷歌浏览器');
+        }
+    });
+
+    $('ImportBtn').addEvent('click', function(){
+        var _parent=this;
+        Ex_Loader('cmdrunner',function(){
+        if (contents.length == 0) {
+            MessageBox.error('读取文件内容失败，请重新选择文件');
+            return false;
+        }
+          new taskrunner(contents.map(function(){return 'index.php?app=<{$import_app}>&ctl=<{$import_ctl}>&act=<{$import_act}>&filter=<{$import_filter}>'}), {
+              dataClass:'.upload-content',
+              container:$('upload'),
+              iframe:new Element('iframe',{src:'about:blank',name:'_TASK_IFRM_UPLOAD',style:'display:none;height:100%;width:100%'}),
+              onLoad:function(){
+                  _parent.disabled = true;
+                  _parent.set('html', '<span><span>数据处理中...</span></span>');
+              },
+              onStart:function(){
+                  var taskData = contents[this.prestep];
+                  $E('#upload textarea').set('text',taskData);
+              },
+              onCheck:function(messageText){
+                  if (/(\s*)ok\.(\s*)/.test(messageText.slice(-4))) {
+                      iTotal++;
+                      $('iTotal').set('html', iTotal);
+
+                      var result = messageText.substr(0,messageText.length-3);
+
+                      result = result?JSON.decode(result):[];
+
+                      if (result.success) {
+                        iSucc++;
+                        $('iSucc').set('html', iSucc);
+                      }
+
+                      if (result.error) {
+                        iFail++;
+                        $('iFail').set('html', iFail);
+
+                        $E('#upload .console .csolinfo').adopt(new Element('div',{html:'第'+(iTotal+1)+'行'+result.error}));
+                      }
+                  }
+              },
+              onComplete:function(){
+                  var num=this.step/this.num*100;
+                  $('processBar').setStyle('width',num+'%');
+              },
+              onError:function(text){
+
+                  if (!text) {alert('未捕获到错误信息，可能执行超时');}
+                  if (this.iframe) this.iframe.destroy();
+                  if (this.form) this.form.destroy();
+
+                  $E('#upload .console .csolinfo').set('text','失败原因：'+text);
+
+                  _parent.set('html', '<span><span>处理终止</span></span>');
+              },
+              onSuccess:function(){
+                  if (this.iframe) this.iframe.destroy();
+                  $('processBar').setStyle('width','100%');
+
+                  _parent.set('html', '<span><span>处理完成</span></span>');
+
+                  if ('<{$finder_id}>' && parent.finderGroup && parent.finderGroup['<{$finder_id}>']) {
+                      parent.finderGroup['<{$finder_id}>'].refresh.delay(100,parent.finderGroup['<{$finder_id}>']);
+                  }
+              }
+          }).run();
+        });
+    });
+
+})();
+</script>

@@ -60,6 +60,11 @@ class erpapi_wms_response_process_delivery
      **/
     public function status_update($params)
     {
+        // $params['status'] = OTHER 忽略
+        if ($params['status'] == 'OTHER' || $params['status'] == 'other') {
+            return array('rsp' => 'succ', 'msg' => '无效的状态, 已忽略');
+        }
+
         // 如果包裹追回，退货入库自动完成 BEGIN ----------------8<
         if ($params['status'] == 'return_back') {
             // 触发AG

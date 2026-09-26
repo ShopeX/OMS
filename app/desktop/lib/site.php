@@ -28,6 +28,11 @@ class desktop_site
         $logoUrl = '';
         if ($info['logoUrl']) {
             list($logoUrl) = explode('|', $info['logoUrl']);
+            // storager 存的是相对路径，展示时拼成可访问 URL
+            if ($logoUrl && !preg_match('#^https?://#i', $logoUrl)) {
+                $base = defined('IMG_URL') ? IMG_URL : kernel::base_url(1);
+                $logoUrl = rtrim($base, '/') . '/' . ltrim($logoUrl, '/');
+            }
         }
         
         $info['logoUrl'] = $logoUrl;

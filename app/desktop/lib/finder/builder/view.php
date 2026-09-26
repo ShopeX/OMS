@@ -38,6 +38,9 @@ class desktop_finder_builder_view extends desktop_finder_builder_prototype {
     public $filter = array();
     public $delete_confirm_tip = '';
     public $base_query_string = '';
+    public $use_unify_order_center = false; //是否显示指定视图栏目
+    public $unify_order_center_views = array();
+    public $unify_order_center_view = '';
 
     /**
      * @var 全局变量,控制视图
@@ -54,6 +57,8 @@ class desktop_finder_builder_view extends desktop_finder_builder_prototype {
 
         $this->short_object_name = substr($this->object_name, strpos($this->object_name, '_mdl_') + 5);
         $this->__view = $this->get_views();
+        
+        $view_filter = array();
         if (count($this->__view) && $this->use_view_tab) {
             $this->tab_view_count = 0;
             foreach ((array) $this->__view as $view) {
@@ -105,13 +110,17 @@ class desktop_finder_builder_view extends desktop_finder_builder_prototype {
         $render->pagedata['var_name'] = $this->var_name;
         $render->pagedata['url'] = $this->url;
         $render->pagedata['use_save_filter'] = $this->use_save_filter;
+        
+        //是否显示指定视图栏目
+        $render->pagedata['use_unify_order_center'] = (bool) $this->use_unify_order_center;
+        $render->pagedata['unify_order_center_views'] = (array) $this->unify_order_center_views;
+        $render->pagedata['unify_order_center_view'] = (string) $this->unify_order_center_view;
+        
         if ($this->top_extra_view) {
             $render->pagedata['top_extra'] = "";
-
             foreach ($this->top_extra_view as $app => $view) {
-
                 $_render = new base_render(app::get($app));
-
+                
                 $_render->pagedata = $render->pagedata;
                 $render->pagedata['top_extra'].= mb_substr($view,-5,5) == '.html' ? $_render->fetch($view) : $view;
             }

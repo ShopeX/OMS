@@ -123,6 +123,11 @@ class ome_event_trigger_shop_data_delivery_360buy extends ome_event_trigger_shop
         
         $order_objects_by_obj = array();
         foreach ($order_objects as $obj_id => $obj) {
+            // OMS本地赠品没有平台商品ID，不参与京东平台整单发货判断
+            if ($obj['shop_goods_id'] == '-1') {
+                continue;
+            }
+
             // 排除已删除的order_objects
             if (isset($obj['delete']) && $obj['delete'] == 'true') {
                 continue;

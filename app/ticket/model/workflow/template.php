@@ -16,6 +16,7 @@ class ticket_mdl_workflow_template extends dbeav_model
     {
         return array(
             'add_gift' => '加赠',
+            'approve_orders' => '补发单审批',
         );
     }
 } 

@@ -6,7 +6,7 @@
  * @version 2025.07.10
  */
 class ticket_finder_workflow_case {
-    public $addon_cols = "id,status,original_bn,current_node_type";
+    public $addon_cols = "id,status,original_bn,scene_type,current_node_type,bpm_status";
     
     public $column_edit = '操作';
     public $column_edit_width = 120;
@@ -14,15 +14,27 @@ class ticket_finder_workflow_case {
     public function column_edit($row) {
         $finder_id = $_GET['_finder']['finder_id'];
         $id = $row[$this->col_prefix.'id'];
+        $scene_type = ($row[$this->col_prefix.'scene_type'] ? $row[$this->col_prefix.'scene_type'] : $row['scene_type']);
+        
+        // audit button
+        $audit_button = '';
+        if ($scene_type == 'add_gift') {
+            $url = sprintf('index.php?app=ticket&ctl=admin_workflow_case&act=audit&p[0]=%s&finder_id=%s', $id, $finder_id);
+            $audit_button = '<a href="'. $url .'" target="dialog::{width:800,height:550,title:\'审批单据号：'. $row[$this->col_prefix.'original_bn'] .'\'}">审批</a>';
+        }else{
+            $url = sprintf('index.php?app=ticket&ctl=admin_workflow_case&act=audit_bufa&p[0]=%s&finder_id=%s', $id, $finder_id);
+            $audit_button = '<a href="'. $url .'" target="dialog::{width:800,height:550,title:\'审批补发单据号：'. $row[$this->col_prefix.'original_bn'] .'\'}">审批补发单</a>';
+        }
         
         // button
         if($row[$this->col_prefix.'current_node_type'] == 'end'){
             $button = '';
-        }elseif(in_array($row[$this->col_prefix.'status'], ['rejected','cancelled'])){
+        }elseif(in_array($row[$this->col_prefix.'status'], ['rejected','cancelled','source_cancelled'])){
+            $button = '';
+        }elseif(($row[$this->col_prefix.'bpm_status'] ?? '') == 'pending'){
             $button = '';
         }else{
-            $url = sprintf('index.php?app=ticket&ctl=admin_workflow_case&act=audit&p[0]=%s&finder_id=%s', $id, $finder_id);
-            $button = '<a href="'. $url .'" target="dialog::{width:800,height:550,title:\'审批单据号：'. $row[$this->col_prefix.'original_bn'] .'\'}">审批</a>';
+            $button = $audit_button;
         }
         
         return $button;
@@ -46,9 +58,91 @@ class ticket_finder_workflow_case {
         } else {
             $row['items_list'] = array();
         }
+
+        if (($row['scene_type'] ?? '') == 'approve_orders') {
+            $workflowCaseLib = kernel::single('ticket_workflow_case');
+            $result = $workflowCaseLib->getOrderDetails($row);
+            if ($result['rsp'] == 'succ') {
+                $row['items_list'] = $result['data']['approvalItemList'] ?? array();
+                $row['order_retail_amount'] = $result['data']['order_retail_amount'] ?? ($row['order_retail_amount'] ?? 0);
+            }
+        }
+        
+        // 去除补发原因中的固定文字
+        if($row['reason']){
+            $row['reason'] = str_replace('零元订单补发：', '', $row['reason']);
+        }
         
         $render->pagedata['data'] = $row;
         return $render->fetch('admin/workflow/case/detail.html');
+    }
+    
+    var $detail_order_basic = '订单基本信息';
+    function detail_order_basic($id)
+    {
+        $render = app::get('ome')->render();
+        $orderMdl = app::get('ome')->model('orders');
+        $objExtendMdl = app::get('ome')->model('order_objects_extend');
+        $oOperation_log = app::get('ome')->model('operation_log');
+        $caseMdl = app::get('ticket')->model('workflow_case');
+        
+        //post
+        if($_POST){
+            die('请到订单栏目里操作，这里不允许提交数据!');
+        }
+        
+        //order
+        $caseInfo = $caseMdl->dump($id, '*');
+        $order_id = $caseInfo['original_id'];
+        
+        //detail
+        //$order_detail = $orderMdl->dump($order_id,"*",array("order_items"=>array("*")));
+        $order_detail = $orderMdl->dump($order_id, "*");
+        
+//        //订单object层商品定制信息
+//        $tempList = $objExtendMdl->getList('*', array('order_id'=>$order_id), 0, -1, 'obj_id DESC');
+//        $itemList = [];
+//        if($tempList){
+//            foreach ($tempList as $tempKey => $tempVal)
+//            {
+//                $obj_order_id = $tempVal['order_id'];
+//
+//                if(empty($tempVal['customization'])){
+//                    continue;
+//                }
+//
+//                $customInfo = json_decode($tempVal['customization'], true);
+//                if(empty($customInfo['items'])){
+//                    continue;
+//                }
+//
+//                $itemList = array_merge($itemList, $customInfo['items']);
+//            }
+//        }
+        
+        //销售价权限验证
+        $showSalePrice = true;
+        if (!kernel::single('desktop_user')->has_permission('sale_price')) {
+            $showSalePrice = false;
+        }
+        
+        // 判断是否加密
+        $order_detail['is_encrypt'] = kernel::single('ome_security_router', $order_detail['shop_type'])->show_encrypt($order_detail, 'order');
+    
+        $order_detail['mark_text'] = kernel::single('ome_func')->format_memo($order_detail['mark_text']);
+        $order_detail['custom_mark'] = kernel::single('ome_func')->format_memo($order_detail['custom_mark']);
+    
+        $render->pagedata['total_amount'] = floatval($order_detail['total_amount']);
+        $render->pagedata['payed'] = floatval($order_detail['payed']);
+        
+        //$render->pagedata['is_hied_receiver_copy'] = true;
+        $render->pagedata['show_sale_price'] = $showSalePrice;
+        $render->pagedata['total_amount'] = floatval($order_detail['total_amount']);
+        $render->pagedata['payed'] = floatval($order_detail['payed']);
+        $render->pagedata['order'] = $order_detail;
+        //$render->pagedata['itemList'] = $itemList;
+        
+        return $render->fetch('admin/order/detail_basic.html');
     }
     
     var $detail_goods = '订单明细';

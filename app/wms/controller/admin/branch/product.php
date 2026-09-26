@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class wms_ctl_admin_branch_product extends desktop_controller{
     var $name = "库存查看";
     var $workground = "wms_center";
@@ -118,6 +102,10 @@ class wms_ctl_admin_branch_product extends desktop_controller{
             //'use_buildin_export'=>true,
             'actions'=>$actions,
             'use_buildin_filter'=>true,
+            'finder_cols' => material_basic_material_master::mergeFinderCols(
+                'column_branch_name,column_bn,column_product_name,column_barcode,column_spec_info,column_brand,store,column_store_freeze,arrive_store',
+                'column_bn'
+            ),
             //'use_buildin_selectrow'=>true,
             //'use_view_tab' => true,
             'object_method'=>array('count'=>'countlist','getlist'=>'getlists')
@@ -128,13 +116,15 @@ class wms_ctl_admin_branch_product extends desktop_controller{
     }
 
 
-    /**
-     * export
-     * @return mixed 返回值
-     */
     public function export()
     {
-        $branch_id = $_GET['branch_id'];
+        // 多选仓库：规范化为有效 ID 数组，避免模板输出 "Array"
+        $branch_id = array();
+        if (isset($_GET['branch_id'])) {
+            $branch_id = array_values(array_filter(array_map('intval', (array) $_GET['branch_id']), function ($v) {
+                return $v > 0;
+            }));
+        }
         $bn = $_GET['bn'];
         $_actual_store_search = $_GET['_actual_store_search'];
         $actual_store = $_GET['actual_store'];

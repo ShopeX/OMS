@@ -158,6 +158,110 @@ class ome_finder_refund_apply{
     }
     
     var $addon_cols = 'archive,source,order_id,abnormal_status,bool_type,reship_id,return_id,source_status,status,refund_refer,shop_type,negotiate_sync_status,tag_type';
+
+    /**
+     * 标记（退款申请单打标，bill_type=refund_apply），展示样式对齐订单列表「订单标记」
+     */
+    public $column_mark = '标记';
+    public $column_mark_width = 120;
+    public $column_mark_order = 8;
+
+    public function column_mark($row, $list)
+    {
+        $apply_id = $row['apply_id'];
+        $labelList = $this->__getRefundApplyBillLabel($list);
+        $dataList = isset($labelList[$apply_id]) ? $labelList[$apply_id] : array();
+        if (empty($dataList)) {
+            return '';
+        }
+
+        $str = array();
+        foreach ($dataList as $val) {
+            $extendTip = $this->__formatBillLabelExtendInfo(isset($val['extend_info']) ? $val['extend_info'] : '');
+            if ($extendTip) {
+                $str[] = sprintf(
+                    "<span onmouseover='bindFinderColTip(event)' rel='%s' style='filter: brightness(0.9) contrast(0.9);border:1px solid %s; color:%s;margin: 2px;padding: 0px 2px;border-radius: 5px;white-space: nowrap;' >%s</span>",
+                    htmlspecialchars($extendTip, ENT_QUOTES, 'UTF-8'),
+                    $val['label_color'],
+                    $val['label_color'],
+                    $val['label_name']
+                );
+            } else {
+                $str[] = sprintf(
+                    "<span style='filter: brightness(0.9) contrast(0.9);border:1px solid %s; color:%s;margin: 2px;padding: 0px 2px;border-radius: 5px;white-space: nowrap;' >%s</span>",
+                    $val['label_color'],
+                    $val['label_color'],
+                    $val['label_name']
+                );
+            }
+        }
+
+        return '<div style="overflow: auto;word-break: break-word;white-space: normal;width: 100%;flex-wrap: wrap;display: flex;">' . implode('', $str) . '</div>';
+    }
+
+    /**
+     * 当前页退款申请单的标记列表（按 apply_id）
+     *
+     * @param array $list
+     * @return array apply_id => label rows
+     */
+    private function __getRefundApplyBillLabel($list)
+    {
+        static $cached;
+        if (isset($cached)) {
+            return $cached;
+        }
+
+        $cached = array();
+        $applyIds = array();
+        foreach ($list as $val) {
+            if (!empty($val['apply_id'])) {
+                $applyIds[] = $val['apply_id'];
+            }
+        }
+        if (empty($applyIds)) {
+            return $cached;
+        }
+
+        $orderLabelObj = app::get('ome')->model('bill_label');
+        $labelData = $orderLabelObj->getBIllLabelList($applyIds, 'refund_apply');
+        foreach ($labelData as $val) {
+            $bill_id = $val['bill_id'];
+            $cached[$bill_id][] = array(
+                'label_id' => $val['label_id'],
+                'label_name' => $val['label_name'],
+                'label_color' => $val['label_color'],
+                'extend_info' => isset($val['extend_info']) ? $val['extend_info'] : '',
+            );
+        }
+
+        return $cached;
+    }
+
+    /**
+     * bill_label.extend_info（常为 JSON）：悬停文案优先 price_abnormal、label_desc，否则原文
+     *
+     * @param string $extendInfo
+     * @return string
+     */
+    private function __formatBillLabelExtendInfo($extendInfo)
+    {
+        if ($extendInfo === null || $extendInfo === '') {
+            return '';
+        }
+        $raw = (string) $extendInfo;
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded)) {
+            if (isset($decoded['price_abnormal']) && $decoded['price_abnormal'] !== '') {
+                return (string) $decoded['price_abnormal'];
+            }
+            if (isset($decoded['label_desc']) && $decoded['label_desc'] !== '') {
+                return (string) $decoded['label_desc'];
+            }
+        }
+
+        return $raw;
+    }
     
     /**
      * 备注
@@ -347,7 +451,7 @@ class ome_finder_refund_apply{
     
     public $column_edit = "操作";
     public $column_edit_width = 120;
-    public $column_edit_order = 1;
+    public $column_edit_order = 2;
     public function column_edit($row){
         $btn = [];
         

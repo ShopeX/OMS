@@ -16,16 +16,27 @@
  */
 
 class finance_finder_extend_filter_ar{
-    function get_extend_colums(){
+    function get_extend_colums($finder_aliasname = null){
+        $arLib = kernel::single('finance_ar');
+        $shopOptions = $arLib->get_name_by_shop();
+
         $db['ar']=array (
             'columns' => array (
                 'channel_id' => array (
-                    'type' => kernel::single('finance_ar')->get_name_by_shop(),
+                    'type' => $shopOptions,
                     'default' => '0',
                     'label' => '渠道名称',
                     'width' => 65,
                     'editable' => false,
-                    'filtertype' => 'normal',
+                    'filtertype' => 'fuzzy_search_multiple',
+                    'filterdefault' => true,
+                ),
+                'shop_type' => array (
+                    'type' => $arLib->get_name_by_shop_type(),
+                    'label' => '店铺类型',
+                    'width' => 65,
+                    'editable' => false,
+                    'filtertype' => 'fuzzy_search_multiple',
                     'filterdefault' => true,
                 ),
                 'status' => array (
@@ -51,28 +62,6 @@ class finance_finder_extend_filter_ar{
                     'in_list' => true,
                     'default_in_list' => false,
                 ),
-                // 'charge_status' => array (
-                //     'type' => kernel::single('finance_ar')->get_name_by_charge_status('',1),
-                //     'default' => '0',
-                //     'label' => '记账状态',
-                //     'width' => 65,
-                //     'editable' => false,
-                //     'filtertype' => 'normal',
-                //     'filterdefault' => true,
-                //     'in_list' => true,
-                //     'default_in_list' => false,
-                // ),
-                // 'monthly_status' => array (
-                //     'type' => kernel::single('finance_ar')->get_name_by_monthly_status('',1),
-                //     'default' => '0',
-                //     'label' => '月结状态',
-                //     'width' => 65,
-                //     'editable' => false,
-                //     'filtertype' => 'normal',
-                //     'filterdefault' => true,
-                //     'in_list' => true,
-                //     'default_in_list' => false,
-                // ),
                 'ar_type' => array (
                     'type' => array('0'=>'应收单','1'=>'应退单'),
                     'default' => '0',
@@ -98,4 +87,3 @@ class finance_finder_extend_filter_ar{
         return $db;
     }
 }
-

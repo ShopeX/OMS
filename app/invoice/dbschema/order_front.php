@@ -54,6 +54,7 @@ $db['order_front'] = array(
             'type'            => array(
                 'b2c' => '电商订单',
                 'b2b' => 'B2B订单',
+                'nipponpaint' => '立邦',
             ),
             'default'         => 'b2c',
             'label'           => '来源',
@@ -227,6 +228,21 @@ $db['order_front'] = array(
             'in_list'         => true,
             'default_in_list' => true,
             'order'           => 100,
+        ),
+        'is_auto' => array(
+            'type' => array(
+                1 => '自动开票',
+                2 => '手工开票',
+            ),
+            'default'         => '2',
+            'required'        => true,
+            'label'           => '是否自动开票',
+            'in_list'         => true,
+            'default_in_list' => true,
+            'filtertype'      => 'normal',
+            'filterdefault'   => true,
+            'order'           => 20,
+            'width'           => 90,
         ),
         'write_msg'         => array(
             'type'            => 'varchar(255)',

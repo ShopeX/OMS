@@ -155,20 +155,37 @@ class erpapi_wms_matrix_yjdf_response_delivery extends erpapi_wms_response_deliv
                 return false;
             }
             
-            //取默认退货仓
-            $branch_id     = app::get('ome')->getConf('return.auto_branch');
-            $return_auto_shop_branch     = app::get('ome')->getConf('return.auto_shop_branch');
-            if($return_auto_shop_branch[$delivery['shop_id']]) {
-                $branch_id = $return_auto_shop_branch[$delivery['shop_id']];
-            }
-            if (!$branch_id){
-                $this->__apilog['result']['msg'] = '未设置默认退货仓';
-                return false;
+            $order = $deliveryObj->getOrderBnbyDeliveryId($delivery['delivery_id']);
+
+            if (app::get('o2o')->is_installed()) {
+                $returnBranchLib = kernel::single('o2o_return_branch');
+                $returnBranchCtx = $returnBranchLib->buildContext($delivery, array(
+                    'shop_id'     => $delivery['shop_id'],
+                    'order_id'    => $order['order_id'],
+                    'return_type' => 'return',
+                    'flag_type'   => ome_reship_const::__LANJIE_RUKU,
+                    'source'      => 'delivery_back',
+                ));
+                $resolved = $returnBranchLib->resolve($returnBranchCtx);
+                if ($resolved['branch_id'] <= 0) {
+                    $this->__apilog['result']['msg'] = $resolved['branch_name'] ?: '未设置默认退货仓';
+                    return false;
+                }
+                $branch_id = $resolved['branch_id'];
+            } else {
+                //取默认退货仓
+                $branch_id     = app::get('ome')->getConf('return.auto_branch');
+                $return_auto_shop_branch     = app::get('ome')->getConf('return.auto_shop_branch');
+                if($return_auto_shop_branch[$delivery['shop_id']]) {
+                    $branch_id = $return_auto_shop_branch[$delivery['shop_id']];
+                }
+                if (!$branch_id){
+                    $this->__apilog['result']['msg'] = '未设置默认退货仓';
+                    return false;
+                }
             }
             $data['branch_id']  = $branch_id;
             $data['branch']     = $branchMdl->db_dump($branch_id,'branch_id,branch_bn');
-
-            $order = $deliveryObj->getOrderBnbyDeliveryId($delivery['delivery_id']);
 
             $items = [];
             foreach ($package_items as $key => $value) {

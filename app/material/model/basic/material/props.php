@@ -1,19 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 class material_mdl_basic_material_props extends dbeav_model{
 
@@ -74,7 +59,7 @@ class material_mdl_basic_material_props extends dbeav_model{
 
     /**
      * 完成基础物料的导入
-     * 
+     *
      * @param Null
      * @return Null
      */
@@ -88,6 +73,7 @@ class material_mdl_basic_material_props extends dbeav_model{
         $oQueue = app::get('base')->model('queue');
                 
    
+        $opInfo = kernel::single('material_basic_material')->getImportOpInfo();
         foreach(array_chunk($aP, 100) as $v){
             
             $queueData = array(
@@ -95,6 +81,7 @@ class material_mdl_basic_material_props extends dbeav_model{
                     'start_time'=>time(),
                     'params'=>array(
                             'sdfdata'=>$v,
+                            'opInfo' => $opInfo,
                     ),
                     'worker'=>'material_mdl_basic_material_props.import_run',
             );
@@ -110,18 +97,14 @@ class material_mdl_basic_material_props extends dbeav_model{
 
 
 
-    /**
-     * import_run
-     * @param mixed $cursor_id ID
-     * @param mixed $params 参数
-     * @param mixed $errmsg errmsg
-     * @return mixed 返回值
-     */
-    public function import_run(&$cursor_id,$params,&$errmsg) {
-       
+     public function import_run(&$cursor_id,$params,&$errmsg) {
+        $opInfo = !empty($params['opInfo']) ? $params['opInfo'] : null;
+        $importLogLib = kernel::single('material_basic_material');
+
         foreach ($params['sdfdata'] as $k=>$v) {
             
             $bm_id = $v['bm_id'];
+            $log = '导入更新物料属性：';
 
             $cols = array();
             foreach($v as $vk=>$vv){
@@ -143,10 +126,12 @@ class material_mdl_basic_material_props extends dbeav_model{
                     );
                     $this->save($propsdata);
                 }
+                $log .= $vk . '->' . $vv . ';';
             }
 
-
-           
+            if ($log != '导入更新物料属性：') {
+                $importLogLib->writeImportLog('basic_material_property@wms', $bm_id, $log, $opInfo);
+            }
         }
         return false;
     }

@@ -137,24 +137,6 @@ class ome_order_reservation extends ome_order_abstract
             return $this->error($error_msg);
         }
         
-        //是否安装了miele应用
-        if(app::get('miele')->is_installed()){
-            $mieleOrderLib = kernel::single('miele_order');
-            
-            // 判断是否大家电
-            $isLargeAppliance = $mieleOrderLib->isLargeAppliance($order_id);
-            if(!$isLargeAppliance){
-                $error_msg = '订单号：'. $orderInfo['order_bn'] .',不是大家电订单';
-                return $this->error($error_msg);
-            }
-            
-            // 标识
-            $orderInfo['operation_type'] = 'cancel_delivery';
-            
-            // 更新大家电订单的标识：不允许审核订单
-            $labelResult = $mieleOrderLib->largeApplianceOrder($orderInfo);
-        }
-        
         // update sdf
         $updateSdf = ['custom_reserved_status'=>'0'];
         

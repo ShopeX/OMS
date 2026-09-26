@@ -26,6 +26,31 @@ class ome_mdl_delivery_bill extends dbeav_model{
      * 导出的文件名
      */
     var $export_name = '包裹中心数据';
+
+    /**
+     * 包裹中心筛选：多值换行拆成 IN，订单号直接走本表 order_bn（index_order_bn）
+     *
+     * @param array $filter
+     * @param string|null $tableAlias
+     * @param array|null $baseWhere
+     * @return string
+     */
+    public function _filter($filter, $tableAlias = null, $baseWhere = null)
+    {
+        // 多值字段：换行拆成数组，由 dbeav 生成 IN（走各字段索引）
+        foreach (array('order_bn', 'package_bn', 'delivery_bn', 'logi_no') as $field) {
+            if (!empty($filter[$field]) && is_string($filter[$field])
+                && (strpos($filter[$field], "\n") !== false || strpos($filter[$field], "\r") !== false)
+            ) {
+                $filter[$field] = array_values(array_unique(array_map(
+                    'trim',
+                    array_filter(preg_split('/[\r\n]+/', $filter[$field]))
+                )));
+            }
+        }
+
+        return parent::_filter($filter, $tableAlias, $baseWhere);
+    }
     
     /**
      * 导出明细
@@ -76,6 +101,26 @@ class ome_mdl_delivery_bill extends dbeav_model{
         }
 
         return [$listV2, $colArray];
+    }
+
+    /**
+     * 列表展示：shop_id 转店铺名称
+     */
+    public function modifier_shop_id($shop_id, $list = null, $row = null)
+    {
+        static $shopList = null;
+        if ($shopList === null && is_array($list)) {
+            $shopIds = array_unique(array_filter(array_column($list, 'shop_id')));
+            $shopList = array();
+            if ($shopIds) {
+                $rows = app::get('ome')->model('shop')->getList('shop_id,name', array('shop_id' => $shopIds));
+                $shopList = array_column($rows, 'name', 'shop_id');
+            }
+        }
+        if ($shop_id && isset($shopList[$shop_id])) {
+            return $shopList[$shop_id];
+        }
+        return $shop_id;
     }
 }
 ?>

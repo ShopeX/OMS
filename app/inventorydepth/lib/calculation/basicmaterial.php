@@ -306,14 +306,24 @@ class inventorydepth_calculation_basicmaterial {
             $notInShop = "and shop_id not in ('".implode("','", array_column($shop, 'shop_id'))."')";
         }
         $bmIdStr = "('".implode("','", $bmIds)."')";
+
+        // 订单冻结（branch_id=0 店铺预占）：按系统配置统计最近 N 天；未配置则不限制
+        $orderFreezeTimeCondition = '';
+        $stockFreezeDays = app::get('inventorydepth')->getConf('stock.freeze.days');
+        if ($stockFreezeDays !== null && $stockFreezeDays !== '') {
+            $startTime = strtotime('-' . (int) $stockFreezeDays . ' days');
+            $orderFreezeTimeCondition = " AND create_time > " . (int) $startTime;
+        }
         $sql = "SELECT sum(num) as total,shop_id,bm_id FROM sdb_material_basic_material_stock_freeze 
-                    WHERE bm_id in {$bmIdStr} AND obj_type=1 AND branch_id=0 {$notInShop}
+                    WHERE bm_id in {$bmIdStr} AND obj_type=1 AND branch_id=0 {$notInShop}{$orderFreezeTimeCondition}
                     GROUP BY bm_id, shop_id";
         $list = kernel::database()->select($sql);
         foreach ($list as $key => $value) {
             $sha1Str = sha1($value['shop_id'].'-'.$value['bm_id']);
             $this->shopFreeze[$sha1Str] = (int) $value['total'];
         }
+
+        // 指定仓预占（branch_id<>0）：不加时间条件，始终统计
         $you = material_basic_material_stock_freeze::__ORDER_YOU;
         $sql = "SELECT sum(num) as total,branch_id,bm_id FROM sdb_material_basic_material_stock_freeze 
                     WHERE bm_id in {$bmIdStr} AND obj_type=1 AND branch_id<>0 AND bill_type<>{$you} {$notInShop}

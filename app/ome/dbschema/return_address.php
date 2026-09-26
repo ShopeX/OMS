@@ -19,7 +19,7 @@ $db['return_address']=array (
   'columns' => 
   array (
    'address_id'=>array(
-   'type' => 'number',
+   'type' => 'int unsigned',
       'required' => true,
       'pkey' => true,
       'extra' => 'auto_increment',

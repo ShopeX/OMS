@@ -207,9 +207,12 @@ class console_ctl_admin_adjust extends desktop_controller {
      * @return mixed 返回值
      */
     public function doSingleConfirm() {
-        $itemIds = explode(',',$_POST['primary_id']);
+        $itemIds = array_values(array_filter(array_map('intval', explode(',', (string) $_POST['primary_id']))));
 
-        if (!$itemIds) { echo 'Error: 缺少调整单明细';exit;}
+        if (!$itemIds) {
+            echo 'Error: 缺少调整单明细';
+            exit;
+        }
 
         $retArr = array(
             'itotal'  => count($itemIds),
@@ -218,26 +221,48 @@ class console_ctl_admin_adjust extends desktop_controller {
             'err_msg' => array(),
         );
 
-        $main = app::get('console')->model('adjust')->db_dump($_POST['adjust_id']);
-        $ckrs = true;
-        //需判断如果是门店
-        if($main['source'] == 'store'){
+        // 一个单一个单确认：primary_id 是明细 id，从任一条明细反查主表即可
+        $main = $this->_loadAdjustMainByItemIds($itemIds);
+        if (empty($main)) {
+            $retArr['ifail'] = count($itemIds);
+            $retArr['err_msg'][] = '调整单不存在';
+            echo json_encode($retArr), 'ok.';
+            exit;
+        }
+        if ($main['source'] == 'store') {
             $main['iso_status'] = 'confirm';
-            
-        }
-        if($ckrs){
-            list($rs, $rsData) = kernel::single('console_adjust')->confirmItems($itemIds, $main);
-        }
-        
-        if($rs) {
-            $retArr['isucc'] += count($itemIds);
-        } else {
-            $retArr['ifail'] += $rsData['fail_num'];
-            $retArr['isucc'] += $retArr['itotal'] - $rsData['fail_num'];
-            $retArr['err_msg'][] = $rsData['msg'];
         }
 
-        echo json_encode($retArr),'ok.';exit;
+        list($rs, $rsData) = kernel::single('console_adjust')->confirmItems($itemIds, $main);
+
+        if ($rs) {
+            $retArr['isucc'] += count($itemIds);
+        } else {
+            $failNum = isset($rsData['fail_num']) ? (int) $rsData['fail_num'] : count($itemIds);
+            $retArr['ifail'] += $failNum;
+            $retArr['isucc'] += max(0, $retArr['itotal'] - $failNum);
+            if (!empty($rsData['msg'])) {
+                $retArr['err_msg'][] = $rsData['msg'];
+            }
+        }
+
+        echo json_encode($retArr), 'ok.';
+        exit;
+    }
+
+    /**
+     * 根据明细 id 反查调整单主表（单条确认场景，取第一条明细的 adjust_id 即可）
+     *
+     * @param array $itemIds
+     * @return array|null
+     */
+    private function _loadAdjustMainByItemIds($itemIds)
+    {
+        $firstItem = app::get('console')->model('adjust_items')->db_dump($itemIds[0], 'adjust_id');
+        if (empty($firstItem['adjust_id'])) {
+            return null;
+        }
+        return app::get('console')->model('adjust')->db_dump((int) $firstItem['adjust_id']);
     }
 
     /**

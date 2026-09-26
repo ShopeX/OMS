@@ -111,7 +111,6 @@ class console_ctl_admin_delivery_sync extends desktop_controller {
      */
     function batch_cancel()
     {
-        
         $oOperation_log = app::get('ome')->model('operation_log');
         
         $ids = $_REQUEST['delivery_id'];
@@ -121,8 +120,9 @@ class console_ctl_admin_delivery_sync extends desktop_controller {
             ]);
             $delivery_list = app::get('console')->model('delivery')->getList('delivery_id,branch_id,delivery_bn', [
                 'delivery_id'=>$ids, 
-                'filter_sql'=>'sync in ('.(implode(',', $sync)).') AND sync > 9',
-                'status' => ['ready','progress']
+                //'filter_sql'=>'sync in ('.(implode(',', $sync)).') AND sync > 9', // 立邦sync=5
+                'status' => ['ready','progress'],
+                'sync_status' => ['2', '4'],
             ]);
             
             foreach ((array) $delivery_list as $delivery)
@@ -130,7 +130,7 @@ class console_ctl_admin_delivery_sync extends desktop_controller {
                 $delivery_id = $delivery['delivery_id'];
                 
                 // 开启事务
-                $transaction = kernel::database()->beginTransaction();
+                //$transaction = kernel::database()->beginTransaction();
                 try {
                     $data = array(
                         'status'=>'cancel',
@@ -139,7 +139,11 @@ class console_ctl_admin_delivery_sync extends desktop_controller {
                     );
                     $rs = kernel::single('ome_event_receive_delivery')->update($data);
                     if ($rs['rsp'] != 'succ') {
-                        throw new Exception('发货单状态更新失败');
+                        //throw new Exception('发货单状态更新失败');
+                        
+                        $oOperation_log->write_log('delivery_back@ome', $delivery_id, '发货单状态更新失败：'. $rs['msg']);
+                        
+                        continue;
                     }
                     
                     // 完成订单明细处理：如果拆分数量为0且支付状态为全额退款，则更新为已删除并更新主表金额
@@ -147,18 +151,20 @@ class console_ctl_admin_delivery_sync extends desktop_controller {
                     if (!$result) {
                         throw new Exception('订单明细处理失败：' . $msg['msg']);
                     }
+                    
                     $oOperation_log->write_log('delivery_back@ome', $delivery_id, '手工强制取消发货单成功');
                     
                     // 提交事务
-                    kernel::database()->commit($transaction);
+                    //kernel::database()->commit($transaction);
                 } catch (Exception $e) {
                     // 回滚事务
-                    kernel::database()->rollBack();
+                    //kernel::database()->rollBack();
                     $oOperation_log->write_log('delivery_back@ome', $delivery_id, '发货单强制取消失败：' . $e->getMessage());
                 }
                 
             }
         }
+        
         $this->splash('success', $this->url, '命令已经被成功发送！！');
     }
 

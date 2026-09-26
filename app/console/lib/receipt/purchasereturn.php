@@ -108,6 +108,12 @@ class console_receipt_purchasereturn extends console_receipt_common{
         }
         kernel::database()->commit();
         $this->clear_stockout_store_freeze($out_stock_data,$io_status);
+        
+        // 机器中心采购退货出库添加
+        if (app::get('machinecenter')->is_installed()) {
+            $this->machineCenterPurchaseReturnStockAdd($purchasereturn, $out_stock_data);
+        }
+        
         return true;
     }
 
@@ -119,6 +125,12 @@ class console_receipt_purchasereturn extends console_receipt_common{
             $effective_num = $return_item['num']-$return_item['out_num'];
             $out_num       = $item['num'] + intval($return_item['out_num']);
             $item_data     = array('out_num'=>$out_num);
+            
+            // 处理 sn_list - 参照 console_receipt_stock
+            if($item['sn_list']) {
+                $sn_list = $return_item['sn_list'] ? json_decode($return_item['sn_list'], 1) : [];
+                $item_data['sn_list'] = json_encode(array_merge($sn_list, $item['sn_list']), JSON_UNESCAPED_UNICODE);
+            }
 
             $this->rp_itemObj->update($item_data,array('item_id'=>$return_item['item_id']));
             $products = $this->getProducts($item['bn']);
@@ -131,6 +143,7 @@ class console_receipt_purchasereturn extends console_receipt_common{
                 'effective_num'=> $effective_num,
                 'name'         => $products['name'],
                 'unit'         => $products['unit'],
+                'sn_list'      => $item_data['sn_list'] ?? '',
             );
             if($item['batch']) {
                 $useLogModel = app::get('console')->model('useful_life_log');
@@ -446,4 +459,101 @@ class console_receipt_purchasereturn extends console_receipt_common{
         return true;
     } // end func
 
+    /**
+     * 机器中心采购退货出库添加 - 参照 console_receipt_stock::machineCenterOtherStockAdd
+     * @param array $purchasereturn 采购退货单信息
+     * @param array $outStockData 出库数据
+     */
+    public function machineCenterPurchaseReturnStockAdd($purchasereturn, $outStockData)
+    {
+        $status = '0'; // 出库
+        
+        $original_id = $purchasereturn['rp_id'];
+        $original_bn = $purchasereturn['rp_bn'];
+        $branch_id   = $purchasereturn['branch_id'];
+        $branchInfo  = app::get('ome')->model('branch')->db_dump($branch_id, 'branch_bn');
+        $items       = $outStockData['items'];
+        
+        if (empty($items)) {
+            return;
+        }
+        
+        // 基础SN参数（空值）
+        $snParams = $this->purchaseReturnSnParams();
+        
+        foreach ($items as $item) {
+            $snList = json_decode($item['sn_list']);
+            if ($snList && is_array($snList)) {
+                foreach ($snList as $serial) {
+                    if (!$serial) {
+                        continue;
+                    }
+                    // 出库时记录bn、product_id和barcode
+                    $bn = $item['bn'];
+                    $bm_id = $item['product_id'];
+                    // 获取条码 - 通过码库获取
+                    $barcode = material_codebase::getBarcodeBybn($bn) ?: '';
+                    
+                    $tmpSnParams                      = [];
+                    $tmpSnParams['sn']                = $serial;
+                    $tmpSnParams['bm_id']             = $bm_id;
+                    $tmpSnParams['material_bn']       = $bn;
+                    $tmpSnParams['barcode']           = $barcode;
+                    $tmpSnParams['imei_number']       = $item['imei_number'] ?? '';
+                    $tmpSnParams['order_bn']          = '';
+                    $tmpSnParams['branch_id']         = $branch_id;
+                    $tmpSnParams['branch_bn']         = $branchInfo['branch_bn'];
+                    $tmpSnParams['original_id']       = $original_id;
+                    $tmpSnParams['original_bn']       = $original_bn;
+                    $tmpSnParams['bill_bn']           = $original_bn;
+                    $tmpSnParams['original_type']     = 'returned_purchase';
+                    $tmpSnParams['status']            = $status;
+                    $tmpSnParams['io_status']         = $status;
+                    $tmpSnParams['io_time']           = time();
+                    $tmpSnParams['platform_order_bn'] = '';
+                    
+                    // 机器中心增加数据
+                    kernel::single('machinecenter_event_receive_sn')->add(array_merge($snParams, $tmpSnParams));
+                }
+            }
+        }
+    }
+    
+    /**
+     * 获取采购退货出库SN参数（空值）
+     * @return array
+     */
+    public function purchaseReturnSnParams()
+    {
+        return [
+            'buyer_open_id'   => '',
+            'buyer_nickname'  => '',
+            'buyer_name'      => '',
+            'buyer_mobile'    => '',
+            'buyer_email'     => '',
+            'buyer_address'   => '',
+            'ship_oaid'       => '',
+            'ship_name'       => '',
+            'ship_mobile'     => '',
+            'ship_email'      => '',
+            'ship_address'    => '',
+            'ship_province'   => '',
+            'ship_city'       => '',
+            'ship_district'   => '',
+            'ship_town'       => '',
+            'ship_village'    => '',
+            'user_name'       => '',
+            'user_mobile'     => '',
+            'user_email'      => '',
+            'user_address'    => '',
+            'user_province'   => '',
+            'user_city'       => '',
+            'user_district'   => '',
+            'user_town'       => '',
+            'user_village'    => '',
+            'source'          => 'local',
+            'shop_id'         => '',
+            'shop_bn'         => '',
+        ];
+    }
 }

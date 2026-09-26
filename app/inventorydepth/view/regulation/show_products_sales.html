@@ -1,0 +1,222 @@
+<style>
+.show-products-sales .cell-basic-bn {
+    width: 160px;
+    word-break: break-all;
+    line-height: 1.6;
+    vertical-align: top;
+}
+.show-products-sales .product-pager {
+    margin-top: 8px;
+    text-align: right;
+}
+.show-products-sales .product-pager .current {
+    font-weight: bold;
+    margin: 0 4px;
+}
+.show-products-sales .product-pager a {
+    margin: 0 4px;
+}
+</style>
+<div class="show-products-sales" style="padding:10px;">
+    <div class="search-bar" style="margin-bottom:10px; padding-bottom: 5px;">
+        <label>销售物料编码：<input type="text" id="search-sales-material-bn" class="x-input" style="width:140px;" onkeydown="if(event.keyCode==13){product_selected_search();return false;}"></label>
+        <label>&nbsp;&nbsp;基础物料编码：<input type="text" id="search-basic-material-bn" class="x-input" style="width:140px;" onkeydown="if(event.keyCode==13){product_selected_search();return false;}"></label>
+        <{button type='button' label='搜索' onclick='product_selected_search();'}>
+        <{button type='button' label='重置' onclick='product_selected_reset();'}>
+        <br>
+        <span style="margin-left:0px;color:#666;">共 <b id="product-total-count"><{$_input.items|@count}></b> 个销售物料，当前页显示 <b id="product-visible-count">0</b> 个</span>
+    </div>
+    <div style="max-height:380px;overflow-y:auto;">
+        <table class="gridlist" width="100%" border="0" cellspacing="0" cellpadding="0">
+            <thead>
+                <tr>
+                    <th style="width:50px;">序号</th>
+                    <th style="width:150px;">销售物料编码</th>
+                    <th style="width:160px;">基础物料编码</th>
+                    <th>销售物料名称</th>
+                    <th style="width:60px;">操作</th>
+                </tr>
+            </thead>
+            <tbody id="product-selected-list">
+                <{foreach from=$_input.items item=item name=productLoop}>
+                <tr id="product-row-<{$item.row_key}>" class="product-data-row" data-row-key="<{$item.row_key}>" data-sm-id="<{$item.sm_id}>" data-sales-bn="<{$item.sales_material_bn}>" data-basic-bn="<{$item.basic_material_bn}>" data-row-index="<{$smarty.foreach.productLoop.index}>">
+                    <td class="cell-num"><{$item.row_num}></td>
+                    <td><{$item.sales_material_bn}></td>
+                    <td class="cell-basic-bn"><{$item.basic_material_bn_display}></td>
+                    <td><{$item.sales_material_name}></td>
+                    <td><a href="javascript:void(0);" onclick="remove_selected_product('<{$item.row_key}>');">删除</a></td>
+                </tr>
+                <{/foreach}>
+            </tbody>
+        </table>
+    </div>
+    <div id="product-pager-bar" class="product-pager"></div>
+    <!-- 隐藏域：保存当前选中的销售物料，用于同步回主页面表单 -->
+    <div id="product-selected-body" style="display:none;">
+        <{foreach from=$_input.items item=item}>
+        <div class="row" id="product-hidden-row-<{$item.row_key}>">
+            <input type="hidden" name="sm_id[]" item_id="<{$item.sm_id}>" value="<{$item.sm_id}>" />
+        </div>
+        <{/foreach}>
+    </div>
+</div>
+<{area inject=".mainFoot"}>
+<div class='table-action'>
+    <{button label='确定' id='primary-btn' onclick='change_products();'}>
+</div>
+<{/area}>
+<script>
+var PRODUCT_PAGE_SIZE = 100;
+var productCurrentPage = 1;
+
+function getProductRows(){
+    return $('product-selected-list').getElements('tr.product-data-row');
+}
+
+function getFilteredProductRows(){
+    var salesBn = $('search-sales-material-bn').get('value').replace(/^\s+|\s+$/g, '');
+    var basicBn = $('search-basic-material-bn').get('value').replace(/^\s+|\s+$/g, '');
+    var matchedRows = [];
+
+    getProductRows().each(function(rowElement){
+        var match = true;
+        var rowSalesBn = String(rowElement.get('data-sales-bn') || '');
+        var rowBasicBn = String(rowElement.get('data-basic-bn') || '');
+        if (salesBn && rowSalesBn.indexOf(salesBn) === -1) {
+            match = false;
+        }
+        if (match && basicBn && rowBasicBn.indexOf(basicBn) === -1) {
+            match = false;
+        }
+        if (match) {
+            matchedRows.push(rowElement);
+        }
+    });
+
+    return matchedRows;
+}
+
+function updateProductSummary(filteredRows, visibleRows){
+    $('product-total-count').set('text', getProductRows().length);
+    var hasFilter = !!($('search-sales-material-bn').get('value').replace(/^\s+|\s+$/g, '') ||
+        $('search-basic-material-bn').get('value').replace(/^\s+|\s+$/g, ''));
+
+    if (hasFilter) {
+        $('product-visible-count').set('text', '匹配 ' + filteredRows.length + ' 个，本页 ' + visibleRows.length + ' 个');
+    } else {
+        $('product-visible-count').set('text', visibleRows.length);
+    }
+}
+
+function renderProductPager(totalPages){
+    var pagerBar = $('product-pager-bar');
+    if (!pagerBar) {
+        return;
+    }
+
+    if (totalPages <= 1) {
+        pagerBar.set('html', '');
+        return;
+    }
+
+    var pagerHtml = [];
+    if (productCurrentPage > 1) {
+        pagerHtml.push('<a href="javascript:void(0);" onclick="product_selected_go_page(' + (productCurrentPage - 1) + ');">&lt;上一页</a>');
+    }
+
+    for (var pageNumber = 1; pageNumber <= totalPages; pageNumber++) {
+        if (pageNumber === productCurrentPage) {
+            pagerHtml.push('<span class="current">' + pageNumber + '</span>');
+        } else {
+            pagerHtml.push('<a href="javascript:void(0);" onclick="product_selected_go_page(' + pageNumber + ');">' + pageNumber + '</a>');
+        }
+    }
+
+    if (productCurrentPage < totalPages) {
+        pagerHtml.push('<a href="javascript:void(0);" onclick="product_selected_go_page(' + (productCurrentPage + 1) + ');">下一页&gt;</a>');
+    }
+
+    pagerBar.set('html', pagerHtml.join(' '));
+}
+
+function renderProductList(pageNumber){
+    var targetPage = pageNumber || 1;
+    var filteredRows = getFilteredProductRows();
+    var totalPages = Math.max(1, Math.ceil(filteredRows.length / PRODUCT_PAGE_SIZE));
+
+    if (targetPage > totalPages) {
+        targetPage = totalPages;
+    }
+    if (targetPage < 1) {
+        targetPage = 1;
+    }
+    productCurrentPage = targetPage;
+
+    getProductRows().each(function(rowElement){
+        rowElement.setStyle('display', 'none');
+    });
+
+    var startIndex = (targetPage - 1) * PRODUCT_PAGE_SIZE;
+    var endIndex = startIndex + PRODUCT_PAGE_SIZE;
+    var visibleRows = [];
+
+    for (var index = startIndex; index < endIndex && index < filteredRows.length; index++) {
+        filteredRows[index].setStyle('display', '');
+        visibleRows.push(filteredRows[index]);
+    }
+
+    updateProductSummary(filteredRows, visibleRows);
+    renderProductPager(totalPages);
+}
+
+function product_selected_go_page(pageNumber){
+    renderProductList(pageNumber);
+}
+
+function product_selected_search(){
+    renderProductList(1);
+}
+
+function product_selected_reset(){
+    $('search-sales-material-bn').set('value', '');
+    $('search-basic-material-bn').set('value', '');
+    product_selected_search();
+}
+
+function remove_selected_product(rowKey){
+    if ($('product-row-' + rowKey)) {
+        $('product-row-' + rowKey).dispose();
+    }
+    if ($('product-hidden-row-' + rowKey)) {
+        $('product-hidden-row-' + rowKey).dispose();
+    }
+    renderProductList(productCurrentPage);
+}
+
+function change_products(){
+    var handle = $('hand-selected-product').getNext('div');
+    handle.setHTML($('product-selected-body').innerHTML);
+
+    var smIds = [];
+    handle.getElements('input[name="sm_id[]"]').each(function(item){
+        if (item.get('value')) {
+            smIds.push(item.get('value'));
+        }
+    });
+    var smIdInput = handle.getParent().getElement('input[data-sm-id-compact="true"]') ||
+        handle.getParent().getElement('input[name="sm_id"]');
+    if (smIdInput) {
+        smIdInput.set('value', smIds.join(','));
+    }
+
+    var length = handle.getElements('.row').length;
+    var html = '已选择了' + length + '个销售物料,' + "<a href='javascript:void(0);' onclick='product_selected_show();'>查看选中的销售物料.</a>";
+    $('hand-selected-product').setHTML(html);
+    $('primary-btn').getParent('.dialog').retrieve('instance').close();
+}
+
+window.addEvent('domready', function(){
+    renderProductList(1);
+});
+renderProductList(1);
+</script>

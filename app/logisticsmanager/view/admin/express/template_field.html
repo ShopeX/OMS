@@ -23,7 +23,13 @@
     h5{margin-bottom:12px;color:#305c89;}
 
 </style>
+<{if $tmpl.template_type == 'wxshipin_standard'}>
+<div style="margin:0 0 10px;color:#666;line-height:22px;">
+    微信视频号自定义区当前支持：文本、图片、条形码、二维码、商品列表。其他 Lodop 控件暂不支持。
+</div>
+<{else}>
 请先去<a href="https://cloudprint.cainiao.com/print/templates.htm" target="_blank">菜鸟云打印</a>后台添加自定义区模板
+<{/if}>
 <div class="division" id="branch-content">
     <div id="agent-company-errorinfo" class="error" style="display:none;"></div>
     <form method="post" action="index.php?app=logisticsmanager&ctl=admin_express_template&act=saveField" id="agent-company-form">
@@ -33,7 +39,16 @@
             <tr>
                 <th>自定义区：</th>
                 <td>
+                    <{if $tmpl.template_type == 'wxshipin_standard'}>
+                    <select name="wxshipin_custom_tpl_id" class="x-input" style="width:360px;">
+                        <option value="">不使用自定义区</option>
+                        <{foreach from=$lodop_templates item=template}>
+                        <option value="<{$template.template_id}>" <{if $tmpl.wxshipin_custom_tpl_id == $template.template_id}>selected="selected"<{/if}>><{$template.template_name}></option>
+                        <{/foreach}>
+                    </select>
+                    <{else}>
                     <input type="text" name="customer_template_url" size="37" value="<{$tmpl.customer_template_url}>" class="x-input" style="width:360px;"/>
+                    <{/if}>
                 </td>
             </tr>
             </tbody>

@@ -31,8 +31,7 @@ class ome_reship{
      * @param String $memo 取消理由
      * @return void
      * @author
-     * */
-
+     **/
     public function cancelRefundApply($apply_id,$memo=''){
         $refundApplyModel = $this->app->model('refund_apply');
         $applyUpdate = array(
@@ -109,7 +108,7 @@ class ome_reship{
      * 取消补差价订单
      * @param Int $order_id 订单ID
      * @param String $shop_id 店铺ID
-     * */
+     **/
     public function cancelDiffOrder($order_id,$shop_id,$memo=''){
         define('FRST_TRIGGER_OBJECT_TYPE','订单：订单作为补差价订单取消');
         define('FRST_TRIGGER_ACTION_TYPE','ome_ctl_admin_order：do_cancel');
@@ -129,7 +128,7 @@ class ome_reship{
     /**
      * 对换货订单进行支付操作
      * @param Array $order 订单信息
-     * */
+     **/
     public function payChangeOrder($order){
         $mathLib      = kernel::single('eccommon_math');
         $orderModel   = $this->app->model('orders');
@@ -208,7 +207,7 @@ class ome_reship{
 
     /**
      * @description 更新订单的状态,并把发货状态同步到前端
-     * */
+     **/
     function updatediffOrder($order_bn){
         $mdl_ome_orders = $this->app->model('orders');
         $mdl_ome_delivery_order = app::get('ome')->model('delivery_order');
@@ -364,13 +363,6 @@ class ome_reship{
     }
     
     //质检成功后 拒绝质检 质检异常 待确认 状态的 执行相应的操作  目前只支持电商仓
-    /**
-     * part_finish_aftersale
-     * @param mixed $reship_id ID
-     * @param mixed $is_check is_check
-     * @param mixed $msg msg
-     * @return mixed 返回值
-     */
     public function part_finish_aftersale($reship_id,$is_check,&$msg){
         //9 => '拒绝质检'  10 => '质检异常' 11 => '待确认'
         if($is_check == '10' || $is_check == '11' || $is_check == '9'){
@@ -393,11 +385,11 @@ class ome_reship{
     
     /**
      * 审核退换货单
-     * 
+     *
      * @param array $params 退换货单相关参数
      * @param string $error_msg
      * @param bool $is_rollback 遇到错误,是否回滚更新的数据(默认为:回滚)
-     * 
+     *
      * @todo need_sv 审核标识(true：正常审核,false：已经被反审单过的标识)
      * @todo exec_type 审核类型(1:系统自动审核,2:批量审核),默认为0
      * @return bool
@@ -464,18 +456,36 @@ class ome_reship{
             }
             return $rs;
         }
-        #拦截入库审核打拦截接口
-        if($reship['is_check'] == '0'
-            && $status == '1'
-            && $reship['flag_type'] & ome_reship_const::__LANJIE_RUKU
-            && !($reship['flag_type'] & ome_reship_const::__QZ_REFUND_CODE)) {
-            $rs = ome_delivery_notice::cut(['logi_no'=>$reship['logi_no']]);
-            if($rs['rsp'] != 'succ') {
-                //$error_msg = '拦截失败：'.$rs['msg'];
-                //return false;
-            } else {
-                if($reship['delivery_id']) {
-                    app::get('ome')->model('delivery')->update(['logi_status'=>'7'], ['delivery_id'=>$reship['delivery_id']]);
+        
+        // 是否拦截
+        $is_lanjie = true;
+        if($reship['source'] == 'local' && $reship['sub_source'] == '1'){
+            $lj_order_bn = str_replace('LJ', '', $reship['reship_bn']);
+            $ljOrderInfo = $orderObj->dump(array('order_bn'=>$lj_order_bn), 'order_id,order_bn,order_type,createway');
+            
+            // 订单是手工新建的补发订单，则不拦截
+            if($ljOrderInfo && $ljOrderInfo['order_type'] == 'bufa' && $ljOrderInfo['createway'] == 'local'){
+                $is_lanjie = false;
+            }
+        }
+        
+        // 拦截入库审核打拦截接口
+        if($is_lanjie){
+            if($reship['is_check'] == '0'
+                && $status == '1'
+                && $reship['flag_type'] & ome_reship_const::__LANJIE_RUKU
+                && !($reship['flag_type'] & ome_reship_const::__QZ_REFUND_CODE)) {
+                $rs = ome_delivery_notice::cut([
+                    'delivery_id'=>$reship['delivery_id'],
+                    'logi_no'=>$reship['logi_no'],
+                ]);
+                if($rs['rsp'] != 'succ') {
+                    //$error_msg = '拦截失败：'.$rs['msg'];
+                    //return false;
+                } else {
+                    if($reship['delivery_id']) {
+                        app::get('ome')->model('delivery')->update(['logi_status'=>'7'], ['delivery_id'=>$reship['delivery_id']]);
+                    }
                 }
             }
         }
@@ -781,26 +791,38 @@ class ome_reship{
 
     /**
      * 执行队列任务自动审核退货单
-     * 
+     *
      * @param int $reship_id 售后单ID
-     * 
+     *
      * @return bool
      */
-    function batch_reship_queue($reship_id)
+    function batch_reship_queue($reship_id, &$error_msg=null)
     {
         $reship_ids = array();
         $reship_ids[0] = $reship_id;
         
         $reshipObj = app::get('ome')->model('reship');
         $reshipInfo = $reshipObj->dump(array('reship_id'=>$reship_id), 'reship_id,reship_bn,return_logi_no,is_check');
+        
+        if (!$this->matchReturnAutoApproveMode($reship_id, $error_msg)) {
+            if ($this->shouldMarkReshipPaidEqualAutoBlockOnMatchFail()) {
+                $this->markReshipPaidEqualAutoBlock($reship_id, $error_msg);
+            }
+            return false;
+        }
+        $this->clearReshipPaidEqualAutoBlock($reship_id);
+        
         //自动审核是否需要有回退物流单号
         $mstLogiApprove = app::get('ome')->getConf('return.logi_auto_approve');
         if($mstLogiApprove == 'on'){
            if(empty($reshipInfo['return_logi_no'])){
+               $error_msg = '配置已开启：审核必须有退回物流单号，请检查!';
                 return false;
             }
         }
+        
         if($reshipInfo['is_check'] == '11'){
+            $error_msg = '退换货单：'. $reshipInfo['reship_bn'] .' 已经审核过了，不能重复审核!';
             return false;
         }
         
@@ -866,6 +888,481 @@ class ome_reship{
         return true;
     }
 
+    /**
+     * 是否满足自动审批扩展校验（调用方需已确认 return.auto_approve=on）
+     *
+     * 遍历 ome.service.reship.autoapprove.match 扩展；无注册实现时直接通过
+     *
+     * @param int    $reship_id
+     * @param string $error_msg
+     * @return bool
+     */
+    public function matchReturnAutoApproveMode($reship_id, &$error_msg = null)
+    {
+        foreach (kernel::servicelist('ome.service.reship.autoapprove.match') as $object) {
+            if (!method_exists($object, 'matchAutoApprove')) {
+                continue;
+            }
+            if (!$object->matchAutoApprove($reship_id, $error_msg)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 自动审批 match 失败时是否打标「实付不等」（仅当存在扩展实现时）
+     *
+     * @return bool
+     */
+    protected function shouldMarkReshipPaidEqualAutoBlockOnMatchFail()
+    {
+        foreach (kernel::servicelist('ome.service.reship.autoapprove.match') as $object) {
+            if (method_exists($object, 'matchAutoApprove')) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 实付相等自动审批失败：打标 flag_type 便于列表筛选查看
+     *
+     * @param int         $reship_id
+     * @param string|null $error_msg
+     */
+    public function markReshipPaidEqualAutoBlock($reship_id, $error_msg = null)
+    {
+        $reshipId = (int) $reship_id;
+        if ($reshipId <= 0) {
+            return;
+        }
+        $reshipObj = app::get('ome')->model('reship');
+        $row = $reshipObj->dump(array('reship_id' => $reshipId), 'reship_id,flag_type,reship_bn');
+        if (empty($row)) {
+            return;
+        }
+        $flag = (int) $row['flag_type'] | ome_reship_const::__PAID_EQUAL_AUTO_BLOCK;
+        if ($flag === (int) $row['flag_type']) {
+            return;
+        }
+        $reshipObj->update(array('flag_type' => $flag), array('reship_id' => $reshipId));
+        $logMemo = '实付相等自动审批未通过，已打标「实付不等」';
+        if ($error_msg !== null && $error_msg !== '') {
+            $logMemo .= '：' . $error_msg;
+        }
+        app::get('ome')->model('operation_log')->write_log('reship@ome', $reshipId, $logMemo);
+    }
+
+    /**
+     * 清除实付相等未自动审标识（校验通过进入自动审批队列时）
+     *
+     * @param int $reship_id
+     */
+    public function clearReshipPaidEqualAutoBlock($reship_id)
+    {
+        $reshipId = (int) $reship_id;
+        if ($reshipId <= 0) {
+            return;
+        }
+        $reshipObj = app::get('ome')->model('reship');
+        $row = $reshipObj->dump(array('reship_id' => $reshipId), 'reship_id,flag_type');
+        if (empty($row)) {
+            return;
+        }
+        $flag = (int) $row['flag_type'] & ~ome_reship_const::__PAID_EQUAL_AUTO_BLOCK;
+        if ($flag === (int) $row['flag_type']) {
+            return;
+        }
+        $reshipObj->update(array('flag_type' => $flag), array('reship_id' => $reshipId));
+    }
+
+    /**
+     * 按订单行实付金额与退货数量计算应退实付（仅用于实付相等自动审批比较）
+     *
+     * 优先 divide_order_fee，其次 actually_amount / sale_price / amount；行数量优先 nums
+     * 订单明细仍无实付时回退销售单明细 actually_amount
+     *
+     * @param int    $orderItemId
+     * @param float  $returnNum
+     * @param object $orderItemMdl
+     * @param int    $orderId       关联订单 ID，用于 db_dump 过滤
+     * @return string
+     */
+    protected function _calcOrderItemActualPayPortion($orderItemId, $returnNum, $orderItemMdl, $orderId = 0)
+    {
+        $orderItemId = (int) $orderItemId;
+        $returnNum = (float) $returnNum;
+        $orderId = (int) $orderId;
+        if ($orderItemId <= 0 || $returnNum <= 0) {
+            return '0.00';
+        }
+
+        // reship_items.order_item_id = order_items.item_id；在线无则回退归档表
+        $fields = 'divide_order_fee,actually_amount,sale_price,amount,nums';
+        $filter = array('item_id' => $orderItemId);
+        if ($orderId > 0) {
+            $filter['order_id'] = $orderId;
+        }
+        $orderItem = $this->dumpOrderItemForPaidEqualAutoApprove($filter, $fields);
+        if (empty($orderItem)) {
+            return '0.00';
+        }
+
+        $linePaid = $this->_resolveOrderItemLinePaidAmount($orderItem);
+        $orderNums = $this->_resolveOrderItemNums($orderItem);
+        if (bccomp($linePaid, '0', 2) <= 0 || $orderNums <= 0) {
+            $linePaid = $this->_calcOrderItemActualPayFromSalesItem($orderItemId, $returnNum);
+            if (bccomp($linePaid, '0', 2) > 0) {
+                return $linePaid;
+            }
+            return '0.00';
+        }
+
+        if ($returnNum >= $orderNums) {
+            return $linePaid;
+        }
+
+        return bcmul(
+            bcdiv($linePaid, number_format($orderNums, 2, '.', ''), 6),
+            number_format($returnNum, 2, '.', ''),
+            2
+        );
+    }
+
+    /**
+     * 实付相等自动审批：读取订单明细（sdb_ome_order_items 无则回退 sdb_archive_order_items）
+     *
+     * @param array        $filter
+     * @param string|array $cols
+     * @return array|null
+     */
+    public function dumpOrderItemForPaidEqualAutoApprove($filter, $cols = '*')
+    {
+        if (empty($filter) || !is_array($filter)) {
+            return null;
+        }
+
+        $omeMdl = app::get('ome')->model('order_items');
+        $row = $omeMdl->db_dump($filter, $cols);
+        if (!empty($row)) {
+            return $row;
+        }
+        if (isset($filter['item_id'])) {
+            $row = $omeMdl->db_dump(array('item_id' => $filter['item_id']), $cols);
+            if (!empty($row)) {
+                return $row;
+            }
+        }
+
+        if (!app::get('archive')->is_installed()) {
+            return null;
+        }
+
+        $archiveFilter = $filter;
+        unset($archiveFilter['delete']);
+        $archiveMdl = app::get('archive')->model('order_items');
+        list($archiveCols, $missingCols) = $this->_filterColsForArchiveModel($archiveMdl, $cols);
+
+        $row = $archiveMdl->db_dump($archiveFilter, $archiveCols);
+        if (empty($row) && isset($filter['item_id'])) {
+            $row = $archiveMdl->db_dump(array('item_id' => $filter['item_id']), $archiveCols);
+        }
+        return $this->_fillMissingArchiveCols($row, $missingCols);
+    }
+
+    /**
+     * 实付相等自动审批：批量读取订单明细（在线无则回退归档）
+     *
+     * @param string|array $cols
+     * @param array        $filter
+     * @param int          $offset
+     * @param int          $limit
+     * @return array
+     */
+    public function getListOrderItemsForPaidEqualAutoApprove($cols, $filter, $offset = 0, $limit = -1)
+    {
+        $rows = app::get('ome')->model('order_items')->getList($cols, $filter, $offset, $limit);
+        if (!empty($rows)) {
+            return $rows;
+        }
+        if (!app::get('archive')->is_installed()) {
+            return array();
+        }
+        $archiveFilter = $filter;
+        unset($archiveFilter['delete']);
+        $archiveMdl = app::get('archive')->model('order_items');
+        list($archiveCols, $missingCols) = $this->_filterColsForArchiveModel($archiveMdl, $cols);
+        $rows = $archiveMdl->getList($archiveCols, $archiveFilter, $offset, $limit);
+        if (empty($rows) || empty($missingCols)) {
+            return $rows ? $rows : array();
+        }
+        foreach ($rows as &$row) {
+            $row = $this->_fillMissingArchiveCols($row, $missingCols);
+        }
+        unset($row);
+        return $rows;
+    }
+
+    /**
+     * 实付相等自动审批：读取订单对象（在线无则回退归档）
+     *
+     * @param array        $filter
+     * @param string|array $cols
+     * @return array|null
+     */
+    public function dumpOrderObjectForPaidEqualAutoApprove($filter, $cols = '*')
+    {
+        if (empty($filter) || !is_array($filter)) {
+            return null;
+        }
+        $row = app::get('ome')->model('order_objects')->db_dump($filter, $cols);
+        if (!empty($row)) {
+            return $row;
+        }
+        if (!app::get('archive')->is_installed()) {
+            return null;
+        }
+        $archiveFilter = $filter;
+        unset($archiveFilter['delete']);
+        $archiveMdl = app::get('archive')->model('order_objects');
+        list($archiveCols, $missingCols) = $this->_filterColsForArchiveModel($archiveMdl, $cols);
+        $row = $archiveMdl->db_dump($archiveFilter, $archiveCols);
+        return $this->_fillMissingArchiveCols($row, $missingCols);
+    }
+
+    /**
+     * 归档表字段可能少于在线表（如无 refund_money），查询前过滤并记录缺失列
+     *
+     * @param object       $archiveMdl
+     * @param string|array $cols
+     * @return array [可查字段(string|*), 缺失字段数组]
+     */
+    protected function _filterColsForArchiveModel($archiveMdl, $cols)
+    {
+        if ($cols === '*' || $cols === '' || $cols === null) {
+            return array('*', array());
+        }
+
+        $schema = method_exists($archiveMdl, 'get_schema') ? $archiveMdl->get_schema() : array();
+        $schemaCols = !empty($schema['columns']) && is_array($schema['columns'])
+            ? array_keys($schema['columns']) : array();
+
+        $requested = is_array($cols) ? $cols : explode(',', (string) $cols);
+        $keep = array();
+        $missing = array();
+        foreach ($requested as $col) {
+            $col = trim((string) $col);
+            if ($col === '' || $col === '*') {
+                continue;
+            }
+            if (empty($schemaCols) || in_array($col, $schemaCols, true)) {
+                $keep[] = $col;
+            } else {
+                $missing[] = $col;
+            }
+        }
+
+        if (empty($keep)) {
+            return array('*', $missing);
+        }
+        return array(implode(',', $keep), $missing);
+    }
+
+    /**
+     * 归档查询缺失字段补默认值（refund_money 等按 0）
+     *
+     * @param array|null $row
+     * @param array      $missingCols
+     * @return array|null
+     */
+    protected function _fillMissingArchiveCols($row, $missingCols)
+    {
+        if (empty($row) || !is_array($row) || empty($missingCols)) {
+            return $row;
+        }
+        foreach ($missingCols as $col) {
+            if (array_key_exists($col, $row)) {
+                continue;
+            }
+            $row[$col] = ($col === 'refund_money') ? 0 : null;
+        }
+        return $row;
+    }
+
+    /**
+     * 订单行实付金额（比较用，不写库）
+     *
+     * @param array $orderItem
+     * @return string
+     */
+    protected function _resolveOrderItemLinePaidAmount($orderItem)
+    {
+        $candidates = array('divide_order_fee', 'actually_amount', 'sale_price', 'amount');
+        foreach ($candidates as $field) {
+            if (!isset($orderItem[$field]) || !is_numeric($orderItem[$field])) {
+                continue;
+            }
+            $val = number_format((float) $orderItem[$field], 2, '.', '');
+            if (bccomp($val, '0', 2) > 0) {
+                return $val;
+            }
+        }
+        return '0.00';
+    }
+
+    /**
+     * 订单行购买数量
+     *
+     * @param array $orderItem
+     * @return float
+     */
+    protected function _resolveOrderItemNums($orderItem)
+    {
+        if (isset($orderItem['nums']) && is_numeric($orderItem['nums']) && (float) $orderItem['nums'] > 0) {
+            return (float) $orderItem['nums'];
+        }
+        return 0;
+    }
+
+    /**
+     * 销售单明细实付回退（与 reship::getActuallyAmount 一致）
+     *
+     * @param int   $orderItemId
+     * @param float $returnNum
+     * @return string
+     */
+    protected function _calcOrderItemActualPayFromSalesItem($orderItemId, $returnNum)
+    {
+        $orderItemId = (int) $orderItemId;
+        $returnNum = (float) $returnNum;
+        if ($orderItemId <= 0 || $returnNum <= 0) {
+            return '0.00';
+        }
+
+        $saleItem = app::get('ome')->model('sales_items')->db_dump(
+            array('order_item_id' => $orderItemId),
+            'nums,actually_amount'
+        );
+        if (empty($saleItem) && app::get('archive')->is_installed()) {
+            $saleItem = app::get('archive')->model('sales_items')->db_dump(
+                array('order_item_id' => $orderItemId),
+                'nums,actually_amount'
+            );
+        }
+        if (empty($saleItem)) {
+            return '0.00';
+        }
+
+        $saleNums = isset($saleItem['nums']) ? (float) $saleItem['nums'] : 0;
+        $actually = isset($saleItem['actually_amount']) ? (float) $saleItem['actually_amount'] : 0;
+        if ($saleNums <= 0 || $actually <= 0) {
+            return '0.00';
+        }
+
+        if ($returnNum >= $saleNums) {
+            return number_format($actually, 2, '.', '');
+        }
+
+        return bcmul(
+            bcdiv(number_format($actually, 2, '.', ''), number_format($saleNums, 2, '.', ''), 6),
+            number_format($returnNum, 2, '.', ''),
+            2
+        );
+    }
+
+    /**
+     * 实付相等自动审批：退换货明细应退金额（仅用于比较，不写库）
+     * amount>0 用 amount；amount=0 用 price*num
+     *
+     * @param array $reshipItem reship_items 一行
+     * @param float $returnNum  退货数量
+     * @return string
+     */
+    protected function _calcReshipRefundForPaidEqualCompare($reshipItem, $returnNum)
+    {
+        $returnNum = (float) $returnNum;
+        if ($returnNum <= 0) {
+            return '0.00';
+        }
+
+        if (isset($reshipItem['amount']) && is_numeric($reshipItem['amount'])) {
+            $amount = number_format((float) $reshipItem['amount'], 2, '.', '');
+            if (bccomp($amount, '0', 2) > 0) {
+                return $amount;
+            }
+        }
+
+        $price = isset($reshipItem['price']) ? (float) $reshipItem['price'] : 0;
+        if ($price > 0) {
+            return bcmul(
+                number_format($price, 2, '.', ''),
+                number_format($returnNum, 2, '.', ''),
+                2
+            );
+        }
+
+        return '0.00';
+    }
+
+    /**
+     * @param int|string $orderId
+     * @param string $bn
+     * @param object $orderItemMdl
+     * @return int
+     */
+    protected function _resolveOrderItemIdByBn($orderId, $bn, $orderItemMdl)
+    {
+        $row = $orderItemMdl->getList(
+            'item_id',
+            array('order_id' => $orderId, 'bn' => $bn, 'delete' => 'false'),
+            0,
+            1
+        );
+        if (!empty($row[0]['item_id'])) {
+            return (int) $row[0]['item_id'];
+        }
+        if (!app::get('archive')->is_installed()) {
+            return 0;
+        }
+        $archiveRow = app::get('archive')->model('order_items')->getList(
+            'item_id',
+            array('order_id' => $orderId, 'bn' => $bn),
+            0,
+            1
+        );
+        return !empty($archiveRow[0]['item_id']) ? (int) $archiveRow[0]['item_id'] : 0;
+    }
+
+    /**
+     * 供 nipponpaint 自动审批 Service 调用：订单行实付分摊
+     */
+    public function calcOrderItemActualPayPortionForAutoApprove($orderItemId, $returnNum, $orderId = 0)
+    {
+        return $this->_calcOrderItemActualPayPortion(
+            $orderItemId,
+            $returnNum,
+            app::get('ome')->model('order_items'),
+            $orderId
+        );
+    }
+
+    /**
+     * 供 nipponpaint 自动审批 Service 调用：退换货应退金额（比较用）
+     */
+    public function calcReshipRefundForPaidEqualCompare($reshipItem, $returnNum)
+    {
+        return $this->_calcReshipRefundForPaidEqualCompare($reshipItem, $returnNum);
+    }
+
+    /**
+     * 供 nipponpaint 自动审批 Service 调用：按货号解析 order_item_id
+     */
+    public function resolveOrderItemIdByBnForAutoApprove($orderId, $bn)
+    {
+        return $this->_resolveOrderItemIdByBn($orderId, $bn, app::get('ome')->model('order_items'));
+    }
+
     static function check_reship_items($reship_id){
         $db = kernel::database();
 
@@ -914,7 +1411,7 @@ class ome_reship{
     
     /**
      * [京东云交易]创建退货包裹明细
-     * 
+     *
      * @param array $reshipInfo
      * @param string $error_msg
      * @return array
@@ -1282,7 +1779,7 @@ class ome_reship{
     
     /**
      * [京东云交易]获取可退货的包裹
-     * 
+     *
      * @param array $reshipInfo 退货单信息
      * @param array $returnSkus 退货货品明细,以product_id为下标
      * @param string $error_msg
@@ -1577,7 +2074,7 @@ class ome_reship{
     
     /**
      * 取消退货包裹信息
-     * 
+     *
      * @param unknown $reship_id
      * @param string $getItems
      * @param string $error_msg
@@ -1630,7 +2127,7 @@ class ome_reship{
     
     /**
      * 完成退货包裹信息
-     * 
+     *
      * @param unknown $reship_id
      * @param string $getItems
      * @param string $error_msg
@@ -1670,7 +2167,7 @@ class ome_reship{
     
     /**
      * [京东云交易]检查退货明细中主品和赠品是否相同
-     * 
+     *
      * @param array $deliveryIds 发货单ID
      * @return bool
      */
@@ -1709,7 +2206,7 @@ class ome_reship{
     
     /**
      * 修改售后换货单上的换货商品信息
-     * 
+     *
      * @param $sdf
      * @param $error_msg
      * @return false|void
@@ -2069,7 +2566,7 @@ class ome_reship{
     
     /**
      * 检测换出商品明细,如果销售物料里基础物料有变化,更新为最新的基础物料;
-     * 
+     *
      * @param $reshipinfo
      * @return void
      */
@@ -2407,7 +2904,7 @@ class ome_reship{
     
     /**
      * 通过退货单退货商品明细获取对应的已退款金额
-     * 
+     *
      * @param $reshipInfo
      * @return void
      */
@@ -2476,13 +2973,29 @@ class ome_reship{
             $branchInfo = $branchObj->dump(['branch_id' => $reship['branch_id'], 'check_permission' => 'false'], 'name');
             $branchName = $branchInfo ? $branchInfo['name'] : '未知仓库';
 
-            // 发送通知
-            kernel::single('monitor_event_notify')->addNotify('reship_cancel_success', [
-                'reship_bn' => $reship['reship_bn'],
+            $notifyParams = [
+                'reship_bn'   => $reship['reship_bn'],
                 'branch_name' => $branchName,
                 'cancel_time' => date('Y-m-d H:i:s'),
-                'memo' => $memo ?: '无',
-            ]);
+                'memo'        => $memo ?: '无',
+            ];
+            if (!empty($reship['branch_id'])) {
+                $notifyParams['branch_id'] = $reship['branch_id'];
+                if (app::get('o2o')->is_installed()) {
+                    $storeRow = app::get('o2o')->model('store')->dump(
+                        array('branch_id' => $reship['branch_id'], 'status' => 1),
+                        'store_id,store_bn,name'
+                    );
+                    if ($storeRow) {
+                        $notifyParams['store_id']   = $storeRow['store_id'];
+                        $notifyParams['store_bn']   = $storeRow['store_bn'];
+                        $notifyParams['store_name'] = $storeRow['name'];
+                    }
+                }
+            }
+
+            // 发送通知（params 需含 branch_id/store_id，企微规则才能按门店路由 Webhook）
+            kernel::single('monitor_event_notify')->addNotify('reship_cancel_success', $notifyParams);
         } catch (Exception $e) {
             // 静默处理异常，不影响主流程
         }

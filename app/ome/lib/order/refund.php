@@ -1,34 +1,13 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: 2022/9/27 16:31:37
  * @describe: 订单退款状态
  * ============================
  */
 class ome_order_refund {
-
-    /**
-     * 检查RefundStatus
-     * @param mixed $order order
-     * @return mixed 返回验证结果
-     */
 
     public function checkRefundStatus($order) {
         if(app::get('ome')->getConf('ome.order.refund.check') != 'true') {
@@ -224,7 +203,7 @@ class ome_order_refund {
     
     /**
      * 退款申请备注
-     * 
+     *
      * @return array
      */
     public function setReasonTypes()
@@ -246,6 +225,25 @@ class ome_order_refund {
             return [false, ['msg'=>'退款单为仅退款']];
         }
         $tgOrder = app::get('ome')->model('orders')->db_dump(['order_id'=>$refundApply['order_id']], 'pay_status,order_bn');
+        
+        // 使用Service检查是否允许生成拦截退货单
+        if ($servicelist = kernel::servicelist('ome.service.reship.finish.after')) {
+            foreach ($servicelist as $objectKey => $instance)
+            {
+                if(method_exists($instance,'checkCreateLanjieReship')){
+                    $checkResult = $instance->checkCreateLanjieReship($refundApply['order_id']);
+                    if(isset($checkResult['rsp']) && $checkResult['rsp'] == 'fail'){
+                        $error_msg = 'Service检查不允许创建拦截退货单：'. $checkResult['error_msg'];
+                        
+                        // log
+                        app::get('ome')->model('operation_log')->write_log('refund_apply@ome', $refundApply['apply_id'], $error_msg);
+                        
+                        return [false, ['msg'=>$error_msg]];
+                    }
+                }
+            }
+        }
+        
         if($refundApply['tag_type'] == '8') {
             kernel::single('monitor_event_notify')->addNotify('order_refund_apply_force_refund', [
                 'refund_apply_bn'=>$refundApply['refund_apply_bn'],
@@ -285,7 +283,7 @@ class ome_order_refund {
      * 延迟更新订单取消状态
      * 场景：平台更新订单全额退款状态与请求WMS取消发货单同分同秒;
      * @todo：发货单撤消成功,订单是(全额退款+未发货+已拆分完)的状态;
-     * 
+     *
      * @param array $orderIds
      * @return bool
      */

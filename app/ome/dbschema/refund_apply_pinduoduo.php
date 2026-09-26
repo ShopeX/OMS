@@ -19,7 +19,7 @@ $db['refund_apply_pinduoduo']=array (
     'columns' =>
         array (
             'apply_id' => array (
-                'type' => 'number',
+                'type' => 'int unsigned',
                 'required' => true,
                 'pkey' => true,
                 'editable' => false,

@@ -50,6 +50,12 @@
     <service id="desktop_finder.o2o_mdl_refuse_reason">
         <class>o2o_finder_refuse_reason</class>
     </service>
+    <service id="desktop_finder.o2o_mdl_store_refuse_analysis">
+        <class>o2o_finder_store_refuse_analysis</class>
+    </service>
+    <service id="extend_filter_o2o_mdl_store_refuse_analysis">
+        <class>o2o_finder_extend_filter_store_refuse_analysis</class>
+    </service>
 
     <service id="desktop_finder.o2o_mdl_performance_orders">
         <class>o2o_finder_performance_orders</class>

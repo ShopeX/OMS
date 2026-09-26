@@ -1,25 +1,11 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/**
  * 日志记录类
  *
  * @author kamisama.xia@gmail.com
  * @version 0.1
  */
+
 class taskmgr_log{
 
     /**
@@ -29,8 +15,6 @@ class taskmgr_log{
      * @param string $info
      * @return null
      */
-
-
     static public function log($filename, $info){
         $logfile = dirname(__FILE__) . '/../logs/'.date('Ymd').'/'.$filename.'.log';
         if(!file_exists($logfile)){
@@ -40,11 +24,6 @@ class taskmgr_log{
     }
 
     // 判断文件目录是否存在
-    /**
-     * 获取DirPath
-     * @param mixed $dir dir
-     * @return mixed 返回结果
-     */
     static public function getDirPath($dir)
     {
         $logfile = dirname(__FILE__) . '/../logs/'.$dir;
@@ -52,12 +31,6 @@ class taskmgr_log{
         return $logfile;
     }
 
-    /**
-     * mkdir_p
-     * @param mixed $dir dir
-     * @param mixed $dirmode dirmode
-     * @return mixed 返回值
-     */
     static public function mkdir_p($dir,$dirmode=0755){
         $path = explode('/',str_replace('\\','/',$dir));
         $depth = count($path);
@@ -68,7 +41,8 @@ class taskmgr_log{
         }
         for($i;$i<$depth;$i++){
             if($d= implode('/',array_slice($path,0,$i+1))){
-                if(!is_dir($d)) mkdir($d,$dirmode);
+                // 多进程并发时目录可能已被其他进程创建，忽略 File exists
+                if(!is_dir($d)) @mkdir($d,$dirmode);
             }
         }
         return is_dir($dir);
@@ -81,7 +55,7 @@ class taskmgr_log{
 
     /**
      * Interesting events
-     * 
+     *
      * Examples: User logs in, SQL logs.
      */
     public const INFO = 'normal';
@@ -93,7 +67,7 @@ class taskmgr_log{
 
     /**
      * Exceptional occurrences that are not errors
-     * 
+     *
      * Examples: Use of deprecated APIs, poor use of an API,
      * undesirable things that are not necessarily wrong.
      */
@@ -106,14 +80,14 @@ class taskmgr_log{
 
     /**
      * Critical conditions
-     * 
+     *
      * Example: Application component unavailable, unexpected exception.
      */
     public const CRITICAL = 'error';
 
     /**
      * Action must be taken immediately
-     * 
+     *
      * Example: Entire website down, database unavailable, etc.
      * This should trigger the SMS alerts and wake you up.
      */
@@ -129,7 +103,7 @@ class taskmgr_log{
 
     /**
      * 在DEBUG级别添加一条日志记录。
-     * 
+     *
      * @param string $message 日志信息
      * @param mixed[] $context 日志上下文数组
      */
@@ -140,7 +114,7 @@ class taskmgr_log{
 
     /**
      * 添加INFO级别的日志记录.
-     * 
+     *
      * @param string $message 日志信息
      * @param mixed[] $context 日志上下文数组
      */
@@ -151,7 +125,7 @@ class taskmgr_log{
 
     /**
      * 添加通知级别的日志记录l.
-     * 
+     *
      * @param string $message 日志信息
      * @param mixed[] $context 日志上下文数组
      */
@@ -162,7 +136,7 @@ class taskmgr_log{
 
     /**
      * 添加警告级别的日志记录.
-     * 
+     *
      * @param string $message 日志信息
      * @param mixed[] $context 日志上下文数组
      */
@@ -173,7 +147,7 @@ class taskmgr_log{
 
     /**
      * 添加错误级别的日志记录
-     * 
+     *
      * @param string $message 日志信息
      * @param mixed[] $context 日志上下文数组
      */
@@ -184,7 +158,7 @@ class taskmgr_log{
 
     /**
      * 添加危急级别的日志记录.
-     * 
+     *
      * @param string $message 日志信息
      * @param mixed[] $context 日志上下文数组
      */
@@ -195,7 +169,7 @@ class taskmgr_log{
 
     /**
      * 添加ALERT级别的日志记录.
-     * 
+     *
      * @param string $message 日志信息
      * @param mixed[] $context 日志上下文数组
      */
@@ -206,7 +180,7 @@ class taskmgr_log{
 
     /**
      * 添加紧急级别的日志记录.
-     * 
+     *
      * @param string $message 日志信息
      * @param mixed[] $context 日志上下文数组
      */

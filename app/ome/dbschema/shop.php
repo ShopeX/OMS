@@ -343,6 +343,14 @@ $db['shop']=array (
           'in_list' => true,
           'default_in_list' => true,
     ),
+    'is_common_shop' => array (
+      'type' => 'bool',
+      'required' => true,
+      'default' => 'false',
+      'label' => '是否常用店铺',
+      'in_list' => true,
+      'default_in_list' => true,
+    ),
   ),
   'index' =>
   array (

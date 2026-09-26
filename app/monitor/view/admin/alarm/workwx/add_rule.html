@@ -1,0 +1,217 @@
+<style>
+    .workwx-rule-form .form-layout-block > h3 {
+        height: auto;
+        padding: 10px 16px;
+        font-size: 14px;
+        line-height: 20px;
+    }
+    .workwx-rule-form .form-layout-block > .form-layout-fields {
+        padding: 8px 16px 0;
+    }
+    .workwx-rule-form .form-layout-block .form-field {
+        width: 100%;
+        margin-bottom: 12px;
+        padding-right: 0;
+    }
+    .workwx-rule-form .form-layout-block .form-field-inline {
+        width: 48%;
+        padding-right: 16px;
+    }
+    .workwx-rule-form .section-tip {
+        color: #888;
+        margin: -4px 16px 8px;
+        font-size: 12px;
+        line-height: 18px;
+    }
+    .workwx-rule-form .form-actions {
+        padding: 8px 16px 16px;
+    }
+    #workwx_rule_content div a { color: #3367d6; font-size: 14px; }
+    #workwx_rule_content ul { margin: 4px 0 0; padding: 0; }
+    #workwx_rule_content ul li {
+        height: 25px;
+        background: #EEEEEE;
+        margin: 1px 0;
+        padding: 6px 10px 0;
+        list-style: none;
+    }
+    #workwx_rule_content ul li span { float: right; margin-right: 10px; }
+    #workwx_rule_content ul li span a { color: #3367d6; text-decoration: underline; }
+    #workwx_rule_content ul li div {
+        width: 450px;
+        overflow: hidden;
+        height: 16px;
+        float: left;
+    }
+    #workwx_rule_content .form-checkbox label {
+        margin-bottom: 4px;
+    }
+</style>
+<div class="form-layout workwx-rule-form" style="padding-bottom: 0;">
+    <form method="post" id="workwx_rule_form" action="index.php?app=monitor&ctl=admin_alarm_workwx_rule&act=save" name="workwx_rule_form">
+        <div class="form-layout-block">
+            <h3>基本信息</h3>
+            <div class="form-layout-fields">
+                <div class="form-field">
+                    <span class="form-field-label"><span style="color:red;">*</span>规则名称：</span>
+                    <input class="form-input" placeholder="如：WAP自提新单通知" type="text" name="rule_name" size="60" value="<{$data.rule_name}>" vtype="required" />
+                </div>
+                <div class="form-field">
+                    <span class="form-field-label"><span style="color:red;">*</span>企微Webhook：</span>
+                    <input class="form-input" placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..." type="text" name="workwx_webhook" size="80" value="<{$data.workwx_webhook}>" vtype="required" />
+                </div>
+            </div>
+
+            <h3>通知条件</h3>
+            <p class="section-tip">多选门店共用本规则 Webhook；未配置路由时仍走原有全局企微 Webhook。</p>
+            <div class="form-layout-fields">
+                <div class="form-field" id="workwx_rule_content">
+                    <div><a href="javascript:void(0);" id="workwx_add_condition">增加规则</a></div>
+                    <ul id="workwxRoleList">
+                        <{foreach from=$data.role_items item=role}>
+                        <li id="<{$role.uid}>">
+                            <div title="<{$role.attr.caption}>"><{$role.attr.caption}></div>
+                            <span>
+                                <a href="javascript:void(0);" class="edit" ref='<{$role.json}>'>编辑</a>&nbsp;
+                                <a href="javascript:void(0);" class="del">删除</a>
+                            </span>
+                        </li>
+                        <{/foreach}>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>触发事件</h3>
+            <p class="section-tip">仅显示预警模板中「发送类型=企微、已审核、已启用」的事件；请先在预警模板中维护企微模板。</p>
+            <div class="form-layout-fields">
+                <div class="form-field">
+                    <{if $event_type}>
+                    <div class="form-checkbox">
+                        <{foreach from=$event_type key=type item=name}>
+                        <label style="display:inline-block;margin-right:16px;margin-bottom:4px;">
+                            <input name="event_type[]" type="checkbox" value="<{$type}>"
+                                <{if is_array($data.event_type) && in_array($type,$data.event_type)}>checked="checked"<{/if}> />
+                            <{$name}>
+                        </label>
+                        <{/foreach}>
+                    </div>
+                    <{else}>
+                    <div class="notice" style="color:#c00;">暂无可用企微预警模板，请先到「预警模板」新增发送类型为「企微」的模板并审核启用。</div>
+                    <{/if}>
+                </div>
+            </div>
+
+            <div class="form-layout-fields">
+                <div class="form-field form-field-inline">
+                    <span class="form-field-label">备注：</span>
+                    <textarea class="form-input" name="memo" cols="70" rows="2"><{$data.memo}></textarea>
+                </div>
+                <div class="form-field form-field-inline">
+                    <span class="form-field-label">启用状态：</span>
+                    <div class="form-radios">
+                        <label><input name="disabled" type="radio" <{if $data.disabled=='false' || !$data.rule_id}>checked<{/if}> value="false">启用</label>
+                        <label><input name="disabled" type="radio" <{if $data.disabled=='true'}>checked<{/if}> value="true">禁用</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <input type="hidden" name="rule_id" value="<{$data.rule_id}>">
+                <input type="hidden" name="roles" id="workwx_roles" value="">
+                <button class="btn-primary" id="workwx-rule-save-btn" type="button">保存</button>
+            </div>
+        </div>
+    </form>
+</div>
+<script type="text/javascript">
+(function () {
+    var _form = $('workwx_rule_form');
+    var btn = $('workwx-rule-save-btn');
+    var finder = finderGroup['<{$env.get.finder_id}>'];
+    if (typeof workwxRuleUniqueID === 'undefined') {
+        workwxRuleUniqueID = (function () {
+            var id = 1000;
+            return function () { return id++; };
+        })();
+    }
+
+    function getRuleId() {
+        return _form.rule_id ? _form.rule_id.value : '';
+    }
+
+    function bindRoleItem(item) {
+        var delBtn = item.getElement('.del');
+        var editBtn = item.getElement('.edit');
+        if (delBtn) {
+            delBtn.addEvent('click', function () {
+                if (confirm('你确定要删除当前通知条件吗？')) {
+                    item.destroy();
+                }
+            });
+        }
+        if (editBtn) {
+            editBtn.addEvent('click', function () {
+                var role = this.get('ref');
+                var uid = item.id;
+                new Dialog('index.php?app=monitor&ctl=admin_alarm_workwx_rule&act=addcondition', {
+                    width: 760,
+                    height: 520,
+                    title: '通知条件设定',
+                    ajaxoptions: { data: { role: role, uid: uid, rule_id: getRuleId() }, method: 'post' }
+                });
+            });
+        }
+    }
+
+    $$('#workwxRoleList li').each(function (item) {
+        bindRoleItem(item);
+    });
+
+    $('workwx_add_condition').addEvent('click', function () {
+        new Dialog('index.php?app=monitor&ctl=admin_alarm_workwx_rule&act=addcondition', {
+            width: 760,
+            height: 520,
+            title: '通知条件设定',
+            ajaxoptions: { data: { rule_id: getRuleId() }, method: 'post' }
+        });
+    });
+
+    _form.store('target', {
+        onSuccess: function (response) {
+            var hash_res_obj = JSON.decode(response);
+            if (hash_res_obj.success != undefined && hash_res_obj.success != "") {
+                try {
+                    var _dialogIns = btn.getParent('.dialog').retrieve('instance');
+                } catch (e) {}
+                if (_dialogIns) {
+                    _dialogIns.close();
+                    if (finder) finder.refresh();
+                }
+            }
+        }
+    });
+
+    btn.addEvent('click', function () {
+        var checked = _form.getElements('input[name="event_type[]"]:checked');
+        if (!checked.length) {
+            alert('请至少选择一个触发事件');
+            return;
+        }
+        if (!_form.workwx_webhook.value.trim()) {
+            alert('请填写企微Webhook地址');
+            return;
+        }
+        var roles = '';
+        $$('#workwxRoleList li').each(function (item) {
+            var ref = item.getElement('.edit').get('ref');
+            roles = roles ? (roles + '|||' + ref) : ref;
+        });
+        if (!roles) {
+            alert('请在通知条件中至少添加一条门店规则');
+            return;
+        }
+        $('workwx_roles').value = roles;
+        _form.fireEvent('submit', { stop: $empty });
+    });
+})();
+</script>

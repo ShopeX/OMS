@@ -38,6 +38,7 @@
         <permission id="order_groupon_index">团购订单导入列表</permission>
         <permission id="order_groupon_import">团购订单批量导入</permission>
         <permission id="order_export">订单导出</permission>
+        <permission id="original_price">原价查看</permission>
         <permission id="order_goback">订单退回</permission>
         <permission id="process_fast_consign" show='ome_roles:show_branch' save='ome_roles:save_role'>状态回写</permission>
         <permission id="batch_update_order">批量编辑订单</permission>

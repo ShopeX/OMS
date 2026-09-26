@@ -1,0 +1,44 @@
+<div class="tableform">
+    <table width="100%" cellspacing="0" cellpadding="0" class="gridlist">
+        <thead>
+        <tr>
+            <th>销售行项目号(ITEMID)</th>
+            <th>商品号码/物料号(ARTNR)</th>
+            <th>商品批次号/唯一码(CHARG)</th>
+            <th>模号(REFBONNR)</th>
+            <th>库存流动方向(VORZEICHEN)</th>
+            <th>数量(MENGE)</th>
+            <th>单位(MEINS)</th>
+            <th>实付金额(KONDVALUE)</th>
+            <th>原价(ZYJ)</th>
+            <th>优惠价(ZYHJ)</th>
+            <th>零售基价(ZLSJJ)</th>
+            <th>投资金条加价(ZJJ)</th>
+            <th>克工费(ZKGF)</th>
+            <th>件工费(ZJGF)</th>
+        </tr>
+        </thead>
+        <tbody>
+        <{foreach from=$items item=it}>
+        <tr>
+            <td><{$it.itemid}></td>
+            <td><{$it.artnr}></td>
+            <td><{$it.charg}></td>
+            <td><{$it.refbonnr}></td>
+            <td><{$it.vorzeichen}></td>
+            <td><{$it.menge}></td>
+            <td><{$it.meins}></td>
+            <td><{$it.kondvalue}></td>
+            <td><{$it.zyj}></td>
+            <td><{$it.zyhj}></td>
+            <td><{$it.zlsjj}></td>
+            <td><{$it.zjj}></td>
+            <td><{$it.zkgf}></td>
+            <td><{$it.zjgf}></td>
+        </tr>
+        <{foreachelse}>
+        <tr><td colspan="14">无行项目</td></tr>
+        <{/foreach}>
+        </tbody>
+    </table>
+</div>

@@ -248,6 +248,15 @@ $db['return_product'] = array(
             'in_list'       => true,
             'filterdefault' => true,
         ),
+        'sub_source'   => array(
+            'type'     => 'number',
+            'default'  => 0,
+            'editable' => false,
+            'in_list'  => true,
+            'default_in_list' => false,
+            'label'    => '子来源',
+            'comment'  => '子来源(0、默认，1、订单，2、发货单，3、售后申请单)',
+        ),
         'shop_type'          => array(
             'type'          => 'varchar(50)',
             'label'         => '店铺类型',

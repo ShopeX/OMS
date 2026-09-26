@@ -20,7 +20,7 @@ $db['return_process_items']=array (
   array (
     'item_id' => 
     array (
-      'type' => 'number',
+      'type' => 'int unsigned',
       'required' => true,
       'pkey' => true,
       'editable' => false,

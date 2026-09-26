@@ -51,6 +51,14 @@
         <th>自动下载POP店帐单：</th>
         <td><{input type="radio" name="config[download_settle_bill]" value=$shop.config.download_settle_bill|default:"no" options=array("yes"=>"是","no"=>"否") separator="&nbsp;"}></td>
     </tr>
+    <tr>
+        <th>财务对账：</th>
+        <td><{input type="radio" name="config[finance_reconcile]" value=$shop.config.finance_reconcile|default:"no" options=array("yes"=>"是","no"=>"否") separator="&nbsp;"}></td>
+    </tr>
+    <tr>
+        <th>自动下载商家账单明细：</th>
+        <td><{input type="radio" name="config[auto_download_merchant_bill]" value=$shop.config.auto_download_merchant_bill|default:"no" options=array("yes"=>"是","no"=>"否") separator="&nbsp;"}></td>
+    </tr>
 </table>
 <h5>京东自营相关配置</h5>
 <table>

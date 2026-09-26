@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class console_ctl_admin_branch_product extends desktop_controller{
     var $name = "仓库库存列表";
     var $workground = "console_center";
@@ -82,25 +66,43 @@ class console_ctl_admin_branch_product extends desktop_controller{
             $panel->show('ome_mdl_branch_product', $params);
         }
         
+        // 多选仓库：「全部」空选项会一起提交，需去掉空值，避免 SQL：IN (,2)
+        $posted_branch_ids = array();
+        if (isset($_POST['branch_id'])) {
+            $posted_branch_ids = array_values(array_filter((array) $_POST['branch_id'], function ($v) {
+                return $v !== '' && $v !== null && $v !== '_NULL_';
+            }));
+            if (!empty($posted_branch_ids)) {
+                $_POST['branch_id'] = $posted_branch_ids;
+            } else {
+                unset($_POST['branch_id']);
+            }
+        }
+
         //获取操作员管辖仓库
         $oBranch = app::get('ome')->model('branch');
         $is_super = kernel::single('desktop_user')->is_super();
         if (!$is_super){
-            if (!isset($_POST['branch_id']) || empty($_POST['branch_id']) ) {
-                $branch_ids = $oBranch->getBranchByUser(true);
-                if ($branch_ids){
+            $branch_ids = $oBranch->getBranchByUser(true);
+            if ($branch_ids){
+                if (!empty($posted_branch_ids)) {
+                    $selected = array_values(array_intersect($posted_branch_ids, $branch_ids));
+                    $base_filter['branch_id'] = !empty($selected) ? $selected : array('false');
+                } else {
                     $base_filter['branch_id'] = $branch_ids;
-                }else{
-                    $base_filter['branch_id'] = 'false';
                 }
             }else{
-                $base_filter['branch_id'] = $_POST['branch_id'];
+                $base_filter['branch_id'] = 'false';
+            }
+        } else {
+            if (!empty($posted_branch_ids)) {
+                $base_filter['branch_id'] = $posted_branch_ids;
             }
         }
         
         $actions =  array(
             array(
-                'label'=>app::get('ome')->_('全部导出').$_POST['branch_id'],
+                'label'=>app::get('ome')->_('全部导出'),
                 'class'=>'export',
                 'icon'=>'add.gif',
                 'href'=>'index.php?app=console&ctl=admin_branch_product&act=export',
@@ -121,17 +123,23 @@ class console_ctl_admin_branch_product extends desktop_controller{
             'use_buildin_recycle' => false,
             'actions' => $actions,
             'use_buildin_filter' => true,
+            'finder_cols' => material_basic_material_master::mergeFinderCols(
+                'column_branch_name,column_bn,column_product_name,column_barcode,column_spec_info,column_material_spu,store,store_freeze,column_available_store,arrive_store,column_vop_sku_stock',
+                'column_bn'
+            ),
             'object_method'=>array('count'=>'countlist','getlist'=>'getlists')
         ));
     }
     
-    /**
-     * export
-     * @return mixed 返回值
-     */
     public function export()
     {
-        $branch_id = $_GET['branch_id'];
+        // 多选仓库：规范化为有效 ID 数组，避免模板输出 "Array"
+        $branch_id = array();
+        if (isset($_GET['branch_id'])) {
+            $branch_id = array_values(array_filter(array_map('intval', (array) $_GET['branch_id']), function ($v) {
+                return $v > 0;
+            }));
+        }
         $bn = $_GET['bn'];
         $_actual_store_search = $_GET['_actual_store_search'];
         $actual_store = $_GET['actual_store'];

@@ -40,6 +40,7 @@
         <!-- <permission id="shop_settlement_jdbill">京东钱包流水</permission> -->
         <permission id="shop_settlement_cainiaoitems">支付宝实付明细</permission>
         <permission id="shop_settlement_task">账单设置</permission>
+        <permission id="shop_settlement_match_notify">匹配失败通知设置</permission>
         <permission id="shop_settlement_expenses_rule">费用拆分规则</permission>
         <permission id="shop_settlement_expenses_splittotal">拆分结果汇总</permission>
         <permission id="shop_settlement_expenses_splititem">拆分结果明细</permission>
@@ -65,6 +66,7 @@
             <menu controller='admin_shop_settlement_gap' action='disableGap' permission='shop_settlement_gap_delete' display='false' order='2000263'>差异类型置为无效</menu>
             <menu controller='admin_shop_settlement_gap' action='restoreGap' permission='shop_settlement_gap_restore' display='false' order='2000264'>差异类型恢复</menu>
             <menu controller='admin_shop_settlement_verification' action='error' permission='shop_settlement_verification' display='true' order='2000300'>核销规则设置</menu>
+            <menu controller='admin_shop_settlement_match_notify' action='index' permission='shop_settlement_match_notify' display='true' order='2000310'>匹配失败通知</menu>
         </menugroup>
         <menugroup name="账单导入" en="bill">
             <menu controller='admin_shop_settlement_bill' action='base' permission='shop_settlement_base' display='true' order='2000105'>店铺收支明细</menu>

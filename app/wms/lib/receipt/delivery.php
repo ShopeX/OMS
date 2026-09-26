@@ -202,6 +202,18 @@ class wms_receipt_delivery{
             }
             //标签写入发货单
             kernel::single('ome_bill_label')->orderToDeliveryLabel($order_id, $data['delivery_id'], 'wms_delivery');
+
+            foreach (kernel::servicelist('wms.service.delivery.create.after') as $service) {
+                if (!method_exists($service, 'afterCreate')) {
+                    continue;
+                }
+                if ($service->afterCreate($data['delivery_id'], $sdf, $msg) === false) {
+                    if (!$msg) {
+                        $msg = '发货单创建后扩展处理失败';
+                    }
+                    return false;
+                }
+            }
             
             return true;
         }else{

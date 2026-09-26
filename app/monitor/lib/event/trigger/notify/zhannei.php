@@ -33,6 +33,7 @@ class monitor_event_trigger_notify_zhannei extends monitor_event_trigger_notify_
                 'msg'        => $notifyInfo['send_content'], // 发送内容作为消息
                 'notifytime' => time(), // 当前时间戳
                 'status'     => 'false', // 默认未读状态
+                'event_type' => $notifyInfo['event_type'] ? $notifyInfo['event_type'] : '',
             ];
             
             // 插入数据到rpcnotify表

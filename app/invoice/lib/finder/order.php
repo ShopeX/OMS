@@ -17,12 +17,13 @@
 
 
 class invoice_finder_order{
-    public $addon_cols = 'id,type_id,order_id,mode,is_status,sync,ship_area,ship_addr,shop_id,dateline,is_print,print_num,batch_number,delivery_id,shop_type,changesdf,is_make_invoice';//调用字段
+    public $addon_cols = 'id,type_id,order_id,mode,is_status,sync,ship_area,ship_addr,shop_id,dateline,is_print,print_num,batch_number,delivery_id,shop_type,changesdf,is_make_invoice,invoice_no';//调用字段
+    private $orderCreateTimeList = null;
     
     //操作
     var $column_edit  = '操作';
     var $column_edit_order = 5;
-    var $column_edit_width = '150';
+    var $column_edit_width = 300;
     function column_edit($row, $list){
         $id        = $row['id'];
         $order_id  = $row[$this->col_prefix . 'order_id'];
@@ -49,6 +50,10 @@ class invoice_finder_order{
         if (!kernel::single('desktop_user')->has_permission('rush_red_invoice')) {
             $cancelBtn = '';
         }
+        
+        // 默认为空，不允许冲红按钮
+        $cancelBtn = '';
+        
         //开票
         $billingBtn = sprintf('<a href="javascript:if (confirm(\'是否确认进行开票操作？开票信息可在列表查看列展开处进行查看。\')){W.page(\'index.php?app=invoice&ctl=admin_order&act=doBilling&id=%s&order_id=%s&finder_id=%s\', $extend({method: \'get\'}, JSON.decode({})), this);}void(0);" target="">开票</a>', $id, $order_id, $finder_id);
         if (!kernel::single('desktop_user')->has_permission('make_invoice')) {
@@ -59,14 +64,15 @@ class invoice_finder_order{
             $cancelBtn = '';
             $billingBtn = '';
         }
+        
         //编辑
-        $editBtn = '<a href="index.php?app=invoice&ctl=admin_order&act=edit&id='.$id.'&finder_id='.$finder_id.'&finder_vid='.$finder_vid.'" >编辑</a>';
+        $editBtn = '<a href="index.php?app=invoice&ctl=admin_order&act=edit&id='.$id.'&finder_id='.$finder_id.'&finder_vid='.$finder_vid.'" target="_blank">编辑</a>';
 
         //新建发票信息
         $addSameBtn = '<a href="index.php?app=invoice&ctl=admin_order&act=addNewSame&id='.$id.'&finder_id='.$finder_id.'&finder_vid='.$finder_vid.'" >新建发票信息</a>';
 
         //改票
-        $changeBtn = '<a href="index.php?app=invoice&ctl=admin_order&act=addChangeTicket&id='.$id.'&finder_id='.$finder_id.'&finder_vid='.$finder_vid.'" >改票</a>';
+        $changeBtn = '<a href="index.php?app=invoice&ctl=admin_order&act=addChangeTicket&id='.$id.'&finder_id='.$finder_id.'&finder_vid='.$finder_vid.'" target="_blank">改票</a>';
         //纸票不展示改票按钮
 //        if ($mode == '0') {
 //            $changeBtn = '';
@@ -77,6 +83,9 @@ class invoice_finder_order{
         // 预览
         $electronic = $this->_getElectronicItem($id.'-'.($is_status=='1'?'1':'2'), $list);
         if ($electronic['url']) {
+            $electronic['invoice_url'] = $electronic['url'];
+            
+            // url
             $urlScheme  = parse_url($electronic['url']);
 
             parse_str($urlScheme['fragment'],$fragment);
@@ -85,10 +94,40 @@ class invoice_finder_order{
                 unset($electronic['url']);
             }
         }
-
-
+        
         $previewBtn =$electronic['file_id'] ? '<a href="index.php?app=invoice&ctl=admin_order&act=show_preview_pdf&p[0]='.$electronic['file_id'].'&finder_id='.$finder_id.'" target="_blank">预览</a>' : '';
+        
+        // pdf_url
+        $pdfUrlButton = '';
+        if ($electronic['pdf_url']) {
+            $pdfUrlButton = '<a href="'.$electronic['pdf_url'].'" target="_blank">PDF下载</a>';
+        }
+        
+        $xmlUrlButton = '';
+        if ($electronic['xml_url']) {
+            $xmlUrlButton = '<a href="'.$electronic['xml_url'].'" target="_blank">XML下载</a>';
+        }
+        
+        $ofdUrlButton = '';
+        if ($electronic['ofd_url']) {
+            $ofdUrlButton = '<a href="'.$electronic['ofd_url'].'" target="_blank">OFD下载</a>';
+        }
 
+        $sendSmsBtn = '';
+        if($this->canSendInvoiceSms($row)){
+            $sendSmsBtn = sprintf('<a href="javascript:if (confirm(\'是否确认发送电子发票短信？\')){W.page(\'index.php?app=invoice&ctl=admin_order&act=sendEinvoiceSms\', {method: \'post\', data: \'id=%s&finder_id=%s\'}, this);}void(0);" target="">发送短信</a>', $id, $finder_id);
+        }
+
+        $receiptRepushBtn = '';
+        if($this->canReceiptRepush($row)){
+            $receiptRepushBtn = sprintf(
+                '<a href="index.php?app=invoice&ctl=admin_order&act=receiptRepush&id=%s&finder_id=%s" target="dialog::{width:520,height:260,title:\'收票补推\'}">收票补推</a>',
+                $id,
+                $finder_id
+            );
+        }
+        
+        // shop
         $shop = app::get('ome')->model('shop')->getShopById($shop_id);
 
         // 上传
@@ -101,7 +140,7 @@ class invoice_finder_order{
         if (in_array($shop['node_type'], array('wesite', 'd1mwestore','ecos.ecshopx')) && in_array($sync, array(3, 6)) && $electronic['upload_tmall_status'] == '1') {
             $uploadBtn = '<a href="index.php?app=invoice&ctl=admin_order&act=batchUpload&id=' . $id . '&finder_id=' . $finder_id . '" target="dialog::{width:550,height:250,title:\'上传电子发票\'}">上传</a>';
         }
-
+        
         //显示逻辑
         $items = $this->_getInvoiceItems($id,$list);
         $link_arr = array();
@@ -128,7 +167,28 @@ class invoice_finder_order{
 
                 // 电子蓝票上传
                 $link_arr[] = $uploadBtn;
+                
+                // 下载按钮
+                if($pdfUrlButton){
+                    $link_arr[] = $pdfUrlButton;
+                }
+                
+                if($xmlUrlButton){
+                    $link_arr[] = $xmlUrlButton;
+                }
+                
+                if($ofdUrlButton){
+                    $link_arr[] = $ofdUrlButton;
+                }
 
+                if($sendSmsBtn){
+                    $link_arr[] = $sendSmsBtn;
+                }
+
+                if($receiptRepushBtn){
+                    $link_arr[] = $receiptRepushBtn;
+                }
+                
                 break;
             case 2:                 // 开票状态:作废/冲红
 
@@ -150,6 +210,66 @@ class invoice_finder_order{
         return implode(" | ", array_filter($link_arr));
         
     }
+
+    private function canSendInvoiceSms($row)
+    {
+        if(!$this->isSendInvoiceSmsEnabled($row)){
+            return false;
+        }
+
+        return $this->isSuccessfulBlueInvoice($row);
+    }
+
+    private function canReceiptRepush($row)
+    {
+        if(!$this->isReceiptRepushEnabled($row)){
+            return false;
+        }
+
+        return $this->isSuccessfulBlueInvoice($row);
+    }
+
+    private function isSuccessfulBlueInvoice($row)
+    {
+        $mode = intval($row[$this->col_prefix.'mode']);
+        $is_status = intval($row[$this->col_prefix.'is_status']);
+        $sync = intval($row[$this->col_prefix.'sync']);
+        $invoiceNo = $row[$this->col_prefix.'invoice_no'];
+
+        return $mode == 1 && $is_status == 1 && $sync == 3 && $invoiceNo;
+    }
+
+    private function isSendInvoiceSmsEnabled($row)
+    {
+        foreach(kernel::servicelist('ome.service.invoice.index.action') as $object)
+        {
+            if(method_exists($object, 'check_send_invoice_sms')){
+                $checkResult = $object->check_send_invoice_sms($row);
+                if(isset($checkResult['data']['is_send_invoice_sms']) && $checkResult['data']['is_send_invoice_sms'] == 'true'){
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private function isReceiptRepushEnabled($row)
+    {
+        foreach(kernel::servicelist('ome.service.invoice.index.action') as $object)
+        {
+            if(!method_exists($object, 'check_invoice_receipt_repush') || !method_exists($object, 'send_invoice_receipt_email')){
+                continue;
+            }
+
+            $checkResult = $object->check_invoice_receipt_repush($row);
+            if(isset($checkResult['data']['is_invoice_receipt_repush']) && $checkResult['data']['is_invoice_receipt_repush'] == 'true'){
+                return true;
+            }
+        }
+
+        return false;
+    }
     
     var $column_ship_area = "客户收货地区";
     var $column_ship_area_width = "150";
@@ -157,6 +277,66 @@ class invoice_finder_order{
         $ship_area = $row[$this->col_prefix.'ship_area'];
         $areaArr = explode(':',$ship_area);
         return str_replace('/',' ',$areaArr[1]);
+    }
+
+    var $column_order_create_time = '订单创建时间';
+    var $column_order_create_time_width = 130;
+    var $column_order_create_time_order = 22;
+    function column_order_create_time($row, $list)
+    {
+        if ($this->orderCreateTimeList === null) {
+            $this->loadOrderCreateTimeList($list);
+        }
+
+        $orderId = (int) $row[$this->col_prefix . 'order_id'];
+        if (empty($this->orderCreateTimeList[$orderId])) {
+            return '';
+        }
+
+        return date('Y-m-d H:i:s', $this->orderCreateTimeList[$orderId]);
+    }
+
+    private function loadOrderCreateTimeList($list)
+    {
+        $this->orderCreateTimeList = array();
+        $orderIds = array();
+        foreach ($list as $item) {
+            $orderId = (int) $item[$this->col_prefix . 'order_id'];
+            if ($orderId > 0) {
+                $orderIds[$orderId] = $orderId;
+            }
+        }
+
+        if (!$orderIds) {
+            return;
+        }
+
+        $orderRows = app::get('ome')->model('orders')->getList(
+            'order_id,createtime',
+            array('order_id' => $orderIds)
+        );
+        foreach ($orderRows as $orderRow) {
+            $this->orderCreateTimeList[$orderRow['order_id']] = $orderRow['createtime'];
+        }
+
+        $archiveOrderIds = array();
+        foreach ($orderIds as $orderId) {
+            if (!array_key_exists($orderId, $this->orderCreateTimeList)) {
+                $archiveOrderIds[$orderId] = $orderId;
+            }
+        }
+
+        if (!$archiveOrderIds) {
+            return;
+        }
+
+        $archiveOrderRows = app::get('archive')->model('orders')->getList(
+            'order_id,createtime',
+            array('order_id' => $archiveOrderIds)
+        );
+        foreach ($archiveOrderRows as $archiveOrderRow) {
+            $this->orderCreateTimeList[$archiveOrderRow['order_id']] = $archiveOrderRow['createtime'];
+        }
     }
     
     var $column_is_print = "打印";
@@ -214,6 +394,8 @@ class invoice_finder_order{
     function detail_invoice($id){
         $render = app::get('invoice')->render();
         
+        $finder_id = $_GET['_finder']['finder_id'];
+        
         //发票信息
         $mdlInOrder = app::get('invoice')->model('order');
         $rs_invoice_order = $mdlInOrder->dump(array("id"=>$id));
@@ -261,10 +443,31 @@ class invoice_finder_order{
                     $var_el_it["billing_type_text"] = "蓝票";
                     $type = "blue";
                 }
+                
                 if ($var_el_it['file_id'] > 0) {
-                    $var_el_it["preview_url"] = "index.php?app=invoice&ctl=admin_order&act=show_preview_pdf&p[0]=".$var_el_it['file_id']."&type=$type";
+                    $var_el_it["preview_url"] = "index.php?app=invoice&ctl=admin_order&act=show_preview_pdf&p[0]=".$var_el_it['file_id']."&finder_id=". $finder_id ."&type=$type";
                 }
-
+                
+                // file_path
+                if($var_el_it['file_path']){
+                    $filePathList = json_decode($var_el_it['file_path'], true);
+                    
+                    // pdf_url
+                    if($filePathList['pdf_url']){
+                        $var_el_it["pdf_url"] = $filePathList['pdf_url'];
+                    }
+                    
+                    // xml_url
+                    if($filePathList['xml_url']){
+                        $var_el_it["xml_url"] = $filePathList['xml_url'];
+                    }
+                    
+                    // ofd_url
+                    if($filePathList['ofd_url']){
+                        $var_el_it["ofd_url"] = $filePathList['ofd_url'];
+                    }
+                }
+                
                 $var_el_it["upload_tmall_status_text"]  = $mdlInOrderElIt->_columns()['upload_tmall_status']['type'][$var_el_it["upload_tmall_status"]];
                 $var_el_it["invoice_status_text"]  = $mdlInOrderElIt->_columns()['invoice_status']['type'][$var_el_it["invoice_status"]];
                 $var_el_it["red_confirm_status_text"]  = $mdlInOrderElIt->_columns()['red_confirm_status']['type'][$var_el_it["red_confirm_status"]];
@@ -336,7 +539,25 @@ class invoice_finder_order{
         }
 
         $itemModel = app::get('invoice')->model('order_electronic_items');
-        foreach ($itemModel->getList('url,id,billing_type,upload_tmall_status,file_id',array('id'=>$invoiceIdArr)) as $value) {
+        foreach ($itemModel->getList('url,id,billing_type,upload_tmall_status,file_id,file_path',array('id'=>$invoiceIdArr)) as $value) {
+            
+            // file_path
+            if($value['file_path']){
+                $fileInfo = json_decode($value['file_path'], true);
+                if($fileInfo['pdf_url']){
+                    // 原来的url
+                    $value['original_url'] = $fileInfo['url'];
+                    
+                    // PDF发票地址
+                    $value['pdf_url'] = $fileInfo['pdf_url'];
+                    //$value['url'] = $fileInfo['pdf_url'];
+                    
+                    // 其它地址
+                    $value['xml_url'] = $fileInfo['xml_url'];
+                    $value['ofd_url'] = $fileInfo['ofd_url'];
+                }
+            }
+            
             $items[$value['id'].'-'.$value['billing_type']] = $value;
         }
 

@@ -1,0 +1,113 @@
+<input type="hidden" id="suggestReshippingSubmitUrl" value="<{$submit_url|escape:'html'}>" />
+<div id="suggestReshippingWrap" class="tableform">
+  <div class="division">
+    <p style="margin:0 0 12px 0; color:#666;">
+      请核对以下包裹明细，确认后将创建补发建议单（与列表行展开「包裹明细」一致）。
+    </p>
+    <table width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:12px;">
+      <tbody>
+        <tr>
+          <th width="100">发货单号</th>
+          <td><{$delivery_bill.delivery_bn}></td>
+          <th width="100">物流单号</th>
+          <td><{$delivery_bill.logi_no}></td>
+        </tr>
+        <tr>
+          <th>订单号</th>
+          <td colspan="3"><{$delivery_bill.order_bn}></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <{if $error_msg}>
+    <div class="notice" style="padding:12px; background:#fff3cd; border:1px solid #ffc107; margin-bottom:12px;">
+      <{$error_msg}>
+    </div>
+    <{/if}>
+
+    <{if $packages}>
+    <div style="max-height:320px; overflow:auto;">
+      <table class="gridlist" border="0" cellspacing="0" cellpadding="0" width="100%">
+        <thead>
+          <tr>
+            <th>包裹ID</th>
+            <th>基础物料号</th>
+            <th>订单号</th>
+            <th>付款状态</th>
+            <th>外部SKU</th>
+            <th>数量</th>
+            <th>包裹状态</th>
+            <th>申请退货</th>
+            <th>已退货</th>
+            <th>补发</th>
+          </tr>
+        </thead>
+        <tbody>
+          <{foreach from=$packages item=package}>
+          <tr<{if !$package.suggest_eligible}> style="color:#999; background:#f9f9f9;"<{/if}>>
+            <td><{$package.package_id}></td>
+            <td><{$package.bn}></td>
+            <td><{$package.order_bn_display}></td>
+            <td>
+              <{if $package.pay_status == '0'}>-
+              <{elseif $package.pay_status == '1'}>已支付
+              <{elseif $package.pay_status == '2'}>处理中
+              <{elseif $package.pay_status == '3'}>部分付款
+              <{elseif $package.pay_status == '4'}>部分退款
+              <{elseif $package.pay_status == '5'}>全额退款
+              <{elseif $package.pay_status == '6'}>退款申请中
+              <{elseif $package.pay_status == '7'}>退款中
+              <{elseif $package.pay_status == '8'}>支付中
+              <{else}>-<{/if}>
+            </td>
+            <td><{$package.outer_sku}></td>
+            <td><strong><{$package.number}></strong></td>
+            <td><{$package.status_display}></td>
+            <td><{$package.apply_num}></td>
+            <td><{$package.return_num}></td>
+            <td><{if !$package.suggest_eligible}><span style="color:#c00;">不参与补发</span><{else}>-<{/if}></td>
+          </tr>
+          <{/foreach}>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:10px; color:#888; font-size:12px;">共 <{$packages|@count}> 条包裹明细</p>
+    <{elseif !$error_msg}>
+    <p style="color:#999;">暂无包裹明细</p>
+    <{/if}>
+  </div>
+</div>
+
+<div class="table-action">
+  <{if $can_submit}>
+  <button type="button" class="btn btn-primary" id="suggestReshippingSubmitBtn" onclick="doSuggestReshippingSubmit(this)"><span><span>确定生成补发建议单</span></span></button>
+  <{/if}>
+  <button type="button" class="btn" onclick="closeSuggestReshippingDialog()"><span><span>取消</span></span></button>
+</div>
+
+<script>
+function closeSuggestReshippingDialog() {
+  var w = $('suggestReshippingWrap');
+  if (!w) return;
+  var dlg = w.getParent('.dialog');
+  if (dlg && dlg.retrieve) {
+    var inst = dlg.retrieve('instance');
+    if (inst) inst.close();
+  }
+}
+function doSuggestReshippingSubmit(btn) {
+  if (btn) btn.disabled = true;
+  var hid = $('suggestReshippingSubmitUrl');
+  var url = hid ? hid.value : '';
+  if (!url) return;
+  if (typeof W !== 'undefined' && W.page) {
+    W.page(url);
+  } else if (window.parent && window.parent.W && window.parent.W.page) {
+    window.parent.W.page(url);
+  }
+  setTimeout(function () {
+    closeSuggestReshippingDialog();
+    if (btn) btn.disabled = false;
+  }, 200);
+}
+</script>

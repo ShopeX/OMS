@@ -109,6 +109,12 @@ class erpapi_wms_response_stockout extends erpapi_wms_response_abstract
               $stockout_items[$val['product_bn']]['bn'] =  $val['product_bn'];
               $stockout_items[$val['product_bn']]['num'] =  (int)$stockout_items[$val['product_bn']]['num'] + (int)$val['num'];
 
+              // 处理 sn_list - 参照 nespresso_master（空字符串时不能当数组取下标）
+              if (is_array($val['sn_list']) && !empty($val['sn_list']['sn'])) {
+                  $sn_list = is_array($val['sn_list']['sn']) ? $val['sn_list']['sn'] : [$val['sn_list']['sn']];
+                  $stockout_items[$val['product_bn']]['sn_list'] = $stockout_items[$val['product_bn']]['sn_list'] ? array_merge($stockout_items[$val['product_bn']]['sn_list'], $sn_list) : $sn_list;
+              }
+
               if(is_array($val['batch']) && $val['batch']['batch']) {
                   $val['batch'] = isset($val['batch']['batch'][0]) ? $val['batch']['batch'] : [$val['batch']['batch']];
                   foreach ($val['batch'] as $v) {

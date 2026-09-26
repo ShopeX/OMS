@@ -320,14 +320,106 @@
   font-size: 0.8125rem;
 }
 
-/* Modal弹出框中的自定义select适配 */
-.modal-form-item .custom-select {
+/* Modal弹出框中的自定义select适配 - 上下布局，避免长文案挤压 */
+.modal-form-item--select .custom-select {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.modal-form-item--select .custom-select-trigger {
+  border: none;
+  border-radius: 0;
+  font-size: 0.9375rem;
+  text-align: left;
+  color: #121212;
+  background-color: transparent;
+  padding: 0 1.5rem 0 0;
+  min-height: 1.5rem;
+  line-height: 1.5;
+}
+
+.modal-form-item--select .custom-select-text {
+  text-align: left;
+  white-space: normal;
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.modal-form-item--select .custom-select-options {
+  left: -0.75rem;
+  right: -0.75rem;
+  min-width: calc(100% + 1.5rem);
+  max-width: none;
+  z-index: 1005;
+}
+
+/* 弹窗内改为内联展开，选项在触发框下方逐条展示，避免 absolute 被裁切 */
+#commonModal .modal-form-item--select .custom-select-options {
+  position: static;
+  top: auto;
+  bottom: auto;
+  left: auto;
+  right: auto;
+  min-width: 100%;
+  max-width: none;
+  margin-top: 0.625rem;
+  max-height: min(52vh, 22rem);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  z-index: auto;
+  transform: none;
+  opacity: 1;
+  border-top: 1px solid #eee;
+  border-radius: 0 0 0.25rem 0.25rem;
+  box-shadow: none;
+}
+
+#commonModal .modal-form-item--select .custom-select:not(.open) .custom-select-options {
+  display: none;
+}
+
+#commonModal .modal-form-item--select .custom-select.open .custom-select-options {
+  display: block;
+}
+
+#commonModal .modal-form-item--select .custom-select-option {
+  padding: 0.875rem 0.5rem;
+  font-size: 0.9375rem;
+  min-height: 2.875rem;
+  display: flex;
+  align-items: center;
+}
+
+#commonModal .custom-select-mask {
+  display: none !important;
+}
+
+.modal-form-item--select .custom-select-option {
+  white-space: normal;
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.modal-form-item--select .custom-select-arrow {
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+}
+
+.modal-form-item--select .custom-select.open .custom-select-arrow {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+/* 兼容旧版横向 select 布局 */
+.modal-form-item:not(.modal-form-item--select) .custom-select {
   position: relative;
   width: auto;
   min-width: 8rem;
 }
 
-.modal-form-item .custom-select-trigger {
+.modal-form-item:not(.modal-form-item--select) .custom-select-trigger {
   border: none;
   border-radius: 0.25rem;
   font-size: 0.875rem;
@@ -339,27 +431,20 @@
   line-height: 1.2;
 }
 
-.modal-form-item .custom-select-trigger:focus {
-  border-color: #666;
-  outline: none;
-  background-color: #fff;
-}
-
-.modal-form-item .custom-select-options {
+.modal-form-item:not(.modal-form-item--select) .custom-select-options {
   right: 0;
   left: auto;
   min-width: 10rem;
   max-width: 15rem;
 }
 
-.modal-form-item .custom-select-arrow {
+.modal-form-item:not(.modal-form-item--select) .custom-select-arrow {
   right: 0.5rem;
   top: 50%;
   transform: translateY(-50%);
   margin: 0;
 }
 
-/* Modal中展开状态的箭头 */
-.modal-form-item .custom-select.open .custom-select-arrow {
+.modal-form-item:not(.modal-form-item--select) .custom-select.open .custom-select-arrow {
   transform: translateY(-50%) rotate(180deg);
 }

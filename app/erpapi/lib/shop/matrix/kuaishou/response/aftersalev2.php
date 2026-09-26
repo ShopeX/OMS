@@ -99,6 +99,9 @@ class erpapi_shop_matrix_kuaishou_response_aftersalev2 extends erpapi_shop_respo
 
     protected function _formatAddItemList($sdf, $convert=array()) {
 
+        if ($sdf['order']['tran_type'] == 'archive') {
+            return $this->formatArchiveitemlist($sdf, $convert);
+        }
         if($sdf['from_platform'] == 'yjdf'){
             $itemList = $sdf['refund_item_list']['return_item'];
 
@@ -120,6 +123,51 @@ class erpapi_shop_matrix_kuaishou_response_aftersalev2 extends erpapi_shop_respo
 
         }
         
+    }
+
+    /**
+     * 归档订单：按 item_id→shop_goods_id 关联 archive.order_objects
+     */
+    public function formatArchiveitemlist($sdf, $convert)
+    {
+        $refund_item_list = $sdf['refund_item_list']['return_item'];
+        if (empty($refund_item_list)) {
+            return array();
+        }
+
+        $archiveOrderObjectMdl = app::get('archive')->model('order_objects');
+        $shopGoodsIds = array_column($refund_item_list, 'item_id');
+        $filter = array('shop_goods_id' => $shopGoodsIds);
+        if ($sdf['order']['order_id']) {
+            $filter['order_id'] = $sdf['order']['order_id'];
+        }
+        $object = $archiveOrderObjectMdl->getList('order_id,shop_goods_id,bn,quantity,obj_id', $filter);
+        $object = array_column($object, null, 'shop_goods_id');
+
+        $arrItem = array();
+        foreach ($refund_item_list as $item) {
+            $matchKey = (string) $item['item_id'];
+            if ($object[$matchKey]['bn']) {
+                $item['bn'] = $object[$matchKey]['bn'];
+            }
+            if ($arrItem[$item['bn']]) {
+                $arrItem[$item['bn']]['num'] += $item['num'];
+            } else {
+                $arrItem[$item['bn']] = $item;
+            }
+            if ($object[$matchKey]['obj_id']) {
+                $arrItem[$item['bn']]['obj_id'][] = $object[$matchKey]['obj_id'];
+            }
+        }
+        return $arrItem;
+    }
+
+    protected function _returnProductAddSdf($sdf)
+    {
+        if ($sdf['order']['tran_type'] == 'archive') {
+            $sdf['archive'] = '1';
+        }
+        return parent::_returnProductAddSdf($sdf);
     }
 
     protected function _refundApplyAdditional($sdf) {

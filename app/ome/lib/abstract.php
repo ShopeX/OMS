@@ -1,37 +1,37 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
+ * 抽象类
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * @author wangbiao@shopex.cn
+ * @version 2025.03.31
  */
 abstract class ome_abstract
 {
     public $page_size = 100;
     
-    /**
-     * __construct
-     * @return mixed 返回值
-     */
+    protected $logiMapCode = [
+        'shentong' => ['code'=>'STO','name'=>'申通快递'],
+        'jd' => ['code'=>'JD','name'=>'京东快递'],
+        'shunfeng' => ['code'=>'SF','name'=>'顺丰快递'],
+        'yuantong' => ['code'=>'YTO','name'=>'圆通快递'],
+        'zhongtong' => ['code'=>'ZTO','name'=>'中通快递'],
+        'yunda' => ['code'=>'YUNDA','name'=>'韵达快递'],
+        'jtexpress' => ['code'=>'JITU','name'=>'极兔速递'],
+        'youzhengguonei' => ['code'=>'POSTB','name'=>'邮政快递'],
+        'ems' => ['code'=>'EMS','name'=>'EMS'],
+    ];
+    
     public function __construct()
     {
         //--
     }
     
     /**
-     * succ
-     * @param mixed $msg msg
-     * @param mixed $data 数据
-     * @return mixed 返回值
+     * 成功输出
+     * 
+     * @param string $msg
+     * @param string $data
+     * @return array
      */
     final public function succ($msg='', $data=null)
     {
@@ -39,10 +39,11 @@ abstract class ome_abstract
     }
     
     /**
-     * error
-     * @param mixed $error_msg error_msg
-     * @param mixed $data 数据
-     * @return mixed 返回值
+     * 失败输出
+     * 
+     * @param string $msg
+     * @param string $data
+     * @return array
      */
     final public function error($error_msg, $data=null)
     {

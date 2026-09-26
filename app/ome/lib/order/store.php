@@ -141,13 +141,13 @@ class ome_order_store
             }
             
             // 准备通知参数
-            $params = array(
+            $params = array_merge(array(
                 'order_bn' => $order['order_bn'],
                 'branch_name' => $branch_name,
                 'lack_products' => $lackProductInfo,
                 'lack_count' => count($lackProducts),
-                'org_id' => $order['org_id'] ?? null
-            );
+                'org_id' => $order['org_id'] ?? null,
+            ), kernel::single('monitor_event_notify')->buildOrderShopParams($order));
             
             // 发送监控通知
             $monitorNotifyLib = kernel::single('monitor_event_notify');

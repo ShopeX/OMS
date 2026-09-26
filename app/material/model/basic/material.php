@@ -29,12 +29,26 @@ class material_mdl_basic_material extends dbeav_model{
 
     var $defaultOrder = array('bm_id',' DESC');
 
+    public function save(&$data, $mustUpdate = null, $mustInsert = false)
+    {
+        $isCreate = empty($data['bm_id']) || $mustInsert;
+        $saved = parent::save($data, $mustUpdate, $mustInsert);
+        if ($saved !== false && $isCreate && !empty($data['bm_id'])) {
+            foreach (kernel::servicelist('material.service.basicmaterial.create.after') as $service) {
+                if (method_exists($service, 'after_create')) {
+                    $service->after_create($data);
+                }
+            }
+        }
+        return $saved;
+    }
+
     
     /**
      * 基础物料列表项扩展字段
      */
     function extra_cols(){
-        return array_merge(array(
+        $cols = array(
             'column_cost' => array('label'=>'成本价','width'=>'75','func_suffix'=>'cost'),
             'column_retail_price' => array('label'=>'零售价','width'=>'75','func_suffix'=>'retail_price'),
             'column_weight' => array('label'=>'重量','width'=>'75','func_suffix'=>'weight'),
@@ -50,7 +64,86 @@ class material_mdl_basic_material extends dbeav_model{
             'column_gendernm' => array('label'=>'适用对象','width'=>'120','func_suffix'=>'gendernm'),
             'column_widthnm' => array('label'=>'鞋型','width'=>'120','func_suffix'=>'widthnm'),
             'column_modelnm' => array('label'=>'风格款式','width'=>'120','func_suffix'=>'modelnm'),
-        ), $this->cat_level_finder_cols());
+        );
+        $customcols = kernel::single('material_customcols')->getcols();
+        if ($customcols) {
+            $order = 480;
+            foreach ($customcols as $c) {
+                $ck = $c['col_key'];
+                if (!preg_match('/^[a-zA-Z0-9_]+$/', $ck)) {
+                    continue;
+                }
+                $cols['column_' . $ck] = array(
+                    'label'       => $c['col_name'],
+                    'width'       => '120',
+                    'func_suffix' => 'bm_props_custom',
+                    'order'       => $order++,
+                );
+            }
+        }
+        return $cols;
+    }
+
+    /**
+     * Finder 扩展列：批量填充「自定义字段」在 sdb_material_basic_material_props 中的值（与桌面自定义列配置一致）
+     * 多个 column_{col_key} 共用同一 func_suffix，框架会多次调用，仅首次做查询与合并
+     */
+    function extra_bm_props_custom($rows){
+        static $__bm_props_custom_done = false;
+        if ($__bm_props_custom_done || empty($rows) || !is_array($rows)) {
+            return $rows;
+        }
+        $customcols = kernel::single('material_customcols')->getcols();
+        if (!$customcols) {
+            $__bm_props_custom_done = true;
+            return $rows;
+        }
+        $bm_ids = array();
+        foreach ($rows as $r) {
+            if (!empty($r['bm_id'])) {
+                $bm_ids[] = (int) $r['bm_id'];
+            }
+        }
+        $bm_ids = array_values(array_unique(array_filter($bm_ids)));
+        if (!$bm_ids) {
+            $__bm_props_custom_done = true;
+            return $rows;
+        }
+        $props_cols = array();
+        foreach ($customcols as $c) {
+            if (!empty($c['col_key']) && preg_match('/^[a-zA-Z0-9_]+$/', $c['col_key'])) {
+                $props_cols[] = $c['col_key'];
+            }
+        }
+        if (!$props_cols) {
+            $__bm_props_custom_done = true;
+            return $rows;
+        }
+        $propsMdl = app::get('material')->model('basic_material_props');
+        $plist    = $propsMdl->getList('bm_id,props_col,props_value', array(
+            'bm_id|in'     => $bm_ids,
+            'props_col|in' => $props_cols,
+        ), 0, -1);
+        $map = array();
+        if (is_array($plist)) {
+            foreach ($plist as $p) {
+                $map[$p['bm_id'] . '_' . $p['props_col']] = $p['props_value'];
+            }
+        }
+        foreach ($rows as $k => $row) {
+            $bid = isset($row['bm_id']) ? (int) $row['bm_id'] : 0;
+            foreach ($customcols as $c) {
+                $ck = $c['col_key'];
+                if (!preg_match('/^[a-zA-Z0-9_]+$/', $ck)) {
+                    continue;
+                }
+                $colName = 'column_' . $ck;
+                $raw     = isset($map[$bid . '_' . $ck]) ? $map[$bid . '_' . $ck] : '';
+                $rows[$k][$colName] = kernel::single('material_customcols')->formatDisplayValue($c, $raw);
+            }
+        }
+        $__bm_props_custom_done = true;
+        return $rows;
     }
 
     /**
@@ -144,6 +237,21 @@ class material_mdl_basic_material extends dbeav_model{
         return kernel::single('material_extracolumn_basicmaterial_modelnm')->process($rows);
     }
 
+    private $_list_extra_gt_master_done = false;
+
+    /**
+     * 主档字段批量填充（goldentra service）
+     */
+    function extra_gt_master($rows)
+    {
+        if ($this->_list_extra_gt_master_done || empty($rows)) {
+            return $rows;
+        }
+        $rows = material_basic_material_master::fillListRows($rows);
+        $this->_list_extra_gt_master_done = true;
+        return $rows;
+    }
+
     /**
      * 列表与导出共用的五级分类列（func_suffix 均为 cat_levels）。
      * 列键须为 column_cat_level_*，使 Finder SQL 为「1 as column_cat_level_n」，
@@ -163,7 +271,7 @@ class material_mdl_basic_material extends dbeav_model{
      * 导出时额外扩展的5级分类列（与 extra_cols 中定义一致，供导出配置合并）
      */
     public function export_extra_cols() {
-        return $this->cat_level_finder_cols();
+        return array_merge($this->cat_level_finder_cols(), material_basic_material_master::extraCols());
     }
 
     /**
@@ -227,6 +335,18 @@ class material_mdl_basic_material extends dbeav_model{
         }
         $list = $this->fillCatLevelColumns($list);
         $this->_export_extra_cat_levels_done = true;
+        return $list;
+    }
+
+    private $_export_extra_gt_master_done = false;
+
+    public function export_extra_gt_master($list)
+    {
+        if ($this->_export_extra_gt_master_done || empty($list)) {
+            return $list;
+        }
+        $list = material_basic_material_master::fillListRows($list);
+        $this->_export_extra_gt_master_done = true;
         return $list;
     }
 
@@ -878,6 +998,7 @@ class material_mdl_basic_material extends dbeav_model{
             $pSdf[$page][] = $aPi;
         }
 
+        $opInfo = kernel::single('material_basic_material')->getImportOpInfo();
         foreach($pSdf as $v){
             $queueData = array(
                 'queue_title'=>'基础物料导入',
@@ -885,7 +1006,8 @@ class material_mdl_basic_material extends dbeav_model{
                 'params'=>array(
                     'sdfdata'=>$v,
                     'app' => 'material',
-                    'mdl' => 'basic_material'
+                    'mdl' => 'basic_material',
+                    'opInfo' => $opInfo,
                 ),
                 'worker'=>'material_basic_material_to_import.run',
             );
@@ -973,6 +1095,9 @@ class material_mdl_basic_material extends dbeav_model{
     }
 
     function _filter($filter,$tableAlias=null,$baseWhere=null){
+        if (!is_array($filter)) {
+            $filter = array();
+        }
         if($filter['material_bn'] && is_string($filter['material_bn']) && strpos($filter['material_bn'], "\n") !== false){
             $filter['material_bn'] = array_unique(array_map('trim', array_filter(explode("\n", $filter['material_bn']))));
         }
@@ -1035,6 +1160,24 @@ class material_mdl_basic_material extends dbeav_model{
             $where[] = ' cos_id in (' . $filter['cos_id'] . ')';
             unset($filter['cos_id']);
         }
+
+        if (!empty($filter['material_label'])) {
+            $billLabelObj = app::get('ome')->model('bill_label');
+            $labelFilter = array(
+                'label_id' => $filter['material_label'],
+                'bill_type' => 'basic_material',
+            );
+            $remainFilter = $filter;
+            unset($remainFilter['material_label']);
+            $alias = $tableAlias ? $tableAlias . '.' : '';
+            $sql = "SELECT bill_id FROM sdb_ome_bill_label bl
+                LEFT JOIN sdb_material_basic_material m ON bl.bill_id=m.bm_id
+                WHERE " . $billLabelObj->_filter($labelFilter, 'bl') . " AND " . parent::_filter($remainFilter, 'm');
+            $where[] = ' ' . $alias . "bm_id IN (" . $sql . ") ";
+            unset($filter['material_label']);
+        }
+
+        material_basic_material_master::applyFilter($filter, $where, $tableAlias);
         
         if($where){
             $sqlstr.=implode(' AND ',$where)." AND ";

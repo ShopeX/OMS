@@ -1,0 +1,17 @@
+<div class="tableform">
+    <table width="100%" cellspacing="0" cellpadding="0" class="gridlist">
+        <tbody>
+        <tr><th width="160">请求ID</th><td><{$row.request_id}></td></tr>
+        <tr><th>变更类型</th><td><{$row.sync_type}></td></tr>
+        <tr><th>销售组织</th><td><{$row.sales_organize}></td></tr>
+        <tr><th>品牌</th><td><{$row.brand_id}></td></tr>
+        <tr><th>类目编码</th><td><{$row.category_code}></td></tr>
+        <tr><th>基准价(元/g)</th><td><{$row.price}></td></tr>
+        <tr><th>商品编码</th><td><{$row.item_code}></td></tr>
+        <tr><th>加价(元/g)</th><td><{$row.add_price}></td></tr>
+        <tr><th>扩展字段</th><td><pre style="white-space:pre-wrap;word-break:break-all;"><{$ext_pretty}></pre></td></tr>
+        <tr><th>批次</th><td><{$row.sync_batch_no}></td></tr>
+        <tr><th>原始报文</th><td><pre style="white-space:pre-wrap;word-break:break-all;"><{$payload_pretty}></pre></td></tr>
+        </tbody>
+    </table>
+</div>

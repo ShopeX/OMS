@@ -1,0 +1,32 @@
+<div class="tableform">
+    <{if $items}>
+    <table width="100%" cellspacing="0" cellpadding="0" border="0" class="gridlist">
+        <thead>
+        <tr>
+            <th>业务值</th>
+            <th>扩展字段</th>
+            <th>创建时间</th>
+        </tr>
+        </thead>
+        <tbody>
+        <{foreach from=$items item=item}>
+        <tr>
+            <td><{$item.unique_key}></td>
+            <td>
+                <{if $item.ext_rows}>
+                    <{foreach from=$item.ext_rows item=ext name=extloop}>
+                        <{$ext.key}>=<{$ext.value}><{if !$smarty.foreach.extloop.last}><br/><{/if}>
+                    <{/foreach}>
+                <{else}>
+                    —
+                <{/if}>
+            </td>
+            <td><{if $item.at_time}><{$item.at_time|cdate:'SDATE_STIME'}><{else}>—<{/if}></td>
+        </tr>
+        <{/foreach}>
+        </tbody>
+    </table>
+    <{else}>
+    <p class="notice">暂无字典值，请通过 OpenAPI <code>goldentra.metadata.add</code> 同步。</p>
+    <{/if}>
+</div>

@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class console_receipt_purchase extends console_receipt_common{
 
     private static $eo_status = array(
@@ -34,10 +18,10 @@ class console_receipt_purchase extends console_receipt_common{
     }
 
     /**
-     * 
+     *
      * 采购单更新方法
      * @param array $data 采购单数据信息
-     * 
+     *
      */
     public function update(&$data,&$msg){
 
@@ -114,6 +98,11 @@ class console_receipt_purchase extends console_receipt_common{
         }
         kernel::database()->commit();
         $this->cleanArriveStore($iostock_data['items'],$io_status);
+
+        if (app::get('machinecenter')->is_installed()) {
+            $this->machineCenterPurchaseStockAdd($Po, $iostock_data);
+        }
+
         return true;
     }
 
@@ -138,6 +127,26 @@ class console_receipt_purchase extends console_receipt_common{
                 'in_num'=>$in_num,
                 'status'=>$status,
             );
+
+            $new_sn_array = [];
+            if ($item['sn_list']) {
+                $old_sn_list = $po_item['sn_list'] ? json_decode($po_item['sn_list'], 1) : [];
+                $old_sn_array = [];
+                if (is_array($old_sn_list) && isset($old_sn_list['sn'])) {
+                    $old_sn_array = is_array($old_sn_list['sn']) ? $old_sn_list['sn'] : [$old_sn_list['sn']];
+                } elseif (is_array($old_sn_list) && !isset($old_sn_list['sn'])) {
+                    $old_sn_array = $old_sn_list;
+                }
+                if (is_array($item['sn_list']) && isset($item['sn_list']['sn'])) {
+                    $new_sn_array = is_array($item['sn_list']['sn']) ? $item['sn_list']['sn'] : [$item['sn_list']['sn']];
+                } elseif (is_array($item['sn_list']) && !isset($item['sn_list']['sn'])) {
+                    $new_sn_array = $item['sn_list'];
+                }
+                $merged_sn_array = array_merge($old_sn_array, $new_sn_array);
+                $merged_sn_array = array_filter($merged_sn_array);
+                $item_data['sn'] = !empty($merged_sn_array) ? implode(',', $merged_sn_array) : '';
+                $new_sn_array = array_filter($new_sn_array);
+            }
             if($item['batch']) {
                 $useLogModel = app::get('console')->model('useful_life_log');
                 $useful = [];
@@ -169,6 +178,13 @@ class console_receipt_purchase extends console_receipt_common{
                 if(($in_num+$defective_num)>$po_item['num']){$auto_iostock = true;}
             }
             if ($item['normal_num']>0){
+                $return_sn_list = '';
+                if (!empty($new_sn_array)) {
+                    $return_sn_list = json_encode($new_sn_array, JSON_UNESCAPED_UNICODE);
+                } elseif (isset($item['sn_list'])) {
+                    $return_sn_list = is_string($item['sn_list']) ? $item['sn_list'] : json_encode($item['sn_list'], JSON_UNESCAPED_UNICODE);
+                }
+
                 $iostock_items[] = array(
                      'name'        => $products_detail['name'],
                      'bn'          => $item['bn'],
@@ -182,6 +198,7 @@ class console_receipt_purchase extends console_receipt_common{
                     'unit'         => $products_detail['unit'],
                     'item_id'      => $po_item['item_id'],
                     'effective_num'=> $effective_num,
+                    'sn_list'      => $return_sn_list,
                 );
             }
             if($defective_num>0){#需要残损确认
@@ -205,7 +222,7 @@ class console_receipt_purchase extends console_receipt_common{
     }
 
     /**
-     * 
+     *
      * 采购单取消
      * @param array $po_bn 采购单编号
      */
@@ -223,7 +240,7 @@ class console_receipt_purchase extends console_receipt_common{
     }
 
     /**
-     * 
+     *
      * 检查需要入库的货号是否存在于采购单中
      * @param array
      */
@@ -246,7 +263,7 @@ class console_receipt_purchase extends console_receipt_common{
     }
 
     /**
-     * 
+     *
      * 检查采购单是否存在判断
      * @param array $po_bn 采购单编号
      */
@@ -264,7 +281,7 @@ class console_receipt_purchase extends console_receipt_common{
     }
 
     /**
-     * 
+     *
      * 检查采购单是否有效
      * @param  $po_bn 采购单编号
      * @param  $status 根据传入状态判断对应状态是否可以操作
@@ -300,11 +317,11 @@ class console_receipt_purchase extends console_receipt_common{
     }
 
     /**
-     * 执行采购入库
-     * $po_id 采购单号
-     * type normal正常出入库 否则残损入库
-     * #为供应商与商品建立关联
-     */
+    * 执行采购入库
+    * $po_id 采购单号
+    * type normal正常出入库 否则残损入库
+    * #为供应商与商品建立关联
+    */
     function save_eo($po_id,$type,$iostock_data){
 
         $iostockObj = kernel::single('console_iostockdata');
@@ -383,9 +400,9 @@ class console_receipt_purchase extends console_receipt_common{
     }
 
     /**
-     * 扣减在途库存
-     * 
-     */
+    * 扣减在途库存
+    *
+    */
     function cleanArriveStore($items,$io_status=''){
         $po = $this->_po;
         $_items = $this->_items;
@@ -437,5 +454,84 @@ class console_receipt_purchase extends console_receipt_common{
             $storeManageLib->processBranchStore($params, $err_msg);
         }
 
+    }
+
+    public function machineCenterPurchaseStockAdd($poInfo, $iostockData)
+    {
+        $status = '1';
+        $original_id = $poInfo['po_id'];
+        $original_bn = $poInfo['po_bn'];
+        $branch_id   = $poInfo['branch_id'];
+        $branchInfo  = app::get('ome')->model('branch')->db_dump($branch_id, 'branch_bn');
+        $items       = $iostockData['items'];
+        $snParams    = $this->purchaseSnParams();
+
+        foreach ($items as $item) {
+            $snList = json_decode($item['sn_list']);
+            if ($snList) {
+                foreach ($snList as $serial) {
+                    if (!$serial) {
+                        continue;
+                    }
+                    $bn = $item['bn'];
+                    $bm_id = $item['product_id'];
+                    $barcode = material_codebase::getBarcodeBybn($bn) ?: '';
+
+                    $tmpSnParams = [];
+                    $tmpSnParams['sn']                = $serial;
+                    $tmpSnParams['bm_id']             = $bm_id;
+                    $tmpSnParams['material_bn']       = $bn;
+                    $tmpSnParams['barcode']           = $barcode;
+                    $tmpSnParams['imei_number']       = '';
+                    $tmpSnParams['order_bn']          = '';
+                    $tmpSnParams['branch_id']         = $branch_id;
+                    $tmpSnParams['branch_bn']         = $branchInfo['branch_bn'];
+                    $tmpSnParams['original_id']       = $original_id;
+                    $tmpSnParams['original_bn']       = $original_bn;
+                    $tmpSnParams['bill_bn']           = $original_bn;
+                    $tmpSnParams['original_type']     = 'purchase';
+                    $tmpSnParams['status']            = $status;
+                    $tmpSnParams['io_status']         = $status;
+                    $tmpSnParams['io_time']           = time();
+                    $tmpSnParams['platform_order_bn'] = '';
+
+                    kernel::single('machinecenter_event_receive_sn')->add(array_merge($snParams, $tmpSnParams));
+                }
+            }
+        }
+    }
+
+    public function purchaseSnParams()
+    {
+        return [
+            'buyer_open_id'   => '',
+            'buyer_nickname'  => '',
+            'buyer_name'      => '',
+            'buyer_mobile'    => '',
+            'buyer_email'     => '',
+            'buyer_address'   => '',
+            'ship_oaid'       => '',
+            'ship_name'       => '',
+            'ship_mobile'     => '',
+            'ship_email'      => '',
+            'ship_address'    => '',
+            'ship_province'   => '',
+            'ship_city'       => '',
+            'ship_district'   => '',
+            'ship_town'       => '',
+            'ship_village'    => '',
+            'user_name'       => '',
+            'user_mobile'     => '',
+            'user_email'      => '',
+            'user_address'    => '',
+            'user_province'   => '',
+            'user_city'       => '',
+            'user_district'   => '',
+            'user_town'       => '',
+            'user_village'    => '',
+            'source'          => 'local',
+            'shop_id'         => '',
+            'shop_bn'         => '',
+        ];
     }
 }

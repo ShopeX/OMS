@@ -61,8 +61,11 @@ class ome_finder_extend_filter_reship
         $reshipLib = kernel::single('ome_reship');
         $platformStatus = $reshipLib->get_platform_status();
         
-        //店铺列表
-        $shopNames = array_column(app::get('ome')->model('shop')->getList('name,shop_id'),'name','shop_id');
+        // 线上店铺列表（按是否常用店铺进行排序）
+        $shopFilter = array(
+            's_type' => '1',
+        );
+        $shopNames = array_column(app::get('ome')->model('shop')->getList('name,shop_id', $shopFilter),'name','shop_id');
         
         //dbschema
         $db['reship']=array (
@@ -137,6 +140,7 @@ class ome_finder_extend_filter_reship
                             ome_reship_const::__LANJIE_RUKU => '拦截入库',
                             ome_reship_const::__RESHIP_DIFF => '差异入库',
                             ome_reship_const::__RETURN_LOGI_DUP => '物流重复',
+                            ome_reship_const::__PAID_EQUAL_AUTO_BLOCK => '实付不等',
                         ),
                         'label' => '标识',
                         'editable' => false,

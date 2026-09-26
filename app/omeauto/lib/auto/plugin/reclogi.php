@@ -46,7 +46,11 @@ class omeauto_auto_plugin_reclogi extends omeauto_auto_plugin_abstract implement
         $arrOrder = $group->getOrders();
         $order = current($arrOrder);
         $corp = $group->getDlyCorp();
-
+        
+        if (in_array(strtoupper($corp['type']), ['OTHER', '其他'])) {
+            return;
+        }
+        
         list($rs, $msg) = kernel::single('ome_event_trigger_shop_logistics')->judgeRecommend($order, $corp['type']);
         if($rs) {
             return;

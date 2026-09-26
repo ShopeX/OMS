@@ -497,8 +497,7 @@ class console_ctl_admin_vopstockout extends desktop_controller{
         
         //请求vop创建出库单
         $storage_no    = $row['storage_no'];
-        if(empty($storage_no))
-        {
+        if(empty($storage_no)){
             $is_multiple     = false;
             $to_branch_bn    = '';
             $po_bns          = array();
@@ -520,8 +519,7 @@ class console_ctl_admin_vopstockout extends desktop_controller{
             $po_bns       = implode(',', $po_bns);
             
             //承运商
-            if($row['carrier_code'])
-            {
+            if($row['carrier_code']){
                 $row['carrier_name']    = $stockLib->getCarrierCode('', $row['carrier_code']);
             }
             
@@ -534,9 +532,19 @@ class console_ctl_admin_vopstockout extends desktop_controller{
             $row['delivery_time']    = $row['delivery_time'] .':00';
             $row['arrival_time']     = $row['arrival_time'] .':00';
             
-            $branch = kernel::single('ome_branch')->getBranchInfo($row['branch_id'],'branch_bn');
-            $branch_rel = app::get('ome')->model('branch_relation')->dump(array ('branch_id'=>$row['branch_id'],'type' => 'vopjitx'));
-
+            // 获取仓库信息
+            $branchInfo = kernel::single('ome_branch')->getBranchInfo($row['branch_id'],'branch_bn');
+            
+            // 获取仓库关联的供应商发货仓库
+            $relBranchInfo = app::get('ome')->model('branch_relation')->dump(array ('branch_id'=>$row['branch_id'],'type' => 'vopjitx'));
+            if(empty($relBranchInfo['relation_branch_bn'])){
+                $error_msg = '创建JIT出库单时，没有配置【平台仓库编码配置-->唯品会JITX编码】，仓库编码：'. $branchInfo['branch_bn'];
+                $this->end(false, $error_msg);
+            }
+            
+            // 供应商发货仓库编码
+            $delivery_warehouse = $relBranchInfo['relation_branch_bn'];
+            
             //API创建出库单
             $param    = array(
                         'po_no'=>$po_bns,//po号
@@ -549,7 +557,7 @@ class console_ctl_admin_vopstockout extends desktop_controller{
                         'delivery_time'=>$row['delivery_time'],//送货批次
                         'arrival_time'=>$row['arrival_time'],//要求到货时间
                         'is_air_embargo'=>$row['is_air_embargo'],
-                        'delivery_warehouse' => $branch_rel['relation_branch_bn'] ? $branch_rel['relation_branch_bn'] : $branch['branch_bn'],
+                        'delivery_warehouse' => $delivery_warehouse, // 供应商发货仓库(如果是承运商=唯品会，则必填)
             );
             
             //超时请求3次
@@ -713,20 +721,18 @@ class console_ctl_admin_vopstockout extends desktop_controller{
             $data    = $iostockData;
             $data['io_status']    = $io_status;
             
+            $msg = '';
             $result = $stockLib->create($iostockData, $data, $msg);
-            
             if (!$result){
-
                 $stockoutObj->db->rollBack();
 
                 $msg = '手动确认出库出入库失败!'. $msg;
                 
                 $this->splash('error', $url, $msg);
             }
-
         } else {
             $stockoutObj->db->rollBack();
-            $msg = '出库单明细为空!'. $msg;
+            $msg = '出库单明细为空!';
             $this->splash('error', $url, $msg);
         }
         

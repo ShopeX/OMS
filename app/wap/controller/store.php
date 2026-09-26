@@ -45,10 +45,9 @@ class wap_ctl_store extends wap_controller
 
         $menu_list_new = array(
             'wap_order_index' => array('menuName' => '订单列表', 'linkUrl' => $this->delivery_link['order_index'], 'ico' => 'icon-order.png', 'key' => 1),
-           
             'wap_aftersale_returnproduct'=>array('menuName'=>'门店退货', 'linkUrl'=>$this->delivery_link['aftersale_returnproduct'], 'ico'=>'icon-return.png', 'key'=>2),
             'wap_store_stock'=>array('menuName'=>'门店库存', 'linkUrl'=>$this->delivery_link['stock'], 'ico'=>'icon-order.png', 'key'=>3),
-           
+            'wap_store_selfpick' => array('menuName' => '自提订单', 'linkUrl' => $this->delivery_link['store_selfpick'], 'ico' => 'icon-ziti.png', 'key' => 4),
         );
         
         #管理员信息
@@ -57,14 +56,11 @@ class wap_ctl_store extends wap_controller
         #授权门店
         $is_super = kernel::single('desktop_user')->is_super();
         if(!$is_super){
-            $branchObj     = kernel::single('o2o_store_branch');
-            $branch_ids    = $branchObj->getO2OBranchByUser(true);
-            
-            $storeObj    = app::get('o2o')->model('store');
-            $storeInfo   = $storeObj->getList('store_id, store_bn, name, addr, branch_id', array('branch_id'=>$branch_ids), 0, 1, 'create_time desc');
-            $storeInfo = $storeInfo[0];
-            
-            $userInfo    = array_merge((array)$userInfo, (array)$storeInfo);
+            $branchObj  = kernel::single('o2o_store_branch');
+            $branch_ids = $branchObj->getO2OBranchByUser(true);
+            $storeLib   = kernel::single('wap_store_user');
+            $storeInfo  = $storeLib->getCurrentStore($branch_ids);
+            $userInfo   = $storeLib->mergeUserStoreInfo($userInfo, $storeInfo);
         }
         $this->pagedata['userInfo']    = $userInfo;
 
@@ -89,6 +85,22 @@ class wap_ctl_store extends wap_controller
         //菜单以Key键值排序
         ksort($show_menu);
         $this->pagedata['menu_list']    = $show_menu;
+
+        // 统计数字可点击跳转（需对应 WAP 权限）
+        $statLinks = array();
+        if (in_array('wap_order_index', $this->user_menu, true)) {
+            $statLinks['wap_order_index'] = $this->delivery_link['order_wait_delivery'];
+        }
+        if (in_array('wap_aftersale_returnproduct', $this->user_menu, true)) {
+            $statLinks['wap_aftersale_returnproduct'] = $this->delivery_link['aftersale_returnproduct'];
+        }
+        if (in_array('wap_store_selfpick', $this->user_menu, true)) {
+            $statLinks['wap_store_selfpick'] = app::get('wap')->router()->gen_url(
+                array('ctl' => 'store_selfpick', 'act' => 'index', 'view' => 'pending'),
+                true
+            );
+        }
+        $this->pagedata['stat_links'] = $statLinks;
 
         #if(empty($statistic) || $_SESSION['login_flag'])
         #{

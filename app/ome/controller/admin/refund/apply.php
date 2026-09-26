@@ -326,6 +326,16 @@ class ome_ctl_admin_refund_apply extends desktop_controller
                     $oRefaccept->save($applydata, true);
                     $oLoger->write_log('refund_apply@ome', $applydata['apply_id'], "退款成功，更新退款申请状态。");
 
+                    // 调用退款申请service
+                    $services = kernel::servicelist('ome.service.refund.apply.accept.refund.after');
+                    if ($services) {
+                        foreach ($services as $service) {
+                            if (method_exists($service, 'after_refund')) {
+                                $service->after_refund($apply_id);
+                            }
+                        }
+                    }
+
                     //更新售后退款金额
                     $return_id = intval($_POST['return_id']);
                     if (!empty($return_id)) {
@@ -1247,6 +1257,15 @@ class ome_ctl_admin_refund_apply extends desktop_controller
                 $refund_apply_obj->save($apply_data);
                 $operation_log_obj->write_log('refund_apply@ome', $a_apply['apply_id'], "退款成功，更新退款申请状态。");
 
+                // 调用退款申请service
+                if ($service_refundapply = kernel::servicelist('service.refundapply')) {
+                    foreach($service_refundapply as $instance) {
+                        if(method_exists($instance, 'accept_refundstatus')) {
+                            $instance->accept_refundstatus($apply_data['status'], $apply_id);
+                        }
+                    }
+                }
+
                 //更新售后退款金额
                 $addon     = unserialize($a_apply['addon']);
                 $return_id = intval($addon['return_id']);
@@ -1321,6 +1340,15 @@ class ome_ctl_admin_refund_apply extends desktop_controller
     }
 
     public function batchRefundOnly() {
+        foreach (kernel::servicelist('ome.service.refund.apply.refundonly.before') as $service) {
+            if (
+                method_exists($service, 'before_batch_refund_only')
+                && $service->before_batch_refund_only($this) === true
+            ) {
+                return;
+            }
+        }
+
         $model = app::get('ome')->model('refund_apply');
         $baseFilter = array('status|nequal' => '0', 'disabled' => 'false', );
         $pageData = array(

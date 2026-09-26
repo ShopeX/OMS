@@ -76,7 +76,7 @@ class wap_event_trigger_delivery{
      */
     public function doUpdate($channel_id, &$data, $sync = false){
         $data['status'] = 'update';
-        return kernel::single('erpapi_router_response')->set_channel_id($channel_id)->set_api_name('wms.delivery.status_update')->dispatch($data);
+        return kernel::single('erpapi_router_response')->set_channel_id($channel_id)->set_api_name('store.delivery.status_update')->dispatch($data);
     }
 
     /**
@@ -88,7 +88,7 @@ class wap_event_trigger_delivery{
      */
     public function doPrint($channel_id, &$data, $sync = false){
         $data['status'] = 'print';
-        return kernel::single('erpapi_router_response')->set_channel_id($channel_id)->set_api_name('wms.delivery.status_update')->dispatch($data);
+        return kernel::single('erpapi_router_response')->set_channel_id($channel_id)->set_api_name('store.delivery.status_update')->dispatch($data);
     }
 }
 

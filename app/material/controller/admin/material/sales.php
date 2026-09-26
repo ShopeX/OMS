@@ -247,14 +247,151 @@ class material_ctl_admin_material_sales extends desktop_controller
         
         $this->pagedata['classList'] = $classList;
         $this->pagedata['shops'] = $shopList;
-        
+
         // 获取价格计算方式配置
-        $priceConfig = kernel::single('material_sales_setting')->getPriceConfig();
-        $this->pagedata['price_rate'] = $priceConfig['price_rate'];
-        $this->pagedata['price_field'] = $priceConfig['price_field'];
-        $this->pagedata['price_label'] = $priceConfig['price_label'];
-        
+        try {
+            $priceConfig = kernel::single('material_sales_setting')->getPriceConfig();
+        } catch (\Throwable $e) {
+            $priceConfig = array();
+        }
+        $this->pagedata['price_rate'] = isset($priceConfig['price_rate']) ? $priceConfig['price_rate'] : 'retail_price';
+        $this->pagedata['price_field'] = isset($priceConfig['price_field']) ? $priceConfig['price_field'] : 'retail_price';
+        $this->pagedata['price_label'] = isset($priceConfig['price_label']) ? $priceConfig['price_label'] : '零售价';
+        // 扩展列：统一从 service 取 options（col.options），无单独 _getColorCodeList；模板 else 分支用空数组
+        $extendedCols = $this->_getExtendedColsWithParams();
+        $this->pagedata['extendedColsForBmProps'] = $extendedCols;
+        $this->pagedata['colorCodeList'] = array();
+        $addJson = json_encode($extendedCols, JSON_UNESCAPED_UNICODE);
+        $this->pagedata['extendedColsForBmPropsJson'] = str_replace('</script>', '<\/script>', $addJson);
+        $this->pagedata['materialTableColspan'] = 7 + count($extendedCols);
         $this->page('admin/material/sales/add.html');
+    }
+
+    /**
+     * 扩展列 + service 合并（委托给 lib，与 getMaterial 共用）
+     * @return array 带 options 的 extendedCols
+     */
+    private function _getExtendedColsWithParams()
+    {
+        return kernel::single('material_sales_extended_cols')->getExtendedColsWithParams();
+    }
+
+    /**
+     * 组合表扩展列（含调色号 options），编辑页 AJAX 加载，与 getMaterial(need_extended_cols=1) 一致
+     */
+    public function getExtendedColsForBmProps()
+    {
+        echo json_encode($this->_getExtendedColsWithParams(), JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
+     * 根据 filter_data 判断某扩展列对当前 bm_id 是否可见（跨表条件）
+     * filter_data 格式：{"filter":{"key":"is_custom_color","value":"1"},"app":"material","model":"basic_material_props"}
+     * 对于 basic_material_props 等键值表：查询 bm_id + props_col=key + props_value=value 是否存在
+     * @param int $bm_id 基础物料ID
+     * @param array $filterData 解析后的 filter_data
+     * @return bool
+     */
+    private function _isExtendedColVisibleByFilter($bm_id, $filterData)
+    {
+        if (empty($filterData) || !is_array($filterData) || empty($filterData['app']) || empty($filterData['model']) || empty($filterData['filter']['key'])) {
+            return true;
+        }
+        $app = $filterData['app'];
+        $modelName = $filterData['model'];
+        $key = $filterData['filter']['key'];
+        $value = isset($filterData['filter']['value']) ? $filterData['filter']['value'] : '';
+        try {
+            $mdl = app::get($app)->model($modelName);
+        } catch (\Throwable $e) {
+            return false;
+        }
+        $bm_id = (int) $bm_id;
+        if ($bm_id <= 0) {
+            return false;
+        }
+        if (strpos($modelName, 'material_props') !== false || $modelName === 'basic_material_props') {
+            $row = $mdl->db_dump(array('bm_id' => $bm_id, 'props_col' => $key), 'props_value');
+            if (empty($row)) {
+                return false;
+            }
+            $actual = (string) $row['props_value'];
+            if ($key === 'is_custom_color' && (string) $value === '1') {
+                return $actual === '1';
+            }
+            return $actual === (string) $value;
+        }
+        $filter = array('bm_id' => $bm_id, $key => $value);
+        $one = $mdl->getList('id', $filter, 0, 1);
+        return !empty($one);
+    }
+
+    /**
+     * 按基础物料与已保存扩展列值，计算应展示的扩展列 col_key 列表
+     *
+     * @param int   $bm_id
+     * @param array $arr_props 已保存的 sales_basic_material_props（props_col => props_value）
+     * @return array
+     */
+    private function _getExtendedColVisibleKeysForBm($bm_id, $arr_props = array())
+    {
+        $bm_id = (int) $bm_id;
+        $visibleColKeys = array();
+        if ($bm_id <= 0) {
+            return $visibleColKeys;
+        }
+        $extendedCols = $this->_getExtendedColsWithParams();
+        foreach ($extendedCols as $col) {
+            $colKey = isset($col['col_key']) ? $col['col_key'] : '';
+            if ($colKey === '') {
+                continue;
+            }
+            if (!empty($arr_props[$colKey]) && (string) $arr_props[$colKey] !== '') {
+                $visibleColKeys[] = $colKey;
+                continue;
+            }
+            $filterData = isset($col['filter_data']) ? $col['filter_data'] : null;
+            if (empty($filterData)) {
+                $visibleColKeys[] = $colKey;
+                continue;
+            }
+            if ($this->_isExtendedColVisibleByFilter($bm_id, $filterData)) {
+                $visibleColKeys[] = $colKey;
+            }
+        }
+        return $visibleColKeys;
+    }
+
+    /**
+     * 根据基础物料ID与扩展列 filter_data 判断各列是否显示，并返回下拉选项（统一从 service 合并后的 extendedCols 取）
+     * 返回：visible_col_keys，color_list 取第一个可见的 select 列的 options
+     *
+     * @return void 输出 JSON
+     */
+    public function getBmCustomColorAndColorCodes()
+    {
+        $bm_id = isset($_GET['bm_id']) ? intval($_GET['bm_id']) : (isset($_POST['bm_id']) ? intval($_POST['bm_id']) : 0);
+        $result = array('visible_col_keys' => array(), 'color_list' => array(), 'is_custom_color' => 0);
+        if ($bm_id <= 0) {
+            echo json_encode($result);
+            return;
+        }
+        $extendedCols = $this->_getExtendedColsWithParams();
+        $visibleColKeys = $this->_getExtendedColVisibleKeysForBm($bm_id);
+        $result['visible_col_keys'] = $visibleColKeys;
+        $colorList = array();
+        foreach ($extendedCols as $col) {
+            $colKey = isset($col['col_key']) ? $col['col_key'] : '';
+            if (in_array($colKey, $visibleColKeys) && isset($col['col_type']) && strtolower((string) $col['col_type']) === 'select' && !empty($col['options']) && is_array($col['options'])) {
+                $colorList = $col['options'];
+                break;
+            }
+        }
+        $result['color_list'] = $colorList;
+        if (in_array('custom_color_code', $visibleColKeys)) {
+            $result['is_custom_color'] = 1;
+        }
+        echo json_encode($result);
     }
 
     /**
@@ -274,7 +411,7 @@ class material_ctl_admin_material_sales extends desktop_controller
         if (!$checkSalesLib->checkParams($_POST, $err_msg)) {
             $this->end(false, $err_msg);
         }
-        
+
         $salesMaterialObj           = app::get('material')->model('sales_material');
         $salesMaterialExtObj        = app::get('material')->model('sales_material_ext');
         $salesMaterialShopFreezeObj = app::get('material')->model('sales_material_shop_freeze');
@@ -291,8 +428,12 @@ class material_ctl_admin_material_sales extends desktop_controller
             "visibled"                => $_POST['visibled'],
             'class_id'                => intval($_POST['class_id']),
         );
-        $shop = app::get('ome')->model('shop')->db_dump(['shop_id'=>$addData['shop_id']], 'org_id');
-        $addData['org_id'] = $shop['org_id'];
+        if ($addData['shop_id'] != '_ALL_') {
+            $shop = app::get('ome')->model('shop')->db_dump(['shop_id' => $addData['shop_id']], 'org_id');
+            $addData['org_id'] = $shop['org_id'];
+        } else {
+            $addData['org_id'] = 0;
+        }
 
         if ($_POST['tax_rate']) {
             $addData['tax_rate'] = $_POST['tax_rate'];
@@ -324,7 +465,39 @@ class material_ctl_admin_material_sales extends desktop_controller
                 $brandInfo = app::get('material')->model('basic_material_ext')->db_dump(['bm_id'=>$_POST['bm_id']], 'brand_id');
                 $brand_id = $brandInfo['brand_id'];
                 $salesBasicMaterialObj->insert($addBindData);
-                
+                // 扩展列：$_POST['props'] 即为扩展列，直接循环保存到 sales_basic_material_props
+                if (!empty($_POST['props']) && is_array($_POST['props'])) {
+                    $salesBmPropsMdl = app::get('material')->model('sales_basic_material_props');
+                    $bindBmId = intval($_POST['bm_id']);
+                    foreach ($_POST['props'] as $pk => $pv) {
+                        $pvNorm = '';
+                        if (is_array($pv)) {
+                            if ($bindBmId && isset($pv[$bindBmId]) && is_scalar($pv[$bindBmId])) {
+                                $pvNorm = trim((string) $pv[$bindBmId]);
+                            }
+                            if ($pvNorm === '') {
+                                foreach ($pv as $subv) {
+                                    if (is_scalar($subv) && trim((string) $subv) !== '') {
+                                        $pvNorm = trim((string) $subv);
+                                        break;
+                                    }
+                                }
+                            }
+                        } else {
+                            $pvNorm = trim((string) $pv);
+                        }
+                        if ($pvNorm === '') {
+                            continue;
+                        }
+                        $propsdata=array(
+                            'sm_id'       => $addData['sm_id'],
+                            'bm_id'       => $bindBmId,
+                            'props_col'   => $pk,
+                            'props_value' => $pvNorm,
+                        );
+                        $salesBmPropsMdl->insert($propsdata);
+                    }
+                }
                 //基础物料信息
                 $baseMaterialInfo = $basicMaterialObj->dump(array('bm_id'=>$_POST['bm_id']), '*');
                 // 同步更新税收分类编码
@@ -347,19 +520,42 @@ class material_ctl_admin_material_sales extends desktop_controller
                 
                 $is_bind = true;
             } elseif ($_POST['sales_material_type'] == 2 && !empty($_POST['at'])) {
-                //促销销售物料关联
+                //组合销售物料关联
+                $pr = isset($_POST['pr']) && is_array($_POST['pr']) ? $_POST['pr'] : array();
                 foreach ($_POST['at'] as $k => $v) {
                     $addBindData = array(
                         'sm_id'  => $addData['sm_id'],
                         'bm_id'  => $k,
                         'number' => $v,
-                        'rate'   => $_POST['pr'][$k],
+                        'rate'   => isset($pr[$k]) ? $pr[$k] : 0,
                     );
                     $salesBasicMaterialObj->insert($addBindData);
                     $addBindData = null;
                 }
-                $brand_id = $_POST['brand_id'];
-                $cat_id = intval($_POST['cat_id']);
+                // 扩展列：$_POST['props'][col_key][bm_id]，按 at 的 bm_id 遍历，再取各 col_key 对应值
+                if (!empty($_POST['props']) && is_array($_POST['props'])) {
+                    $salesBmPropsMdl = app::get('material')->model('sales_basic_material_props');
+                    foreach ($_POST['at'] as $bm_id => $num) {
+                        foreach ($_POST['props'] as $pk => $pv) {
+                            if (!is_array($pv) || !isset($pv[$bm_id])) {
+                                continue;
+                            }
+                            $val = is_scalar($pv[$bm_id]) ? trim((string) $pv[$bm_id]) : '';
+                            if ($val !== '') {
+                                $propsdata=array(
+                                    'sm_id'       => $addData['sm_id'],
+                                    'bm_id'       => intval($bm_id),
+                                    'props_col'   => $pk,
+                                    'props_value' => $val,
+                                );
+                               
+                                $salesBmPropsMdl->insert($propsdata);
+                            }
+                        }
+                    }
+                }
+                $brand_id = isset($_POST['brand_id']) ? $_POST['brand_id'] : 0;
+                $cat_id = isset($_POST['cat_id']) ? intval($_POST['cat_id']) : 0;
                 $is_bind = true;
                 
             } elseif ($_POST['sales_material_type'] == 3 && !empty($_POST['at'])) { // 赠品关联多基础物料处理
@@ -374,8 +570,8 @@ class material_ctl_admin_material_sales extends desktop_controller
                     $addBindData = null;
                 }
 
-                $brand_id = $_POST['brand_id'];
-                $cat_id = intval($_POST['cat_id']);
+                $brand_id = isset($_POST['brand_id']) ? $_POST['brand_id'] : 0;
+                $cat_id = isset($_POST['cat_id']) ? intval($_POST['cat_id']) : 0;
                 $is_bind = true;
             } elseif ($_POST['sales_material_type'] == 5 && !empty($_POST['sort'])) {
                 //多选一
@@ -608,6 +804,28 @@ EOF;
         $this->pagedata['price_rate'] = $priceConfig['price_rate'];
         $this->pagedata['price_field'] = $priceConfig['price_field'];
         $this->pagedata['price_label'] = $priceConfig['price_label'];
+
+        // 扩展列（与编辑页一致）：查看页展示调色号等；组合表异步行需 extendedColsForBmPropsJson
+        $extendedColsForBmProps = $this->_getExtendedColsWithParams();
+        $this->pagedata['materialTableColspan'] = 7 + count($extendedColsForBmProps);
+        $arr_props = array();
+        $salesBmPropsMdl = app::get('material')->model('sales_basic_material_props');
+        $bind_bm_id = isset($this->pagedata['bind_bm_id']) ? $this->pagedata['bind_bm_id'] : null;
+        if (($salesMaterialInfo['sales_material_type'] == 1 || $salesMaterialInfo['sales_material_type'] == 6) && $salesMaterialInfo['is_bind'] == 1 && $bind_bm_id) {
+            $propsList = $salesBmPropsMdl->getList('props_col,props_value', array('sm_id' => $tmp_sm_id, 'bm_id' => $bind_bm_id), 0, -1);
+            foreach ($propsList as $v) {
+                $arr_props[$v['props_col']] = $v['props_value'];
+            }
+        }
+        foreach ($extendedColsForBmProps as $k => $col) {
+            $colKey = isset($col['col_key']) ? $col['col_key'] : '';
+            if ($colKey !== '' && array_key_exists($colKey, $arr_props)) {
+                $extendedColsForBmProps[$k]['col_value'] = (string) $arr_props[$colKey];
+            }
+        }
+        $this->pagedata['extendedColsForBmProps'] = $extendedColsForBmProps;
+        $json = json_encode($extendedColsForBmProps, JSON_UNESCAPED_UNICODE);
+        $this->pagedata['extendedColsForBmPropsJson'] = str_replace('</script>', '<\/script>', $json);
         
         $this->pagedata['data'] = $logList;
         $this->pagedata['luckyBagList'] = $luckyBagList;
@@ -691,6 +909,30 @@ EOF;
         $this->pagedata['price_field'] = $priceConfig['price_field'];
         $this->pagedata['price_label'] = $priceConfig['price_label'];
 
+        // 扩展列：参照 basic edit，读取 sales_basic_material_props 得到 arr_props，与扩展列定义合并 col_value（编辑时默认显示已保存值）
+        $extendedColsForBmProps = $this->_getExtendedColsWithParams();
+        $this->pagedata['materialTableColspan'] = 7 + count($extendedColsForBmProps);
+        $arr_props = array();
+        $salesBmPropsMdl = app::get('material')->model('sales_basic_material_props');
+        $bind_bm_id = isset($this->pagedata['bind_bm_id']) ? $this->pagedata['bind_bm_id'] : null;
+        if (($salesMaterialInfo['sales_material_type'] == 1 || $salesMaterialInfo['sales_material_type'] == 6) && $salesMaterialInfo['is_bind'] == 1 && $bind_bm_id) {
+            $propsList = $salesBmPropsMdl->getList('props_col,props_value', array('sm_id' => $tmp_sm_id, 'bm_id' => $bind_bm_id), 0, -1);
+            foreach ($propsList as $v) {
+                $arr_props[$v['props_col']] = $v['props_value'];
+            }
+        }
+        foreach ($extendedColsForBmProps as $k => $col) {
+            $colKey = isset($col['col_key']) ? $col['col_key'] : '';
+            if ($colKey !== '' && array_key_exists($colKey, $arr_props)) {
+                $extendedColsForBmProps[$k]['col_value'] = (string) $arr_props[$colKey];
+            }
+        }
+        $this->pagedata['extendedColsForBmProps'] = $extendedColsForBmProps;
+        $this->pagedata['arr_props'] = $arr_props;
+        $json = json_encode($extendedColsForBmProps, JSON_UNESCAPED_UNICODE);
+        $this->pagedata['extendedColsForBmPropsJson'] = str_replace('</script>', '<\/script>', $json);
+        $this->pagedata['bind_bm_id'] = !empty($bind_bm_id) ? (int) $bind_bm_id : '';
+
         $this->pagedata['material_info'] = $salesMaterialInfo;
         $this->pagedata['readonly']      = $readonly;
         $this->page('admin/material/sales/edit.html');
@@ -715,7 +957,7 @@ EOF;
         $salesMaterialObj    = app::get('material')->model('sales_material');
         $salesMaterialExtObj = app::get('material')->model('sales_material_ext');
         $basicMaterialObj = app::get('material')->model('basic_material');
-        
+       
         //更新基础物料基本信息
         $filter['sm_id'] = $_POST['sm_id'];
         //快照
@@ -747,8 +989,12 @@ EOF;
             "visibled"            => $_POST['visibled'],
             'class_id'            => intval($_POST['class_id']),
         );
-        $shop = app::get('ome')->model('shop')->db_dump(['shop_id'=>$updateData['shop_id']], 'org_id');
-        $updateData['org_id'] = $shop['org_id'];
+        if ($updateData['shop_id'] != '_ALL_') {
+            $shop = app::get('ome')->model('shop')->db_dump(['shop_id' => $updateData['shop_id']], 'org_id');
+            $updateData['org_id'] = $shop['org_id'];
+        } else {
+            $updateData['org_id'] = 0;
+        }
 
         if ($_POST['tax_rate']) {
             $updateData['tax_rate'] = $_POST['tax_rate'];
@@ -771,6 +1017,7 @@ EOF;
             
             //删除原有关联基础物料信息  后续会新增的（重做关系）
             $salesBasicMaterialObj->delete(array('sm_id' => $filter['sm_id'])); //普通、赠品、促销、福袋组合
+            app::get('material')->model('sales_basic_material_props')->delete(array('sm_id' => $filter['sm_id']));
             $mdl_ma_pickone_ru->delete(array("sm_id" => $filter['sm_id'])); //多选一
             
             if ($_POST['sales_material_type'] != 4) {
@@ -793,6 +1040,39 @@ EOF;
                     'number' => 1,
                 );
                 $salesBasicMaterialObj->insert($addBindData);
+                // 扩展列：编辑时保存 $_POST['props']
+                if (!empty($_POST['props']) && is_array($_POST['props'])) {
+                    $salesBmPropsMdl = app::get('material')->model('sales_basic_material_props');
+                    $bindBmId = intval($_POST['bm_id']);
+                    foreach ($_POST['props'] as $pk => $pv) {
+                        $pvNorm = '';
+                        if (is_array($pv)) {
+                            if ($bindBmId && isset($pv[$bindBmId]) && is_scalar($pv[$bindBmId])) {
+                                $pvNorm = trim((string) $pv[$bindBmId]);
+                            }
+                            if ($pvNorm === '') {
+                                foreach ($pv as $subv) {
+                                    if (is_scalar($subv) && trim((string) $subv) !== '') {
+                                        $pvNorm = trim((string) $subv);
+                                        break;
+                                    }
+                                }
+                            }
+                        } else {
+                            $pvNorm = trim((string) $pv);
+                        }
+                        if ($pvNorm === '') {
+                            continue;
+                        }
+                        $propsdata = array(
+                            'sm_id' => $filter['sm_id'],
+                            'bm_id' => $bindBmId,
+                            'props_col' => $pk,
+                            'props_value' => $pvNorm,
+                        );
+                        $salesBmPropsMdl->insert($propsdata);
+                    }
+                }
                 $brandInfo = app::get('material')->model('basic_material_ext')->db_dump(['bm_id'=>$_POST['bm_id']], 'brand_id');
                 $brand_id = $brandInfo['brand_id'];
                 
@@ -819,19 +1099,38 @@ EOF;
                 $is_bind = true;
             } elseif ($_POST['sales_material_type'] == 2 && !empty($_POST['at'])) {
                 //促销销售物料关联
-                //促销销售物料关联
+                $pr = isset($_POST['pr']) && is_array($_POST['pr']) ? $_POST['pr'] : array();
                 foreach ($_POST['at'] as $k => $v) {
                     $addBindData = array(
                         'sm_id'  => $filter['sm_id'],
                         'bm_id'  => $k,
                         'number' => $v,
-                        'rate'   => $_POST['pr'][$k],
+                        'rate'   => isset($pr[$k]) ? $pr[$k] : 0,
                     );
                     $salesBasicMaterialObj->insert($addBindData);
                     $addBindData = null;
                 }
-                $brand_id = $_POST['brand_id'];
-                $cat_id = intval($_POST['cat_id']);
+                // 扩展列：编辑时保存 $_POST['props'][col_key][bm_id]
+                if (!empty($_POST['props']) && is_array($_POST['props'])) {
+                    $salesBmPropsMdl = app::get('material')->model('sales_basic_material_props');
+                    foreach ($_POST['at'] as $bm_id => $num) {
+                        foreach ($_POST['props'] as $pk => $pv) {
+                            if (!is_array($pv) || !isset($pv[$bm_id])) continue;
+                            $val = is_scalar($pv[$bm_id]) ? trim((string) $pv[$bm_id]) : '';
+                            if ($val !== '') {
+                                $propsdata = array(
+                                    'sm_id' => $filter['sm_id'],
+                                    'bm_id' => intval($bm_id),
+                                    'props_col' => $pk,
+                                    'props_value' => $val,
+                                );
+                                $salesBmPropsMdl->insert($propsdata);
+                            }
+                        }
+                    }
+                }
+                $brand_id = isset($_POST['brand_id']) ? $_POST['brand_id'] : 0;
+                $cat_id = isset($_POST['cat_id']) ? intval($_POST['cat_id']) : 0;
 
                 $is_bind = true;
             } elseif ($_POST['sales_material_type'] == 3 && !empty($_POST['at'])) {
@@ -961,6 +1260,22 @@ EOF;
         $rows  = array();
         $items = $salesBasicMaterialObj->getList('bm_id,sm_id,number,rate,fixed_price', array('sm_id' => $sm_id), 0, -1);
         if (!empty($items)) {
+            $salesBmPropsMdl = app::get('material')->model('sales_basic_material_props');
+            $bmIds = array_column($items, 'bm_id');
+            $propsList = $salesBmPropsMdl->getList('bm_id,props_col,props_value', array('sm_id' => $sm_id, 'bm_id|in' => $bmIds), 0, -1);
+            $propsByBm = array();
+            foreach ($propsList as $p) {
+                if (!isset($propsByBm[$p['bm_id']])) {
+                    $propsByBm[$p['bm_id']] = array();
+                }
+                $propsByBm[$p['bm_id']][$p['props_col']] = $p['props_value'];
+            }
+            $basicPropsMdl = app::get('material')->model('basic_material_props');
+            $customColorBmIds = array();
+            $customColorList = $basicPropsMdl->getList('bm_id', array('bm_id|in' => $bmIds, 'props_col' => 'is_custom_color', 'props_value' => '1'), 0, -1);
+            if ($customColorList) {
+                $customColorBmIds = array_column($customColorList, 'bm_id');
+            }
             foreach ($items as $k => $item) {
                 $basicMaterialInfo = $basicMaterialObj->dump(array('bm_id' => $item['bm_id']), 'material_bn,material_name,cat_id,cat_path');
 
@@ -975,6 +1290,10 @@ EOF;
                 
                 // 根据配置设置显示的价格字段
                 $item['display_price'] = $extInfo[$priceField];
+                $item['is_custom_color'] = in_array($item['bm_id'], $customColorBmIds) ? 1 : 0;
+                if (!empty($propsByBm[$item['bm_id']])) {
+                    $item = array_merge($item, $propsByBm[$item['bm_id']]);
+                }
                 
                 $items[$k] = array_merge($item, $basicMaterialInfo);
             }

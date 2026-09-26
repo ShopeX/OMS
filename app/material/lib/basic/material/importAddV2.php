@@ -447,7 +447,8 @@ class material_basic_material_importAddV2  implements omecsv_data_split_interfac
         unset($data);
         //创建订单
         if ($sdf) {
-            list($result,$msgList) = $this->implodeMaterial($sdf);
+            $opInfo = !empty($params['queue_data']['opInfo']) ? $params['queue_data']['opInfo'] : null;
+            list($result,$msgList) = $this->implodeMaterial($sdf, $opInfo);
             if($msgList){
                 $errmsg = array_merge($errmsg, $msgList);
             }
@@ -697,7 +698,7 @@ class material_basic_material_importAddV2  implements omecsv_data_split_interfac
         }
      }
 
-    function implodeMaterial($contents)
+    function implodeMaterial($contents, $opInfo = null)
     {
         $errmsg = '';
         $importObj = app::get('material')->model('basic_material');
@@ -708,6 +709,7 @@ class material_basic_material_importAddV2  implements omecsv_data_split_interfac
         $basicMaterialConfObj = app::get('material')->model('basic_material_conf');
 
         $basicMaterialConfObjSpe    = app::get('material')->model('basic_material_conf_special');
+        $importLogLib = kernel::single('material_basic_material');
         $createSalesByBmIds    = array();//自动生成销售物料的基础物料bm_id
 
         foreach($contents as $v){
@@ -860,6 +862,12 @@ class material_basic_material_importAddV2  implements omecsv_data_split_interfac
                 {
                     $createSalesByBmIds[]    = $importData['bm_id'];
                 }
+                $importLogLib->writeImportLog(
+                    'basic_material_import@wms',
+                    $importData['bm_id'],
+                    '批量导入新增基础物料：' . $importData['material_bn'] . ' ' . $importData['material_name'],
+                    $opInfo
+                );
             }else{
                 $m = $importObj->db->errorinfo();
                 if(!empty($m)){

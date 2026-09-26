@@ -66,6 +66,8 @@
                                 <option <{if $item.rule_type == 'trade_type'}> selected <{/if}> value="trade_type">业务类型</option>
                                 <option <{if $item.rule_type == 'member'}> selected <{/if}> value="member">对方账号</option>
                                 <option <{if $item.rule_type == 'remarks'}> selected <{/if}> value="remarks">备注</option>
+                                <option <{if $item.rule_type == 'goods_name'}> selected <{/if}> value="goods_name">商品名称</option>
+                                <option <{if $item.rule_type == 'trade_desc'}> selected <{/if}> value="trade_desc">业务描述</option>
                               </select> <select name="rule_op[<{$rule_key}>][]" style="display:none;">
                                 <option <{if $item.rule_op == 'and'}> selected <{/if}> value="and">并且</option>
                                 <option <{if $item.rule_op == 'or'}> selected <{/if}> value="or">或者</option>
@@ -137,7 +139,7 @@ function addRuleFilter()
 
 function getRuleContent(rule_key,allow_plus,allow_reduce)
 {
-  var rule_filter_content = '<select name="rule_type['+rule_key+'][]"><option value="trade_type">业务类型</option><option value="member">对方账号</option><option value="remarks">备注</option></select>&nbsp;<select style="display:none;" name="rule_op['+rule_key+'][]"><option value="and">并且</option><option value="or">或者</option></select>&nbsp;<select name="rule_filter['+rule_key+'][]"><option value="contain">包含</option><option value="nocontain">不包含</option><option value="equal">等于</option></select>&nbsp;<input type="text" name="rule_value['+rule_key+'][]" value="" vtype="required">';
+  var rule_filter_content = '<select name="rule_type['+rule_key+'][]"><option value="trade_type">业务类型</option><option value="member">对方账号</option><option value="remarks">备注</option><option value="goods_name">商品名称</option><option value="trade_desc">业务描述</option></select>&nbsp;<select style="display:none;" name="rule_op['+rule_key+'][]"><option value="and">并且</option><option value="or">或者</option></select>&nbsp;<select name="rule_filter['+rule_key+'][]"><option value="contain">包含</option><option value="nocontain">不包含</option><option value="equal">等于</option></select>&nbsp;<input type="text" name="rule_value['+rule_key+'][]" value="" vtype="required">';
 
     if(allow_plus){
       rule_filter_content += '<a href="javascript:void(0);" onclick="addRule('+rule_key+');">[&nbsp;+&nbsp;]</a>'; 

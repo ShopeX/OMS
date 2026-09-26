@@ -376,7 +376,7 @@ class ome_finder_reship{
 
         $anti_check = '  <a target="dialog::{width:250,height:100,title:\'反审核退换货单号:'.$reship_items['reship_bn'].'\'}" href="index.php?app=ome&ctl=admin_return_rchange&act=anti_check&p[0]='.$row['reship_id'].'&finder_id='.$_GET['_finder']['finder_id'].'">反审核</a>  ';
 
-        $edit ='  <a href="index.php?app=ome&ctl=admin_return_rchange&act=edit&p[0]='.$row['reship_id'].'&finder_id='.$_GET['_finder']['finder_id'].'">'.$edit_title.'</a>  ';
+        $edit ='  <a target="dialog::{width:1200,height:680,title:\''.$edit_title.'退换货单:'.$reship_items['reship_bn'].'\'}" href="index.php?app=ome&ctl=admin_return_rchange&act=edit&p[0]='.$row['reship_id'].'&finder_id='.$_GET['_finder']['finder_id'].'">'.$edit_title.'</a>  ';
 
         $accept_returned = '  <a target="dialog::{width:1200,height:546,title:\'收货退换货单:'.$reship_items['reship_bn'].'\'}" href="index.php?app=ome&ctl=admin_return_rchange&act=accept_returned&p[0]='.$row['reship_id'].'&finder_id='.$_GET['_finder']['finder_id'].'">收货</a>  ';
 

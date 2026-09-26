@@ -1,0 +1,79 @@
+<style>
+#snflowinfo th:first-child,
+#snflowinfo td:first-child { white-space: nowrap; min-width: 4em; }
+</style>
+<div class="tableform">
+    <h4>SN流水详情</h4>
+    <div class="division">
+        <table cellpadding="0" cellpadding="0" cellspacing="0" class="gridlist" id="snflowinfo">
+            <thead>
+            <tr>
+                <th>操作</th>
+                <{foreach from=$header key=head_key item=head_value}>
+                    <th><{$head_value}></th>
+                <{/foreach}>
+            </tr>
+            </thead>
+            <tbody>
+            <{foreach from=$flow_list item=item name=flow_loop}>
+            <tr class="sn-flow-row" data-row-id="<{$item.id}>" data-sn-id="<{$item.sn_id}>">
+                <td>
+                    <a href="index.php?app=machinecenter&ctl=admin_sn&act=editSn&p[0]=<{$item.id}>&finder_id=<{$finder_id}>" target="dialog::{width:520,height:280,title:'编辑唯一码'}">编辑</a>
+                </td>
+                <{foreach from=$header key=head_key item=head_value}>
+                    <td>
+                        <{if $head_key== 'order_bn'}>
+                            <a class="sn-sensitive-btn-row data-hide" 
+                               href="javascript:void(0);" 
+                               data-row-id="<{$item.id}>"
+                               data-sn-id="<{$item.sn_id}>"
+                               title="解密此行数据"></a>
+                        <{/if}>
+                        <{$item[$head_key]|default:'-'}>
+                    </td>
+                <{/foreach}>
+            </tr>
+            <{/foreach}>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+(function(){
+    // 敏感数据处理 - 单行解密
+    if ($defined($E('.sn-sensitive-btn-row')))
+        $ES('.sn-sensitive-btn-row').addEvent('click',function(e){
+            var rowId = this.get('data-row-id');
+            var snId = this.get('data-sn-id');
+            var tr = this.getParent('tr');
+            
+            Ex_Loader('security',function(){
+                new Security({
+                    url:'index.php?app=machinecenter&ctl=admin_sn&act=showSensitiveData&p[0]='+snId+'&p[1]=row&p[2]='+rowId,
+                    clickElement:$(e.target)
+                }).desHtml(tr, function(){
+
+                });
+            });
+        });
+
+    // 敏感数据处理 - 整体脱敏（保留原有功能）
+    if ($defined($E('.sn-sensitive-btn')))
+        $E('.sn-sensitive-btn').addEvent('click',function(e){
+            Ex_Loader('security',function(){
+                new Security({url:'index.php?app=machinecenter&ctl=admin_sn&act=showSensitiveData&p[0]=<{$sn_id}>&p[1]=order',clickElement:$(e.target)}).desHtml($E('#snflowinfo'));
+            });
+        });
+
+    // 敏感数据处理 - 单个字段脱敏（保留原有功能）
+    if ($defined($E('.sn-sensitive-btn-detail')))
+        $ES('.sn-sensitive-btn-detail').addEvent('click',function(e){
+            var type = this.get('data-type');
+            var tr = this.getParent('tr');
+            Ex_Loader('security',function(){
+                new Security({url:'index.php?app=machinecenter&ctl=admin_sn&act=showSensitiveData&p[0]=<{$sn_id}>&p[1]='+type,clickElement:$(e.target)}).desHtml(tr);
+            });
+        });
+})();
+</script>

@@ -20,7 +20,7 @@ $db['refund_apply_taobao']=array (
   array (
     'apply_id' => 
     array (
-      'type' => 'number',
+      'type' => 'int unsigned',
       'required' => true,
       'pkey' => true,
      

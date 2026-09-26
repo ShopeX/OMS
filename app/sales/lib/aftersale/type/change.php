@@ -25,8 +25,11 @@ class sales_aftersale_type_change
         $shopData        = $Oshop->getList('name,shop_bn', array('shop_id' => $reshipData[0]['shop_id']));
         $orderData       = $Oorder->getList('member_id,order_bn,platform_order_bn,betc_id,cos_id', array('order_id' => $reshipData[0]['order_id']));
         
-        //判断是否来源为归档
+        //判断是否来源为归档（平台推送 source 多为 matrix，需同时认 reship.archive=1）
         $is_archive = kernel::single('archive_order')->is_archive($reshipData[0]['source']);
+        if (!$is_archive && (string)$reshipData[0]['archive'] === '1') {
+            $is_archive = true;
+        }
         if ($is_archive) {
             $archive_ordObj = kernel::single('archive_interface_orders');
             $orderData      = $archive_ordObj->getOrders($reshipData[0]['order_id'], 'member_id,order_bn');
@@ -122,8 +125,8 @@ class sales_aftersale_type_change
             $platform_order_bn = $reshipData[0]['platform_order_bn'];
         }
     
-        //销售单
-        $salesInfo = $salesMdl->db_dump(['order_id'=>$reshipData[0]['order_id']],'sale_id,order_id,ship_time');
+        //销售单（按标识优先，空则回落另一边）
+        $salesInfo = $this->getSalesInfo($reshipData[0]['order_id'], $is_archive);
         
         //data
         $data['shop_id']            = $reshipData[0]['shop_id'];
@@ -182,16 +185,20 @@ class sales_aftersale_type_change
         if ($is_archive) {
             $data['archive'] = '1';
         }
-        if($reshipData[0]['delivery_id']) {
+        if ($reshipData[0]['delivery_id']) {
             $data['delivery_id'] = $reshipData[0]['delivery_id'];
-            $data['delivery_bn'] = app::get('sales')->model('delivery_order')->db_dump(['delivery_id'=>$data['delivery_id']], 'delivery_bn')['delivery_bn'];
+            $deliveryRow = app::get('ome')->model('delivery')->db_dump(
+                array('delivery_id' => $data['delivery_id']),
+                'delivery_bn'
+            );
+            $data['delivery_bn'] = !empty($deliveryRow['delivery_bn']) ? $deliveryRow['delivery_bn'] : '';
         }
         
         //获取退货单明细
         $reshipitemData = $Oreship_items->db->select("SELECT item_id as obj_item_id, order_item_id,bn,product_name,product_id,num,price,branch_id,return_type,defective_num,normal_num,amount FROM sdb_ome_reship_items WHERE reship_id=" . $reship_id . " AND  ((defective_num>0 OR normal_num>0 OR num>0) OR return_type='change') AND `is_del`='false' ");
         
-        //获取销售单明细金额
-        $orderSales = $this->getSaleAmount($reshipData[0]['order_id']);
+        //获取销售单明细金额（按标识优先，空则回落另一边）
+        $orderSales = $this->getSaleAmount($reshipData[0]['order_id'], $is_archive);
 
         $objs = $this->getOrderObj($reshipData[0]['order_id'],$is_archive);
 
@@ -337,8 +344,8 @@ class sales_aftersale_type_change
         //获取退货关联的订单明细
         $aftersaleLib = kernel::single('sales_aftersale');
         $returnItems = $aftersaleLib->getReturnOrderItems($reshipData[0]['order_id'], $is_archive);
-        $dlySaleItems = app::get('sales')->model('delivery_order_item')->getList('order_item_id,nums,platform_amount,settlement_amount,actually_amount,platform_pay_amount', ['order_id'=>$reshipData[0]['order_id']]);
-        $dlySaleItems = array_column($dlySaleItems, null, 'order_item_id');
+        // 发货销售明细金额：优先按来源查，空则回落另一边（归档单实付多在 archive 表）
+        $dlySaleItems = $this->getDeliverySaleItems($reshipData[0]['order_id'], $is_archive);
         $data['platform_amount'] = 0;
         $data['settlement_amount'] = 0;
         //format
@@ -483,14 +490,99 @@ class sales_aftersale_type_change
         return $objs;
     }
 
-    public function getSaleAmount($order_id){
+    /**
+     * 销售单头：按标识优先查一边，空则回落另一边。
+     *
+     * @param int  $order_id
+     * @param bool $prefer_archive
+     * @return array
+     */
+    public function getSalesInfo($order_id, $prefer_archive = false)
+    {
+        $filter = array('order_id' => intval($order_id));
+        $cols = 'sale_id,order_id,ship_time';
+        $omeSalesMdl = app::get('ome')->model('sales');
+        $archiveSalesMdl = app::get('archive')->model('sales');
+
+        if ($prefer_archive) {
+            $row = $archiveSalesMdl->db_dump($filter, $cols);
+            if (empty($row)) {
+                $row = $omeSalesMdl->db_dump($filter, $cols);
+            }
+        } else {
+            $row = $omeSalesMdl->db_dump($filter, $cols);
+            if (empty($row)) {
+                $row = $archiveSalesMdl->db_dump($filter, $cols);
+            }
+        }
+
+        return $row ? $row : array();
+    }
+
+    /**
+     * 发货销售明细金额：按标识优先查一边，空则回落另一边。
+     *
+     * @param int  $order_id
+     * @param bool $prefer_archive
+     * @return array order_item_id => row
+     */
+    public function getDeliverySaleItems($order_id, $prefer_archive = false)
+    {
+        $filter = array('order_id' => intval($order_id));
+        $cols = 'order_item_id,nums,platform_amount,settlement_amount,actually_amount,platform_pay_amount';
+        $omeDlyItemMdl = app::get('sales')->model('delivery_order_item');
+        $archiveDlyItemMdl = app::get('archive')->model('sales_delivery_order_item');
+
+        if ($prefer_archive) {
+            $rows = $archiveDlyItemMdl->getList($cols, $filter);
+            if (empty($rows)) {
+                $rows = $omeDlyItemMdl->getList($cols, $filter);
+            }
+        } else {
+            $rows = $omeDlyItemMdl->getList($cols, $filter);
+            if (empty($rows)) {
+                $rows = $archiveDlyItemMdl->getList($cols, $filter);
+            }
+        }
+
+        if (empty($rows)) {
+            return array();
+        }
+        return array_column($rows, null, 'order_item_id');
+    }
+
+    /**
+     * 销售明细单价：按标识优先查一边，空则回落另一边。
+     *
+     * @param int  $order_id
+     * @param bool $prefer_archive
+     * @return array
+     */
+    public function getSaleAmount($order_id, $prefer_archive = false)
+    {
+        $order_id = intval($order_id);
         $db = kernel::database();
-        $items = $db->select("SELECT sales_material_bn,bn,sales_amount,nums FROM sdb_ome_sales_items AS I LEFT JOIN sdb_ome_sales as S ON I.sale_id=S.sale_id WHERE S.order_id=".$order_id." AND I.product_id>0");
+        $sqlOme = "SELECT sales_material_bn,bn,sales_amount,nums FROM sdb_ome_sales_items AS I LEFT JOIN sdb_ome_sales as S ON I.sale_id=S.sale_id WHERE S.order_id={$order_id} AND I.product_id>0";
+        $sqlArchive = "SELECT sales_material_bn,bn,sales_amount,nums FROM sdb_archive_sales_items AS I LEFT JOIN sdb_archive_sales as S ON I.sale_id=S.sale_id WHERE S.order_id={$order_id} AND I.product_id>0";
+
+        if ($prefer_archive) {
+            $items = $db->select($sqlArchive);
+            if (empty($items)) {
+                $items = $db->select($sqlOme);
+            }
+        } else {
+            $items = $db->select($sqlOme);
+            if (empty($items)) {
+                $items = $db->select($sqlArchive);
+            }
+        }
 
         $data = array();
-        foreach ( $items as $item ){
-           
-            $sales_price = sprintf('%.3f',$item['sales_amount']/$item['nums']);
+        foreach ($items as $item) {
+            if (empty($item['nums'])) {
+                continue;
+            }
+            $sales_price = sprintf('%.3f', $item['sales_amount'] / $item['nums']);
             $data[$item['sales_material_bn']][$item['bn']] = $sales_price;
         }
 

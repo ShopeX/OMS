@@ -55,7 +55,7 @@ class ome_export_whitelist
             'finance_mdl_monthly_report_items'=> array('cansplit'=>1, 'splitnums'=>200, 'primary_key' => 'id', 'structure'=>'single'),
             'financebase_mdl_base'=> array('cansplit'=>1, 'splitnums'=>200, 'primary_key' => 'id', 'structure'=>'single'),
             'financebase_mdl_expenses_rule'=> array('cansplit'=>1, 'splitnums'=>200, 'primary_key' => 'rule_id', 'structure'=>'single'),
-            'console_mdl_branch_product' => array('cansplit'=>0, 'splitnums'=>200),
+            'console_mdl_branch_product' => array('cansplit'=>1, 'splitnums'=>1000, 'structure'=>'single'),
             'wms_mdl_branch_product' => array('cansplit'=>0, 'splitnums'=>200),
             'drm_mdl_distributor_product_sku' => array('cansplit'=>1, 'splitnums'=>200, 'structure'=>'single'),
             'inventorydepth_mdl_shop_frame' => array('cansplit'=>1, 'splitnums'=>200, 'structure'=>'single'),

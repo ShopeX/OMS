@@ -194,57 +194,7 @@ class wap_ctl_logistics extends wap_controller
             $this->error('参数不能为空');
         }
 
-        // 验证快递单号:最少8位,只允许字母和数字
-        if (!preg_match('/^[a-zA-Z0-9]{8,}$/', $logi_no)) {
-            $this->error('快递单号必须至少8位且只能包含字母和数字');
-        }
-
-        // 验证快递单号：顺丰:SF+12/13位数字 京东:JD+2位数字/字母+11位数字
-//        if($logi_code == 'SF'){
-//            if(!preg_match('/^SF[0-9]{12,13}$/', $logi_no)){
-//                $this->error('顺丰快递单号必须以SF开头+12/13位数字');
-//            }
-//        }
-//        if($logi_code == 'JD'){
-//            if(!preg_match('/^JD[a-zA-Z0-9]{13}$/', $logi_no)){
-//                $this->error('京东快递单号必须以JD开头+13位数字/字母');
-//            }
-//        }
-        // 验证圆通快递单号：YT+12/13位数字
-        if($logi_code == 'YT'){
-            if(!preg_match('/^YT[0-9]{12,13}$/', $logi_no)){
-                $this->error('圆通快递单号必须以YT开头+12/13位数字');
-            }
-        }
-        // 验证德邦快递单号：DB+12/13位数字
-        if($logi_code == 'DBL'){
-            if(!preg_match('/^DP[A-Z]{1}[0-9]{12}$/', $logi_no)){
-                $this->error('德邦物流单号必须以DP开头+1位大写字母+12位数字');
-            }
-        }
-
-        // 验证中通快递单号：7+12至14位数字
-        if($logi_code == 'ZTO'){
-            if(!preg_match('/^7[0-9]{12,14}$/', $logi_no)){
-                $this->error('中通快递单号必须以7开头+12至14位数字');
-            }
-        }
-
-        $orderBn = app::get("wap")->model('delivery')->dump(array('delivery_id' => $delivery_id), 'order_bn');
-        $order = app::get("ome")->model('orders')->dump(array('order_bn' => $orderBn), 'order_id,shop_type');
-        if ($order['shop_type'] == 'luban') {
-            $jyInfo = kernel::single('ome_bill_label')->getBillLabelInfo($order['order_id'], 'order', 'XJJY');
-            if ($jyInfo) {
-                $this->error('中转订单请联系客服修改直邮后再进行操作');
-            }
-        }
-
-        $isCheckStore = kernel::single('wap_delivery_process')->checkDeliveryItemStore($delivery_id);
-        if (!$isCheckStore) {
-            $this->error('库存不足，请联系库存管理员处理');
-        }
-
-        // 补录快递单号
+        $this->validateLogiNoInput($delivery_id, $logi_no, $logi_code);
         $this->checkDelivery('offline');
 
         $msg = '';
@@ -252,18 +202,8 @@ class wap_ctl_logistics extends wap_controller
         $data = array('delivery_id' => $delivery_id, 'logi_no' => $logi_no, 'logi_code' => $logi_code);
         $res = kernel::single('wap_delivery_process')->insertExpress($data);
         if ($res['rsp'] == 'succ') {
-
-            $wapDeliveryObj    = app::get('wap')->model('delivery');
-            $deliveryInfo      = $wapDeliveryObj->dump(array('delivery_id' => $delivery_id), '*');
-            $deliveryInfo['logi_no'] = $logi_no;//执行发货
-
-            $dlyProcessLib  = kernel::single('wap_delivery_process');
-            $is_bulu = true;
-            $res = $dlyProcessLib->consign($deliveryInfo, $is_bulu);
-            //task任务更新统计数据
-            $wapDeliveryLib    = kernel::single('wap_delivery');
-            $wapDeliveryLib->taskmgr_statistic('consign');
-            $this->success('补录快递单号成功');
+            kernel::single('wap_event_trigger_cloudprint')->updatePrintStatus($delivery_id);
+            $this->success('录入运单号成功');
         } else {
             $this->error($res['msg']);
         }
@@ -278,18 +218,39 @@ class wap_ctl_logistics extends wap_controller
     {
         $delivery_id = $_POST['delivery_id'];
         $logi_no = $_POST['logi_no'];
+        $logi_code = isset($_POST['logi_code']) ? $_POST['logi_code'] : '';
         $wapdeliveryObj = app::get('wap')->model('delivery');
+        $wap_delivery_bill_obj = app::get('wap')->model('delivery_bill');
 
         if (empty($delivery_id) || empty($logi_no)) {
             $this->error('参数不能为空');
         }
 
-        $wap_delivery_info = $wapdeliveryObj->dump(array('delivery_id' => $delivery_id), 'outer_delivery_bn,logi_id,logi_status');
-        if(!$wap_delivery_info){
+        $wap_delivery_info = $wapdeliveryObj->dump(array('delivery_id' => $delivery_id), 'outer_delivery_bn,logi_id,logi_status,status');
+        if (!$wap_delivery_info) {
             $this->error('wap 发货单不存在');
         }
 
-        if(!in_array($wap_delivery_info['logi_status'],['1','2','5','6','7'])) {
+        // 首次录入：仅保存运单号（insertExpress），不触发门店发货完成（consign）
+        $delivery_bill = $wap_delivery_bill_obj->dump(array('delivery_id' => $delivery_id), 'logi_no');
+        $is_first_entry = empty($delivery_bill['logi_no']);
+        if ($is_first_entry) {
+            if (empty($logi_code)) {
+                $this->error('请选择快递公司');
+            }
+            $this->validateLogiNoInput($delivery_id, $logi_no, $logi_code);
+            $this->checkDelivery('offline');
+            $data = array('delivery_id' => $delivery_id, 'logi_no' => $logi_no, 'logi_code' => $logi_code);
+            $res = kernel::single('wap_delivery_process')->insertExpress($data);
+            if ($res['rsp'] == 'succ') {
+                $this->success('录入运单号成功');
+            } else {
+                $this->error($res['msg']);
+            }
+            exit;
+        }
+
+        if (!in_array($wap_delivery_info['logi_status'], array('1', '2', '5', '6', '7'))) {
             $this->error('当前物流状态不允许修改运单号');
         }
 
@@ -431,5 +392,20 @@ class wap_ctl_logistics extends wap_controller
 
         $this->success('修改快递单号成功');
 
+    }
+
+    /**
+     * 录入/修改运单号共用校验
+     */
+    protected function validateLogiNoInput($delivery_id, $logi_no, $logi_code)
+    {
+        $processLib = kernel::single('wap_delivery_process');
+        $err_msg    = '';
+        if (!$processLib->validateLogiNoFormat($logi_no, $logi_code, $err_msg)) {
+            $this->error($err_msg);
+        }
+        if (!$processLib->validateLogiNoNotUsedByOthers($delivery_id, $logi_no, $err_msg)) {
+            $this->error($err_msg);
+        }
     }
 }

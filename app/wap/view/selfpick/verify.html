@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>确认提货</title>
+  <link rel="stylesheet" type="text/css" href="<{$env.app.res_url}>/css/common.css" />
+  <link rel="stylesheet" type="text/css" href="<{$env.app.res_url}>/css/index.css" />
+  <link rel="stylesheet" type="text/css" href="<{$env.app.res_url}>/css/work_space.css" />
+  <script src="<{$env.app.res_url}>/js/axios.min.js"></script>
+  <script src="<{$env.app.res_url}>/js/flexible.js"></script>
+  <{if $has_serial}>
+  <{include file="store/wxwork_sdk.html"}>
+  <{/if}>
+</head>
+
+<body>
+  <div class="page flex-col">
+    <div class="section_1">
+      <div class="text-wrapper_1 flex-row align-center justify-between">
+        <img src="<{$env.app.res_url}>/img/icon-back.png" class="icon-back" onclick="history.back()">
+        <span class="text_1">确认提货</span>
+        <span></span>
+      </div>
+    </div>
+    <div class="main selfpick-verify-main">
+      <{if $err_msg}>
+      <div class="section_4 flex-col">
+        <div class="list-item selfpick-verify-error">
+          <span class="text_12"><{$err_msg}></span>
+        </div>
+      </div>
+      <{elseif $delivery}>
+      <div class="section_4 flex-col">
+        <div class="list-item wspace-info">
+          <div class="text-wrapper_5 flex-row justify-between">
+            <span class="text_11">订单号：</span>
+            <span class="text_12"><{$delivery.order_bn}></span>
+          </div>
+          <div class="text-wrapper_5 flex-row justify-between">
+            <span class="text_11">门店：</span>
+            <span class="text_12"><{$delivery.store_name}></span>
+          </div>
+          <div class="text-wrapper_5 flex-row justify-between">
+            <span class="text_11">渠道：</span>
+            <span class="text_12"><{$delivery.shop_type_name}></span>
+          </div>
+          <div class="text-wrapper_5 flex-row justify-between">
+            <span class="text_11">下单时间：</span>
+            <span class="text_12"><{if $delivery.order_createtime}><{$delivery.order_createtime|date:"Y-m-d H:i:s"}><{else}><{$delivery.create_time|date:"Y-m-d H:i:s"}><{/if}></span>
+          </div>
+        </div>
+        <{if $order_items}>
+        <{foreach from=$order_items item=item}>
+        <div class="section_6 flex-row verify-good">
+          <img class="image_2" referrerpolicy="no-referrer"
+            src="<{if $item.goods_img_url}><{$item.goods_img_url}><{else}><{$env.app.res_url}>/img/goods_default.png<{/if}>" />
+          <div class="text-group_1 flex-col">
+            <span class="text_28"><{$item.name}></span>
+            <span class="text_29">商户货号：<{$item.bn}></span>
+            <{include file="common/item_display_lines.html" display_item=$item}>
+            <span class="text_29">子订单号：<{$item.esb_oid}></span>
+            <span class="text_30"><{$item.nums}>件；<{$item.product_attr}></span>
+          </div>
+        </div>
+        <div class="section_6 flex-wrap verify-price">
+          <div class="mrg-side-4">
+            <span class="text_36">买家</span><span class="text_37">￥<{$item.divide_order_fee}></span>
+          </div>
+          <div class="mrg-side-4">
+            <span class="text_36">优惠</span><span class="text_37">￥<{$item.esb_pmt_amount}></span>
+          </div>
+          <div class="mrg-side-4">
+            <span class="text_36">商家</span><span class="text_37">￥<{$item.esb_amount}></span>
+          </div>
+        </div>
+        <{/foreach}>
+        <{/if}>
+        <{if $require_pickup_code}>
+        <div class="selfpick-verify-code-box">
+          <label class="selfpick-verify-code-label">提货码</label>
+          <input type="text" class="selfpick-verify-code-input" id="pickupCodeInput" maxlength="6"
+            placeholder="请核对顾客提货码" value="<{$pickup_code}>">
+        </div>
+        <{/if}>
+        <{if $has_serial}>
+        <div class="list-item selfpick-serial-card">
+          <div class="selfpick-serial-card-title">唯一码扫描</div>
+          <div id="serialScanContainer"></div>
+        </div>
+        <{/if}>
+      </div>
+      <{/if}>
+    </div>
+    <{if $delivery}>
+    <div class="wspace-footer justify-between">
+      <button class="modal-btn modal-cancle" onclick="history.back()">返回</button>
+      <button class="modal-btn modal-confirm" id="confirmPickupBtn" onclick="doVerify()">确认提货</button>
+    </div>
+    <input type="hidden" id="delivery_id" value="<{$delivery.delivery_id}>">
+    <{/if}>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script src="<{$env.app.res_url}>/js/common.js"></script>
+  <script>
+    const requirePickupCode = <{if $require_pickup_code}>true<{else}>false<{/if}>;
+    const hasSerial = <{if $has_serial}>true<{else}>false<{/if}>;
+    const serialInfo = <{$serial_info_json}>;
+    const scanSerialUrl = '<{$scan_serial_url}>';
+    const releaseSerialUrl = '<{$release_serial_url}>';
+    const wxSignUrl = '<{$wx_sign_url}>';
+    const request2 = axios.create({ timeout: 10000, headers: { 'Content-Type': 'application/json' } });
+
+    const scannedList = [];
+    const scannedMap = {};
+
+    function getTotalRequired() {
+      if (!serialInfo || !serialInfo.serial_items) return 0;
+      return serialInfo.serial_items.reduce(function (sum, item) {
+        return sum + parseInt(item.number, 10);
+      }, 0);
+    }
+
+    function isSerialScanComplete() {
+      if (!hasSerial) return true;
+      return scannedList.length >= getTotalRequired();
+    }
+
+    function getSerialItemsPayload() {
+      const payload = {};
+      scannedList.forEach(function (row) {
+        if (!payload[row.bn]) {
+          payload[row.bn] = [];
+        }
+        payload[row.bn].push(row.sn);
+      });
+      return payload;
+    }
+
+    function renderSerialContent() {
+      const container = document.getElementById('serialScanContainer');
+      if (!container || !serialInfo) return;
+
+      const itemHtml = (serialInfo.serial_items || []).map(function (item) {
+        const scanned = scannedMap[item.bn] || 0;
+        return '<div class="serial-item-row">' +
+          '<div class="serial-item-name">' + item.product_name + '</div>' +
+          '<div class="serial-item-meta">货号：' + item.bn + '　数量：' + item.number + item.unit + '</div>' +
+          '<div class="serial-item-progress">已扫 ' + scanned + ' / ' + item.number + '</div>' +
+          '</div>';
+      }).join('');
+
+      const scannedHtml = scannedList.length
+        ? scannedList.map(function (row, idx) {
+            return '<div class="serial-scanned-row">' +
+              '<span>' + row.product_name + '：' + row.sn + '</span>' +
+              '<span class="serial-remove-btn" data-index="' + idx + '">删除</span>' +
+              '</div>';
+          }).join('')
+        : '<div class="serial-scanned-empty">暂无扫描记录</div>';
+
+      container.innerHTML =
+        '<div class="serial-scan-modal">' +
+          '<div class="serial-scan-tip">请扫描唯一码，全部扫满后可确认提货</div>' +
+          '<div class="serial-item-list">' + itemHtml + '</div>' +
+          '<div class="modal-form-item">' +
+            '<div class="input-box flex-row align-center justify-between">' +
+              '<label>唯一码</label>' +
+              '<input type="text" class="modal-input" id="serialScanInput" placeholder="请扫描或输入唯一码">' +
+              '<div class="scan-icon serial-scan-icon"><img src="<{$env.app.res_url}>/img/icon-scan.png" alt="扫码"></div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="serial-scanned-title">已扫描</div>' +
+          '<div class="serial-scanned-list" id="serialScannedList">' + scannedHtml + '</div>' +
+        '</div>';
+    }
+
+    function bindSerialEvents() {
+      const container = document.getElementById('serialScanContainer');
+      const input = document.getElementById('serialScanInput');
+      const listEl = document.getElementById('serialScannedList');
+
+      updateConfirmBtn();
+
+      function doScan() {
+        const delivery_id = document.getElementById('delivery_id').value;
+        const sn = input ? input.value.trim() : '';
+        if (!sn) {
+          showToast('请输入唯一码');
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('delivery_id', delivery_id);
+        formData.append('sn', sn);
+        formData.append('scanned_list', JSON.stringify(scannedList));
+
+        fetch(scanSerialUrl, { method: 'POST', body: formData })
+          .then(function (res) { return res.json(); })
+          .then(function (json) {
+            if (json.res !== 'succ') {
+              showToast(json.msg || '扫描失败');
+              return;
+            }
+            scannedList.push({
+              sn: json.sn,
+              bn: json.bn,
+              product_name: json.product_name
+            });
+            scannedMap[json.bn] = (scannedMap[json.bn] || 0) + 1;
+            renderSerialContent();
+            bindSerialEvents();
+            const newInput = document.getElementById('serialScanInput');
+            if (newInput) {
+              newInput.value = '';
+              newInput.focus();
+            }
+          })
+          .catch(function () {
+            showToast('扫描失败，请重试');
+          });
+      }
+
+      if (input) {
+        input.onkeydown = function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            doScan();
+          }
+        };
+      }
+
+      const scanIcon = container ? container.querySelector('.serial-scan-icon') : null;
+      if (scanIcon) {
+        scanIcon.onclick = function () {
+          scanQRCodeForSerial(function (code) {
+            const scanInput = document.getElementById('serialScanInput');
+            if (scanInput) scanInput.value = code;
+            doScan();
+          });
+        };
+      }
+
+      if (listEl) {
+        listEl.onclick = function (e) {
+          const target = e.target;
+          if (!target.classList.contains('serial-remove-btn')) {
+            return;
+          }
+          const index = parseInt(target.getAttribute('data-index'), 10);
+          if (isNaN(index) || !scannedList[index]) {
+            return;
+          }
+          const removed = scannedList.splice(index, 1)[0];
+          scannedMap[removed.bn] = Math.max(0, (scannedMap[removed.bn] || 0) - 1);
+          renderSerialContent();
+          bindSerialEvents();
+        };
+      }
+    }
+
+    function updateConfirmBtn() {
+      const btn = document.getElementById('confirmPickupBtn');
+      if (!btn || !hasSerial) return;
+      const complete = isSerialScanComplete();
+      btn.disabled = !complete;
+      btn.style.display = complete ? '' : 'none';
+    }
+
+    function scanQRCodeForSerial(callback) {
+      if (typeof wx === 'undefined') {
+        showToast('请在企业微信中打开');
+        return;
+      }
+      wapWxScan.requestScan(wxSignUrl, {
+        onSuccess: callback,
+        onFail: function (msg) {
+          showToast(msg);
+        }
+      });
+    }
+
+    function releaseSerialHold() {
+      const delivery_id = document.getElementById('delivery_id');
+      if (!delivery_id || !hasSerial || !releaseSerialUrl) return;
+      const formData = new FormData();
+      formData.append('delivery_id', delivery_id.value);
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(releaseSerialUrl, formData);
+      }
+    }
+
+    async function doVerify() {
+      const delivery_id = document.getElementById('delivery_id').value;
+      let pickup_code = '';
+      const pickupInput = document.getElementById('pickupCodeInput');
+      if (pickupInput) {
+        pickup_code = pickupInput.value.trim();
+      }
+
+      if (requirePickupCode && !pickup_code) {
+        showToast('请填写提货码');
+        if (pickupInput) pickupInput.focus();
+        return;
+      }
+
+      if (hasSerial && !isSerialScanComplete()) {
+        showToast('请先扫描全部唯一码');
+        const serialInput = document.getElementById('serialScanInput');
+        if (serialInput) serialInput.focus();
+        return;
+      }
+
+      const btn = document.getElementById('confirmPickupBtn');
+      const originalText = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '核销中...';
+      }
+
+      const postData = { delivery_id, pickup_code };
+      if (hasSerial) {
+        postData.serial_items = JSON.stringify(getSerialItemsPayload());
+      }
+
+      try {
+        const res = await request2.post('<{$do_verify_url}>', postData);
+        const data = res.data || res;
+        if (data.rsp === 'succ') {
+          showToast('提货成功');
+          window.location.href = '<{$return_url}>';
+        } else {
+          showToast(data.msg || data.err_msg || '提货失败');
+        }
+      } catch (e) {
+        showToast('提货失败');
+      } finally {
+        if (btn) {
+          btn.innerHTML = originalText;
+          updateConfirmBtn();
+        }
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const pickupInput = document.getElementById('pickupCodeInput');
+      if (pickupInput) {
+        pickupInput.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            doVerify();
+          }
+        });
+        if (!pickupInput.value.trim() && !hasSerial) {
+          pickupInput.focus();
+        }
+      }
+
+      if (hasSerial) {
+        renderSerialContent();
+        bindSerialEvents();
+        const serialInput = document.getElementById('serialScanInput');
+        if (serialInput) {
+          serialInput.focus();
+        }
+        window.addEventListener('pagehide', releaseSerialHold);
+      }
+    });
+  </script>
+  <style>
+    .selfpick-verify-main {
+      padding-bottom: 5rem;
+    }
+
+    .selfpick-verify-error {
+      text-align: center;
+      color: #e53935;
+    }
+
+    .selfpick-verify-code-box {
+      margin-top: 1rem;
+      padding: 0.75rem 0.5rem 0;
+      border-top: 1px solid #eee;
+    }
+
+    .selfpick-verify-code-label {
+      display: block;
+      font-size: 0.875rem;
+      color: #121212;
+      margin-bottom: 0.5rem;
+    }
+
+    .selfpick-verify-code-input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.75rem;
+      font-size: 1.125rem;
+      letter-spacing: 0.15rem;
+      text-align: center;
+      border: 1px solid #dfdfdf;
+      border-radius: 0.25rem;
+      background: #f7f7f7;
+    }
+
+    .selfpick-serial-card {
+      margin-top: 0.75rem;
+      padding: 0.813rem 0.688rem 1.125rem;
+    }
+
+    .selfpick-serial-card-title {
+      margin: 0 0 0.75rem;
+      font-size: 1rem;
+      font-weight: 500;
+      text-align: center;
+      color: #121212;
+    }
+
+    .selfpick-serial-card .serial-scan-modal {
+      max-height: none;
+      overflow: visible;
+    }
+
+    .selfpick-serial-card .modal-form-item {
+      margin-bottom: 0;
+    }
+
+    .selfpick-serial-card .input-box {
+      border-radius: 0.25rem;
+      background: #fff;
+    }
+
+    .selfpick-serial-card .modal-input {
+      flex: 1;
+      min-width: 0;
+      text-align: left;
+      margin: 0 0.5rem;
+    }
+
+    .selfpick-serial-card .serial-scanned-list {
+      max-height: 10rem;
+    }
+
+    .selfpick-serial-card .scan-icon img {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+
+    .wspace-footer .modal-btn.modal-confirm:disabled {
+      background: #000;
+      color: #d4ca99;
+      opacity: 0.45;
+    }
+  </style>
+</body>
+</html>

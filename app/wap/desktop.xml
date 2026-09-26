@@ -1,18 +1,3 @@
-<!--
-  Copyright 2012-2026 ShopeX (https://www.shopex.cn)
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
--->
 <desktop>
     <permissions>
         <permission id="wap_branch_product" show='ome_roles:show_o2o_branch' save='ome_roles:save_role'>供货管理(Wap)</permission>
@@ -24,7 +9,7 @@
         <permission id="wap_aftersale_returnproduct" show='ome_roles:show_o2o_branch' save='ome_roles:save_role'>门店退货(Wap)</permission>
         <permission id="wap_aftersale_changeproduct" show='ome_roles:show_o2o_branch' save='ome_roles:save_role'>门店换货(Wap)</permission>
         <permission id="wap_store_setting" show='ome_roles:show_o2o_branch' save='ome_roles:save_role'>门店设置(Wap)</permission>
-      
+        <permission id="wap_store_selfpick" show='ome_roles:show_o2o_branch' save='ome_roles:save_role'>自提订单(Wap)</permission>
     </permissions>
 
     <workground name="门店管理" id="o2o_center" order="1000" icon="icon-mendianguanli-01">
@@ -39,6 +24,7 @@
             <menu controller='admin_order' action='sign' permission='wap_order_sign' display='false' order='1023'>签收核销</menu>
             <menu controller='admin_aftersale_returnproduct' action='index' permission='wap_aftersale_returnproduct' display='false' order='1024'>退货列表</menu>
             <menu controller='admin_aftersale_changeproduct' action='index' permission='wap_aftersale_changeproduct' display='false' order='1025'>门店换货</menu>
+            <menu controller='admin_store_selfpick' action='index' permission='wap_store_selfpick' display='false' order='1028'>自提订单</menu>
             <menu controller='admin_store' action='setting' permission='wap_store_setting' display='false' order='1040'>门店设置</menu>
           
             

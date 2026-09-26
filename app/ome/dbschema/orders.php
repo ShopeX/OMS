@@ -879,7 +879,7 @@ $db['orders'] = array(
         'relate_order_bn'    => array(
             'type'            => 'varchar(32)',
             'label'           => '关联订单号',
-            'width'           => 130,
+            'width'           => 180,
             'searchtype'      => 'nequal',
             'editable'        => false,
             'filtertype'      => 'textarea',
@@ -947,7 +947,7 @@ $db['orders'] = array(
         ),
         'order_bool_type'    => array(
             'type'     => 'bigint(20)',
-            'label'    => '订单种类',
+            'label'    => '订单标识',
             'editable' => false,
             'default'  => '0',
         ),

@@ -90,7 +90,7 @@ class ome_sales_original_data
                     if ($presale_flag && $item['pmt_price']<0){
                         $tmp_sale_price =$tmp_sale_price+ $item['pmt_price'];
                     }
-                    $tmp_sale_price = $tmp_sale_price-$item['refund_money'];
+                   
 
                     // 格式化避免浮点数精度问题导致科学计数法
                     $order_info['order_objects'][$key]['order_items'][$k]['sale_price'] = floatval(sprintf('%.2f', $tmp_sale_price));
@@ -192,6 +192,7 @@ class ome_sales_original_data
                 $objPrice['pmt_price'] += $iv['pmt_price'];
                 $objPrice['sale_price'] += $iv['sale_price'];
                 $objPrice['part_mjz_discount'] += $iv['part_mjz_discount'];
+                $objPrice['refund_money'] += $iv['refund_money'];
                 $objPrice['divide_order_fee'] += $iv['divide_order_fee'];
                 $objPrice['platform_amount'] += $iv['platform_amount'];
                 $objPrice['settlement_amount'] += $iv['settlement_amount'];

@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class ome_ctl_admin_return_refund_apply extends desktop_controller {
     var $name = "售后退款单";
     var $workground = "aftersale_center";
@@ -201,20 +185,27 @@ class ome_ctl_admin_return_refund_apply extends desktop_controller {
     //保存退款申请
     function apply_refund(){
        $post = kernel::single('base_component_request')->get_params(true);
-       $this->begin('index.php?app=ome&ctl=admin_return_refund_apply&act=index&finder_vid=85439f');
-       $Oorefund = $this->app->model('refund_apply');
-       
+       $source = $_POST['source'] ? $_POST['source'] : 'local';
+
+       // 归档订单从弹窗提交：splash 不带跳转，避免把归档列表换成售后退款页
+       if ($source === 'archive') {
+           $this->begin('');
+       } else {
+           $this->begin('index.php?app=ome&ctl=admin_return_refund_apply&act=index');
+       }
+
        //退款申请来源(0:普通流程产生的退款申请 1:通过售后流程产生的退款申请)
        $post['refund_refer']    = '1';
-       $post['source']          = $_POST['source'] ? $_POST['source'] : 'local';
+       $post['source']          = $source;
        $is_update_order         = false;//是否更新订单付款状态
        $return = kernel::single('ome_refund_apply')->createRefundApply($post, $is_update_order, $error_msg);
        if(!$return)
        {
            $this->end(false, $error_msg);
        }
-       
-       $this->end(true, $return['msg']);
+
+       $msg = (is_array($return) && !empty($return['msg'])) ? $return['msg'] : '申请退款成功';
+       $this->end(true, $msg);
     }
 
     //$apply_id 退款申请单号,$refund_refer 退款申请来源 0:普通退款申请 1:通过售后流程产生的退款申请

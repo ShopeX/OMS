@@ -48,7 +48,12 @@ class  taoexlib_sms_event_einvoice extends taoexlib_sms_event_abstract implement
             array('id' => 'dingdanhao', 'name' => '订&nbsp;&nbsp;单&nbsp;&nbsp;号', 'value' => '{订单号}','br'=>''),
             array('id' => 'kaipiaoshijian', 'name' => '开票时间', 'value' => '{开票时间}','br'=>'<br>'),
             array('id' => 'fapiaohaoma', 'name' => '发票号码', 'value' => '{发票号码}','br'=>''),
+            array('id' => 'fapiaodaima', 'name' => '发票代码', 'value' => '{发票代码}','br'=>''),
+            array('id' => 'jiashuiheji', 'name' => '价税合计', 'value' => '{价税合计}','br'=>'<br>'),
             array('id' => 'kaipiaofangmingcheng', 'name' => '开票方名称', 'value' => '{开票方名称}','br'=>'<br>'),
+            array('id' => 'pdfurl', 'name' => 'PDF链接', 'value' => '{PDF链接}','br'=>''),
+            array('id' => 'ofdurl', 'name' => 'OFD链接', 'value' => '{OFD链接}','br'=>''),
+            array('id' => 'xmlurl', 'name' => 'XML链接', 'value' => '{XML链接}','br'=>'<br>'),
             array('id'=>'msgsign','name'=>'短信签名','value'=>'{短信签名}','br'=>''),
             array('id' => 'recovery', 'name' => '<font style="color:#f00">恢复默认</font>', 'value' => $this->_tmplContent,'br'=>'<br>','img'=>kernel::base_url(1).'/app/desktop/statics/bundle/afresh.gif'),
         );
@@ -95,8 +100,13 @@ class  taoexlib_sms_event_einvoice extends taoexlib_sms_event_abstract implement
         $order_bn = $params['order_bn'];
         $billing_time = $params['billing_time'];
         $invoice_no = $params['invoice_no'];
+        $invoice_code = isset($params['invoice_code']) ? $params['invoice_code'] : '';
+        $amount = isset($params['amount']) ? $params['amount'] : '';
         $payee_name = $params['payee_name'];
         $store_name = $params['store_name'];
+        $invoice_pdf_path = isset($params['invoice_pdf_path']) ? $params['invoice_pdf_path'] : '';
+        $invoice_ofd_path = isset($params['invoice_ofd_path']) ? $params['invoice_ofd_path'] : '';
+        $invoice_xml_url = isset($params['invoice_xml_url']) ? $params['invoice_xml_url'] : '';
         $helper = kernel::single('base_view_helper');
         $sendParams['phones'] = $params["telephone"];
         $sendParams['order_bn'] = $order_bn;
@@ -104,13 +114,25 @@ class  taoexlib_sms_event_einvoice extends taoexlib_sms_event_abstract implement
             'orderstr' => $helper->str_mosaic($order_bn, '*', true, 2, 4),
             'billing_time' => $billing_time,
             'invoice_no' => $invoice_no,
+            'invoice_code' => $invoice_code,
+            'amount' => $amount,
             'payee_name' => $payee_name,
+            'invoice_pdf_path' => $invoice_pdf_path,
+            'invoice_ofd_path' => $invoice_ofd_path,
+            'invoice_xml_url' => $invoice_xml_url,
             'msgsign' => "【".$store_name."】",
         );
 
+        foreach(kernel::servicelist('taoexlib.service.sms.einvoice.replace.format') as $object)
+        {
+            if(method_exists($object, 'format_replace')){
+                $object->format_replace($params, $sendParams['replace']);
+            }
+        }
+
         //替换签名 获取完整短信日志content
-        $find = array('{订单号}','{开票时间}','{发票号码}','{开票方名称}','{短信签名}');
-        $replace = array($helper->str_mosaic($order_bn, '*', true, 2, 4),$billing_time,$invoice_no,$payee_name,$sendParams['replace']['msgsign']);
+        $find = array('{订单号}','{开票时间}','{发票号码}','{发票代码}','{价税合计}','{开票方名称}','{PDF链接}','{OFD链接}','{XML链接}','{短信签名}');
+        $replace = array($sendParams['replace']['orderstr'],$sendParams['replace']['billing_time'],$sendParams['replace']['invoice_no'],$sendParams['replace']['invoice_code'],$sendParams['replace']['amount'],$sendParams['replace']['payee_name'],$sendParams['replace']['invoice_pdf_path'],$sendParams['replace']['invoice_ofd_path'],$sendParams['replace']['invoice_xml_url'],$sendParams['replace']['msgsign']);
 
         //获取短信日志content
         $sendParams['content'] = str_replace($find,$replace,$content);

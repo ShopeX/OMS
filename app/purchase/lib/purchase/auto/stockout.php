@@ -72,7 +72,7 @@ class purchase_purchase_auto_stockout
         
         $iso               = array_merge($iso, $pickInfo);
         $this->_isoInfo    = $iso;
-        $this->_branch_id  = $iso['branch_id'];
+        $this->_branch_id  = intval($iso['branch_id']);
         
         //获取店铺shop_id
         $sql     = "SELECT shop_id FROM sdb_purchase_order WHERE po_id=". $this->_isoInfo['po_id'];
@@ -113,6 +113,7 @@ class purchase_purchase_auto_stockout
             $error_msg    = '没有配置承运商';
             return false;
         }
+        
         if(empty($dly_mode))
         {
             $error_msg    = '没有配置配送方式';
@@ -157,6 +158,19 @@ class purchase_purchase_auto_stockout
         $inventoryLib   = kernel::single('taoguaninventory_inventorylist');
         $is_install     = app::get('taoguaninventory')->is_installed();
         $is_check       = false;//是否检查盘点
+        
+        // 获取仓库关联的供应商发货仓库
+        $relBranchInfo = app::get('ome')->model('branch_relation')->dump(array('branch_id'=>$this->_branch_id, 'type'=>'vopjitx'), '*');
+        if(empty($relBranchInfo['relation_branch_bn'])){
+            $error_msg = '创建JIT出库单时，没有配置【平台仓库编码配置-->唯品会JITX编码】，请检查!';
+            
+            $this->_logObj->write_log('check_stockout_bills@ome', $this->_isoInfo['stockout_id'], $error_msg);
+            
+            return false;
+        }
+        
+        // 供应商发货仓库编码
+        $delivery_warehouse = $relBranchInfo['relation_branch_bn'];
         
         //检查货品对应出库仓库存
         foreach ($this->_items as $key => $val)
@@ -217,6 +231,7 @@ class purchase_purchase_auto_stockout
                     'carrier_code'=>$this->_isoInfo['carrier_code'],//承运商编码
                     'delivery_time'=>$this->_isoInfo['delivery_time'],//送货批次
                     'arrival_time'=>$this->_isoInfo['arrival_time'],//要求到货时间
+                    'delivery_warehouse' => $delivery_warehouse, // 供应商发货仓库(如果是承运商=唯品会，则必填)
             );
             
             //超时请求3次

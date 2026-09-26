@@ -287,9 +287,29 @@ class ome_event_data_delivery
                 $data['extend_field'] = @json_decode($orderextend['extend_field'] ?? '', 1);
                 $data['extend_status'] = $orderextend['extend_status'] ?? '';
                 $data['order_bool_type'] = $row['order_bool_type'];
-            
-                // 合并发货单时，优先取第一个有密文数据的订单，并让它的订单号排在首位
-                if(!$encrypt_source_order_bn && isset($orderReceivers['encrypt_source_data']) && $orderReceivers['encrypt_source_data']){
+
+                // 物流中心包裹中心补发单：密文索引沿用原单 order_receiver
+                $returnReshippingLib = kernel::single('ome_return_reshipping');
+                if ($row['order_type'] === 'bufa'
+                    && $returnReshippingLib->isDeliveryBillLocalBufaOrder($row['order_id'])
+                    && !empty($row['relate_order_bn'])
+                ) {
+                    $relateOrder = $orderObj->db_dump(
+                        array('order_bn' => $row['relate_order_bn'], 'shop_id' => $row['shop_id']),
+                        'order_id'
+                    );
+                    if (!empty($relateOrder['order_id'])) {
+                        $relateReceiver = $orderReceiverMdl->db_dump(
+                            array('order_id' => $relateOrder['order_id']),
+                            'encrypt_source_data'
+                        );
+                        if (!empty($relateReceiver['encrypt_source_data'])) {
+                            $data['encrypt_source_data'] = json_decode($relateReceiver['encrypt_source_data'], true);
+                            $encrypt_source_order_bn = $row['relate_order_bn'];
+                            $data['bufa_from_delivery_bill'] = true;
+                        }
+                    }
+                } elseif (!$encrypt_source_order_bn && isset($orderReceivers['encrypt_source_data']) && $orderReceivers['encrypt_source_data']) {
                     $data['encrypt_source_data'] = json_decode($orderReceivers['encrypt_source_data'], true);
                     $encrypt_source_order_bn = $row['order_bn'];
                 }
@@ -423,6 +443,11 @@ class ome_event_data_delivery
             
             //订单号(合并发货单以'|'竖线分隔多个订单号)
             $data['order_bn'] = implode('|', $order_bns);
+            $data['is_guobu_order'] = 'false';
+            $isGuobu  = kernel::single('ome_bill_label')->isGuobu($order_id);
+            if ($isGuobu) {
+                $data['is_guobu_order'] = 'true';
+            }
             // 如果是唯品会，如果是合单，取第一个订单号，保证oms获取唯品会接口和给到wms的订单号一致
             if (kernel::single('ome_order_bool_type')->isJITX($data['order_bool_type']) && count($order_bns)>1) {
                 $data['is_vop_merge'] = true;

@@ -60,6 +60,26 @@ class taoexlib_mdl_sms_sample extends dbeav_model
         $result = $this->save($param);
         
         if ($param['id']) {
+            if($this->isWsdlSmsChannelEnabled()){
+                $param['status'] = '1';
+                $param['approved'] = '1';
+                $param['isapproved'] = 'true';
+                $param['sync_status'] = 'true';
+                $param['approvedtime'] = time();
+                $param['createtime'] = time();
+                $param['op_name'] = 'channel_sms';
+                $items_result = app::get('taoexlib')->model('sms_sample_items')->save($param);
+                $sampleData = array(
+                    'id' => $param['id'],
+                    'status' => '1',
+                    'approved' => '1',
+                    'isapproved' => 'true',
+                );
+                $this->save($sampleData);
+                $db->commit($transaction);
+                return $items_result;
+            }
+
         	$op_name = kernel::single('desktop_user')->get_name();
         	$param['createtime'] = time();
         	$param['op_name'] = $op_name;
@@ -81,6 +101,22 @@ class taoexlib_mdl_sms_sample extends dbeav_model
             }
         }
         
+    }
+
+    private function isWsdlSmsChannelEnabled()
+    {
+        $channelMdl = app::get('channel')->model('channel');
+        $channels = $channelMdl->getList('channel_id,node_type', array('channel_type' => 'sms', 'disabled' => 'false'), 0, 1, 'channel_id ASC');
+        if(!$channels || $channels[0]['node_type'] != 'soap'){
+            return false;
+        }
+
+        $adapter = app::get('channel')->model('adapter')->db_dump(array('channel_id' => $channels[0]['channel_id']), '*');
+        if(!$adapter || $adapter['adapter'] != 'openapi'){
+            return false;
+        }
+
+        return true;
     }
 
      /**

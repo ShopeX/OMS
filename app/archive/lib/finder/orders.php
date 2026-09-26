@@ -155,7 +155,26 @@ class archive_finder_orders{
                 'is_tax' => $_POST['is_tax'],
                 'source_status' => 'TRADE_FINISHED'
             );
-            kernel::single('invoice_order_front_router', 'b2c')->operateTax($arr_create_invoice);
+            
+            // 发票来源
+            $invoice_source = 'b2c';
+            
+            // 注册service，获取发票来源
+            foreach(kernel::servicelist('ome.service.invoice.analysis.prepose') as $object)
+            {
+                if(method_exists($object, 'get_invoice_source')){
+                    // 获取项目上定制的发票来源
+                    $custom_invoice_source = $object->get_invoice_source();
+                    if($custom_invoice_source){
+                        $invoice_source = $custom_invoice_source;
+                    }
+                }
+            }
+            
+            // 发票来源
+            $arr_create_invoice['invoice_source'] = $invoice_source;
+            
+            kernel::single('invoice_order_front_router', $invoice_source)->operateTax($arr_create_invoice);
         }
     }
 

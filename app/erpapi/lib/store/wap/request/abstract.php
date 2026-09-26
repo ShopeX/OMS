@@ -223,6 +223,19 @@ abstract class erpapi_store_wap_request_abstract
     }
 
     /**
+     * 发货单签收
+     *
+     * @return void
+     * @author
+     **/
+    public function delivery_sign($sdf){
+        $this->title = $this->__channelObj->wms['channel_name'] . '发货单签收';
+        $this->original_bn = $sdf['outer_delivery_bn'];
+
+        return $this->request('wap_event_receive_delivery','sign',$sdf);
+    }
+
+    /**
      * 商品添加
      * 
      * @return void

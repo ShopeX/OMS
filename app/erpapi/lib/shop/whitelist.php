@@ -663,7 +663,9 @@ class erpapi_shop_whitelist {
         SHOP_BILL_BOOK_BILL_GET,
         SHOP_RETURNORDER_DIFF_DETAIL_GET,
         SHOP_RETURNORDER_DIFF_LIST_GET,
+        STORE_WAYBILL_RESHIPPING_GET,
     );
+    
     private $mengdian = array(
         SHOP_LOGISTICS_OFFLINE_SEND,
         SHOP_LOGISTICS_DUMMY_SEND,

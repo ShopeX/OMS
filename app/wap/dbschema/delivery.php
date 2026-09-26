@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 $db['delivery']=array (
   'columns' =>
   array (
@@ -327,6 +311,24 @@ $db['delivery']=array (
       'editable' => false,
       'label' => '处理状态',
     ),
+    'wms_status' =>
+    array (
+      'type' => array(
+        '0' => '无',
+        '5' => '异常',
+        '10' => '仓库接单',
+        '15' => '打印',
+        '20' => '拣货',
+        '25' => '复核',
+        '30' => '打包',
+        '40' => '确认出库',
+      ),
+      'default' => '10',
+      'width' => 110,
+      'editable' => false,
+      'label' => '仓库作业状态',
+      'comment' => '仓库作业状态,可选值:0(无),5(异常),10(仓库接单),15(打印),20(拣货),25(复核),30(打包),40(确认出库)',
+    ),
     'memo' =>
     array (
       'type' => 'longtext',
@@ -518,6 +520,54 @@ $db['delivery']=array (
       'editable' => false,
       'in_list' => true,
     ),
+    'logi_id' =>
+    array (
+      'type' => 'table:dly_corp@ome',
+      'comment' => '物流公司ID',
+      'editable' => false,
+      'label' => '物流公司',
+      'filtertype' => 'normal',
+      'filterdefault' => true,
+    ),
+    'logi_name' =>
+    array (
+      'type' => 'varchar(100)',
+      'label' => '物流公司',
+      'comment' => '物流公司名称',
+      'editable' => false,
+      'width' => 75,
+      'in_list' => true,
+      'default_in_list' => true,
+    ),
+    'delivery_time' =>
+    array (
+      'type' => 'time',
+      'label' => '发货时间',
+      'comment' => '发货时间',
+      'editable' => false,
+      'in_list' => true,
+    ),
+    'logi_status' =>
+    array (
+      'type' => array(
+        '0' => '无',
+        '1' => '已揽收',
+        '2' => '在途中',
+        '3' => '已签收',
+        '4' => '退件/问题件',
+        '5' => '待取件',
+        '6' => '待派件',
+        '7' => '待揽收',
+        '8' => '已取消',
+      ),
+      'default' => '0',
+      'label' => '物流跟踪状态',
+      'editable' => false,
+      'in_list' => true,
+      'default_in_list' => false,
+      'filtertype' => 'normal',
+      'filterdefault' => true,
+    ),
    'print_count' =>
     array (
       'type' => 'number',
@@ -525,6 +575,29 @@ $db['delivery']=array (
       'editable' => false,
       'label' => '打印次数',
       'comment' => '打印次数',
+    ),
+    'platform_pickup_verified' =>
+    array (
+      'type' => 'tinyint(1)',
+      'default' => 0,
+      'editable' => false,
+      'label' => '平台提货码已核销',
+      'comment' => '平台侧提货码核销成功标记，用于断线后跳过重复调平台',
+    ),
+    'platform_pickup_verified_time' =>
+    array (
+      'type' => 'time',
+      'editable' => false,
+      'label' => '平台核销时间',
+      'comment' => '平台侧提货码核销成功时间',
+    ),
+    'platform_pickup_trace_id' =>
+    array (
+      'type' => 'varchar(64)',
+      'default' => '',
+      'editable' => false,
+      'label' => '平台核销traceId',
+      'comment' => '平台核销接口返回的 traceId',
     ),
   ),
   'index' =>

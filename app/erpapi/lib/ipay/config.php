@@ -41,6 +41,7 @@ class erpapi_ipay_config extends erpapi_config
             'format'       => 'json',
             'certi_id'     => base_certificate::certi_id(),
             'from_node_id' => base_shopnode::node_id('ome'),
+           
             'to_node_id'   => $this->__channelObj->channel['node_id'],
             'node_type'    => $this->__channelObj->channel['node_type'],
         );

@@ -108,69 +108,85 @@ class omeauto_auto_plugin_store extends omeauto_auto_plugin_abstract implements 
         $branchProductObj  = app::get('o2o')->model('branch_product');
         $basicMStockFreezeLib  = kernel::single('material_basic_material_stock_freeze');
         
-        //根据获取到的仓库来判断库存
+        $o2oStoreLib = kernel::single('o2o_store');
+        $orderIds    = array_column($group->getOrders(), 'order_id');
+        $eligible    = array();
+
+        //根据获取到的仓库来判断库存，收集所有可派单门店
         foreach ((array) $branchIds as $bid )
         {
+            // 本订单已拒单的门店，继续路由下一个门店
+            if ($o2oStoreLib->isBranchRefusedByOrder($bid, $orderIds)) {
+                continue;
+            }
+
+            // 门店设置了接单量且当日已满，继续路由下一个门店
+            if ($o2oStoreLib->isAcceptOrderLimitExceeded($bid)) {
+                continue;
+            }
+
             $storeManageLib->loadBranch(array('branch_id'=>$bid));
             $isCtrlStore    = $storeManageLib->isCtrlBranchStore();
             
             if(!$isCtrlStore){
-                $group->setBranchId($bid);
-                return true;
-            }else{
-                //检查基础物料的供货关系是否存在
-                $bm_ids    = array();
-                $is_flag   = true;
+                $eligible[] = $bid;
+                continue;
+            }
+
+            //检查基础物料的供货关系是否存在
+            $bm_ids    = array();
+            $is_flag   = true;
+            
+            foreach ($groupStore['pids'] as $bm_id)
+            {
+                $bm_ids[]    = $bm_id;
+            }
+            
+            //找到门店供货的基础物料中需要管控库存的基础物料
+            $allow    = true;
+            if($bm_ids)
+            {
+                //实际库存减掉冻结数再做库存判断
+                $sql      = "SELECT product_id as bm_id, store FROM sdb_ome_branch_product WHERE product_id in (".join(',', $bm_ids).") AND branch_id = ".$bid;
+                $prows    = $branchProductObj->db->select($sql);
                 
-                foreach ($groupStore['pids'] as $bm_id)
-                {
-                   
+                //转换数据格式
+                $store = array();
+                foreach ((array) $prows as $row) {
                     
+                    //根据门店仓库ID、基础物料ID获取该物料仓库级的预占
+                    $store_freeze    = $basicMStockFreezeLib->getO2oBranchFreeze($row['bm_id'], $bid);
+                    $row['store']    = ($row['store'] < $store_freeze) ? 0 : ($row['store'] - $store_freeze);
                     
-                    $bm_ids[]    = $bm_id;
+                    $store[$row['bm_id']] = $row;
                 }
                 
-                
-                //找到门店供货的基础物料中需要管控库存的基础物料
-                $allow    = true;
-                if($bm_ids)
-                {
-                    //实际库存减掉冻结数再做库存判断
-                    $sql      = "SELECT product_id as bm_id, store FROM sdb_ome_branch_product WHERE product_id in (".join(',', $bm_ids).") AND branch_id = ".$bid;
-                    $prows    = $branchProductObj->db->select($sql);
-                    
-                    //转换数据格式
-                    $store = array();
-                    foreach ((array) $prows as $row) {
-                        
-                        //根据门店仓库ID、基础物料ID获取该物料仓库级的预占
-                        $store_freeze    = $basicMStockFreezeLib->getO2oBranchFreeze($row['bm_id'], $bid);
-                        $row['store']    = ($row['store'] < $store_freeze) ? 0 : ($row['store'] - $store_freeze);
-                        
-                        $store[$row['bm_id']] = $row;
-                    }
-                    
-                    //检查订单组内的货品数量是否足够
-                    foreach ($groupStore['store'] as $pid => $nums) {
-                        if(in_array($pid, $bm_ids)){
-                            if (($store[$pid]['store'] - $nums) < 0) {
-                                $allow = false;
-                            }
+                //检查订单组内的货品数量是否足够
+                foreach ($groupStore['store'] as $pid => $nums) {
+                    if(in_array($pid, $bm_ids)){
+                        if (($store[$pid]['store'] - $nums) < 0) {
+                            $allow = false;
                         }
                     }
                 }
-                
-                //成功
-                if ($allow) {
-                    $group->setBranchId($bid);
-                    return true;
-                }
+            }
+            
+            if ($allow) {
+                $eligible[] = $bid;
             }
         }
-        
-        if (!$allow || ($is_flag === false)) {
+
+        if (empty($eligible)) {
             return false;
         }
+
+        $selected = $o2oStoreLib->pickBranchByLowestDispatch($eligible);
+        if ($selected <= 0) {
+            return false;
+        }
+
+        $group->setBranchId($selected);
+        return true;
     }
 
     //根据电商仓检查库存情况

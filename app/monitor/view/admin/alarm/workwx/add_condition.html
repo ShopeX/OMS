@@ -1,0 +1,185 @@
+<div class="form-layout" style="padding-bottom: 0px;">
+    <form method="post" id="workwx_condition_form" action="index.php?app=monitor&ctl=admin_alarm_workwx_rule&act=createCondition">
+        <input type="hidden" name="rule_id" value="<{$rule_id}>">
+        <div class="form-layout-block">
+            <div class="form-layout-fields">
+                <div class="form-field" style="width:40%">
+                    <span class="form-field-label">筛选条件：</span>
+                    <select name="type_id" id="workwx_type_id">
+                        <{foreach from=$condition_types key=tkey item=tname}>
+                        <option value="<{$tkey}>" <{if $init.role==$tkey}>selected="selected"<{/if}>><{$tname}></option>
+                        <{/foreach}>
+                    </select>
+                </div>
+            </div>
+            <div class="form-layout-fields">
+                <div class="form-field" style="width:100%">
+                    <span class="form-field-label">条件设定：</span>
+                    <div id="workwx_type_content" style="width:100%;"></div>
+                </div>
+            </div>
+            <div class="form-layout-fields">
+                <button class="btn-primary" id="workwx-condition-save-btn" type="button">确定</button>
+                <button class="btn-secondary" id="workwx-condition-cancel-btn" type="button">取消</button>
+            </div>
+        </div>
+    </form>
+</div>
+<script type="text/javascript">
+(function () {
+    var uid = '<{$uid}>';
+    var initRole = '<{$role}>';
+    var ruleId = '<{$rule_id}>';
+
+    if (typeof workwxRuleUniqueID === 'undefined') {
+        workwxRuleUniqueID = (function () {
+            var id = 1000;
+            return function () { return id++; };
+        })();
+    }
+
+    function getRoleListEl() {
+        var el = $('workwxRoleList');
+        if (el) {
+            return el;
+        }
+        var doc = document;
+        var win = window;
+        for (var i = 0; i < 5; i++) {
+            try {
+                if (win.parent && win.parent.document && win.parent !== win) {
+                    el = win.parent.document.getElementById('workwxRoleList');
+                    if (el) {
+                        return $(el);
+                    }
+                    win = win.parent;
+                } else {
+                    break;
+                }
+            } catch (e) {
+                break;
+            }
+        }
+        return null;
+    }
+
+    function bindRoleItem(item) {
+        var delBtn = item.getElement('.del');
+        var editBtn = item.getElement('.edit');
+        if (delBtn) {
+            delBtn.addEvent('click', function () {
+                if (confirm('你确定要删除当前通知条件吗？')) {
+                    item.destroy();
+                }
+            });
+        }
+        if (editBtn) {
+            editBtn.addEvent('click', function () {
+                var role = this.get('ref');
+                var itemUid = item.id;
+                new Dialog('index.php?app=monitor&ctl=admin_alarm_workwx_rule&act=addcondition', {
+                    width: 760,
+                    height: 520,
+                    title: '通知条件设定',
+                    ajaxoptions: { data: { role: role, uid: itemUid, rule_id: ruleId }, method: 'post' }
+                });
+            });
+        }
+    }
+
+    function addRole(role) {
+        var info = JSON.decode(role);
+        var listEl = getRoleListEl();
+        if (!listEl) {
+            alert('未找到规则列表，请关闭后重试');
+            return false;
+        }
+        var addItem = new Element('li', {
+            html: '<div title="' + info.caption + '">' + info.caption + '</div><span><a href="javascript:void(0);" class="edit" ref=\'' + role + '\'>编辑</a>&nbsp;<a href="javascript:void(0);" class="del">删除</a></span>'
+        }).inject(listEl);
+        addItem.id = 'm_item_' + workwxRuleUniqueID();
+        bindRoleItem(addItem);
+        return true;
+    }
+
+    function editRole(role, itemUid) {
+        var info = JSON.decode(role);
+        var editItem = $(itemUid);
+        if (!editItem) {
+            return addRole(role);
+        }
+        editItem.set('html', '<div title="' + info.caption + '">' + info.caption + '</div><span><a href="javascript:void(0);" class="edit" ref=\'' + role + '\'>编辑</a>&nbsp;<a href="javascript:void(0);" class="del">删除</a></span>');
+        bindRoleItem(editItem);
+        return true;
+    }
+
+    function displayDetail(role) {
+        var type = $('workwx_type_id').value;
+        new Request.HTML({
+            url: 'index.php?app=monitor&ctl=admin_alarm_workwx_rule&act=ajax',
+            method: 'post',
+            evalScripts: true,
+            update: $('workwx_type_content')
+        }).post('p[0]=' + type + '&p[1]=getUI&p[2]=' + (role || '') + '&p[3]=' + ruleId);
+    }
+
+    function closeDialog(btn) {
+        try {
+            btn.getParent('.dialog').retrieve('instance').close();
+        } catch (e) {}
+    }
+
+    $('workwx_type_id').addEvent('change', function () {
+        displayDetail('');
+    });
+
+    $('workwx-condition-cancel-btn').addEvent('click', function () {
+        closeDialog(this);
+    });
+
+    $('workwx-condition-save-btn').addEvent('click', function () {
+        $('workwx_condition_form').fireEvent('submit', { stop: $empty });
+    });
+
+    $('workwx_condition_form').removeEvents('submit').addEvent('submit', function (e) {
+        e.stop();
+        new Request.JSON({
+            url: this.action,
+            onRequest: function () {
+                $('workwx-condition-save-btn').set('disabled', 'true');
+                $('workwx-condition-cancel-btn').set('disabled', 'true');
+            },
+            onSuccess: function (result) {
+                if (!result) {
+                    alert('保存失败：服务器无响应');
+                    $('workwx-condition-save-btn').set('disabled', '');
+                    $('workwx-condition-cancel-btn').set('disabled', '');
+                    return;
+                }
+                if (result.code == 'SUCC') {
+                    var ok = false;
+                    if (uid === '') {
+                        ok = addRole(result.msg);
+                    } else {
+                        ok = editRole(result.msg, uid);
+                    }
+                    if (ok) {
+                        closeDialog($('workwx-condition-save-btn'));
+                    }
+                } else {
+                    alert(result.msg || '保存失败');
+                }
+                $('workwx-condition-save-btn').set('disabled', '');
+                $('workwx-condition-cancel-btn').set('disabled', '');
+            },
+            onFailure: function (xhr) {
+                $('workwx-condition-save-btn').set('disabled', '');
+                $('workwx-condition-cancel-btn').set('disabled', '');
+                alert('保存失败，请重试');
+            }
+        }).post(this);
+    });
+
+    displayDetail(initRole);
+})();
+</script>

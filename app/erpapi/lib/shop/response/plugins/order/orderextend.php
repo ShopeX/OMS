@@ -61,11 +61,25 @@ class erpapi_shop_response_plugins_order_orderextend extends erpapi_shop_respons
         
         if ($platform->_ordersdf['o2o_info']){
             $o2o_info = $platform->_ordersdf['o2o_info'];
+
+            // 有赞门店自提：解密 self_fetch_info_encrypted
+            if (!empty($o2o_info['self_fetch_info_encrypted'])
+                && $platform->__channelObj->channel['shop_type'] == 'youzan') {
+                $this->_applyYouzanSelfFetchInfo($platform, $o2o_info, $extend);
+                $o2o_info = $platform->_ordersdf['o2o_info'];
+            }
+
             if($o2o_info['o2o_store_bn']){
                 $extend['o2o_store_bn'] = $o2o_info['o2o_store_bn'];
             }
             if ($o2o_info['o2o_store_name']){
                 $extend['o2o_store_name'] = $o2o_info['o2o_store_name'];
+            }
+            if ($o2o_info['store_code'] && empty($extend['store_bn'])) {
+                $extend['store_bn'] = $o2o_info['store_code'];
+            }
+            if (empty($extend['store_dly_type']) && !empty($o2o_info['store_dly_type'])) {
+                $extend['store_dly_type'] = $o2o_info['store_dly_type'];
             }
             
         }
@@ -225,6 +239,12 @@ class erpapi_shop_response_plugins_order_orderextend extends erpapi_shop_respons
         //json_encode
         if($platform->_ordersdf['extend_field']) {
             $extend['extend_field'] = json_encode($platform->_ordersdf['extend_field'], JSON_UNESCAPED_UNICODE);
+        }
+
+        // store_dly_type=1 门店自提：与 ecshopx/fy 一致，写入 orders.shipping=STORE_SELF_FETCH（审单不拆单等）
+        if (!empty($extend['store_dly_type']) && (int) $extend['store_dly_type'] === 1) {
+            $this->_markStoreSelfFetchShipping($platform);
+            $extend['assign_express_code'] = 'o2o_pickup';
         }
        
         return $extend;
@@ -433,6 +453,78 @@ class erpapi_shop_response_plugins_order_orderextend extends erpapi_shop_respons
         return $extendinfo;
     }
     
+    /**
+     * 有赞 o2o_info.self_fetch_info_encrypted 解密并写入扩展/分仓字段
+     *
+     * @param erpapi_shop_response_abstract $platform
+     * @param array $o2o_info
+     * @param array $extend
+     */
+    protected function _applyYouzanSelfFetchInfo($platform, $o2o_info, &$extend)
+    {
+        $shop_id  = $platform->__channelObj->channel['shop_id'];
+        $order_bn = $platform->_ordersdf['order_bn'];
+        $encrypted = $o2o_info['self_fetch_info_encrypted'];
+
+        $selfFetchInfo = kernel::single('ome_security_youzan')->decryptSelfFetchInfo(
+            $shop_id,
+            $order_bn,
+            $encrypted
+        );
+        if (empty($selfFetchInfo)) {
+            return;
+        }
+
+        $storeCode = '';
+        if (!empty($selfFetchInfo['id'])) {
+            $storeCode = (string) $selfFetchInfo['id'];
+        } elseif (!empty($selfFetchInfo['kdt_id'])) {
+            $storeCode = (string) $selfFetchInfo['kdt_id'];
+        }
+
+        if ($storeCode) {
+            $platform->_ordersdf['o2o_info']['store_code']    = $storeCode;
+            $platform->_ordersdf['o2o_info']['o2o_store_bn']  = $storeCode;
+            $extend['store_bn']                               = $storeCode;
+            $extend['o2o_store_bn']                           = $storeCode;
+        }
+        if (!empty($selfFetchInfo['name'])) {
+            $platform->_ordersdf['o2o_info']['o2o_store_name'] = $selfFetchInfo['name'];
+            $extend['o2o_store_name']                          = $selfFetchInfo['name'];
+        }
+
+        // 自动审单指定仓拆单：store_dly_type=1 对应 o2o_pickup
+        $extend['store_dly_type'] = 1;
+
+        $extend['store_info'] = json_encode($selfFetchInfo, JSON_UNESCAPED_UNICODE);
+        $platform->_ordersdf['o2o_info']['self_fetch_info'] = $selfFetchInfo;
+
+        if ($storeCode && !empty($platform->_newOrder['order_objects'])) {
+            foreach ($platform->_newOrder['order_objects'] as $objKey => $object) {
+                $platform->_newOrder['order_objects'][$objKey]['store_code'] = $storeCode;
+            }
+        }
+    }
+
+    /**
+     * 门店自提：shipping.shipping_name = STORE_SELF_FETCH → orders.shipping
+     * shipping 组件先于插件执行，需同步写 _newOrder
+     *
+     * @param erpapi_shop_response_abstract $platform
+     */
+    protected function _markStoreSelfFetchShipping($platform)
+    {
+        if (!is_array($platform->_ordersdf['shipping'])) {
+            $platform->_ordersdf['shipping'] = array();
+        }
+        $platform->_ordersdf['shipping']['shipping_name'] = 'STORE_SELF_FETCH';
+
+        if (!isset($platform->_newOrder['shipping']) || !is_array($platform->_newOrder['shipping'])) {
+            $platform->_newOrder['shipping'] = array();
+        }
+        $platform->_newOrder['shipping']['shipping_name'] = 'STORE_SELF_FETCH';
+    }
+
     /**
      * 翱象数据格式化
      *

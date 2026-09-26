@@ -36,6 +36,13 @@ class wap_ctl_order extends wap_controller
 
         //发货
         $this->delivery_link['doConsign']    = app::get('wap')->router()->gen_url(array('ctl'=>'order','act'=>'doConsign'), true);
+        $this->delivery_link['getDeliverySerialInfo'] = app::get('wap')->router()->gen_url(array('ctl'=>'order','act'=>'getDeliverySerialInfo'), true);
+        $this->delivery_link['scanDeliverySerial']    = app::get('wap')->router()->gen_url(array('ctl'=>'order','act'=>'scanDeliverySerial'), true);
+        $this->delivery_link['getPrepareStockInfo']   = app::get('wap')->router()->gen_url(array('ctl'=>'order','act'=>'getPrepareStockInfo'), true);
+        $this->delivery_link['scanPrepareStockSerial'] = app::get('wap')->router()->gen_url(array('ctl'=>'order','act'=>'scanPrepareStockSerial'), true);
+        $this->delivery_link['removePrepareStockSerial'] = app::get('wap')->router()->gen_url(array('ctl'=>'order','act'=>'removePrepareStockSerial'), true);
+        $this->delivery_link['finishPrepareStock'] = app::get('wap')->router()->gen_url(array('ctl'=>'order','act'=>'finishPrepareStock'), true);
+        $this->delivery_link['getConsignPrepareInfo'] = app::get('wap')->router()->gen_url(array('ctl'=>'order','act'=>'getConsignPrepareInfo'), true);
 
         //签收
         $this->delivery_link['signPage']    = app::get('wap')->router()->gen_url(array('ctl'=>'order','act'=>'signPage'), true);
@@ -49,12 +56,13 @@ class wap_ctl_order extends wap_controller
        
         # 补录快递单号
         $this->delivery_link['doAddLogiNo']  = app::get('wap')->router()->gen_url(array('ctl'=>'logistics','act'=>'doAddLogiNo'), true);
+        $this->delivery_link['doUpdateLogiNo']  = app::get('wap')->router()->gen_url(array('ctl'=>'logistics','act'=>'doUpdateLogiNo'), true);
 
         # 呼叫快递
         $this->delivery_link['onlineDelivery']  = app::get('wap')->router()->gen_url(array('ctl'=>'order','act'=>'onlineDelivery'), true);
         # 取消发货
         $this->delivery_link['doCancelDelivery']  = app::get('wap')->router()->gen_url(array('ctl'=>'order','act'=>'doCancelDelivery'), true);
-
+        $this->delivery_link['getWxSign']  = app::get('wap')->router()->gen_url(array('ctl'=>'order','act'=>'getWxSign'), true);
 
         //待发货
         $this->delivery_link['orderWaitDelivery']  = app::get('wap')->router()->gen_url(array('ctl'=>'order','act'=>'index?view=wait_delivery'), true);
@@ -77,7 +85,8 @@ class wap_ctl_order extends wap_controller
      */
     function _views_confirm($curr_view)
     {
-        $base_filter = array();
+        $wapDeliveryLib = kernel::single('wap_delivery');
+        $base_filter = $wapDeliveryLib->getExcludePickupFilter();
         $wapDeliveryObj    = app::get('wap')->model('delivery');
 
         $page              = intval($_POST['page']) ? intval($_POST['page']) : 0;
@@ -185,7 +194,8 @@ class wap_ctl_order extends wap_controller
      */
     function _views_tab($curr_view)
     {
-        $base_filter = array();
+        $wapDeliveryLib = kernel::single('wap_delivery');
+        $base_filter = $wapDeliveryLib->getExcludePickupFilter();
         $wapDeliveryObj    = app::get('wap')->model('delivery');
 
         $page              = intval($_POST['page']) ? intval($_POST['page'])-1 : 0;
@@ -322,23 +332,42 @@ class wap_ctl_order extends wap_controller
     }
 
     /**
+     * 解析订单列表 Tab（支持路径参数 /view/xxx 与 query ?view=xxx）
+     */
+    protected function _resolveOrderView()
+    {
+        $requestParams = kernel::request()->request_params;
+        if (!empty($requestParams['view'])) {
+            return $requestParams['view'];
+        }
+        if (!empty($_GET['view'])) {
+            return $_GET['view'];
+        }
+        if (!empty($_POST['menu_type'])) {
+            return $_POST['menu_type'];
+        }
+
+        return '';
+    }
+
+    /**
      * 订单查看
      */
     function index()
     {
-        if ($_GET['view']) {
-            $this->delivery_type = $_GET['view'];
-            $sub_menu = $this->_views_tab($this->delivery_type);
-        } else {
-            $this->delivery_type = 'all';
-            $sub_menu = $this->_views_tab($this->delivery_type);
-        }
+        $view = $this->_resolveOrderView();
+        $this->delivery_type = $view ?: 'all';
+        $sub_menu = $this->_views_tab($this->delivery_type);
 
         $this->pagedata['sub_menu'] = $sub_menu;
 
         $filter      = $sub_menu[$this->delivery_type]['filter'];
 
         $filter = $this->getCreateTimeByDateType($filter);
+
+        if ($this->delivery_type == 'wait_delivery') {
+            kernel::single('wap_delivery')->syncStaleWapWaitDeliveryFromOme($filter, 100);
+        }
 
         $title       = $sub_menu[$this->delivery_type]['label'];
 
@@ -729,6 +758,190 @@ class wap_ctl_order extends wap_controller
     }
 
     /**
+     * 获取发货单唯一码明细
+     */
+    public function getDeliverySerialInfo()
+    {
+        $delivery_id = intval($_POST['delivery_id']);
+        $serialLib   = kernel::single('wap_delivery_serial');
+        $err_msg     = '';
+        $info        = $serialLib->getDeliverySerialInfo($delivery_id, $err_msg);
+
+        if ($info === false) {
+            echo json_encode(['res' => 'error', 'msg' => $err_msg ?: '获取失败']);
+            exit;
+        }
+
+        echo json_encode(array_merge(['res' => 'succ'], $info));
+        exit;
+    }
+
+    /**
+     * 扫描唯一码
+     */
+    public function scanDeliverySerial()
+    {
+        $delivery_id  = intval($_POST['delivery_id']);
+        $sn           = trim($_POST['sn']);
+        $op_no        = trim($_POST['op_no'] ?? '');
+        if ($op_no === '') {
+            echo json_encode(['res' => 'error', 'msg' => '请先录入工号']);
+            exit;
+        }
+        $scannedList  = [];
+        if (!empty($_POST['scanned_list'])) {
+            $scannedList = json_decode($_POST['scanned_list'], true);
+            if (!is_array($scannedList)) {
+                $scannedList = [];
+            }
+        }
+
+        $serialLib = kernel::single('wap_delivery_serial');
+        $err_msg   = '';
+        $result    = $serialLib->scanSerial($delivery_id, $sn, $scannedList, $err_msg);
+
+        if ($result === false) {
+            echo json_encode(['res' => 'error', 'msg' => $err_msg ?: '扫描失败']);
+            exit;
+        }
+
+        echo json_encode(array_merge(['res' => 'succ'], $result));
+        exit;
+    }
+
+    /**
+     * 备货：获取唯一码明细及已扫记录
+     */
+    public function getPrepareStockInfo()
+    {
+        $delivery_id = intval($_POST['delivery_id']);
+        $serialLib   = kernel::single('wap_delivery_serial');
+        $err_msg     = '';
+        $info        = $serialLib->getPrepareStockInfo($delivery_id, $err_msg);
+
+        if ($info === false) {
+            echo json_encode(['res' => 'error', 'msg' => $err_msg ?: '获取失败']);
+            exit;
+        }
+
+        echo json_encode(array_merge(['res' => 'succ'], $info));
+        exit;
+    }
+
+    /**
+     * 备货：扫描并保存唯一码
+     */
+    public function scanPrepareStockSerial()
+    {
+        $delivery_id = intval($_POST['delivery_id']);
+        $sn          = trim($_POST['sn']);
+        $op_no       = trim($_POST['op_no'] ?? '');
+
+        $serialLib = kernel::single('wap_delivery_serial');
+        $err_msg   = '';
+        $result    = $serialLib->scanPrepareSerial($delivery_id, $sn, $op_no, $err_msg);
+
+        if ($result === false) {
+            echo json_encode(['res' => 'error', 'msg' => $err_msg ?: '扫描失败']);
+            exit;
+        }
+
+        echo json_encode(array_merge(['res' => 'succ'], $result));
+        exit;
+    }
+
+    /**
+     * 备货：删除已扫唯一码
+     */
+    public function removePrepareStockSerial()
+    {
+        $delivery_id     = intval($_POST['delivery_id']);
+        $item_serial_id  = intval($_POST['item_serial_id']);
+
+        $serialLib = kernel::single('wap_delivery_serial');
+        $err_msg   = '';
+        $result    = $serialLib->removePrepareSerial($delivery_id, $item_serial_id, $err_msg);
+
+        if ($result === false) {
+            echo json_encode(['res' => 'error', 'msg' => $err_msg ?: '删除失败']);
+            exit;
+        }
+
+        echo json_encode(array_merge(['res' => 'succ'], $result));
+        exit;
+    }
+
+    /**
+     * 备货完成：更新 WAP 发货单为已打印
+     */
+    public function finishPrepareStock()
+    {
+        $delivery_id = intval($_POST['delivery_id']);
+        $serialLib   = kernel::single('wap_delivery_serial');
+        $err_msg     = '';
+        $result      = $serialLib->finishPrepareStock($delivery_id, $err_msg);
+
+        if ($result === false) {
+            echo json_encode(['res' => 'error', 'msg' => $err_msg ?: '备货失败']);
+            exit;
+        }
+
+        echo json_encode(array_merge(['res' => 'succ', 'msg' => '备货成功'], $result));
+        exit;
+    }
+
+    /**
+     * 确认发货：获取备货唯一码及物流录入信息
+     */
+    public function getConsignPrepareInfo()
+    {
+        $delivery_id = intval($_POST['delivery_id']);
+        $serialLib   = kernel::single('wap_delivery_serial');
+        $err_msg     = '';
+        $info        = $serialLib->getConsignPrepareInfo($delivery_id, $err_msg);
+
+        if ($info === false) {
+            echo json_encode(['res' => 'error', 'msg' => $err_msg ?: '获取失败']);
+            exit;
+        }
+
+        $bill = app::get('wap')->model('delivery_bill')->dump(
+            ['delivery_id' => $delivery_id],
+            'logi_no'
+        );
+        $info['has_logi_no'] = !empty($bill['logi_no']);
+
+        $delivery = app::get('wap')->model('delivery')->dump(
+            ['delivery_id' => $delivery_id],
+            'order_bn,is_cod'
+        );
+        if (!empty($delivery['order_bn'])) {
+            $orderInfo = kernel::single('wap_delivery')->get_order_info($delivery['order_bn'], $delivery['is_cod']);
+            $info['source_status'] = !empty($orderInfo['source_status']) ? $orderInfo['source_status'] : '';
+        }
+
+        echo json_encode(array_merge(['res' => 'succ'], $info));
+        exit;
+    }
+
+    /**
+     * 释放发货单唯一码预占
+     */
+    public function releaseDeliverySerialHold()
+    {
+        $delivery_id = intval($_POST['delivery_id']);
+        $delivery    = app::get('wap')->model('delivery')->dump(['delivery_id' => $delivery_id], 'delivery_id');
+        if (empty($delivery)) {
+            echo json_encode(['res' => 'error', 'msg' => '发货单不存在']);
+            exit;
+        }
+
+        kernel::single('machinecenter_sn_hold')->releaseByBill('delivery', $delivery_id);
+        echo json_encode(['res' => 'succ', 'msg' => '已释放']);
+        exit;
+    }
+
+    /**
      * 立即发货
      *
      * @return json
@@ -796,8 +1009,70 @@ class wap_ctl_order extends wap_controller
         }
         
         $deliveryInfo['order_number']  = 1;
+
+        $deliveryBill = app::get('wap')->model('delivery_bill')->dump(
+            array('delivery_id' => $delivery_id),
+            'logi_no'
+        );
+        $postLogiNo   = trim($_POST['logi_no'] ?? '');
+        $postLogiCode = trim($_POST['logi_code'] ?? '');
+        if (empty($deliveryBill['logi_no'])) {
+            if ($postLogiNo === '' || $postLogiCode === '') {
+                echo json_encode(array('res' => 'error', 'msg' => '请填写快递公司和运单号'));
+                exit;
+            }
+            $saveErr = '';
+            if (!kernel::single('wap_delivery_process')->saveLogiNoForConsign(
+                $delivery_id,
+                $postLogiNo,
+                $postLogiCode,
+                $saveErr
+            )) {
+                echo json_encode(array('res' => 'error', 'msg' => $saveErr ?: '保存运单号失败'));
+                exit;
+            }
+        }
+
+        $serialLib      = kernel::single('wap_delivery_serial');
+        $formattedItems = [];
+        $serialInfo = $serialLib->getDeliverySerialInfo($delivery_id, $serialErr);
+        if ($serialInfo === false) {
+            echo json_encode(['res' => 'error', 'msg' => $serialErr ?: '唯一码校验失败']);
+            exit;
+        }
+        if (!empty($serialInfo['has_serial'])) {
+            $serialItems = [];
+            if (!empty($_POST['serial_items'])) {
+                $serialItems = json_decode($_POST['serial_items'], true);
+            }
+            if (empty($serialItems)) {
+                $serialItems = $serialLib->buildSerialItemsPayloadFromPrepare($delivery_id);
+            }
+            $formattedItems = $serialLib->validateSerialItemsForConsign($delivery_id, $serialItems, $serialErr);
+            if ($formattedItems === false) {
+                echo json_encode(['res' => 'error', 'msg' => $serialErr ?: '唯一码校验失败']);
+                exit;
+            }
+            $deliveryInfo['serial_items'] = $formattedItems;
+        }
+
+        $consignOp = kernel::single('wap_delivery_process')->getConsignOp();
+        $opNo = trim($_POST['op_no'] ?? '');
+        if ($opNo === '' && !empty($serialInfo['has_serial'])) {
+            $savedPrepare = $serialLib->loadPrepareSerialRows($delivery_id);
+            $opNo = trim($savedPrepare['op_no'] ?? '');
+        }
+        if (!empty($serialInfo['has_serial']) && $opNo === '') {
+            echo json_encode(['res' => 'error', 'msg' => '请先录入工号']);
+            exit;
+        }
+        if ($opNo !== '') {
+            $consignOp['op_no'] = $opNo;
+            $deliveryInfo['scanned_op_no'] = $opNo;
+        }
+        $deliveryInfo = array_merge($deliveryInfo, $consignOp);
         
-        //执行发货
+        //执行发货（machinecenter SN 主数据走 OME 回写；门店发货唯一码记录需 scanned_op_no）
         $dlyProcessLib  = kernel::single('wap_delivery_process');
         $res            = $dlyProcessLib->consign($deliveryInfo);
       
@@ -809,7 +1084,10 @@ class wap_ctl_order extends wap_controller
             
             echo json_encode(array('res'=>'succ', 'msg'=>'发货成功'));
             exit;
-        }else {
+        }else { 
+            if (!empty($formattedItems)) {
+                kernel::single('machinecenter_sn_hold')->releaseByBill('delivery', $delivery_id);
+            }
             echo json_encode(array('res'=>'error', 'msg'=>'发货失败'));
             exit;
         }
@@ -1333,10 +1611,9 @@ class wap_ctl_order extends wap_controller
         $url = $_POST['url'];
 
         $msg = '';
-        $wxSign = kernel::single('monitor_wechat_token')->getWxSign($url, $msg);
+        $wxSign = kernel::single('wap_wechat_sign')->getSign($url, $msg);
         if (!$wxSign) {
-            $msg = $msg ? $msg : '网络异常，请重试';
-            $this->error($msg);
+            $this->error($msg ? $msg : '网络异常，请重试');
         }
 
         $this->success('签名成功', $wxSign);

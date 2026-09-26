@@ -17,6 +17,8 @@
 /**
  * 账单接口下载任务
  *
+ * 统一调用 financebase_rpc_request_bill::process(shop_type)；矩阵直连落 CSV（当前场景：360buy + biz_type=360buy_bills）由 RPC 返回 csv_files。
+ *
  * @author 334395174@qq.com
  * @version 0.1
  */
@@ -47,7 +49,6 @@ class financebase_autotask_task_type_billApiDownload extends financebase_autotas
 
         $oRpc       = kernel::single('financebase_rpc_request_bill');
         $storageLib = kernel::single('taskmgr_interface_storage');
-        $oTask      = kernel::single('financebase_data_task');
 
         $params = array ();
         $params['bill_date']  = $bill_date;
@@ -59,9 +60,17 @@ class financebase_autotask_task_type_billApiDownload extends financebase_autotas
         $params['queue_no'] = $task_info['queue_no'];
         $params['download_id'] = $task_info['download_id'];
         $params['queue_id']    = $task_info['queue_id'];
+        if (isset($task_info['queue_data']['biz_type'])) {
+            $params['biz_type'] = $task_info['queue_data']['biz_type'];
+        }
+        if (!empty($task_info['queue_data']['startTime'])) {
+            $params['startTime'] = $task_info['queue_data']['startTime'];
+        }
+        if (!empty($task_info['queue_data']['endTime'])) {
+            $params['endTime'] = $task_info['queue_data']['endTime'];
+        }
 
-        // 从矩阵接口获取下载url
-        $rpcRes = $oRpc->process($shop_type,$params);
+        $rpcRes = $oRpc->process($shop_type, $params);
         $this->oFunc->writelog($shop_type.'对账单-获取对账单结果','settlement',$rpcRes);
 
         if(!$rpcRes || (isset($rpcRes['rsp']) && $rpcRes['rsp'] == 'fail'))
@@ -69,6 +78,8 @@ class financebase_autotask_task_type_billApiDownload extends financebase_autotas
             $error_msg[] = ($rpcRes && $rpcRes['rsp'] == 'fail') ? $rpcRes['err_msg'] : '没有远程地址';
             return false;
         }
+
+        $csv_files = array();
 
         if ($rpcRes['downloadurl'] === false) {
             $csv_files = (array)$rpcRes['csv_files'];
@@ -117,6 +128,8 @@ class financebase_autotask_task_type_billApiDownload extends financebase_autotas
         // 读取文件
         foreach ((array)$csv_files as $file_name) {
             $path_parts = pathinfo($file_name);
+            $ext        = isset($path_parts['extension']) ? strtolower($path_parts['extension']) : 'csv';
+            $file_type  = ($ext === 'json') ? 'json' : 'csv';
 
             $task_name = sprintf($shop_type."对账单（ %s ）",$params['bill_date']);
             $move_res = $storageLib->save($file_name, $path_parts['filename'], $remote_url);
@@ -130,9 +143,14 @@ class financebase_autotask_task_type_billApiDownload extends financebase_autotas
                 $queueData['queue_data']['shop_id']    = $shop_id;
                 $queueData['queue_data']['shop_name']  = $task_info['queue_data']['shop_name'];
                 $queueData['queue_data']['bill_date']  = $bill_date;
-                $queueData['queue_data']['shop_type']  = $shop_type;
+                $queueData['queue_data']['shop_type']  = isset($task_info['queue_data']['import_shop_type'])
+                    ? $task_info['queue_data']['import_shop_type']
+                    : $shop_type;
+                if (!empty($task_info['queue_data']['biz_type'])) {
+                    $queueData['queue_data']['biz_type'] = $task_info['queue_data']['biz_type'];
+                }
                 $queueData['queue_data']['task_name']  = base64_encode(basename($file_name));
-                $queueData['queue_data']['file_type']  = 'csv';
+                $queueData['queue_data']['file_type']  = $file_type;
                 $queueData['queue_data']['remote_url'] = base64_encode($remote_url);
 
                 $queue_id = $this->oQueue->insert($queueData);

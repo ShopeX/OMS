@@ -2,7 +2,7 @@
 $db['workflow_record'] = array(
     'columns' => array(
         'id' => array(
-            'type' => 'number',
+            'type' => 'int unsigned',
             'required' => true,
             'pkey' => true,
             'extra' => 'auto_increment',
@@ -13,13 +13,26 @@ $db['workflow_record'] = array(
             'order' => 1,
         ),
         'case_id' => array(
-            'type' => 'table:workflow_case@ticket',
+            'type' => 'int unsigned',
             'required' => true,
+            'label' => '审批ID',
+            'editable' => true,
+            'in_list' => true,
+            'default_in_list' => false,
+            'order' => 10,
+        ),
+        'case_bn' => array(
+            'type' => 'varchar(32)',
+            'required' => true,
+            'is_title' => true,
             'label' => '审批号',
             'editable' => true,
             'in_list' => true,
             'default_in_list' => true,
-            'order' => 10,
+            'searchtype' => 'has',
+            'filtertype' => 'has',
+            'width' => 180,
+            'order' => 11,
         ),
         'node_id' => array(
             'type' => 'table:workflow_node@ticket',
@@ -58,7 +71,7 @@ $db['workflow_record'] = array(
             'required' => false,
             'label' => '审批人ID',
             'editable' => true,
-            'in_list' => false,
+            'in_list' => true,
             'default_in_list' => false,
             'order' => 30,
         ),

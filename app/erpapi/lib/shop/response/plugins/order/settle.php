@@ -42,6 +42,8 @@ class erpapi_shop_response_plugins_order_settle extends erpapi_shop_response_plu
 			}
 			
 			$data     = reset($result['data']);
+			// extend 会 serialize 入库；平台返回里若含 emoji(🍀等) 且表/连接非 utf8mb4 会报 Incorrect string value
+			$data     = $this->_strip4ByteChars($data);
 			$settle[] = array(
 				'type'                => 'commission',
 				'material_bn'         => $value['bn'],
@@ -82,10 +84,37 @@ class erpapi_shop_response_plugins_order_settle extends erpapi_shop_response_plu
 		$settleObj = app::get('ome')->model('order_settle');
 		foreach ($settle as $key => $value) {
 			$settle[$key]['order_id'] = $order_id;
+			if (isset($settle[$key]['extend'])) {
+				$settle[$key]['extend'] = $this->_strip4ByteChars($settle[$key]['extend']);
+			}
 		}
 		
 		$sql = ome_func::get_insert_sql($settleObj, $settle);
 		
 		kernel::database()->exec($sql);
+	}
+
+	/**
+	 * 去掉 emoji 等 4 字节 UTF-8（U+10000 以上）
+	 *
+	 * @param mixed $value
+	 * @return mixed
+	 */
+	private function _strip4ByteChars($value)
+	{
+		if (is_array($value)) {
+			foreach ($value as $k => $v) {
+				$value[$k] = $this->_strip4ByteChars($v);
+			}
+			return $value;
+		}
+		if (is_object($value)) {
+			$arr = json_decode(json_encode($value), true);
+			return is_array($arr) ? $this->_strip4ByteChars($arr) : $value;
+		}
+		if (!is_string($value) || $value === '') {
+			return $value;
+		}
+		return preg_replace('/[\x{10000}-\x{10FFFF}]/u', '', $value);
 	}
 }

@@ -1,24 +1,10 @@
-<!--
-  Copyright 2012-2026 ShopeX (https://www.shopex.cn)
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
--->
 <desktop>
 	<permissions>
 		<permission id="logistics_exrecommend">智选物流</permission>
 		<permission id="channel_index_kuaidi">第三方快递</permission>
 		<permission id="channel_index_cloudprint">云打印授权</permission>
-		<!-- <permission id="channel_index_ticket">工单集成授权</permission> -->
+		<permission id="channel_index_ticket">工单集成授权</permission>
+		<permission id="channel_index_sms">短信开通</permission>
 	</permissions>
 	<workground name="系统集成" id="channel_center" order="1400" icon="icon-xitongjicheng-01">
 		<menugroup name="智能优选" en="intelligent-optimization">
@@ -28,9 +14,12 @@
 			<menu controller='admin_channel' action='index' params='channel_type:kuaidi' permission='channel_index_kuaidi' display='true' order="100213">
 				第三方快递
 			</menu>
-			<!-- <menu controller='admin_channel' action='index' params='channel_type:ticket' permission='channel_index_ticket' display='true' order="100214">
+			<menu controller='admin_channel' action='index' params='channel_type:ticket' permission='channel_index_ticket' display='true' order="100214">
 				工单集成授权
-			</menu> -->
+			</menu>
+			<menu controller='admin_channel' action='index' params='channel_type:sms' permission='channel_index_sms' display='true' order="100215">
+				短信开通
+			</menu>
 		</menugroup>
 		<menugroup name="云打印" en="cloudprint-yilian">
 			<menu controller='admin_channel' action='index' params='channel_type:cloudprint' permission='channel_index_cloudprint' display='true' order="100214">

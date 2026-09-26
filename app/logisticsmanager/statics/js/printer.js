@@ -2386,6 +2386,31 @@ var CaiNiaoPrinter = new Class({
                     taskID:(is_preview ? '1_' : '0_') + printData.logi_no,
                     printInfo:jsonPacket.print_info,
                 };
+
+                if (this.options.custom_template_url) {
+                    var customConfig = this.options.custom_data || {};
+                    var customData = {
+                        shopName: printData.shop_name ? printData.shop_name : '',
+                        productInfo: customConfig.has_product_info && printData.wxshipin_product_info
+                            ? printData.wxshipin_product_info
+                            : [],
+                        productBarcode: customConfig.barcode_field && typeof printData[customConfig.barcode_field] !== 'undefined'
+                            ? printData[customConfig.barcode_field]
+                            : '',
+                        productQRcode: customConfig.qrcode_field && typeof printData[customConfig.qrcode_field] !== 'undefined'
+                            ? printData[customConfig.qrcode_field]
+                            : ''
+                    };
+                    if (customConfig.fields) {
+                        customConfig.fields.each(function(field){
+                            customData[field] = typeof printData[field] !== 'undefined' ? printData[field] : '';
+                        });
+                    }
+                    doc.customInfo = {
+                        templateUrl: this.options.custom_template_url,
+                        data: customData
+                    };
+                }
                 
                 documents.push(doc);
                
@@ -2813,4 +2838,3 @@ var CaiNiaoPrinter = new Class({
     });
   
 })();
-

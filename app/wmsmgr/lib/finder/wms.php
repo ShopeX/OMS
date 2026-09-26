@@ -138,7 +138,7 @@ class wmsmgr_finder_wms{
         $shop_config = app::get('finance')->getConf('shop_config_'.$wms_id);
 
         $shopMdl = app::get('ome')->model('shop');
-        $shop_list = $shopMdl->getlist('*');
+        $shop_list = $shopMdl->getlist('*', array('s_type' => '1'));
         foreach($shop_list as $k=>&$v){
             $v['wms_code'] = isset($shop_config[$v['shop_bn']]) ? $shop_config[$v['shop_bn']] : $v['shop_bn'];
         }

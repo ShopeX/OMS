@@ -797,6 +797,43 @@ class finance_mdl_ar extends dbeav_model{
     
     public function _filter($filter, $tableAlias = null, $baseWhere = null)
     {
+        $where = '';
+        $channelIds = null;
+
+        if (isset($filter['channel_id']) && $filter['channel_id']) {
+            $picked = array_filter((array) $filter['channel_id'], function ($v) {
+                return $v !== '' && $v !== '_ALL_' && $v !== '_ANY_' && $v !== '0';
+            });
+            if ($picked) {
+                $channelIds = array_values($picked);
+            }
+        }
+        unset($filter['channel_id']);
+
+        if (isset($filter['shop_type']) && $filter['shop_type']) {
+            $shopTypes = array_filter((array) $filter['shop_type'], function ($v) {
+                return $v !== '' && $v !== '_ALL_' && $v !== '_ANY_';
+            });
+            if ($shopTypes) {
+                $typeChannelIds = kernel::single('finance_ar')->getBoundShopIdsByTypes($shopTypes);
+                if ($channelIds === null) {
+                    $channelIds = $typeChannelIds;
+                } else {
+                    $channelIds = array_values(array_intersect($channelIds, $typeChannelIds));
+                }
+            }
+        }
+        unset($filter['shop_type']);
+
+        if ($channelIds !== null) {
+            if ($channelIds) {
+                $channelIds = array_map('addslashes', $channelIds);
+                $where .= " AND `channel_id` IN ('" . implode("','", $channelIds) . "')";
+            } else {
+                $where .= ' AND 0';
+            }
+        }
+
         if (isset($filter['monthly_date']) && $filter['monthly_date']) {
             $monthlyIds = [0];
             $miList     = app::get('finance')->model('monthly_report')->getList('monthly_id, monthly_date', ['monthly_date' => $filter['monthly_date']]);
@@ -807,6 +844,6 @@ class finance_mdl_ar extends dbeav_model{
             unset($filter['monthly_date']);
         }
     
-        return parent::_filter($filter, $tableAlias, $baseWhere);
+        return parent::_filter($filter, $tableAlias, $baseWhere) . $where;
     }
 }

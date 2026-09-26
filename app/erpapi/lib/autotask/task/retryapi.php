@@ -27,7 +27,7 @@ class erpapi_autotask_task_retryapi{
     public function process($params, &$error_msg) 
     {
         $apiModel = app::get('erpapi')->model('api_fail');
-        $apilog = $apiModel->dump(array('id'=>$params['id']),'status,obj_type,params,fail_times');
+        $apilog = $apiModel->dump(array('id'=>$params['id']), '*');
 
         if ($apilog['status'] != 'fail') {
             $error_msg = $params['obj_bn'].'已经重试，不允许发起';
@@ -249,6 +249,28 @@ class erpapi_autotask_task_retryapi{
                     
                     //重新推送发货状态给平台(无返回结果)
                     $result = kernel::single('ome_service_aftersale')->update_status($returnInfo['return_id'], '5');
+                    
+                    break;
+                case 'upload_invoice':
+                    $api_id = $apilog['id'];
+                    $fail_times = $apilog['fail_times'] + 1;
+                    
+                    // err_msg
+                    $api_error_msg = ($apilog['err_msg'] ? $apilog['err_msg'] .'；' : '');
+                    $api_error_msg = $api_error_msg . '手工重试执行：'. date('Y-m-d H:i:s', time());
+                    
+                    // update
+                    $apiModel->update(array('fail_times'=>$fail_times, 'err_msg'=>$api_error_msg), array('id'=>$api_id));
+                    
+                    // exec
+                    $res = $apiModel->retry($apilog);
+                    if ($res['rsp'] == 'succ'){
+                        // 删除失败记录
+                        $apiModel->delete(array('id'=>$apilog['id']));
+                    }else{
+                        $api_error_msg = '手工重试失败：'. ($res['error_msg'] ? $res['error_msg'] : $res['msg']);
+                        $apiModel->update(array('status'=>'fail', 'err_msg'=>$api_error_msg, 'last_modify'=>time()), array('id'=>$apilog['id']));
+                    }
                     
                     break;
                 default:

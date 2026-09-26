@@ -17,7 +17,6 @@
 
 class financebase_finder_base{
 
-
 	var $detail_basic = "原始数据";
     
     function detail_basic($id){
@@ -78,6 +77,90 @@ class financebase_finder_base{
         $ret = '<a href="index.php?app=financebase&ctl=admin_shop_settlement_bill&act=edit&p[0]='.$row['id'].'&finder_id=' . $finder_id . '" target="dialog::{width:690,height:200,title:\'编辑\'}">编辑</a>';
 
         return $ret;
+    }
+
+    public $column_goods_name = '商品名称';
+    public $column_goods_name_width = '150';
+    public $column_goods_name_order = 36;
+    public function column_goods_name($row, $list)
+    {
+        $content = $this->_getBillBaseContent($row, $list);
+        return isset($content['goods_name']) ? $content['goods_name'] : '';
+    }
+
+    public $column_trade_desc = '业务描述';
+    public $column_trade_desc_width = '150';
+    public $column_trade_desc_order = 37;
+    public function column_trade_desc($row, $list)
+    {
+        $content = $this->_getBillBaseContent($row, $list);
+        return $this->_resolveTradeDesc($content);
+    }
+
+    /**
+     * 批量加载 bill_base 原始 JSON，避免列表逐行查询
+     */
+    protected function _getBillBaseContent($row, $list)
+    {
+        static $cache = null;
+        if ($cache === null) {
+            $cache = array();
+            $billIds = array();
+            foreach ($list as $listRow) {
+                if (!empty($listRow['id'])) {
+                    $billIds[] = $listRow['id'];
+                }
+            }
+            if ($billIds) {
+                $mdlBill = app::get('financebase')->model('bill');
+                $mdlBillBase = app::get('financebase')->model('bill_base');
+                $bills = $mdlBill->getList(
+                    'id,shop_id,unique_id',
+                    array('id|in' => array_unique($billIds))
+                );
+                $shopUniqueMap = array();
+                $idKeyMap = array();
+                foreach ($bills as $billRow) {
+                    if (empty($billRow['shop_id']) || empty($billRow['unique_id'])) {
+                        continue;
+                    }
+                    $shopUniqueMap[$billRow['shop_id']][] = $billRow['unique_id'];
+                    $idKeyMap[$billRow['id']] = $billRow['shop_id'] . ':' . $billRow['unique_id'];
+                }
+                foreach ($shopUniqueMap as $shopId => $uniqueIds) {
+                    $rows = $mdlBillBase->getList(
+                        'shop_id,unique_id,content',
+                        array('shop_id' => $shopId, 'unique_id|in' => array_unique($uniqueIds))
+                    );
+                    foreach ($rows as $baseRow) {
+                        $cacheKey = $baseRow['shop_id'] . ':' . $baseRow['unique_id'];
+                        $cache[$cacheKey] = json_decode($baseRow['content'], true) ?: array();
+                    }
+                }
+                foreach ($idKeyMap as $billId => $cacheKey) {
+                    $cache['id:' . $billId] = isset($cache[$cacheKey]) ? $cache[$cacheKey] : array();
+                }
+            }
+        }
+
+        $billId = isset($row['id']) ? $row['id'] : '';
+        return ($billId && isset($cache['id:' . $billId])) ? $cache['id:' . $billId] : array();
+    }
+
+    /**
+     * 业务描述字段兼容各平台命名差异
+     */
+    protected function _resolveTradeDesc($content)
+    {
+        if (empty($content)) {
+            return '';
+        }
+        foreach (array('trade_desc', 'trade_describe') as $field) {
+            if (!empty($content[$field]) && $content[$field] !== '-') {
+                return $content[$field];
+            }
+        }
+        return '';
     }
 
 }

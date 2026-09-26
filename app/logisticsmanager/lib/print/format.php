@@ -39,6 +39,9 @@ class logisticsmanager_print_format {
 
     public function formatField(&$printRowData) {
         foreach($printRowData as $k => &$val) {
+            if ($k == 'wxshipin_product_info') {
+                continue;
+            }
             if(array_key_exists($k, $this->fieldFormat)) {
                 $method = $this->fieldFormat[$k];
                 if(method_exists($this, $method)) {
