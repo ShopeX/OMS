@@ -160,6 +160,6 @@ wsl -d Ubuntu -e bash -c "curl -fsSL https://oss.shopex.cn/oms/install.sh | sudo
 
 ----
 
-**最后更新**：2026年3月  
-**版本**：8.3.0
+**最后更新**：2026年9月  
+**版本**：8.10.0
 
