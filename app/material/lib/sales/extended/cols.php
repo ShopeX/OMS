@@ -6,42 +6,38 @@
 class material_sales_extended_cols
 {
     /**
-     * 扩展列 + service 合并：取扩展列后调 service 取 params，按 col_key 合并 options/col_type
-     * @return array 带 options 的 extendedCols
+     * 扩展列：读 sdb_desktop_customcols（tbl_name=sdb_material_basic_material_props），合并 filter_data 中的 options
+     * @return array 带 options 的 extendedCols；未配置任何扩展列时返回空数组
      */
     public function getExtendedColsWithParams()
     {
         $extendedCols = $this->_getBmPropsExtendedCols();
-        $params = array();
-        try {
-            if ($service = kernel::servicelist('material.service.salesmaterial.props.params.format')) {
-                foreach ($service as $object => $instance) {
-                    if ($instance && method_exists($instance, 'format_params')) {
-                        $params = $instance->format_params($extendedCols);
-                        if (!is_array($params)) {
-                            $params = array();
-                        }
-                        break;
-                    }
-                }
-            }
-        } catch (\Throwable $e) {
-            $params = array();
+        if (empty($extendedCols)) {
+            return array();
         }
-       
+
         foreach ($extendedCols as &$col) {
             $colKey = isset($col['col_key']) ? $col['col_key'] : '';
             if ($colKey === '') {
                 continue;
             }
-            foreach ($params as $p) {
-                if (isset($p['col_key']) && $p['col_key'] === $colKey && !empty($p['options']) && is_array($p['options'])) {
-                    $col['options'] = $p['options'];
-                    if (isset($p['col_type']) && strtolower((string) $p['col_type']) === 'select') {
-                        $col['col_type'] = 'select';
-                    }
-                    break;
+            if (empty($col['options']) || !is_array($col['options'])) {
+                $col['options'] = array();
+            }
+            // 下拉选项与显隐条件均来自 sdb_desktop_customcols.filter_data（JSON），与基础物料 customcols 一致
+            if (!empty($col['filter_data']) && is_array($col['filter_data'])) {
+                if (!empty($col['filter_data']['options']) && is_array($col['filter_data']['options'])) {
+                    $col['options'] = $col['filter_data']['options'];
                 }
+                if (isset($col['filter_data']['col_type']) && strtolower((string) $col['filter_data']['col_type']) === 'select'
+                    && !empty($col['options'])) {
+                    $col['col_type'] = 'select';
+                }
+            }
+            if (strtolower((string) ($col['col_type'] ?? '')) === 'select'
+                && (empty($col['options']) || !is_array($col['options']))) {
+                $col['col_type'] = 'input';
+                $col['options'] = array();
             }
         }
         unset($col);
@@ -50,7 +46,7 @@ class material_sales_extended_cols
 
     private function _getBmPropsExtendedCols()
     {
-        $errLevel = error_reporting(E_ALL & ~E_DEPRECATED);
+       
         try {
             $customcolsMdl = app::get('desktop')->model('customcols');
             $list = $customcolsMdl->getList('col_name,col_key,col_type,filter_data', array(
@@ -62,11 +58,20 @@ class material_sales_extended_cols
                     if (empty($row['col_type'])) {
                         $row['col_type'] = 'input';
                     }
+                    $row['options'] = array();
                     if (!empty($row['filter_data'])) {
                         $decoded = json_decode($row['filter_data'], true);
                         $row['filter_data'] = is_array($decoded) ? $decoded : null;
+                        if (is_array($decoded) && !empty($decoded['options']) && is_array($decoded['options'])) {
+                            $row['options'] = $decoded['options'];
+                        }
                     } else {
                         $row['filter_data'] = null;
+                    }
+                    if (strtolower((string) $row['col_type']) === 'select'
+                        && (empty($row['options']) || !is_array($row['options']))) {
+                        $row['col_type'] = 'input';
+                        $row['options'] = array();
                     }
                 }
                 unset($row);
@@ -74,7 +79,7 @@ class material_sales_extended_cols
             }
         } catch (\Throwable $e) {
         } finally {
-            error_reporting($errLevel);
+           
         }
         // 未配置自定义扩展列时不兜底，避免无条件展示调色号
         return array();

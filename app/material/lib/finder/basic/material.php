@@ -1,19 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 class material_finder_basic_material{
     var $detail_basic = '物料信息';
@@ -30,7 +15,7 @@ class material_finder_basic_material{
         if($_GET['ctl'] == 'admin_material_basic' && $_GET['act'] == 'index'){
             $btn = '-';
             if(kernel::single('desktop_user')->has_permission('basic_material_edit')) {
-                $btn = '<a href="index.php?app=material&ctl=admin_material_basic&act=edit&p[0]='.$row['bm_id'].'&finder_id='.$_GET['_finder']['finder_id'].'">编辑</a>&nbsp;&nbsp;';
+                $btn = '<a href="index.php?app=material&ctl=admin_material_basic&act=edit&p[0]='.$row['bm_id'].'&finder_id='.$_GET['_finder']['finder_id'].'" target="_blank">编辑</a>&nbsp;&nbsp;';
     
             }
             $use_buildin_look = kernel::single('desktop_user')->has_permission('basic_material_detail');
