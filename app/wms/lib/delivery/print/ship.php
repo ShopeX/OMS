@@ -418,6 +418,10 @@ class wms_delivery_print_ship extends wms_delivery_print_abstract{
         foreach($oriRowData as $k => &$val) {
             if(is_array($val)) {
                 foreach($val as &$data) {
+                    // 保留 wxshipin_product_info 等嵌套商品数组结构
+                    if (is_array($data)) {
+                        continue;
+                    }
                     $data = $this->printSingleFormat($data);
                 }
             } else {

@@ -533,7 +533,11 @@ class ome_delivery_template{
             $data[$new_key] = $str_self_elment;
         }
         foreach($data as $k=>$v){
-            $data[$k] = addslashes($v);
+            // wxshipin_product_info 等打印项为数组，PHP8 下 addslashes 会 TypeError
+            if (is_array($v)) {
+                continue;
+            }
+            $data[$k] = addslashes((string) $v);
             unset($k,$v);
         }
         return $data;
