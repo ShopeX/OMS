@@ -72,7 +72,7 @@ $db['channel_extend'] = array(
         ),
         'allocated_quantity' => array(
             'label'    => '可用数量',
-            'type'     => 'int unsigned',
+            'type'     => 'int',
             'editable' => false,
 
         ),
