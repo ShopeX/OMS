@@ -29,7 +29,7 @@ background:#ffffff
 .d_table table{ border-collapse:collapse;}
 .d_table td{ border:1px solid #ccc; border-collapse:collapse; height:26px; line-height:26px; text-align:center;}
 .d_table th{ border:1px solid #ccc; border-collapse:collapse; height:26px; line-height:26px; text-align:center; color:#4e5318; }
-#print_confirm { width:100%;  height:30px;  border-top:1px solid #999999; padding-top:4px;   background-color:#5473ae; position:absolute; }
+#print_confirm { width:100%;  height:30px;  border-top:1px solid #999999; padding-top:4px;   background-color:#5473ae; position:absolute; z-index:1001; }
 #btn_print { width:71px; height:24px; background-image:url(images/btn_print.gif); cursor:pointer; margin-left:auto; margin-right:auto;}
 #barcode { width:150px; height:50px; background:url(images/bar_code.gif) no-repeat;}
 .salemodes{
@@ -72,13 +72,13 @@ window.addEvents({
         if ($("chk_pic_print1")){
             $("chk_pic_print1").addEvent("click",function(){
                 $$("#print2 img").filter(function(e){return e.className!='x-barcode'}).setStyle("display",(this.checked == false?"none":'inline'));
-               $("print_confirm").setStyle("top",document.documentElement.scrollTop + window.getHeight() - 35);
+               $("print_confirm").setStyle("top",document.documentElement.scrollTop + window.getHeight() - 75);
             });
             $("chk_address").addEvent("click",function(){
                 $("print_address").setStyle("display",(this.checked == false?"none":'inline'));
             });
         }
-        $("print_confirm").setStyle("top",window.getHeight() - 35);
+        $("print_confirm").setStyle("top",window.getHeight() - 75);
         var j =0;
         $("btn_print").addEvent("click",function()
         {
@@ -143,10 +143,10 @@ window.addEvents({
         
     },
     "scroll":function() {
-        $("print_confirm").setStyle("top",window.getSize().y+window.getScrollTop() - 35);
+        $("print_confirm").setStyle("top",window.getSize().y+window.getScrollTop() - 75);
     },
     "resize":function() {
-        $("print_confirm").setStyle("top",window.getSize().y+window.getScrollTop() - 35);
+        $("print_confirm").setStyle("top",window.getSize().y+window.getScrollTop() - 75);
     }
 });
 window.addEvent('load',function(){
