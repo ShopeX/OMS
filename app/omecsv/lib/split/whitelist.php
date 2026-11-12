@@ -24,7 +24,7 @@ class omecsv_split_whitelist
         ],
         'platform' => [
             'name'  => '导入任务',//任务名称
-            'class' => 'ome_order_import',//平台自发订单导入
+            'class' => 'ome_order_importV2',//平台自发订单导入(新)
         ],
         'iostock' => [
             'name'  => '出入库单导入任务',//任务名称

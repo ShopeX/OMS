@@ -24,6 +24,13 @@
  * ============================
  */
 class console_finder_wms_transferorder {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = '';
 
     /*public $column_edit = "操作";
@@ -51,6 +58,7 @@ class console_finder_wms_transferorder {
             $logdata[$k]['operate_time'] = date('Y-m-d H:i:s',$v['operate_time']);
         }
         $render->pagedata['log'] = $logdata;
+        if ($this->vue_mode) { return []; }
         return $render->fetch('admin/oplog.html');
     }
 }

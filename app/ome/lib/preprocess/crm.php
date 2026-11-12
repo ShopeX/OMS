@@ -60,7 +60,7 @@ class ome_preprocess_crm{
         $orderObj = app::get('ome')->model('orders');
         $obj_channel = app::get('channel')->model('channel');
         
-        #根据订单号，找到当前订单的相关信息
+        // 根据订单号，找到当前订单的相关信息
         $order_info = $obj_channel->getOrderInfo($order_id);
         if( in_array($order_info['process_status'],array('splitting','splited'))){
             return true;
@@ -75,6 +75,12 @@ class ome_preprocess_crm{
             return true;
         }
         
+        // 平台发货类型，不需要添加赠品
+        if ($order_info['order_type'] == 'platform') {
+            $msg = '平台发货订单，不需要执行CRM赠品!';
+            return true;
+        }
+        
         if( in_array($order_info['shop_type'],array('taobao'))
                 && $order_info['createway'] == 'matrix'
                 && $order_info['order_source'] == 'maochao'){
@@ -82,9 +88,11 @@ class ome_preprocess_crm{
             $operationLogObj->write_log('order_preprocess@ome',$order_id, $msg);
             return true;
         }
-        #获取赠品规则的订单明细
+        
+        // 获取赠品规则的订单明细
         $order_item_info = $this->get_order_item_info($order_id);
-        #获取赠品规则的订单对象
+    
+        // 获取赠品规则的订单对象
         $order_obj_info = $this->get_order_obj_info($order_id);
        
         #打标的状态
@@ -122,6 +130,8 @@ class ome_preprocess_crm{
         #检测完毕,调用赠品接口,获取赠品规则
         $params = array(
             'buyer_nick' => $buyer_nick,
+            'buyer_open_uid' => isset($order_info['buyer_open_uid']) ? $order_info['buyer_open_uid'] : '',
+            'member_id' => isset($order_info['member_id']) ? intval($order_info['member_id']) : 0,
             'receiver_name'=> $receiver_name,
             'mobile' => $mobile,
             'tel' => $tel,
@@ -453,7 +463,12 @@ class ome_preprocess_crm{
               $msg = 'CRM赠品'.$str_bn.'与ERP的赠品货号不对应,订单置为失败类型';
               $operationLogObj->write_log('order_preprocess@ome',$order_id, $msg,time(),$opinfo);
               #将订单状态改为失败订单
-              $orderObj->update(array('is_fail'=>'true'),array('order_id'=>$order_id)); 
+              $orderObj->update(array('is_fail'=>'true'),array('order_id'=>$order_id));
+              // SCRUM-7468：失败订单进入快照
+              try {
+                  kernel::single('monitor_event_orderfail')->recordEnterByOrderId($order_id);
+              } catch (Throwable $e) {
+              }
               kernel::database()->commit();
               return true ;
             }
@@ -591,9 +606,11 @@ class ome_preprocess_crm{
             return false;
         }
         
-        //会员名、收货人姓名
-        $memberInfo = app::get('ome')->model('members')->db_dump($ordersdf['member_id'], 'uname');
+        //会员名、收货人姓名（含 buyer_open_uid，兼容京东 pin/xid）
+        $memberInfo = app::get('ome')->model('members')->db_dump($ordersdf['member_id'], '*');
+        
         $ordersdf['buyer_nick'] = $memberInfo['uname']; //会员名
+        $ordersdf['buyer_open_uid'] = isset($memberInfo['buyer_open_uid']) ? $memberInfo['buyer_open_uid'] : '';
         $ordersdf['receiver_name'] = $ordersdf['ship_name']; //收件人姓名
         
         //指定订单审核时符合的赠品应用规则

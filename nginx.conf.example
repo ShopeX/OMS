@@ -73,33 +73,27 @@ server {
         return 403;
     }
     
+    # ---------- 1. 拦截规则（必须在 PHP handler 之前） ----------
     # 禁止访问敏感目录
     location ~ ^/(\.git|script|data|config|vendor|cgi-bin|tools|docs|docker|tests|upgrade)/ {
         deny all;
         return 403;
     }
     
-    # 禁止访问 PHP 配置文件
-    location ~ ^/.*/(config|secrets|defined_ext)\.php$ {
-        deny all;
+    # 敏感文件
+    location ~* /(composer\.(json|lock)|phpstan\.neon\.dist|phpunit\.xml\.dist|\.gitignore|(config|secrets|defined_ext)\.php)$ {
         return 403;
     }
     
-    # ========== 特殊路由规则 ==========
     
-    # 修复重复的 index.php - 将多个连续的 /index.php 重写为单个 /index.php
-    location ~ ^/index\.php(/index\.php)+ {
-        rewrite ^/index\.php(/index\.php)+(.*)$ /index.php$2 last;
-    }
-    
-    # 将 '/home' 的请求重写到 index.html
-    location = /home {
-        rewrite ^ /index.html last;
-    }
-    
-    # 将以 'm-' 开头的请求重写到 index.html
-    location ~ ^/m- {
-        rewrite ^/m- /index.html last;
+    # ---------- 2. 前端路由入口 → index.html ----------
+    location = /home  { rewrite ^ /index.html last; }
+    location = /login  { rewrite ^ /index.html last; }
+    location ~ ^/m-   { rewrite ^ /index.html last; }
+
+    # ---------- 3. 修正重复的 index.php（必须在 PHP handler 之前） ----------
+    location ~ ^/index\.php/index\.php {
+        return 301 /index.php$is_args$args;
     }
     
     # ========== 静态文件处理 ==========

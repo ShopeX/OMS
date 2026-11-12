@@ -402,8 +402,6 @@ class ome_reship{
         $orderObj = app::get('ome')->model('orders');
         
         $consoleReshipLib = kernel::single('console_reship');
-        $reReshipLib = kernel::single('ome_receipt_reship');
-        $libBranchProduct = kernel::single('ome_branch_product');
         $branchLib = kernel::single('ome_branch');
         
         $operation = '审核退换货单,';
@@ -554,7 +552,6 @@ class ome_reship{
             }
             
             if(empty($orderInfo)){
-                // $error_msg = '退换货单：'. $reship['reship_bn'] .',关联订单不存在!';
                 $error_msg = '关联订单不存在!';
                 return false;
             }
@@ -580,13 +577,17 @@ class ome_reship{
                 return false;
             }
             
+            // 审核下发前：按售后+商品校验可退数量（已审/已完成退换货单占用额度）
+            if (!$this->checkReturnableQuantity($reship_id, $error_msg)) {
+                return false;
+            }
+            
             //[换货]检查退入商品和换出商品的数量
             if($reship['return_type'] == 'change' && $reship['is_check']!='11'){
                 $result = array();
                 $oReship_item->Get_items_count($reship_id, $result);
                 
                 if($result['return'] == '0' || ($result['change'] == '0' && $reship['change_status']!='2')){
-                    // $error_msg = '退换货单：'. $reship['reship_bn'] .',退入商品与换货商品数量有误!';
                     $error_msg = '退入商品与换货商品数量有误!';
                     return false;
                 }
@@ -594,7 +595,6 @@ class ome_reship{
                 if($reship['change_status']!='2'){
                     // 只有自动审核的时候判断，批量和单独审单不再判断
                     if($result['return'] != $result['change'] && $exec_type == 1){
-                        // $error_msg = '退换货单：'. $reship['reship_bn'] .',退入商品数量与换货商品数量不一致!';
                         $error_msg = '退入商品数量与换货商品数量不一致!';
                         return false;
                     }
@@ -619,8 +619,7 @@ class ome_reship{
                     $check_stock = false;
                 }
                 
-                if($change_store_id)
-                {
+                if($change_store_id){
                     //门店仓换货库存检查
                     $arr_stock = kernel::single('o2o_return')->o2o_store_stock($changebranch_id, $item['product_id']);
                     $could_usable_store = $arr_stock["store"]; //值可能会包括 "-" "x" 或 真实的库存数
@@ -631,10 +630,9 @@ class ome_reship{
                     }elseif($could_usable_store == "-"){
                         $check_stock = false; //不管控库存
                     }
-                }
-                else
-                {
+                }else{
                     // //电商仓换货库存检查
+                    //$libBranchProduct = kernel::single('ome_branch_product');
                     // $usable_store = $libBranchProduct->getAvailableStore($item['changebranch_id'], array($item['product_id']));
                     
                     // $could_usable_store = $usable_store[$item['product_id']] ? $usable_store[$item['product_id']] : 0;
@@ -727,12 +725,6 @@ class ome_reship{
             //发起通知单
             $error_msg = '';
             $result = ome_return_notice::create($reship_id, $error_msg);
-           // if(!$result){
-               // $is_rollback = false; //不用回滚更新的数据
-                
-                //$error_msg = ($error_msg ? $error_msg : '发起通知单失败');
-               // return false;
-            //}
         }
         
         //update data
@@ -762,7 +754,6 @@ class ome_reship{
         $error_msg = '';
         $affect_row = $Oreship->update($updateData, array('reship_id'=>$reship_id));
         if(!is_numeric($affect_row) || $affect_row <= 0){
-            // $error_msg = '退换货单：'. $reship['reship_bn'] .' 审核失败!';
             $error_msg = '审核失败!';
             return false;
         }
@@ -776,15 +767,14 @@ class ome_reship{
                 $object->after_check($reship_id);
             }
         }
-        //[电商仓]质检成功后执行相应的操作
         
+        //[电商仓]质检成功后执行相应的操作
         $result = $this->part_finish_aftersale($reship_id,$reship['is_check'], $after_error_msg);
         if(!$result){
             // $error_msg = '退换货单：'. $reship['reship_bn'] . $after_error_msg;
             $error_msg = $after_error_msg;
             return false;
         }
-        
         
         return true;
     }
@@ -1397,7 +1387,8 @@ class ome_reship{
         
         $reship_data = kernel::single('ome_receipt_reship')->reship_create(array('reship_id'=>$reship_id));
         
-        $wms_id = kernel::single('ome_branch')->getWmsIdById($reship_data['branch_id']);
+        $shop_type = isset($reship_data['shop_type']) ? $reship_data['shop_type'] : '';
+        $wms_id = kernel::single('ome_branch')->getWmsIdById($reship_data['branch_id'], $shop_type);
         
         $rsp_result = kernel::single('console_event_trigger_reship')->create($wms_id, $reship_data, false);
         
@@ -1587,7 +1578,8 @@ class ome_reship{
         $flag_type = $reshipInfo['flag_type'];
         
         //wms_id
-        $channel_id = $branchLib->getWmsIdById($branch_id);
+        $shop_type = isset($reshipInfo['shop_type']) ? $reshipInfo['shop_type'] : '';
+        $channel_id = $branchLib->getWmsIdById($branch_id, $shop_type);
         
         //branch_bn
         $branch_bn = $branchLib->getBranchBnById($branch_id);
@@ -3045,5 +3037,185 @@ class ome_reship{
         }
 
         return true;
+    }
+    
+    /**
+     * 校验退换货单退入明细可退数量（订单+货号/行维度，排除当前退换货单）
+     *
+     * 口径使用本类 getReshipItemReturnCount：
+     * - is_check=0（未审核）、is_check=5（拒绝）不占用
+     * - is_check in (11,7) 占用入库数
+     * - 其余有效状态（含已审核）占用申请数
+     * - 仅统计 reship_items.return_type=return（换货单退入明细同样占用）
+     *
+     * @param int|string  $reship_id
+     * @param string|null $error_msg
+     * @return bool
+     */
+    public function checkReturnableQuantity($reship_id, &$error_msg = null)
+    {
+        $reship_id = intval($reship_id);
+        if ($reship_id <= 0) {
+            $error_msg = '无效的退换货单';
+            return false;
+        }
+        
+        $reshipObj = app::get('ome')->model('reship');
+        $itemObj = app::get('ome')->model('reship_items');
+        
+        // 退换货单信息
+        $reshipInfo = $reshipObj->dump(array('reship_id' => $reship_id), '*');
+        if (empty($reshipInfo)) {
+            $error_msg = '检查退货明细失败，退换货单不存在';
+            return false;
+        }
+        
+        $order_id = $reshipInfo['order_id'];
+        if (empty($order_id)) {
+            $error_msg = '检查退货明细失败，没有关联的订单';
+            return false;
+        }
+        
+        // 退货明细
+        $returnItems = $itemObj->getList('item_id,product_id,bn,num,order_item_id', array(
+            'reship_id' => $reship_id,
+            'return_type' => 'return',
+        ));
+        if (empty($returnItems) || !is_array($returnItems)) {
+            $error_msg = '检查退货明细失败，没有可退货的明细';
+            return false;
+        }
+        
+        $reshipInfo['return_items'] = $returnItems;
+        
+        // 通过退货商品明细，获取所有退货商品明细可退货数量
+        $reshipInfo = $this->getReshipItemReturnCount($reshipInfo);
+        
+        // 循环检查：申请退货数量是否大于可退货数量
+        foreach ($reshipInfo['return_items'] as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            
+            // bn
+            $bn = isset($item['bn']) ? trim((string) $item['bn']) : '';
+            
+            // 申请退货数量
+            $applyNum = intval(isset($item['num']) ? $item['num'] : 0);
+            if ($bn === '' || $applyNum <= 0) {
+                continue;
+            }
+            
+            // 可退货数量
+            $effective = intval(isset($item['returnable_num']) ? $item['returnable_num'] : 0);
+            
+            // check
+            if ($applyNum > $effective) {
+                $error_msg = '货号【' . $bn . '】申请数量' . $applyNum . '超出可退数量' . $effective;
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    /**
+     * 为退换货单退入明细回填可退数量（审核占用口径：未审核/拒绝不占用）
+     *
+     * 参考 ome_mdl_reship_items::Get_refund_count，独立实现，不改原方法。
+     * 可退 = order_items.nums
+     *      - is_check in (11,7) 的入库数
+     *      - is_check not in (0,5,7,11) 的申请数（已审未入库）
+     * 排除当前 reship_id。
+     *
+     * @param array $reshipInfo 须含 order_id、reship_id、return_items[]
+     * @return array 回写 return_items[*]['returnable_num']
+     */
+    public function getReshipItemReturnCount($reshipInfo)
+    {
+        if (empty($reshipInfo) || !is_array($reshipInfo)) {
+            return $reshipInfo;
+        }
+        
+        $order_id = isset($reshipInfo['order_id']) ? $reshipInfo['order_id'] : '';
+        $reship_id = isset($reshipInfo['reship_id']) ? $reshipInfo['reship_id'] : '';
+        
+        // check
+        if ($order_id === '' || $order_id === null) {
+            return $reshipInfo;
+        }
+        
+        if (empty($reshipInfo['return_items']) || !is_array($reshipInfo['return_items'])) {
+            return $reshipInfo;
+        }
+        
+        foreach ($reshipInfo['return_items'] as $k => $item)
+        {
+            if (!is_array($item)) {
+                continue;
+            }
+            
+            $bn = isset($item['bn']) ? trim((string) $item['bn']) : '';
+            
+            $orderItemId = isset($item['order_item_id']) ? $item['order_item_id'] : '';
+            
+            // 按订单货号计算可退数量
+            $returnable_num = $this->_calcReturnableCountByBn($order_id, $bn, $reship_id, $orderItemId);
+            
+            $reshipInfo['return_items'][$k]['returnable_num'] = $returnable_num;
+        }
+        
+        return $reshipInfo;
+    }
+    
+    /**
+     * 按订单货号计算可退数量（内部用）
+     *
+     * @param int|string $order_id
+     * @param string     $bn
+     * @param int|string $reship_id
+     * @param int|string $item_id order_item_id
+     * @return int
+     */
+    protected function _calcReturnableCountByBn($order_id, $bn, $reship_id = '', $item_id = '')
+    {
+        $bn = trim((string) $bn);
+        if ($order_id === '' || $order_id === null || $bn === '') {
+            return 0;
+        }
+
+        $db = kernel::database();
+
+        $sql = "SELECT sum(nums) as count FROM sdb_ome_order_items WHERE order_id='" . $order_id . "' AND bn='" . $bn . "' AND `delete`='false' ";
+        if ($item_id !== '' && $item_id !== null && $item_id !== false) {
+            $sql .= " AND item_id=" . intval($item_id);
+        }
+        $order = $db->selectrow($sql);
+
+        $sql = "SELECT sum(i.normal_num) as normal_count,sum(i.defective_num) as defective_count FROM sdb_ome_reship as r left join sdb_ome_reship_items as i on r.reship_id=i.reship_id WHERE i.return_type='return' AND r.is_check in ('11','7') AND r.order_id='" . $order_id . "' AND i.bn='" . $bn . "'";
+        if ($item_id !== '' && $item_id !== null && $item_id !== false) {
+            $sql .= " AND order_item_id=" . intval($item_id);
+        }
+        if ($reship_id !== '' && $reship_id !== null) {
+            $sql .= ' AND r.reship_id!=' . intval($reship_id);
+        }
+        $refund = $db->selectrow($sql);
+
+        // 已审核未入库占用申请数；未审核(0)/拒绝(5)/完成(7)/待确认(11)不占申请数
+        $sql1 = "SELECT sum(i.num) as nums FROM sdb_ome_reship as r left join sdb_ome_reship_items as i on r.reship_id=i.reship_id WHERE i.return_type='return' AND r.is_check not in ('0','5','7','11') AND r.order_id='" . $order_id . "' AND i.bn='" . $bn . "' ";
+        if ($item_id !== '' && $item_id !== null && $item_id !== false) {
+            $sql1 .= " AND order_item_id=" . intval($item_id);
+        }
+        if ($reship_id !== '' && $reship_id !== null) {
+            $sql1 .= ' AND r.reship_id!=' . intval($reship_id);
+        }
+        $refund1 = $db->selectrow($sql1);
+
+        $count = intval(isset($order['count']) ? $order['count'] : 0)
+            - intval(isset($refund['normal_count']) ? $refund['normal_count'] : 0)
+            - intval(isset($refund['defective_count']) ? $refund['defective_count'] : 0)
+            - intval(isset($refund1['nums']) ? $refund1['nums'] : 0);
+
+        return $count > 0 ? $count : 0;
     }
 }

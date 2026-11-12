@@ -14,9 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class logisticsmanager_finder_channel
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols           = "channel_id,status,channel_type,logistics_code,shop_id,bind_status";
     public $column_control       = '操作';
     // public $column_control_width = '60';
@@ -79,10 +85,15 @@ class logisticsmanager_finder_channel
     public function column_logistics($row)
     {
         $channel_type = $row[$this->col_prefix . 'channel_type'];
-        if ($channel_type && class_exists('logisticsmanager_waybill_' . $channel_type)) {
-            $wlbObj         = kernel::single('logisticsmanager_waybill_' . $channel_type);
-            $logistics_code = $row[$this->col_prefix . 'logistics_code'];
-            $logistics      = $wlbObj->logistics($logistics_code);
+        $logistics = array();
+        // class_exists 会走自动加载；lib 文件不存在时直接抛 Don't find lib file，不能用来探测类。
+        if ($channel_type && preg_match('/^[A-Za-z0-9_]+$/', $channel_type)) {
+            $waybillLib = app::get('logisticsmanager')->app_dir . '/lib/waybill/' . $channel_type . '.php';
+            if (file_exists($waybillLib)) {
+                $wlbObj         = kernel::single('logisticsmanager_waybill_' . $channel_type);
+                $logistics_code = $row[$this->col_prefix . 'logistics_code'];
+                $logistics      = $wlbObj->logistics($logistics_code);
+            }
         }
 
         if ($logistics) {

@@ -16,6 +16,13 @@
  */
 
 class purchase_finder_extend_filter_po{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function get_extend_colums(){
         
         $brObj = app::get('ome')->model('branch');
@@ -41,7 +48,7 @@ class purchase_finder_extend_filter_po{
                     'in_list' => true,
                     'default_in_list' => false,
                     'searchtype' => 'has',
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => false,
                 ),
                 'bn' => array (

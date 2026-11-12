@@ -200,7 +200,7 @@ $db['express_template'] = array(
                 'in_list' => true,
                 'width' => 'auto',
                 'searchtype' => 'has',
-                'filtertype' => 'yes',
+                'filtertype' => 'normal',
                 'filterdefault' => true,
                 'order' => 70,
             ),

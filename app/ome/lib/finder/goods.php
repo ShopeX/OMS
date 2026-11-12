@@ -17,7 +17,14 @@
 
 class ome_finder_goods{
 
-    
+    // Vue 模式标志
+    private $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $column_control = '商品操作';
     function column_control($row){
         return '<a href="index.php?app=ome&ctl=admin_goods_editor&act=edit&p[0]='.$row['goods_id'].'" target="_blank">编辑</a>';

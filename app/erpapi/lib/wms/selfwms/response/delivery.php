@@ -1,11 +1,22 @@
 <?php
 /**
- * WMS 发货单
+ * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
  *
- * @category
- * @package
- * @author chenping<chenping@shopex.cn>
- * @version $Id: Z
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * WMS自有仓储发货单业务
  */
 class erpapi_wms_selfwms_response_delivery  extends erpapi_wms_response_delivery
 {
@@ -16,6 +27,11 @@ class erpapi_wms_selfwms_response_delivery  extends erpapi_wms_response_delivery
         // 自建仓 trigger 传 logistics=corp_id（数字）；统一转成 dly_corp.type，与奇门回写对齐，供 OME _convertConsignSdf 按 type 解析
         $logisticsCode = '';
         $corpId = 0;
+        
+        // status
+        $status = strtolower(trim((string) (isset($params['status']) ? $params['status'] : '')));
+        $keepCorpId = ($status === 'update');
+        
         if (!empty($params['logistics'])) {
             $corpId = is_numeric($params['logistics']) ? (int) $params['logistics'] : 0;
         } elseif (!empty($params['logi_id']) && is_numeric($params['logi_id'])) {
@@ -25,8 +41,12 @@ class erpapi_wms_selfwms_response_delivery  extends erpapi_wms_response_delivery
             $corp = app::get('ome')->model('dly_corp')->db_dump(array('corp_id' => $corpId), 'type');
             if (!empty($corp['type'])) {
                 $logisticsCode = (string) $corp['type'];
-                $params['logi_id'] = $logisticsCode;
-                $params['logistics'] = $logisticsCode;
+                
+                // 当$status === 'update'时，不能将 logi_id 转成 logi_code，否则会导致发货报错
+                if (!$keepCorpId) {
+                    $params['logi_id'] = $logisticsCode;
+                    $params['logistics'] = $logisticsCode;
+                }
             }
         } elseif (!empty($params['logistics']) && empty($params['logi_id'])) {
             $params['logi_id'] = $params['logistics'];

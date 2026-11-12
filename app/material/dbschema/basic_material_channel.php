@@ -38,7 +38,7 @@ $db['basic_material_channel'] = array(
                     'type'     => 'int',
                     'required' => true,
                     'label'    => 'ID',
-                    'width'    => 110,
+                    'width' => 150,
                     'hidden'   => true,
                     'editable' => false,
                 ),
@@ -46,7 +46,7 @@ $db['basic_material_channel'] = array(
                 array(
                     'type'            => 'varchar(200)',
                     'label'           => '物料编码',
-                    'width'           => 120,
+                    'width' => 150,
                     'editable'        => false,
                     'in_list'         => true,
                     'default_in_list' => true,
@@ -59,7 +59,7 @@ $db['basic_material_channel'] = array(
                 array(
                     'type'            => 'varchar(200)',
                     'label'           => '外部编码',
-                    'width'           => 120,
+                    'width' => 150,
                     'editable'        => false,
                     'in_list'         => true,
                     'default_in_list' => true,
@@ -73,7 +73,7 @@ $db['basic_material_channel'] = array(
                     'type'     => 'varchar(20)',
                     'required' => true,
                     'label'    => '渠道id',
-                    'width'    => 110,
+                    'width' => 150,
                     'hidden'   => true,
                     'editable' => false,
                 ),
@@ -81,7 +81,7 @@ $db['basic_material_channel'] = array(
                 array(
                     'type'            => 'varchar(200)',
                     'label'           => '渠道名称',
-                    'width'           => 120,
+                    'width' => 150,
                     'default'           => '',
                     'editable'        => false,
                     'in_list'         => true,
@@ -117,7 +117,7 @@ $db['basic_material_channel'] = array(
             'op_id'         => array(
                 'type'       => 'table:account@pam',
                 'label'      => '操作员',
-                'width'      => 110,
+                'width' => 150,
                 'editable'   => false,
                 'filtertype' => 'normal',
                 'in_list'    => true,
@@ -142,7 +142,7 @@ $db['basic_material_channel'] = array(
                     'type' => 'money',
                     'default' => '0.000',
                     'label' => '售价',
-                    'width' => 75,
+                    'width' => 150,
                 ),
         ),
     

@@ -1,25 +1,16 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/**
  * @author chenping<chenping@shopex.cn>
  */
 
 class inventorydepth_finder_shop {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = 'config,shop_type,name,shop_bn,business_type';
     public static $shop_regu_apply;
 
@@ -88,11 +79,19 @@ EOF;
         <a style="margin:5px;padding:10px;background:url('{$src}') no-repeat scroll 50% 50%;" title="传上{$shop_name}店铺指定货品库存" target="dialog::{title:'传上{$shop_name}店铺指定货品库存',onClose:function(){window.finderGroup['{$finder_id}'].refresh();}}" href='index.php?app=inventorydepth&ctl=shop_adjustment&act=displayAssignUpload&shop_id={$row["shop_id"]}'></a>
 EOF;
 
-        //下载缓存商品
-        $downloadUrl = "index.php?app=inventorydepth&ctl=shop&act=pageSync&shop_id={$row['shop_id']}&downloadType=shop";
-        $return .= <<<EOF
+        //下载缓存商品（猫超店铺类型不支持，不展示按钮）
+        $is_show_download = true;
+        if($row[$this->col_prefix .'shop_type'] == 'taobao' && $row[$this->col_prefix . 'business_type'] == 'maochao'){
+            $is_show_download = false;
+        }
+        
+        // 缓存商品下载
+        if ($is_show_download) {
+            $downloadUrl = "index.php?app=inventorydepth&ctl=shop&act=pageSync&shop_id={$row['shop_id']}&downloadType=shop";
+            $return .= <<<EOF
             <a style="margin:5px;padding:5px;" href="{$downloadUrl}" target="dialog::{title:'下载{$shop_name}店铺 缓存商品',onClose:function(){window.finderGroup['{$finder_id}'].refresh();}}" title="下载{$shop_name}店铺 缓存商品">缓存商品下载</a>
 EOF;
+        }
         return $return;
     }
 

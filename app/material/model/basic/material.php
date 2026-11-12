@@ -488,34 +488,8 @@ class material_mdl_basic_material extends dbeav_model{
     function io_title( $filter, $ioType='csv' ){
         switch( $filter ){
             case 'basicM':
-                $this->oSchema['csv'][$filter] = array(
-                    '*:基础物料名称' => 'material_name',
-                    '*:基础物料编码' => 'material_bn',
-                    '*:基础物料属性' => 'type',
-                    '*:条码' => 'material_code',
-                    '*:是否在售' => 'visibled',
-                    '*:包装单位' => 'unit',
-                    '*:零售价' => 'retail_price',
-                    '*:成本价' => 'cost',
-                    '*:重量' => 'weight',
-                    '*:关联半成品信息' => 'at',
-                    '*:是否启用保质期监控' => 'use_expire',
-                    '*:预警天数配置' => 'warn_day',
-                    '*:自动退出库存天数配置' => 'quit_day',
-                    '*:开票税率' => 'tax_rate',
-                    '*:开票名称' => 'tax_name',
-                    '*:发票分类编码' => 'tax_code',
-                    '*:基础物料类型' => 'cat_id',
-                    '*:规格' => 'specifications',
-                    '*:品牌' => 'brand_id',
-                    '*:特殊扫码配置' => 'special_setting',
-                    '*:特殊扫码开始位数' => 'first_num',
-                    '*:特殊扫码结束位数' => 'last_num',
-                    '*:是否自动生成销售物料' => 'create_material_sales',
-                    '*:是否全渠道' => 'omnichannel',
-                    '*:是否启用唯一码'=>'serial_number',
-                    '*:基础物料款号'=>'material_spu',
-                    );
+                // Finder 下载模板与 prepared_import_csv_row 共用当前导入 schema，避免标题和列数漂移。
+                $this->oSchema['csv'][$filter] = $this->templateColumn();
                 break;
             case 'exportBasicM':
                 $this->oSchema['csv'][$filter] = array(

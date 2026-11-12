@@ -17,40 +17,43 @@
 
 
 $db['roles']=array (
-  'columns' => 
+  'columns' =>
   array (
-    'role_id' => 
+    'role_id' =>
     array (
       'type' => 'number',
       'required' => true,
       'pkey' => true,
-      'width' => 50,
-      'label' => app::get('desktop')->_('工作组id'),
-      'hidden' => 1,
+      'width' => 100,
+      'label' => app::get('desktop')->_('角色ID'),
+      'hidden' => false,
       'editable' => false,
       'extra' => 'auto_increment',
       'in_list' => true,
+      'default_in_list' => true,
     ),
-    'role_name' => 
+    'role_name' =>
     array (
       'type' => 'varchar(100)',
       'required' => true,
-      'label' => app::get('desktop')->_('角色名'),
-      'width' => 310,
+      'label' => app::get('desktop')->_('角色名称'),
+      'width' => 200,
       'in_list' => true,
       'is_title' => true,
       'searchtype'      => 'has',
       'default_in_list' => true,
+      'filtertype'     => 'normal',
     ),
-    'workground' => 
+    'workground' =>
     array (
-      'label' => app::get('desktop')->_('操作权限'),
+      'label' => app::get('desktop')->_('权限'),
       'type' => 'text',
       'editable' => false,
-      'in_list' => false,
-      'hidden' => true,
+      'in_list' => true,
+      'default_in_list' => true,
+      'hidden' => false,
     ),
-    'data_authority' => 
+    'data_authority' =>
     array (
       'label' => app::get('desktop')->_('数据权限'),
       'type' => 'text',

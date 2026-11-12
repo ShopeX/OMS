@@ -17,6 +17,13 @@
 
 
 class desktop_finder_builder_to_run_import {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     function run(&$cursor_id,$params){
         base_kvstore::instance($params['app'].'_'.$params['mdl'])->fetch($params['file_name'].'_sdf',$sdfContents);

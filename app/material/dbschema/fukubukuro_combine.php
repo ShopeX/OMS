@@ -83,7 +83,7 @@ $db['fukubukuro_combine'] = array(
             'label' => '福袋售价(未使用)',
             'in_list' => false,
             'default_in_list' => false,
-            'width' => 110,
+            'width' => 150,
         ),
         'lowest_price' => array (
             'type' => 'money',
@@ -92,7 +92,7 @@ $db['fukubukuro_combine'] = array(
             'comment'=>'最低价',
             'in_list' => true,
             'default_in_list' => true,
-            'width' => 110,
+            'width' => 150,
             'order' => 80,
         ),
         'highest_price' => array (
@@ -102,7 +102,7 @@ $db['fukubukuro_combine'] = array(
             'comment' => '最高价',
             'in_list' => true,
             'default_in_list' => true,
-            'width' => 110,
+            'width' => 150,
             'order' => 82,
         ),
         'is_delete' => array(

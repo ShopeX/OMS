@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class omeanalysts_mdl_ome_products extends dbeav_model{
 
     var $has_export_cnf = true;
@@ -23,10 +22,6 @@ class omeanalysts_mdl_ome_products extends dbeav_model{
 
     var $stockcost_enabled = false;
 
-    /**
-     * __construct
-     * @return mixed 返回值
-     */
     public function __construct(){
         parent::__construct();
         if(app::get('tgstockcost')->is_installed()){
@@ -39,10 +34,6 @@ class omeanalysts_mdl_ome_products extends dbeav_model{
         }
     }
 
-    /**
-     * 搜索Options
-     * @return mixed 返回值
-     */
     public function searchOptions(){
         $columns = array();
         foreach($this->_columns() as $k=>$v){
@@ -54,11 +45,6 @@ class omeanalysts_mdl_ome_products extends dbeav_model{
         return $columns;
     }
 
-    /**
-     * 获取_products
-     * @param mixed $filter filter
-     * @return mixed 返回结果
-     */
     public function get_products($filter=null){
         if(isset($filter['time_to']) && $filter['time_to']){
             $filter['time_to'] = $filter['time_to'].' 23:59:59';
@@ -120,11 +106,6 @@ class omeanalysts_mdl_ome_products extends dbeav_model{
         return $data;
     }
 
-    /**
-     * count
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function count($filter=null){
         if(isset($filter['time_to']) && $filter['time_to']){
             $filter['time_to'] = $filter['time_to'].' 23:59:59';
@@ -293,11 +274,6 @@ class omeanalysts_mdl_ome_products extends dbeav_model{
         return $rows;
     }
 
-    /**
-     * rfilter
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function rfilter($filter){
         $where = array(1);
         #店铺
@@ -328,13 +304,6 @@ class omeanalysts_mdl_ome_products extends dbeav_model{
         return implode(' AND ', $where);
     }
 
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter,$tableAlias=null,$baseWhere=null){
         $config = app::get('eccommon')->getConf('analysis_config');
 
@@ -474,10 +443,6 @@ class omeanalysts_mdl_ome_products extends dbeav_model{
         }
     }
 
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema(){
         $schema = array (
             'columns' => array (
@@ -500,7 +465,7 @@ class omeanalysts_mdl_ome_products extends dbeav_model{
                     'width' => 120,
                     'searchtype' => 'has',
                     'editable' => true,
-                    'filtertype' => 'bool',
+                    'filtertype' => 'normal',
                     'filterdefault' => 'true',
                     'in_list' => true,
                     'default_in_list' => true,

@@ -39,8 +39,9 @@ class ome_mdl_api_log_local extends dbeav_model{
     }
     
     function _filter($filter,$tableAlias=NULL,$baseWhere=NULL){
+        $wheresql = '';
         if (isset($filter['params'])){
-            $wheresql = " AND `params` LIKE '%".$filter['params']."%'";
+            $wheresql = ' AND `params` LIKE '.$this->db->quote('%'.$filter['params'].'%');
             unset($filter['params']);
         }
         return parent::_filter($filter,$tableAlias,$baseWhere).$wheresql;
@@ -155,7 +156,12 @@ class ome_mdl_api_log_local extends dbeav_model{
             }
         }else{
             //单个按钮重试
-            $row = $this->db->selectrow("SELECT * FROM sdb_ome_api_log WHERE log_id='".$log_id."' and status='fail' and retry>=$max_retry ");
+            $rows = $this->getList('*', array(
+                'log_id' => $log_id,
+                'status' => 'fail',
+                'retry|bthan' => $max_retry,
+            ), 0, 1);
+            $row = $rows ? $rows[0] : null;
             return $this->start_api_retry($row);
         }
     }
@@ -178,7 +184,11 @@ class ome_mdl_api_log_local extends dbeav_model{
         $msg = '手动重试';
         
         if($params && !strstr($row['task_name'],'的库存')){
-            $return = $this->db->exec("UPDATE sdb_ome_api_log SET retry=retry+1,last_modified='".time()."',status='sending',msg='".$msg."' WHERE log_id='".$log_id."'");
+            $return = $this->db->exec(
+                'UPDATE sdb_ome_api_log SET retry=retry+1,last_modified='.$this->db->quote((string) time())
+                .",status='sending',msg=".$this->db->quote($msg)
+                .' WHERE log_id='.$this->db->quote($log_id)
+            );
             if (isset($params[1]['all_list_quantity'])){
                 unset($params[1]['all_list_quantity']);
             }

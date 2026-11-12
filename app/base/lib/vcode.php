@@ -14,16 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
+ 
 class base_vcode {
-    
-    var $use_gd = false;
 
-    function __construct(){
-        if($this->use_gd){
-            $this->obj = kernel::single('base_vcode_gd');    
-        }else{
+    var $use_gd = false;
+    private $kvstoreKey = 'base_vcode';
+
+    function __construct() {
+        if ($this->use_gd) {
+            $this->obj = kernel::single('base_vcode_gd');
+        } else {
             $this->obj = kernel::single('base_vcode_gif');
         }
     }
@@ -31,22 +31,31 @@ class base_vcode {
     function length($len) {
         $this->obj->length($len);
         return true;
-    }    
-    
-    function verify_key($key){
-        kernel::single('base_session')->start();
-        $_SESSION[$key] = $this->obj->get_code();
     }
-    
-    static function verify($key,$value){
-        kernel::single('base_session')->start();
-        if( $_SESSION[$key] == $value ){
+
+    function verify_key($key) {
+        $code = $this->obj->get_code();
+        $kvstore = $this->getKvStore();
+        $kvstore->store($this->kvstoreKey . '_' . $key, $code, 300);
+    }
+
+    static function verify($key, $value) {
+        $kvstore = base_kvstore::instance('base_vcode');
+        $storedCode = null;
+        $kvstore->fetch('base_vcode_' . $key, $storedCode);
+
+        if ($storedCode && $storedCode == $value) {
+            $kvstore->store('base_vcode_' . $key, '', 1);
             return true;
         }
         return false;
     }
-    
-    function display(){
+
+    private function getKvStore() {
+        return base_kvstore::instance('base_vcode');
+    }
+
+    function display() {
         $this->obj->display();
     }
 }

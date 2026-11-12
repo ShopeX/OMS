@@ -90,7 +90,7 @@ class pam_passport_wap implements pam_interface_passport{
         {
             $usrdata['log_data'] = app::get('pam')->_('验证失败！');
             $_SESSION['error'] = app::get('pam')->_('用户名或密码错误');
-            $_SESSION['error_count'][$auth->appid] = $_SESSION['error_count'][$auth->appid]+1;
+            kernel::single('pam_login_error_counter')->increment($auth->appid);
             return false;
         }
         // 先查询账户信息，获取 is_hash256 字段值
@@ -154,14 +154,14 @@ class pam_passport_wap implements pam_interface_passport{
             else setcookie('pam_passport_basic_uname','',0,'/');
             
             $usrdata['log_data'] = app::get('pam')->_('用户').$_POST['uname'].app::get('pam')->_('验证成功！');
-            unset($_SESSION['error_count'][$auth->appid]);
+            kernel::single('pam_login_error_counter')->reset($auth->appid);
             return $rows[0]['account_id'];
         }
         else
         {
             $usrdata['log_data'] = app::get('pam')->_('用户').$_POST['uname'].app::get('pam')->_('验证失败！');
             $_SESSION['error'] = app::get('pam')->_('用户名或密码错误');
-            $_SESSION['error_count'][$auth->appid] = $_SESSION['error_count'][$auth->appid]+1;
+            kernel::single('pam_login_error_counter')->increment($auth->appid);
             return false;
         }
     }

@@ -14,15 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class ome_roles
 {
-    /**
-     * show_group
-     * @param mixed $user_id ID
-     * @param mixed $post post
-     * @return mixed 返回值
-     */
     public function show_group($user_id = null, $post = [])
     {
         $render = app::get('ome')->render();
@@ -52,12 +45,6 @@ class ome_roles
 
     
 
-    /**
-     * show_branch
-     * @param mixed $user_id ID
-     * @param mixed $post post
-     * @return mixed 返回值
-     */
     public function show_branch($user_id = null, $post = [])
     {
 
@@ -87,11 +74,118 @@ class ome_roles
     }
 
     /**
-     * 保存_role
-     * @param mixed $user_id ID
-     * @param mixed $data 数据
-     * @return mixed 返回操作结果
+     * 直营仓库列表（JSON 模式）
      */
+    public function show_branch_json($user_id = null)
+    {
+        $branchList = app::get('ome')->model('branch')->getList('branch_id,name', [
+            'b_type' => '1',
+        ]);
+
+        if ($user_id) {
+            $curBranch = app::get('ome')->model('branch_ops')->getList('branch_id', [
+                'op_id' => $user_id,
+            ]);
+            $curBranch = array_column((array) $curBranch, 'branch_id');
+
+            foreach ($branchList as $key => $value) {
+                $branchList[$key]['checked'] = in_array($value['branch_id'], $curBranch);
+            }
+        } else {
+            foreach ($branchList as $key => $value) {
+                $branchList[$key]['checked'] = false;
+            }
+        }
+
+        foreach ($branchList as $key => $value) {
+            $result[] = [
+                'id'      => $value['branch_id'],
+                'name'    => $value['name'],
+                'checked' => $value['checked'] ?? false,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * O2O门店列表（JSON 模式）
+     */
+    public function show_o2o_branch_json($user_id = null)
+    {
+        if (!app::get('o2o')->is_installed()) {
+            return [];
+        }
+
+        $storeList = app::get('o2o')->model('store')->getList('store_id,name,store_mode');
+        foreach ($storeList as $key => $value) {
+            $storeList[$key]['store_mode'] = app::get('o2o')->model('store')->schema['columns']['store_mode']['type'][$value['store_mode']] ?? '';
+        }
+
+        if ($user_id) {
+            $ops = app::get('ome')->model('branch_ops')->getList('branch_id', [
+                'op_id' => $user_id,
+            ]);
+            if ($branch_id = array_column($ops, 'branch_id')) {
+                $branches = app::get('ome')->model('branch')->getList('store_id', [
+                    'branch_id' => $branch_id,
+                    'check_permission' => 'false',
+                ]);
+                $store_id = array_unique(array_column($branches, 'store_id'));
+
+                foreach ($storeList as $key => $value) {
+                    $storeList[$key]['selected'] = in_array($value['store_id'], $store_id);
+                }
+            }
+        }
+
+        $result = [];
+        foreach ($storeList as $item) {
+            $result[] = [
+                'id'       => $item['store_id'],
+                    'name'     => $item['name'],
+                    'store_mode' => $item['store_mode'],
+                    'checked'  => $item['selected'] ?? false,
+            ];
+        }
+        return $result;
+    }
+
+    /**
+     * 订单组列表（JSON 模式）
+     */
+    public function show_group_json($user_id = null)
+    {
+        $groups = app::get('ome')->model('groups')->getList('group_id,name', [
+            'g_type' => 'confirm',
+        ]);
+
+        if ($user_id) {
+            $curGroups = app::get('ome')->model('group_ops')->getList('group_id', [
+                'op_id' => $user_id
+            ]);
+            $curGroupIds = array_column($curGroups, 'group_id');
+
+            foreach ($groups as $key => $value) {
+                $groups[$key]['selected'] = in_array($value['group_id'], $curGroupIds);
+            }
+        } else {
+            foreach ($groups as $key => $value) {
+                $groups[$key]['selected'] = false;
+            }
+        }
+
+        $result = [];
+        foreach ($groups as $item) {
+            $result[] = [
+                'id'       => $item['group_id'],
+                'name'     => $item['name'],
+                'checked'  => $item['selected'] ?? false,
+            ];
+        }
+        return $result;
+    }
+
     public function save_role($user_id, $data)
     {
         $group_id   = $data['confirm_group'];
@@ -171,12 +265,6 @@ class ome_roles
         }
     }
 
-    /**
-     * show_o2o_branch
-     * @param mixed $user_id ID
-     * @param mixed $post post
-     * @return mixed 返回值
-     */
     public function show_o2o_branch($user_id = null, $post = [])
     {
         $render = app::get('ome')->render();

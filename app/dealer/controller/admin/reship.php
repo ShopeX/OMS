@@ -43,7 +43,6 @@ class dealer_ctl_admin_reship extends desktop_controller
      */
     public function index()
     {
-        
         $_GET['view'] = intval($_GET['view']);
         $base_filter = $this->getFilters();
         $params = array(
@@ -61,8 +60,7 @@ class dealer_ctl_admin_reship extends desktop_controller
       
         $this->finder('dealer_mdl_reship', $params);
     }
-
-
+    
     /**
      * 公共filter条件
      * 
@@ -75,11 +73,9 @@ class dealer_ctl_admin_reship extends desktop_controller
         $base_filter['betc_id|than'] = 0; //贸易公司ID
         $base_filter['cos_id|than'] = 0; //组织权限
         
-        
         return $base_filter;
     }
     
-
     public function _views()
     {
         $reshipMdl = app::get('dealer')->model('reship');
@@ -94,7 +90,6 @@ class dealer_ctl_admin_reship extends desktop_controller
             2 => array('label'=>app::get('base')->_('已审核'), 'filter'=>array('is_check'=>'1'),'optional'=>false),
             3 => array('label'=>app::get('base')->_('完成'),'filter'=>array('is_check' => '7'),'optional'=>false),
             4 => array('label'=>app::get('base')->_('拒绝'),'filter'=>array('is_check' => '5'),'optional'=>false),
-           
         );
         
         $i = 0;
@@ -131,7 +126,6 @@ class dealer_ctl_admin_reship extends desktop_controller
         //执行审核
         $error_msg = '';
         $is_rollback = true; //遇到错误,是否回滚更新的数据(默认为:回滚)
-        $is_anti = ($is_anti ? true : false);
         $params = array('reship_id'=>$reship_id, 'status'=>1);
         $confirm = $reshipLib->confirm_reship($params, $error_msg, $is_rollback);
         
@@ -143,7 +137,6 @@ class dealer_ctl_admin_reship extends desktop_controller
             }else{
                 $this->splash('success', $url, '审核退换货单成功。');
             }
-            
         }else{
             $this->begin($url);
             
@@ -154,5 +147,4 @@ class dealer_ctl_admin_reship extends desktop_controller
             $this->end(true, '审核退换货单成功!');
         }
     }
-   
 }

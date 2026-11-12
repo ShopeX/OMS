@@ -452,6 +452,11 @@ class material_basic_material_stock_freeze{
         $batchList = $skuBatchList = [];
         $obj_id = $obj_type = $bill_type = '';
         $obj_type_arr = $obj_id_arr = [];
+        
+        // 本批实际 UPDATE 过的冻结流水主键，用于末尾按 PK 删除 num=0，避免宽条件 DELETE 在 ind_num/idx_bmid_num 上死锁
+        $bmsfIdMap = [];
+        
+        // 批量处理
         foreach ($items as $item) {
             
             // 基础物料不管控库存，则跳过
@@ -504,6 +509,14 @@ class material_basic_material_stock_freeze{
                     }
                     $list = $this->_stockFreezeObj->db->select('select bmsf_id,bill_type,branch_id from sdb_material_basic_material_stock_freeze '.$sql_where);
                     $sql_where = "WHERE bmsf_id in('" . implode("','", array_column($list, 'bmsf_id')) . "')";
+                    
+                    // 收集bmsf_id
+                    foreach (array_column($list, 'bmsf_id') as $bmsf_id) {
+                        if ($bmsf_id) {
+                            $bmsfIdMap[$bmsf_id] = $bmsf_id;
+                        }
+                    }
+                    
                     foreach($list as $v) {
                         if($v['bill_type'] == self::__ORDER_YOU && $num!=0) {
                             $batchList[] = [
@@ -523,17 +536,38 @@ class material_basic_material_stock_freeze{
                     $sql_where = "WHERE  bm_id =".$bm_id." and obj_type =".$obj_type." and bill_type=". $bill_type ." and obj_id =".$obj_id." and bmsq_id =".$bmsq_id;
                     $list = $this->_stockFreezeObj->db->select('select bmsf_id,bill_type,branch_id from sdb_material_basic_material_stock_freeze '.$sql_where);
                     $sql_where = "WHERE bmsf_id in('" . implode("','", array_column($list, 'bmsf_id')) . "')";
+                    
+                    // 收集bmsf_id
+                    foreach (array_column($list, 'bmsf_id') as $bmsf_id) {
+                        if ($bmsf_id) {
+                            $bmsfIdMap[$bmsf_id] = $bmsf_id;
+                        }
+                    }
                     break;
                 case 2:
                     $sql_where = "WHERE  bm_id =".$bm_id." and obj_type =".$obj_type." and bill_type=". $bill_type ." and obj_id =".$obj_id." and bmsq_id =".$bmsq_id;
                     $list = $this->_stockFreezeObj->db->select('select bmsf_id from sdb_material_basic_material_stock_freeze '.$sql_where);
                     $sql_where = "WHERE bmsf_id in('" . implode("','", array_column($list, 'bmsf_id')) . "')";
+                    
+                    // 收集bmsf_id
+                    foreach (array_column($list, 'bmsf_id') as $bmsf_id) {
+                        if ($bmsf_id) {
+                            $bmsfIdMap[$bmsf_id] = $bmsf_id;
+                        }
+                    }
                     break;
                 case 15:
                     //唯品会销售订单
                     $sql_where = "WHERE bm_id =". $bm_id ." AND obj_type =". $obj_type ." AND bill_type=". $bill_type ." AND obj_id =". $obj_id ." AND bmsq_id =". $bmsq_id;
                     $list = $this->_stockFreezeObj->db->select('select bmsf_id from sdb_material_basic_material_stock_freeze '.$sql_where);
                     $sql_where = "WHERE bmsf_id in('" . implode("','", array_column($list, 'bmsf_id')) . "')";
+                    
+                    // 收集bmsf_id
+                    foreach (array_column($list, 'bmsf_id') as $bmsf_id) {
+                        if ($bmsf_id) {
+                            $bmsfIdMap[$bmsf_id] = $bmsf_id;
+                        }
+                    }
                     break;
                 default:
                     $error_msg = 'obj_type无效';
@@ -582,6 +616,7 @@ class material_basic_material_stock_freeze{
                 return false;
             }
         }
+        
         if ($batchList) {
             $rs = ome_branch_product::freezeInRedis($batchList, '-', $source);
             if ($rs[0] == false) {
@@ -589,6 +624,7 @@ class material_basic_material_stock_freeze{
                 return false;
             }
         }
+        
         // 商品释放冻结
         if ($skuBatchList) {
             $basicMStockLib = kernel::single('material_basic_material_stock');
@@ -598,16 +634,15 @@ class material_basic_material_stock_freeze{
                 return false;
             }
         }
-        // 释放冻结成功以后，再去删除冻结流水，并回收业务层删除流水方法的调用
-        if ($obj_id && $obj_type) {
-            $filter = array(
-                'obj_id'    => array_keys($obj_id_arr),
-                'obj_type'  => array_keys($obj_type_arr),
-                'bill_type' => $bill_type,
-                'num'       => 0
-            );
-            $this->_stockFreezeObj->delete($filter);
+        
+        // 释放冻结成功以后，再去删除本批已更新且 num=0 的冻结流水（按主键，避免宽条件 DELETE 死锁）
+        if ($bmsfIdMap) {
+            $this->_stockFreezeObj->delete(array(
+                'bmsf_id' => array_values($bmsfIdMap),
+                'num'     => 0,
+            ));
         }
+        
         return true;
     }
 

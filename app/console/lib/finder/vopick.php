@@ -16,6 +16,13 @@
  */
 
 class console_finder_vopick{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     var $addon_cols    ='status,delivery_status,to_branch_bn,pick_no';
     

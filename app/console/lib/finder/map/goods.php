@@ -16,6 +16,13 @@
  */
 
 class console_finder_map_goods {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     public $addon_cols = 'shop_id,bind,shop_type';
 

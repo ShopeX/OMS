@@ -41,7 +41,7 @@ $db['branch_product_pos']=array (
       'editable' => false,
       'label' => '货位',
    	  'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'branch_id' =>

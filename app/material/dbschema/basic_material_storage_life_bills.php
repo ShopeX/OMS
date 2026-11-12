@@ -32,7 +32,7 @@ $db['basic_material_storage_life_bills']=array (
       'pkey' => true,
       'extra' => 'auto_increment',
       'label' => 'ID',
-      'width' => 110,
+      'width' => 150,
       'hidden' => true,
       'editable' => false,
     ),
@@ -40,7 +40,7 @@ $db['basic_material_storage_life_bills']=array (
     array (
       'type' => 'int unsigned',
       'required' => true,
-      'width' => 110,
+      'width' => 150,
       'hidden' => true,
       'editable' => false,
     ),    
@@ -48,7 +48,7 @@ $db['basic_material_storage_life_bills']=array (
     array (
       'type' => 'int unsigned',
       'required' => true,
-      'width' => 110,
+      'width' => 150,
       'hidden' => true,
       'editable' => false,
     ),
@@ -56,7 +56,7 @@ $db['basic_material_storage_life_bills']=array (
     array (
 	  'type' => 'varchar(200)',
       'label' => '物料编码',
-      'width' => 120,
+      'width' => 150,
       'editable' => false,
       'in_list' => true,
       'default_in_list' => true,

@@ -16,12 +16,33 @@
  */
 
 class omevirtualwms_finder_stockout{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     
     var $column_control = '操作';
 	var $column_control_width = 100;
+
+    /** vue_mode 下发 _0_<col> 原始值别名（结构化行操作取主键用） */
+    public $addon_cols = "bn,i_type";
     function column_control($row){
     	$flag = "stockout";
+        if ($this->vue_mode) {
+            $bn     = $row['_0_bn'] ?? $row['bn'] ?? '';
+            $iType  = $row['_0_i_type'] ?? $row['i_type'] ?? '';
+            return array(
+                array(
+                    'key'    => 'start_mock',
+                    'label'  => '开始模拟',
+                    'action' => 'index.php?app=omevirtualwms&ctl=admin_wms&act=getinfo&p[0]=' . $bn . '&p[1]=' . $flag . '&i_type=' . $iType,
+                ),
+            );
+        }
        return '<a  href="index.php?app=omevirtualwms&ctl=admin_wms&act=getinfo&p[0]='.$row['bn'].'&p[1]='.$flag.'&i_type='.$row['i_type'].'">开始模拟</a>';
     }
 

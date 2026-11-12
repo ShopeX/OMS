@@ -17,6 +17,13 @@
 
 class ome_finder_extend_filter_reship
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function get_extend_colums()
     {
         //WMS异常错误码
@@ -106,7 +113,7 @@ class ome_finder_extend_filter_reship
                 'abnormal_status' => array(
                     'type' => $abnormal_status_options,
                     'label' => '异常标识',
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                     'editable' => false,
                 ),

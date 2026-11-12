@@ -17,6 +17,13 @@
 
 class purchase_finder_pick_order_items
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     private $_appName = 'purchase';
     
     public $addon_cols = 'item_id,stat';

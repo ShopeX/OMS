@@ -22,18 +22,19 @@
 */
 class ome_finder_print_otmpl 
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     
     function __construct(&$app)
     {
     }
 
     var $column_control = '操作';
-    /**
-     * column_control
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
-
     public function column_control($row){
         return '<a href="index.php?app=ome&ctl=admin_print_otmpl&act=show&p[0]='.$row['id'].'&p[1]='.$row['type'].'&finder_id='.$_GET['_finder']['finder_id'].'" target="_blank">编辑</a>';
     }

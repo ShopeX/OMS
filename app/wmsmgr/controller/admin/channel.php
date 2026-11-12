@@ -70,40 +70,15 @@ class wmsmgr_ctl_admin_channel extends desktop_controller
     
     function saveChannel()
     {
-        $channelMdl = app::get('wmsmgr')->model('channel');
-        
         $url = 'index.php?app=wmsmgr&ctl=admin_channel&act=index';
         $this->begin($url);
-    
-        $ad_info = kernel::single('ome_func')->getDesktopUser();
-        $data = array('createtime'=>time(),'op_id'=>$ad_info['op_id'],'op_name'=>$ad_info['op_name']);
-        if ($_POST['channel']['channel_id'])
-            $data['channel_id'] = trim($_POST['channel']['channel_id']);
-        if ($_POST['channel']['channel_name'])
-            $data['channel_name'] = $_POST['channel']['channel_name'];
-        if ($_POST['channel']['wms_id']){
-            $data['wms_id'] = $_POST['channel']['wms_id'];
-        }
-        
-        //是否允许添加新渠道
-        $isAddChannel = kernel::single('wmsmgr_channel')->checkAddChannel();
-        if(!$isAddChannel){
-            $this->end(false, '请先购买绑定多渠道的授权服务!');
-        }
-        
-        if ($channelMdl->dump(array('channel_id' => $data['channel_id']))) {
-            $this->end(false, app::get('base')->_('渠道ID重复，保存失败'));
-        } else {
-            $rt = $channelMdl->save($data);
-            
-            //已绑定的渠道总数
-            $countNum = $channelMdl->count();
-            
-            //更新授权服务已使用次数(Monitor每次固定+1授权次数)
-            $authNum = 1;
-            $result = kernel::single('wmsmgr_channel')->updateServiceAuthNums('kepler_channel', $authNum);
-            
-            $this->end($rt, app::get('base')->_($rt ? '保存成功' : '保存失败'));
+
+        // 写实现唯一落点 = wmsmgr_capability_channel（api 控制器 act=save 委托同一 capability）
+        try {
+            $result = (new wmsmgr_capability_channel())->saveChannel($_POST);
+            $this->end(true, app::get('base')->_($result['message'] ?? '保存成功'));
+        } catch (Throwable $e) {
+            $this->end(false, $e->getMessage() !== '' ? $e->getMessage() : '保存失败');
         }
     }
 
@@ -115,28 +90,15 @@ class wmsmgr_ctl_admin_channel extends desktop_controller
      */
     public function delChannel($channel_id)
     {
-        $channelMdl = app::get('wmsmgr')->model('channel');
-        $materialChannelMdl = app::get('material')->model('basic_material_channel');
-        
         $url = 'javascript:parent.finderGroup["'.$_GET['finder_id'].'"].refresh();';
-        
-        if(empty($channel_id)){
-            $this->splash('error', $url, '操作出错：无效的操作。');
+
+        // 写实现唯一落点 = wmsmgr_capability_channel（api 控制器 act=delChannel 委托同一 capability）
+        try {
+            $result = (new wmsmgr_capability_channel())->deleteChannel((string) $channel_id);
+            $this->splash('success', $url, $result['message'] ?? '删除渠道成功');
+        } catch (Throwable $e) {
+            $this->splash('error', $url, $e->getMessage() !== '' ? $e->getMessage() : '删除渠道失败');
         }
-        
-        //渠道商品总数
-        $countNum = $materialChannelMdl->count(array('channel_id'=>$channel_id));
-        if($countNum){
-            $this->splash('error', $url, '此渠道已经有关联商品,禁止删除。');
-        }
-        
-        //删除
-        $result = $channelMdl->delete(array('channel_id'=>$channel_id));
-        if(!$result){
-            $this->splash('success', $url, '删除渠道失败');
-        }
-        
-        $this->splash('success', $url, '删除渠道成功');
     }
     
     /**

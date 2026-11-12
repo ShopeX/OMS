@@ -16,6 +16,13 @@
  */
 
 class financebase_finder_extend_filter_expenses_split{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function get_extend_colums(){
         // 获取所有店铺数据
         $shopName = array_column(app::get('ome')->model('shop')->getList('name,shop_id'),'name','shop_id');

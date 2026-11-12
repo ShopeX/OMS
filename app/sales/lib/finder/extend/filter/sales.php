@@ -15,6 +15,13 @@
  * limitations under the License.
  */
 class sales_finder_extend_filter_sales{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function get_extend_colums(){
         $db['sales']=array (
             'columns' => array (
@@ -22,7 +29,7 @@ class sales_finder_extend_filter_sales{
                     'type' => 'varchar(30)',
                     'label' => '订单号',
                     'width' => 130,
-                    'filtertype' => 'normal',
+                    'filtertype' => 'textarea',
                     'filterdefault' => true,
                     'editable' => false,
                     'in_list' => true,

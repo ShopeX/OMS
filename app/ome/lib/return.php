@@ -14,22 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 售后服务类
- *
- *
  **/
 class ome_return 
 {
     const __EDIT_RETURN_CODE = 0x00020;
     const __EDIT_CHANGE_CODE = 0x00040;
     private $boolStatus = array(
-       
         self::__EDIT_RETURN_CODE => array('identifier'=>'换转退', 'text'=>'换转退', 'color'=>'LimeGreen','search'=>'true'),
         self::__EDIT_CHANGE_CODE => array('identifier'=>'退转换', 'text'=>'退转换', 'color'=>'#D2B48C','search'=>'true'),
     );
-
-
+    
     function __construct($app)
     {
         $this->app = $app;
@@ -57,14 +54,11 @@ class ome_return
             $group = $userLib->group();
         }
         
-
         $permission_id = $permission_id ? $permission_id : $menus->permissionId($url_params);
         if($permission_id == '0'){return true;}
 
         return in_array($permission_id,$group) ? true : false;
-
     }
-
     
     /**
      * 生成售后单.
@@ -74,7 +68,6 @@ class ome_return
      * @author cyyr24@sina.cn
      */
     public function add($sdf,$shop_id,&$msg="操作失败",&$logTitle="",&$logInfo=""){
-       
         $shop = app::get("ome")->model("shop");
         $shop_row = $shop->db->selectrow("select node_id,node_type from sdb_ome_shop where shop_id='".$shop_id."'");
         $log = app::get('ome')->model('api_log');
@@ -89,13 +82,11 @@ class ome_return
         $logTitle = $rs['logTitle'];
         $logInfo = $rs['logInfo'];
         $msg = '';
-        return true;
         
-
+        return true;
     }
 
     function get_return_log($sdf_return,$shop_id,&$msg){
-        
         $log = app::get('ome')->model('api_log');
 
         $result = $this->add($sdf_return,$shop_id,$msg,$logTitle,$logInfo);
@@ -287,13 +278,7 @@ class ome_return
         
         return $shopResaon;
     }
-
-
-    /**
-     * 获取BoolTypeText
-     * @param mixed $num num
-     * @return mixed 返回结果
-     */
+    
     public function getBoolTypeText($num = null) {
         if($num) {
             return (array) $this->boolStatus[$num];
@@ -374,19 +359,18 @@ class ome_return
                 // 释放换货冻结
                 kernel::single('ome_return_product')->releaseChangeFreeze($return_id);
             }
+            
             $flag_type = ome_reship_const::__EDIT_RETURN_CODE;
+            
             $updata = array(
                 'flag_type'     =>  $flag_type,
                 'return_type'   => 'return',
-              
             );
-
             $return_productMdl->update($updata,array('return_id'=>$return_id));
+            
+            // log
             $logMdl->write_log('return@ome', $return_id, $log_msg);
-
         }
-
-        
     }
 
     /**
@@ -395,7 +379,6 @@ class ome_return
      * @return 
      */
     public function processChange($sdf){
-       
         $return_productMdl = app::get('ome')->model('return_product');
         $reship = $sdf['reship'];
         $logMdl = app::get('ome')->model('operation_log');
@@ -441,7 +424,6 @@ class ome_return
      * @return mixed 返回值
      */
     public function cancelChangeOrder($change_order_id){
-
         $orderMdl = app::get('ome')->model('orders');
         $rs = $orderMdl->cancel($change_order_id, '线上取消换货', false, 'async');
         if($rs['rsp'] == 'fail') {
@@ -450,27 +432,16 @@ class ome_return
             $changeorders = $orderMdl->dump(array('order_id'=>$change_order_id),'order_id,pause,order_bn');
 
             if($changeorders['pause']!='true'){
-
                 kernel::single('ome_bill_label_delivery')->ToChangeOrderLabel($change_order_id);
-
             }
-
-
         }else{
             $tmpOrder = $orderMdl->db_dump(array('order_id'=>$change_order_id),'order_id,order_bn,payed,shop_id');
             if($tmpOrder['payed'] > 0) {
                 kernel::single('ome_reship_luban')->refundOrder($tmpOrder);
             }
         }
-
     }
     
-
-    /**
-     * pauseChangeOrder
-     * @param mixed $change_order_id ID
-     * @return mixed 返回值
-     */
     public function pauseChangeOrder($change_order_id){
         $orderMdl = app::get('ome')->model('orders');
         $orderMdl->pauseOrder($change_order_id);
@@ -486,7 +457,6 @@ class ome_return
      * @return mixed 返回值
      */
     public function changeToRefund($data){
-
         $order_bn = $data['order_bn'];
         $oid = $data['oid'];
        
@@ -501,9 +471,7 @@ class ome_return
         if($shop_type=='tmall'){
             $sql = "SELECT b.change_order_id,b.reship_bn FROM sdb_ome_return_product_tmall AS a LEFT JOIN sdb_ome_reship AS b ON a.return_id=b.return_id
                 WHERE a.oid='". $oid ."' AND  a.refund_type='change' AND b.change_order_id>0 AND b.return_type='change'";
-               
             $reshipInfo = $db->selectrow($sql);
-         
         }
         
         if(empty($reshipInfo)){

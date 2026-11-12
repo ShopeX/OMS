@@ -16,6 +16,13 @@
  */
 
 class console_finder_inventory{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     //var $detail_base = "基本信息";
     var $detail_item = "详情";
 

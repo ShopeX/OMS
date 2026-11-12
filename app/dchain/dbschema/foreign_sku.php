@@ -63,7 +63,7 @@ $db['foreign_sku'] = array(
             'width'    => 110,
             'editable' => false,
             'in_list'  => true,
-            'filtertype'      => 'yes',
+            'filtertype'      => 'normal',
             'filterdefault'   => true,
         ),
         'outer_sku'        => array(
@@ -110,7 +110,7 @@ $db['foreign_sku'] = array(
             'in_list'         => true,
             'default_in_list' => true,
             'order'           => 60,
-            'filtertype'      => 'yes',
+            'filtertype'      => 'normal',
             'filterdefault'   => true,
         ),
         'mapping_status'   => array(
@@ -124,7 +124,7 @@ $db['foreign_sku'] = array(
             'in_list'         => true,
             'default_in_list' => true,
             'order'           => 70,
-            'filtertype'      => 'yes',
+            'filtertype'      => 'normal',
             'filterdefault'   => true,
         ),
         'mapping_addon'    => array(

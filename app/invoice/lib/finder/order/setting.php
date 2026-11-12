@@ -18,6 +18,13 @@
 
 class invoice_finder_order_setting
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 	public $addon_cols = 'title,tax_rate,shop_id';//调用字段
 	
 	/*------------------------------------------------------ */
@@ -28,6 +35,12 @@ class invoice_finder_order_setting
     var $column_edit_width = '60';
     function column_edit($row)
     {
+        if ($this->vue_mode) {
+            return [
+                ['key' => 'edit', 'label' => '编辑', 'action' => 'edit'],
+            ];
+        }
+
         $finder_id = $_GET['_finder']['finder_id'];
         $sid = $row['sid'];
 

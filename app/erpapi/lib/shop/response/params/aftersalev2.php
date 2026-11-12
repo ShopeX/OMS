@@ -115,6 +115,10 @@ class erpapi_shop_response_params_aftersalev2 extends erpapi_shop_response_param
                 if(empty($sdf['modified']) && in_array($sdf['status'], array('3','4'))){
                     return array('rsp'=>'succ');
                 }
+
+                if(in_array($sdf['status'], array('11'))){
+                    return array('rsp'=>'succ');
+                }
                 
                 //检查更新时间是否变化
                 if($sdf['modified'] < $refundApply['outer_lastmodify']) {

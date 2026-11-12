@@ -694,7 +694,17 @@ class ome_ctl_admin_dly_corp extends desktop_controller
             foreach ($dlycorp['area_fee_conf'] as $key => $val) {
                 $dlycorp['area_fee_conf'][$key]['areaGroupBakId'] = $val['areaGroupId'];
 
-                $dlycorp['area_fee_conf'][$key]['areaGroupId'] = implode(',', $val['newId']);
+                $newId = array();
+                if (isset($val['newId']) && is_array($val['newId'])) {
+                    $newId = $val['newId'];
+                } elseif (isset($val['newId']) && is_string($val['newId']) && $val['newId'] !== '') {
+                    $newId = explode(',', $val['newId']);
+                }
+                if (empty($newId) && !empty($val['areaGroupId']) && is_string($val['areaGroupId'])) {
+                    $newId = explode(',', $val['areaGroupId']);
+                }
+                $newId = array_values(array_filter(array_map('trim', $newId), 'strlen'));
+                $dlycorp['area_fee_conf'][$key]['areaGroupId'] = implode(',', $newId);
                 unset($dlycorp['area_fee_conf'][$key]['newId']);
             }
         }

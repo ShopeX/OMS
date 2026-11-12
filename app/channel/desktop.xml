@@ -11,18 +11,18 @@
 			<menu controller='admin_logistics_exrecommend' action='index' permission='logistics_exrecommend' display='true' order="100213">智选物流</menu>
 		</menugroup>
 		<menugroup name="第三方授权管理" en="thirdparty-auth">
-			<menu controller='admin_channel' action='index' params='channel_type:kuaidi' permission='channel_index_kuaidi' display='true' order="100213">
+			<menu controller='admin_channel' action='index' params='channel_type:kuaidi' target='/m-channel/channel/index?channel_type=kuaidi' permission='channel_index_kuaidi' display='true' order="100213">
 				第三方快递
 			</menu>
-			<menu controller='admin_channel' action='index' params='channel_type:ticket' permission='channel_index_ticket' display='true' order="100214">
+			<menu controller='admin_channel' action='index' params='channel_type:ticket' target='/m-channel/channel/index?channel_type=ticket' permission='channel_index_ticket' display='true' order="100214">
 				工单集成授权
 			</menu>
-			<menu controller='admin_channel' action='index' params='channel_type:sms' permission='channel_index_sms' display='true' order="100215">
+			<menu controller='admin_channel' action='index' params='channel_type:sms' target='/m-channel/channel/index?channel_type=sms' permission='channel_index_sms' display='true' order="100215">
 				短信开通
 			</menu>
 		</menugroup>
 		<menugroup name="云打印" en="cloudprint-yilian">
-			<menu controller='admin_channel' action='index' params='channel_type:cloudprint' permission='channel_index_cloudprint' display='true' order="100214">
+			<menu controller='admin_channel' action='index' params='channel_type:cloudprint' target='/m-channel/channel/index?channel_type=cloudprint' permission='channel_index_cloudprint' display='true' order="100214">
 				云打印授权
 			</menu>
 		</menugroup>

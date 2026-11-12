@@ -14,8 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class console_finder_appropriation{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function __construct($app)
     {
         $this->app = $app;
@@ -67,11 +73,6 @@ EOF;
 
 
     public $detail_items = '调拨单明细';
-    /**
-     * detail_items
-     * @param mixed $appropriation_id ID
-     * @return mixed 返回值
-     */
     public function detail_items($appropriation_id)
     {
         $basicMaterialSelect    = kernel::single('material_basic_select');

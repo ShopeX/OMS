@@ -29,8 +29,8 @@ class omeauto_auto_type_shop extends omeauto_auto_type_abstract implements omeau
     public function _prepareUI(& $tpl, $val) {
         $filter = array('s_type'=>1);
 
-        if($val[0]){
-            $filter['org_id'] = $val[0];
+        if(isset($val[1]) && $val[1]){
+            $filter['org_id'] = $val[1];
         }
 
         #过滤o2o门店店铺

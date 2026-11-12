@@ -89,23 +89,14 @@ class ome_ctl_admin_order_platform extends desktop_controller {
                 array('label' => '批量发货', 'submit' => 'index.php?app=ome&ctl=admin_order_platform&act=delivery', 'target' => 'dialog::{width:600,height:250,title:\'平台自发订单发货\'}'),
             );
         }
+        
         $params['actions']['import'] = [
             'label'  => '自发订单导入',
-            'href'   => sprintf('%s&act=import_orders', $this->url),
+            'href'   => sprintf('%s&act=displayImportV2&p[0]=%s', $this->url, 'platform'),
             'target' => 'dialog::{width:760,height:300,title:\'导入自发订单任务\'}',
         ];
+        
         $this->finder('ome_mdl_orders',$params);
-    }
-    
-    /**
-     * import_orders
-     * @return mixed 返回值
-     */
-    public function import_orders()
-    {
-        $this->pagedata['beginurl'] = $this->url . '&act=index';
-        $this->pagedata['type'] = 'platform';//平台自发
-        $this->display('admin/order/platform/import.html');
     }
 
     /**
@@ -151,18 +142,13 @@ class ome_ctl_admin_order_platform extends desktop_controller {
         echo json_encode($retArr);
     }
     
-    /**
-     * exportTemplate
-     * @return mixed 返回值
-     */
-    public function exportTemplate()
+    public function exportTemplateV2()
     {
-        header("Content-Type: text/csv");
-        header("Content-Disposition: attachment; filename=平台自发订单导入模板" . date('Ymd') . ".csv");
-        header('Cache-Control:must-revalidate,post-check=0,pre-check=0');
-        header('Expires:0');
-        header('Pragma:public');
-        $title = kernel::single('ome_order_import')->getTitle('order');
-        echo '"' . implode('","', $title) . '"';
+        $fileName = "平台自发订单导入模板-" . date('Ymd') . ".xlsx";
+        $title = app::get('ome')->model('orders')->exportTemplateV2('ome_order_importV2');
+        
+        // 获取下载模板事例
+        $demoRows = kernel::single('ome_order_importV2')->getTemplateDemoRows($title);
+        kernel::single('omecsv_phpoffice')->export($fileName, array_merge([$title], $demoRows));
     }
 }

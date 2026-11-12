@@ -87,7 +87,7 @@ class omevirtualwms_mdl_goods extends dbeav_model{
                   'required' => true,
                   'in_list' => true,
                   'default_in_list' => true,
-                  'filtertype' => 'yes',
+                  'filtertype' => 'normal',
                   'filterdefault' => true,
                   'label' => '同步类型',
                   'width' => '70',
@@ -119,7 +119,7 @@ class omevirtualwms_mdl_goods extends dbeav_model{
                   'in_list' => true,
                   'default_in_list' => true,
                   'editable' => false,
-                  'filtertype' => 'yes',
+                  'filtertype' => 'normal',
                   'filterdefault' => true,
                   'label' => '状态',
                   'width' => '60',
@@ -138,7 +138,7 @@ class omevirtualwms_mdl_goods extends dbeav_model{
                   'type' => 'longtext',
                   'editable' => false,
                   'label' => '日志参数',
-                  'filtertype' => 'yes',
+                  'filtertype' => 'normal',
                 ),
                 'error_lv' =>
                 array (
@@ -154,13 +154,13 @@ class omevirtualwms_mdl_goods extends dbeav_model{
                   'default' => 'normal',
                   'required' => true,
                   'label' => '错误级别',
-                  'filtertype' => 'yes',
+                  'filtertype' => 'normal',
                   'filterdefault' => true,
                 ),
                 'msg_id' =>
                 array (
                   'type' => 'varchar(60)',
-                  'filtertype' => 'yes',
+                  'filtertype' => 'normal',
                   'filterdefault' => true,
                   'label' => 'msg_id',
                   'width' => 60,

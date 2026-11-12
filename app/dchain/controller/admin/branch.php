@@ -97,8 +97,8 @@ class dchain_ctl_admin_branch extends desktop_controller
         }
     
         $config = $_POST['config'];
+        $warehouse_mapping = array();
         if ($_POST['oms_warehouse']) {
-            $warehouse_mapping = array();
             foreach ($_POST['oms_warehouse'] as $key => $value) {
                 if (empty($value) && empty($_POST['outer_warehouse'][$key])) {
                     continue;

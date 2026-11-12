@@ -61,17 +61,9 @@ class pam_callback{
 
                     $usersObj->update($loginSdf, array('user_id'=>$module_uid));
 
-                    //session
-                    $_SESSION['type'] = $auth->type;
-                    $_SESSION['login_time'] = time();
-                    if(!kernel::single('desktop_user')->checkPassword($_POST['password'], $errmsg)) {
-                        $_SESSION['needChangePassword'] = $errmsg;
-                    } elseif (kernel::single('desktop_user')->isForceResetPwd($module_uid)) {
-                        $_SESSION['needChangePassword'] = '管理员强制您改密码';
-                    } else {
-                        $_SESSION['needChangePassword'] = null;
-                    }
-                    $params['member_id'] = $_SESSION['account'][$params['type']];
+                    // SESSION auth writes removed - JWT is now primary auth
+                    // Keeping $_SESSION['account'][$params['type']] for backward compatibility (read only)
+                    $params['member_id'] = $_SESSION['account'][$params['type']] ?? null;
                     $params['uname'] = $_POST['uname'];
 
                     foreach(kernel::servicelist('pam_login_listener') as $service)

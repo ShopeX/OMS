@@ -24,6 +24,13 @@
  * ============================
  */
 class console_finder_wms_reship {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = 'wms_status,reship_status,order_type';
 
     /*public $column_edit = "操作";
@@ -58,6 +65,7 @@ class console_finder_wms_reship {
             $logdata[$k]['operate_time'] = date('Y-m-d H:i:s',$v['operate_time']);
         }
         $render->pagedata['log'] = $logdata;
+        if ($this->vue_mode) { return []; }
         return $render->fetch('admin/oplog.html');
     }
 }

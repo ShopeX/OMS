@@ -1074,8 +1074,11 @@ class ome_finder_orders
             $order_id = $_POST['order']['order_id'];
             $op_name = kernel::single('desktop_user')->get_name();
             
+            // mark_type
+            $mark_type = $_POST['order']['mark_type'];
+            
             // 使用ome_order_marktext::add方法添加备注
-            list($success, $message) = kernel::single('ome_order_marktext')->add($order_id, $_POST['order']['mark_text'], $op_name);
+            list($success, $message) = kernel::single('ome_order_marktext')->add($order_id, $_POST['order']['mark_text'], $op_name, $mark_type);
             
             if (!$success) {
                 // 可以在这里处理错误，比如显示错误消息

@@ -119,12 +119,9 @@ class eccommon_ctl_regions extends desktop_controller{
     public function addDlArea()
 	{
 		$this->begin('index.php?app=eccommon&ctl=regions&act=index');
-		$obj_regions_op = kernel::single('eccommon_regions_operation');
-        if(!$obj_regions_op->insertDlArea($_POST,$msg)){
-            $this->end(false, '新建失败，'.$msg);
-        }else
-            $this->end(true, '新建成功，地区名称：'.$_POST['local_name']);
-
+		// 写实现收敛到 capability（与 api_regions 共用同一份；ownTransaction=false：本页事务由 begin()/end() 托管）
+		$result = (new eccommon_capability_regions())->addArea($_POST, false);
+		$this->end($result['ok'], $result['ok'] ? $result['msg'] : '新建失败，'.$result['msg']);
     }
 
     /**
@@ -135,14 +132,9 @@ class eccommon_ctl_regions extends desktop_controller{
     public function saveDlArea()
 	{
 		$this->begin('index.php?app=eccommon&ctl=regions&act=index');
-		$obj_regions_op = kernel::single('eccommon_regions_operation');
-        if(!$obj_regions_op->updateDlArea($_POST,$msg)){
-			$this->end(false, '修改失败，'.$msg);
-        }
-		else
-		{
-			$this->end(true, '修改成功，地区名称：'.$_POST['local_name']);
-		}
+		// 写实现收敛到 capability（与 api_regions 共用同一份；ownTransaction=false：本页事务由 begin()/end() 托管）
+		$result = (new eccommon_capability_regions())->saveArea($_POST, false);
+		$this->end($result['ok'], $result['ok'] ? $result['msg'] : '修改失败，'.$result['msg']);
     }
 
     /**
@@ -166,29 +158,9 @@ class eccommon_ctl_regions extends desktop_controller{
     public function toRemoveArea($regionId)
 	{
         $this->begin('index.php?app=eccommon&ctl=regions&act=index');
-        $regions = app::get('eccommon')->model('regions');
-
-        //判断地区ID是否已使用
-        $region_detail = $regions->getDlAreaById($regionId);
-       
-        //
-        $area = '';
-        if ($region_detail['region_grade'] == '3'){
-            $area = '%'.$region_detail['parent_name'].'/'.$region_detail['local_name'].':'.$region_detail['region_id'].'';
-        }else if($region_detail['region_grade'] == '2'){
-            $area = 'mainland:'.$region_detail['parent_name'].'/'.$region_detail['local_name'].'/%';
-        }else if($region_detail['region_grade'] == '1'){
-            $area = 'mainland:'.$region_detail['local_name'].'/%';
-        }
-        $orders = $regions->db->selectrow("SELECT order_id FROM sdb_ome_orders WHERE ship_area LIKE '".$area."'");
-        if ($orders){
-            $this->end(false,'该地区已有订单使用,不可以删除!');
-        }
-		$obj_regions_op = kernel::single('eccommon_regions_operation');
-		if ($obj_regions_op->toRemoveArea($regionId))
-			$this->end(true,'删除地区成功！');
-		else
-			$this->end(false,'删除地区失败！');
+        // 写实现（含「已有订单使用」守卫）收敛到 capability（与 api_regions 共用同一份；ownTransaction=false）
+        $result = (new eccommon_capability_regions())->removeArea($regionId, false);
+        $this->end($result['ok'], $result['msg']);
     }
 
     /**
@@ -199,31 +171,10 @@ class eccommon_ctl_regions extends desktop_controller{
     public function updateOrderNum()
 	{
         $this->begin('index.php?app=eccommon&ctl=regions&act=index');
-
-        $is_update = true;
-        $dArea = app::get('eccommon')->model('regions');
-        $arrPOdr = $_POST['p_order'];
-
-        $arrRegions = array();
-        if ($arrPOdr)
-        {
-            foreach ($arrPOdr as $key=>$strPOdr)
-            {
-                $arrdArea = $dArea->dump($key, 'region_id,ordernum');
-                $arrdArea['ordernum'] = $strPOdr ? $strPOdr : '50';
-                $arrRegions[] = $arrdArea;
-            }
-        }
-
-        if ($arrRegions)
-        {
-            foreach ($arrRegions as $arrRegionsinfo)
-            {
-                $is_update = $dArea->save($arrRegionsinfo);
-            }
-        }
-
-        $this->end($is_update,'排序成功！');
+        // 写实现收敛到 capability（与 api_regions 共用同一份；ownTransaction=false：本页事务由 begin()/end() 托管）
+        $pOrder = (isset($_POST['p_order']) && is_array($_POST['p_order'])) ? $_POST['p_order'] : array();
+        $result = (new eccommon_capability_regions())->updateOrderNum($pOrder, false);
+        $this->end($result['ok'], $result['msg']);
     }
 
     /**

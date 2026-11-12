@@ -16,6 +16,13 @@
  */
 
 class ome_finder_members{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     
     var $detail_address = '地址库';
     

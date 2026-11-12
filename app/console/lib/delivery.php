@@ -996,7 +996,8 @@ class console_delivery
                 {
                     $itemVal['logistics'] = trim($itemVal['logistics']);
                     
-                    $saveData['logi_code'] = $this->getLogiCode($itemVal['logistics'], $wms_id);
+                    $shop_type = kernel::single('wmsmgr_func')->getShopTypeByDeliveryBn($delivery_bn);
+                    $saveData['logi_code'] = $this->getLogiCode($itemVal['logistics'], $wms_id, $shop_type);
                     
                     $saveData['logi_no'] = ($saveData['logi_no'] ? $saveData['logi_no'] : $itemVal['logi_no']);
                 }
@@ -1301,17 +1302,17 @@ class console_delivery
      * @todo：兼容京东传的物流单号是ID
      *
      * @param string $logi_code
+     * @param string $wms_id
+     * @param string $shop_type
      * @return string
      */
-    public function getLogiCode($logi_code, $wms_id)
+    public function getLogiCode($logi_code, $wms_id, $shop_type = '')
     {
         $dlyCorpObj = app::get('ome')->model('dly_corp');
-        $relationObj = app::get('wmsmgr')->model('express_relation');
-        
-        //获取物流公司对照关系
-        $logiMapInfo = $relationObj->dump(array('wms_id'=>$wms_id, 'wms_express_bn'=>$logi_code), 'sys_express_bn');
-        
-        $logi_code = ($logiMapInfo['sys_express_bn'] ? $logiMapInfo['sys_express_bn'] : $logi_code);
+        $wmsFunc = kernel::single('wmsmgr_func');
+
+        $mapped = $wmsFunc->getlogiCode($wms_id, $logi_code, $shop_type);
+        $logi_code = $mapped ? $mapped : $logi_code;
         
         //获取物流公司信息
         $dlyInfo = $dlyCorpObj->dump(array('type'=>$logi_code), 'corp_id,type,name');
@@ -1405,7 +1406,11 @@ class console_delivery
             $val['logistics'] = trim($val['logistics']);
             $val['logistics'] = str_replace(array('"', "'"), '', $val['logistics']);
             if($val['logistics'] && $val['logi_no']){
-                $logi_code = $this->getLogiCode($val['logistics'], $delivery['wms_id']);
+                // shop_type
+                $shop_type = isset($delivery['shop_type']) ? $delivery['shop_type'] : kernel::single('wmsmgr_func')->getShopTypeByDeliveryBn($delivery['delivery_bn']);
+                
+                // 获取WMS物流编码映射的OMS物流编码
+                $logi_code = $this->getLogiCode($val['logistics'], $delivery['wms_id'], $shop_type);
             }
             
             //如果有子单取消父单

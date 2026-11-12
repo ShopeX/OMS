@@ -18,15 +18,15 @@
 
     <workground name="日志管理" id="monitor_center"  order="1820" icon="icon-caozuorizhi-01">
         <menugroup name="监控日志" en="iptables">
-            <menu controller='admin_alarm_template' action='index' permission='alarm_template' display='true' order='10000200'>预警模板</menu>
-            <menu controller='admin_alarm_group' action='index' permission='alarm_group' display='true' order='10000201'>邮件组配置</menu>
-            <menu controller='admin_alarm_workwx_rule' action='index' permission='alarm_workwx_rule' display='true' order='100002016'>企微通知规则</menu>
-            <menu controller='admin_alarm_receiver' action='index' permission='alarm_receiver' display='true' order='10000201'>收件人配置</menu>
-            <menu controller='admin_alarm_notify' action='index' permission='alarm_notify' display='true' order='10000202'>通知日志</menu>
-            <menu controller="admin_setting" action="index" permission="performance" display='true'  order='10000203'>端口配置</menu>
+            <menu controller='admin_alarm_template' action='index' permission='alarm_template' display='true' order='10000200' target='/m-monitor/alarm-template/index'>预警模板</menu>
+            <menu controller='admin_alarm_group' action='index' permission='alarm_group' display='true' order='10000201' target='/m-monitor/alarm-group/index'>邮件组配置</menu>
+            <menu controller='admin_alarm_workwx_rule' action='index' permission='alarm_workwx_rule' display='true' order='100002016' target='/m-monitor/alarm-workwx-rule/index'>企微通知规则</menu>
+            <menu controller='admin_alarm_receiver' action='index' permission='alarm_receiver' display='true' order='10000201' target='/m-monitor/alarm-receiver/index'>收件人配置</menu>
+            <menu controller='admin_alarm_notify' action='index' permission='alarm_notify' display='true' order='10000202' target='/m-monitor/alarm-notify/index'>通知日志</menu>
+            <menu controller="admin_setting" action="index" permission="performance" display='true'  order='10000203' target='/m-monitor/setting/index'>端口配置</menu>
         </menugroup>
         <menugroup name="监控队列" en="monitoring-queue">
-            <menu controller='admin_alarm_queue' action='index' permission='monitor_alarm_queue' display='true' order='10000301'>队列监控</menu>
+            <menu controller='admin_alarm_queue' action='index' permission='monitor_alarm_queue' display='true' order='10000301' target='/m-monitor/alarm-queue/index'>队列监控</menu>
         </menugroup>
     </workground>
 </desktop>

@@ -45,6 +45,9 @@ class ome_reship_const
     // 实付相等自动审批未通过（应退与订单明细实付不一致，需人工审核）
     const __PAID_EQUAL_AUTO_BLOCK = 0x00002000;
     
+    // 天猫【极速换货】
+    const __TOPSPEED_EXCHANGE = 0x00004000;
+    
     // 京东引凤标识（仅用于 reship/return_product 的 flag_type，不打 bill_label）
     const __YINFENG = 0x00200000;
     
@@ -114,6 +117,13 @@ class ome_reship_const
                 $style = array('color'=>'#FF8C00', 'msg'=>'实付相等自动审批未通过，应退金额与订单实付不一致', 'flag'=>'实付不等');
                 $ret .= $this->getViewPanel($style['color'], $style['msg'], $style['flag']);
             }
+            
+            // 天猫【极速换货】
+            if($flag_type & ome_reship_const::__TOPSPEED_EXCHANGE){
+                $style = array('color'=>'#FFDEAD', 'msg'=>'天猫极速换货', 'flag'=>'极速换货');
+                $ret .= $this->getViewPanel($style['color'], $style['msg'], $style['flag']);
+            }
+            
             $ret = '<div style="overflow: auto;word-break: break-word;white-space: normal;width: 100%;flex-wrap: wrap;display: flex;">'.$ret.'</div>';
         }
         return $ret;

@@ -469,6 +469,64 @@ class ome_refund_apply
     }
 
     /**
+     * 拒绝退款申请时：若关联退货单且尚未生成售后单，则按退货单补生成售后单
+     * 场景：退货完成后生成的退款申请单，退货入库时因金额等条件未落售后单，拒绝时补齐
+     *
+     * @param array $applyInfo 退款申请单
+     * @param string $trigger_event 售后触发事件，默认与退货完成一致
+     * @return bool true=已存在或本次生成成功；false=无退货单或生成失败
+     */
+    public function generateAftersaleIfReshipPending($applyInfo, $trigger_event = '1')
+    {
+        if (empty($applyInfo) || !is_array($applyInfo)) {
+            return false;
+        }
+        
+        $reshipObj = app::get('ome')->model('reship');
+        $aftersaleObj = app::get('sales')->model('aftersale');
+        $operLogObj = app::get('ome')->model('operation_log');
+        
+        $reshipInfo = array();
+        $reship_id = intval(isset($applyInfo['reship_id']) ? $applyInfo['reship_id'] : 0);
+        if ($reship_id > 0) {
+            $reshipInfo = $reshipObj->dump(array('reship_id' => $reship_id), 'reship_id,reship_bn,return_type');
+        }
+        
+        if (empty($reshipInfo) && !empty($applyInfo['return_id'])) {
+            $reshipInfo = $reshipObj->dump(array('return_id' => $applyInfo['return_id']), 'reship_id,reship_bn,return_type');
+        }
+        
+        if (empty($reshipInfo) && !empty($applyInfo['refund_apply_bn'])) {
+            $reshipInfo = $reshipObj->dump(array('reship_bn' => $applyInfo['refund_apply_bn']), 'reship_id,reship_bn,return_type');
+        }
+        
+        if (empty($reshipInfo['reship_id'])) {
+            return false;
+        }
+        
+        $reship_id = intval($reshipInfo['reship_id']);
+        $exist = $aftersaleObj->db_dump(array('reship_id' => $reship_id), 'aftersale_id');
+        if (!empty($exist['aftersale_id'])) {
+            return true;
+        }
+        
+        // 退货类型
+        $return_type = $reshipInfo['return_type'] ? $reshipInfo['return_type'] : 'return';
+        
+        // 生成售后单
+        $rs = kernel::single('sales_aftersale')->generate_aftersale($reship_id, $return_type, $trigger_event);
+        if (!empty($applyInfo['apply_id'])) {
+            if ($rs) {
+                $operLogObj->write_log('refund_refuse@ome', $applyInfo['apply_id'], '拒绝退款申请，按退货单['.$reshipInfo['reship_bn'].']补生成售后单');
+            } else {
+                $operLogObj->write_log('refund_refuse@ome', $applyInfo['apply_id'], '拒绝退款申请，按退货单['.$reshipInfo['reship_bn'].']补生成售后单失败');
+            }
+        }
+        
+        return (bool)$rs;
+    }
+
+    /**
      * 识别当前退款申请是否需要请求接口进行退款
      * @param  $params  参数
      * @param  $err_msg  错误信息

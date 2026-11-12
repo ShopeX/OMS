@@ -16,6 +16,13 @@
  */
 
 class console_finder_vopurchase{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     
     var $addon_cols    ='warehouse,sell_et_time';
     

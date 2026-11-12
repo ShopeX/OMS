@@ -14,24 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-class omeanalysts_mdl_ome_goodsaftersale extends dbeav_model{
+    class omeanalysts_mdl_ome_goodsaftersale extends dbeav_model{
     
-    /**
-     * count
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
-    public function count($filter=null){
+        public function count($filter=null){
             return $this->_get_count($filter);
         }
     
-    /**
-     * _get_count
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
-    public function _get_count($filter=null){
+        public function _get_count($filter=null){
             $sql = "select count(*) as _count 
                     from sdb_ome_return_product as rp 
                     inner join sdb_ome_return_product_items as rpi on rpi.return_id = rp.return_id where ".$this->_filter($filter);
@@ -96,11 +85,7 @@ class omeanalysts_mdl_ome_goodsaftersale extends dbeav_model{
             
         }
         
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
-    public function get_schema(){
+        public function get_schema(){
             //售后申请单号，售后申请时间,名称，品牌，货号，规格，数量
             
 //          快速搜索：货号，售后申请单号。
@@ -118,7 +103,7 @@ class omeanalysts_mdl_ome_goodsaftersale extends dbeav_model{
                         'order'=>'1',
                         'width' =>200,
                         'searchtype' => 'has',
-                        'filtertype' => 'yes',
+                        'filtertype' => 'normal',
                         'filterdefault' => true,
                         'is_title' => true,
                     ),
@@ -126,7 +111,7 @@ class omeanalysts_mdl_ome_goodsaftersale extends dbeav_model{
                         'type' => 'time',
                         'label' => '售后申请时间',
                         'comment' => '申请时间',
-                        'filtertype' => 'yes',
+                        'filtertype' => 'normal',
                         'orderby'=>false,
                         'order'=>'2',
                         'filterdefault' => true,
@@ -163,7 +148,7 @@ class omeanalysts_mdl_ome_goodsaftersale extends dbeav_model{
                         'order'=>'5',
                         'width' =>85,
                         'searchtype' => 'has',
-                        'filtertype' => 'yes',
+                        'filtertype' => 'normal',
                         'filterdefault' => true,
                     ),
                     /*'spec_info' => array (
@@ -210,14 +195,7 @@ class omeanalysts_mdl_ome_goodsaftersale extends dbeav_model{
             return $schema;
         }
         
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
-    public function _filter($filter,$tableAlias=null,$baseWhere=null){
+        public function _filter($filter,$tableAlias=null,$baseWhere=null){
             $where = array(1);
 
             if(isset($filter['time_from']) && $filter['time_from']){
@@ -277,10 +255,6 @@ class omeanalysts_mdl_ome_goodsaftersale extends dbeav_model{
         }
 
     //配置信息
-    /**
-     * export_params
-     * @return mixed 返回值
-     */
     public function export_params(){
 
         $filter = $this->export_filter;
@@ -307,10 +281,6 @@ class omeanalysts_mdl_ome_goodsaftersale extends dbeav_model{
     }
 
     //商品销量统计title
-    /**
-     * 获取_export_main_title
-     * @return mixed 返回结果
-     */
     public function get_export_main_title(){
         $title = array(
             'col:售后申请单号',
@@ -325,14 +295,6 @@ class omeanalysts_mdl_ome_goodsaftersale extends dbeav_model{
     }
 
     //商品销量统计
-    /**
-     * 获取_export_main
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $limit limit
-     * @param mixed $data 数据
-     * @return mixed 返回结果
-     */
     public function get_export_main($filter,$offset,$limit,&$data){
         $goodsaftersaleMdl = $this->app->model('ome_goodsaftersale');
         //$brandMdl = app::get('ome')->model('brand');

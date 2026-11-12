@@ -17,6 +17,14 @@
 
 class tbo2o_finder_shop_products
 {
+
+    private $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols    = 'id,is_sync,sync_time,visibled';
     
     //操作

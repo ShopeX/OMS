@@ -17,6 +17,13 @@
 
 class financebase_finder_cainiao
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $column_edit = "操作";
     var $column_edit_width = "110";
     var $column_edit_order = 4;

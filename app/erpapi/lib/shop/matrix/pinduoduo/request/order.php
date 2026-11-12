@@ -70,5 +70,4 @@ class erpapi_shop_matrix_pinduoduo_request_order extends erpapi_shop_request_ord
         
         return $params;
     }
-
 }

@@ -14,8 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class crm_finder_gift{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 //    var $addon_cols = "status";
 //    var $column_control = '操作';
 //    var $column_control_width = "80";
@@ -45,9 +51,21 @@ class crm_finder_gift{
     var $column_edit_width = 120;
     function column_edit($row)
     {
-        $finder_id = $_GET['_finder']['finder_id'];
         $gift_id = $row[$this->col_prefix.'gift_id'];
 
+        // Vue 模式：下发结构化行操作（FE 用 #column-_actions 渲染，见 FinderTable.vue）
+        if ($this->vue_mode) {
+            return array(
+                array(
+                    'key'    => 'gift-set',
+                    'label'  => '设置赠品',
+                    'action' => 'edit',
+                    'id'     => (int)$gift_id,
+                ),
+            );
+        }
+
+        $finder_id = isset($_GET['_finder']['finder_id']) ? $_GET['_finder']['finder_id'] : '';
         $button1 = '<a href="index.php?app=crm&ctl=admin_gift&act=edit&p[0]='.$gift_id.'&finder_id='.$finder_id.'" target="dialog::{width:600,height:350,title:\'赠品设置\'}">设置赠品</a>';
 
         return $button1;

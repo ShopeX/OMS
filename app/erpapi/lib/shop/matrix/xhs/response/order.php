@@ -69,6 +69,10 @@ class erpapi_shop_matrix_xhs_response_order extends erpapi_shop_response_order
                 $components[] = 'consignee';
             }
         }
+
+        if ($this->_ordersdf['is_delivery'] == 'Y' && $this->_tgOrder['is_delivery'] == 'N') {
+            $components[] = 'master';
+        }
         
         return $components;
     }
@@ -96,6 +100,22 @@ class erpapi_shop_matrix_xhs_response_order extends erpapi_shop_response_order
     protected function _analysis()
     {
         parent::_analysis();
+
+        // source_status=2 已支付处理中：禁止发货；=4 待发货：允许发货
+        if ($this->_ordersdf['source_status'] === 'PAID_DEALING') {
+            $this->_ordersdf['is_delivery'] = 'N';
+        } elseif ($this->_ordersdf['source_status'] === 'WAIT_SELLER_SEND_GOODS') {
+            $this->_ordersdf['is_delivery'] = 'Y';
+        }
+
+        // 超级合拍：extend_field.orderTagList 含 GROUPON
+        $orderTagList = $this->_ordersdf['extend_field']['orderTagList'] ?? [];
+        if (is_array($orderTagList) && in_array('GROUPON', $orderTagList, true)) {
+            $this->_ordersdf['is_risklabels'][] = [
+                'label_code' => 'SOMS_ORDER_GROUPON',
+            ];
+        }
+
         //买家实付字段名
         $this->_ordersdf['coupon_actuallypay_field'] = 'extend_item_list/totalPayAmount';
         $this->_ordersdf['coupon_actuallypay_field_unit'] = 100;
@@ -344,6 +364,7 @@ class erpapi_shop_matrix_xhs_response_order extends erpapi_shop_response_order
             $plugins[] = 'payment';
         }
         $plugins[] = 'orderextend';
+        $plugins[] = 'orderlabels';
         
         return $plugins;
     }

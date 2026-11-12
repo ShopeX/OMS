@@ -208,8 +208,8 @@ class ome_ctl_admin_batch_order extends desktop_controller{
             $selectCorps[] = $val['corp_id'];
         }
         
-        // 获取仓库关联的指定物流公司
-        if($corps){
+        // 获取仓库关联的指定物流公司（门店虚拟仓则跳过）
+        if($corps && $branchInfo['b_type'] != '2'){
             $trueCorps = array();
             foreach ($corps as $key => $val)
             {
@@ -357,37 +357,48 @@ class ome_ctl_admin_batch_order extends desktop_controller{
         $oShop = $this->app->model('shop');
         $result = array('total' => 0, 'succ' => 0, 'fail' => 0);
         $ajaxParams = explode(';',$_POST['ajaxParams']);
-        $rows = $oOrder->getList('shop_id,order_id,source', array('order_id' => $ajaxParams,'payed'=>0,'status|notin'=>array('dead')));
+        $rows = $oOrder->getList('shop_id,order_id,source,shop_type,order_type,order_source', array('order_id' => $ajaxParams,'payed'=>0,'status|notin'=>array('dead')));
+        
         $orders = array();
         foreach ($rows as $order) {
             $orders[$order['order_id']] = $order;
-
         }
+        
         unset($rows);
+        
         foreach ( $orders as $order ) {
-        $order_id = $order['order_id'];
-        $result['total'] ++;
-
-        $memo = "批量取消订单: ".$_POST['memo'];
-        $mod = 'sync';
-
-        $c2c_shop_list = ome_shop_type::shop_list();
-        $shop_detail = $oShop->dump(array('shop_id'=>$order['shop_id']),'node_id,node_type');
-        if(!$shop_detail['node_id'] || in_array($shop_detail['node_type'],$c2c_shop_list) || $order['source'] == 'local'){
-            $mod = 'async';
+            $order_id = $order['order_id'];
+            $result['total'] ++;
+            
+            $memo = "批量取消订单: ".$_POST['memo'];
+            $mod = 'sync';
+            
+            $c2c_shop_list = ome_shop_type::shop_list();
+            $shop_detail = $oShop->dump(array('shop_id'=>$order['shop_id']),'node_id,node_type');
+            if(!$shop_detail['node_id'] || in_array($shop_detail['node_type'],$c2c_shop_list) || $order['source'] == 'local'){
+                $mod = 'async';
+            }
+            
+            $sync_rs = $oOrder->cancel($order_id,$memo,true,$mod, false);
+            if($sync_rs['rsp'] == 'success')
+            {
+                // 极速换货订单，回传平台换纲拒绝发新品
+                if ($order['order_type'] === 'exchange' || $order['order_source'] === 'platformexchange') {
+                    if ($order['shop_type'] == 'taobao'){
+                        $notifyRs = kernel::single('ome_order_platform_taobao_aftersale')->notifyConsigngoodsRefuseOnOrderCancel($order_id, $memo);
+                        if (empty($notifyRs['rsp']) || $notifyRs['rsp'] !== 'succ') {
+                            $result['fail']++;
+                            continue;
+                        }
+                    }
+                }
+                
+                $result['succ'] ++;
+            }else{
+                $result['fail']++;
+            }
         }
-
-        $sync_rs = $oOrder->cancel($order_id,$memo,true,$mod, false);
-        if($sync_rs['rsp'] == 'success')
-        {
-            $result['succ'] ++;
-        }else{
-            $result['fail']++;
-        }
-
-
-
-        }
+        
         echo json_encode($result,true);
     }
    

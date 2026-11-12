@@ -47,4 +47,15 @@ class erpapi_shop_request_member extends erpapi_shop_request_abstract
         }
         return $return;
     }
+
+    /**
+     * 京东 pin 转 xid / ouid（非 360buy 平台默认不支持）
+     *
+     * @param array $sdf
+     * @return array
+     */
+    public function pin2xid(array $sdf)
+    {
+        return array('rsp' => 'fail', 'msg' => '当前平台不支持pin转xid', 'data' => array());
+    }
 }

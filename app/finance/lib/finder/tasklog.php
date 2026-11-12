@@ -16,6 +16,13 @@
  */
 
 class finance_finder_tasklog{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     /* 详情
      */

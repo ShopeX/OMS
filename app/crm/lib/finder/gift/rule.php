@@ -16,6 +16,13 @@
  */
 
 class crm_finder_gift_rule{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     
     var $addon_cols = "start_time,end_time,status,disable,filter_arr";
     

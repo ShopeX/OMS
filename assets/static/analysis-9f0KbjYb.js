@@ -1,0 +1,1 @@
+import{N as e}from"./index-JvM0-iLs.js";function i(a,t={}){return e({url:"/index.php",method:"GET",params:{app:"tgkpi",ctl:"api_analysis",act:"index",type:a,...t}})}function r(a,t){return e({url:"/index.php",method:"GET",params:{app:"tgkpi",ctl:"api_analysis_check",act:"ajaxChartData",start_time:a,end_time:t}})}export{r as a,i as f};

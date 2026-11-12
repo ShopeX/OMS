@@ -1,0 +1,1 @@
+import{_ as e}from"./index-JvM0-iLs.js";import{p as o,m as t,q as s}from"./vue-Myi12l60.js";import"./element-51ajuxku.js";const c={},r={class:"placeholder-page"},n=s("p",null,"页面迁移中...",-1),_=[n];function a(d,i){return t(),o("div",r,_)}const f=e(c,[["render",a]]);export{f as default};

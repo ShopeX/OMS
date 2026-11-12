@@ -24,6 +24,13 @@
  */
 class dealer_finder_goods_price 
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = "id";
     public $column_edit = "操作";
     public $column_edit_width = 80;

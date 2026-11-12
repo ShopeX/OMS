@@ -14,8 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class ome_finder_tbgift_goods{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $addon_cols = "status";
     var $column_control = '操作';
     var $column_control_width = "150";

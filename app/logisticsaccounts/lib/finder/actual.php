@@ -14,8 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class logisticsaccounts_finder_actual{
+
+    private $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
 
      function __construct(){
         if($_GET['ctl'] == 'admin_actual'){

@@ -28,6 +28,7 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
         'taobao'    => 'TB',
         'paipai'    => 'PP',
         '360buy'    => 'JD',
+        'jd'        => 'JD',
         'yihaodian' => 'YHD',
         'qq_buy'    => 'QQ',
         'dangdang'  => 'DD',

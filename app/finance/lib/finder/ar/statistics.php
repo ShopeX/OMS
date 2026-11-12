@@ -16,6 +16,13 @@
  */
 
 class finance_finder_ar_statistics{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     private $publicData;
     var $addon_cols = "addon";
     /**

@@ -16,7 +16,6 @@
  */
 
 class ome_finder_branch {
-
     /**
      * 是否仓库配置
      * 
@@ -35,7 +34,6 @@ class ome_finder_branch {
      * 析构
      */
     function __construct() {
-
         //根据APP做判断
         if ($_REQUEST['app'] == 'ome') {
             $this->isConfig = false;
@@ -44,7 +42,6 @@ class ome_finder_branch {
         }
 
         if (self::$orderTypes === null) {
-
             $types = app::get('omeauto')->model('order_type')->getList('tid,name,disabled');
             foreach ((array) $types as $t) {
                 self::$orderTypes[$t['tid']] = $t;
@@ -53,7 +50,6 @@ class ome_finder_branch {
     }
 
     var $detail_basic = "仓库详情";
-
     function detail_basic($branch_id) {
         $render = app::get('ome')->render();
         $branchObj = app::get('ome')->model('branch');
@@ -66,26 +62,23 @@ class ome_finder_branch {
     var $addon_cols = "branch_id,area_conf,defaulted,wms_id,cutoff_time,latest_delivery_time,parent_id";
     var $column_edit = "操作";
     var $column_edit_width = "100";
-
     function column_edit($row) {
         $finder_id = $_GET['_finder']['finder_id'];
         $ret = '';
         if (!$this->isConfig) {
               return '<a href="index.php?app=ome&ctl=admin_branch&act=editbranch&p[0]=' . $row[$this->col_prefix . 'branch_id'] . '&p[1]=true&_finder[finder_id]=' . $finder_id . '&finder_id=' . $finder_id . '&finder_vid='.$_GET['finder_vid'].'">编辑</a>';
         } else {
-
             if ($row['_0_defaulted'] == 'false') {
-//                $ret = "&nbsp;<a href='javascript:voide(0);' onclick=\"new Dialog('index.php?app=omeauto&ctl=autobranch&act=edit&p[0]={$row[branch_id]}&finder_id={$finder_id}',{width:760,height:400,title:'仓库相关订单分组设置'}); \">设置</a>";
                 $ret .= "&nbsp;&nbsp;<a href='index.php?app=omeauto&ctl=autobranch&act=setDefault&p[0]={$row[$this->col_prefix . 'branch_id']}&finder_id={$finder_id}' target='download'>默认</a>";
             } else {
                 $ret .= "&nbsp;&nbsp;<a href='index.php?app=omeauto&ctl=autobranch&act=removeDefault&p[0]={$row[$this->col_prefix . 'branch_id']}&finder_id={$finder_id}' target='download'>取消默认</a>";
             }
+            
             return $ret;
         }
     }
 
     var $column_owner = '仓库归属';
-
     function column_owner($row){
         $branch_model  = app::get('ome')->model('branch');
         $channel_model = app::get('channel')->model('channel');
@@ -103,37 +96,6 @@ class ome_finder_branch {
             return '-';
         }
     }
-
-//    var $column_order = "订单分组";
-//    var $column_order_width = "250";
-//
-//    function column_order($row) {
-//
-//        $html = '';
-//        $title = '';
-//        if ($row['_0_defaulted'] == 'false') {
-//            if (!empty($row['_0_area_conf'])) {
-//                $config = unserialize($row['_0_area_conf']);
-//                foreach ($config as $tid) {
-//
-//                    if (self::$orderTypes[$tid]['disabled'] == 'false') {
-//                        $title .= self::$orderTypes[$tid]['name'] . "<br/>";
-//                        $html .= sprintf("<a href=\"javascript:voide(0);\" onclick=\"new Dialog('index.php?app=omeauto&ctl=order_type&act=edit&p[0]=%s&finder_id=%s',{width:760,height:480,title:'修改分组规则'}); \">%s</a>&nbsp;&nbsp;", $tid, $_GET[_finder][finder_id], self::$orderTypes[$tid]['name']);
-//                    } else {
-//                        $html .= "<span style='color:#DDDDDD;' title='该规则已经暂停使用'>" . self::$orderTypes[$tid]['name'] . "</span>";
-//                    }
-//                }
-//            }
-//        } else {
-//            $title = '所有未分组订单';
-//            $html = '<a href="javascript:voide(0);">所有未分组订单</a>';
-//        }
-//        if ($title <> '') {
-//            return "<div onmouseover='bindFinderColTip(event)' rel='{$title}'>" . $html . "<div>";
-//        } else {
-//            return $html;
-//        }
-//    }
 
     public $detail_branch = '平台仓库编码配置';
     /**
@@ -165,25 +127,97 @@ class ome_finder_branch {
         $render->pagedata['branch_relation'] = $branchRelation;
         return $render->fetch("admin/system/branch_config.html");
     }
+    
+    public $detail_wms_branch = '仓库对应WMS配置';
+    public function detail_wms_branch($branchId)
+    {
+        $render = app::get('ome')->render();
+        $oBranch = app::get('ome')->model('branch');
+        $oBranchWms = app::get('ome')->model('branch_wms_channel');
+        $oChannel = app::get('channel')->model('channel');
+
+        if ($_POST) {
+            $updateId = array();
+            foreach ((array) $_POST['shop_type'] as $k => $shopType) {
+                $channelId = $_POST['channel_id'][$k];
+                if ($shopType === '' || $shopType === null || !$channelId) {
+                    continue;
+                }
+                $row = $oBranchWms->db_dump(
+                    array('branch_id' => $branchId, 'shop_type' => $shopType),
+                    'id,channel_id'
+                );
+                if ($row) {
+                    if ($row['channel_id'] != $channelId) {
+                        $oBranchWms->update(array('channel_id' => $channelId), array('id' => $row['id']));
+                    }
+                    $updateId[] = $row['id'];
+                } else {
+                    $iData = array(
+                        'branch_id'  => $branchId,
+                        'shop_type'  => $shopType,
+                        'channel_id' => $channelId,
+                    );
+                    $oBranchWms->insert($iData);
+                    $updateId[] = $iData['id'];
+                }
+            }
+            $filter = array('branch_id' => $branchId);
+            if ($updateId) {
+                $filter['id|notin'] = $updateId;
+            }
+            $oBranchWms->delete($filter);
+        }
+
+        $branch = $oBranch->dump($branchId, 'branch_id,wms_id');
+        $defaultWmsName = '-';
+        if (!empty($branch['wms_id'])) {
+            $defaultChannel = $oChannel->dump(array('channel_id' => $branch['wms_id']), 'channel_name');
+            if ($defaultChannel) {
+                $defaultWmsName = $defaultChannel['channel_name'];
+            }
+        }
+
+        // 仅已绑定（node_id 非空），排除自有仓 selfwms
+        $wmsList = $oChannel->getList(
+            'channel_id,channel_name',
+            array(
+                'channel_type' => 'wms',
+                'node_id|notin' => array('selfwms'),
+                'node_type|noequal' => 'selfwms',
+                'filter_sql' => "node_id IS NOT NULL AND node_id != ''",
+            )
+        );
+        
+        // 平台类型列表
+        $shopTypeList = ome_shop_type::get_shop_type();
+        
+        // 删除掉平台类型：shopex_b2c、shopex_b2b、ecos.b2c、ecos.dzg
+        unset($shopTypeList['shopex_b2c'], $shopTypeList['shopex_b2b'], $shopTypeList['ecos.b2c'], $shopTypeList['ecos.dzg']);
+        
+        // 删除掉平台类型：paipai、yihaodian
+        unset($shopTypeList['paipai'], $shopTypeList['yihaodian']);
+        
+        $render->pagedata['shop_type'] = $shopTypeList;
+        $render->pagedata['wms_list'] = $wmsList;
+        $render->pagedata['default_wms_name'] = $defaultWmsName;
+        $render->pagedata['branch_wms_channel'] = $oBranchWms->getList('*', array('branch_id' => $branchId));
+        
+        return $render->fetch('admin/system/branch_wms_channel.html');
+    }
 
     var $column_wms = 'WMS名称';
-
     function column_wms($row){
-
-       
         $wms_id = $row[$this->col_prefix.'wms_id'];
-     
         $channelMdl = app::get('channel')->model('channel');
-        
         $channel = $channelMdl->dump(array('channel_id' => $wms_id), 'channel_name');
-
-        
         if($channel){
             return $channel['channel_name'];
         } else {
             return '-';
         }
     }
+    
     var $column_cutoff_time = '截单时间';
     var $column_cutoff_time_width = "80";
     function column_cutoff_time($row){
@@ -195,6 +229,7 @@ class ome_finder_branch {
         }else{
             $str = '';
         }
+        
         return $str;
     }
 

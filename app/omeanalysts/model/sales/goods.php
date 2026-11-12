@@ -467,7 +467,7 @@ class omeanalysts_mdl_sales_goods extends dbeav_model
                     'width' => 160,
                     'searchtype' => 'has',
                     'editable' => true,
-                    'filtertype' => 'bool',
+                    'filtertype' => 'normal',
                     'filterdefault' => 'true',
                     'in_list' => true,
                     'default_in_list' => true,

@@ -16,6 +16,13 @@
  */
 
 class o2o_finder_autostore_rule {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     var $addon_cols = "rule_id,branch_id";
 

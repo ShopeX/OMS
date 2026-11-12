@@ -16,6 +16,13 @@
  */
 
 class purchase_finder_returned_purchase{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 //    var $detail_basic = "采购退货单详情";
 //    var $detail_item = "采购退货单明细";
 //    //var $column_bn = "入库单编号";

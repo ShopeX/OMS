@@ -17,6 +17,13 @@
 
 class ediws_finder_reship
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     
     
     public $detail_items = '明细列表';

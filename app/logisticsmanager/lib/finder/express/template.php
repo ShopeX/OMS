@@ -16,6 +16,13 @@
  */
 
 class logisticsmanager_finder_express_template{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $addon_cols = "template_id,out_template_id,is_default,control_type,template_select,template_data";
     var $column_confirm = "操作";
     var $column_confirm_width = "150";

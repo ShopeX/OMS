@@ -1,0 +1,161 @@
+<style>
+.mcp-admin { font-size: 13px; color: #333; }
+.mcp-admin h5 { margin: 14px 0 8px; font-size: 14px; }
+.mcp-admin .division { background: #fff; border: 1px solid #e8e8e8; border-radius: 4px; padding: 12px 14px; margin-bottom: 14px; }
+.mcp-admin table.list { width: 100%; border-collapse: collapse; }
+.mcp-admin table.list th, .mcp-admin table.list td { border-bottom: 1px solid #f0f0f0; padding: 8px 10px; text-align: left; vertical-align: middle; }
+.mcp-admin table.list th { background: #f7f8fa; color: #5e6d82; font-weight: 600; white-space: nowrap; }
+.mcp-admin .mono { font-family: Menlo, Consolas, monospace; font-size: 12px; }
+.mcp-admin .mcp-st-on { color: #1a7f37; font-weight: 600; }
+.mcp-admin .mcp-st-pending { color: #b7791f; font-weight: 600; }
+.mcp-admin .mcp-st-revoked { color: #c0392b; font-weight: 600; }
+.mcp-admin .btn { display: inline-block; padding: 3px 10px; border: 1px solid #d0d0d0; border-radius: 3px; background: #fff; cursor: pointer; font-size: 12px; margin-right: 4px; }
+.mcp-admin .btn-primary { background: #2d6cdf; border-color: #2d6cdf; color: #fff; }
+.mcp-admin .btn-danger { background: #fff; border-color: #d9534f; color: #d9534f; }
+.mcp-admin .form-row { margin: 8px 0; }
+.mcp-admin .form-row label { display: inline-block; width: 120px; color: #5e6d82; vertical-align: top; padding-top: 4px; }
+.mcp-admin .form-row input[type=text], .mcp-admin .form-row select, .mcp-admin .form-row textarea { border: 1px solid #d0d0d0; border-radius: 3px; padding: 4px 8px; font-size: 13px; width: 420px; }
+.mcp-admin .form-row textarea { height: 60px; }
+.mcp-admin .scopes label { margin-right: 14px; white-space: nowrap; }
+.mcp-admin .agent-only, .mcp-admin .operator-only { display: none; }
+.mcp-admin .agent-only.on, .mcp-admin .operator-only.on { display: block; }
+.mcp-admin .mode-tag { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+.mcp-admin .mode-open { background: #e6f4ea; color: #1a7f37; }
+.mcp-admin .mode-approval { background: #fdf3e0; color: #b7791f; }
+.mcp-admin .mode-closed { background: #fdeaea; color: #c0392b; }
+.mcp-admin .hint { color: #999; font-size: 12px; margin-left: 6px; }
+</style>
+
+<div class="mcp-admin">
+
+  <h5>动态注册模式</h5>
+  <div class="division">
+    当前模式：<span class="mode-tag mode-<{$mode}>"><{$mode}></span>
+    <span class="hint">open=外部应用可自行注册；approval=注册需管理员批准；closed=关闭动态注册</span>
+    <form action="index.php?app=mcpapi&ctl=admin_client&act=save_regmode" method="post" style="display:inline-block;margin-left:20px">
+      <select name="mode">
+        <option value="open" <{if $mode eq 'open'}>selected<{/if}>>open（开放注册）</option>
+        <option value="approval" <{if $mode eq 'approval'}>selected<{/if}>>approval（注册需审批）</option>
+        <option value="closed" <{if $mode eq 'closed'}>selected<{/if}>>closed（关闭注册）</option>
+      </select>
+      <button class="btn" type="submit">切换模式</button>
+    </form>
+  </div>
+
+  <h5>注册机密客户端</h5>
+  <div class="division">
+    <form action="index.php?app=mcpapi&ctl=admin_client&act=save_register" method="post" id="mcp-reg-form">
+      <div class="form-row">
+        <label>客户端类型：</label>
+        <label style="width:auto"><input type="radio" name="kind" value="operator" checked onchange="mcpSwitchKind(this.value)"> 操作员型（浏览器授权 + 用户同意）</label>
+        <label style="width:auto"><input type="radio" name="kind" value="agent" onchange="mcpSwitchKind(this.value)"> Agent型（密钥直换令牌，无人值守）</label>
+      </div>
+      <div class="form-row">
+        <label>应用名称：</label>
+        <input type="text" name="name" required maxlength="100" placeholder="如：WorkBuddy 助手">
+      </div>
+      <div class="form-row operator-only on" id="mcp-row-redirect">
+        <label>回调地址：</label>
+        <textarea name="redirect_uris" placeholder="每行一个，如 workbuddy://oauth/callback&#10;https://app.example.com/oauth/cb"></textarea>
+        <span class="hint">https / 自定义 scheme / loopback</span>
+      </div>
+      <div class="form-row agent-only" id="mcp-row-svc">
+        <label>绑定服务账号：</label>
+        <select name="service_user_id" required>
+          <option value="" disabled selected>— 请选择 —</option>
+          <{foreach from=$service_accounts item=sa}>
+          <option value="<{$sa.user_id}>"><{$sa.name}>（user#<{$sa.user_id}>）</option>
+          <{/foreach}>
+        </select>
+        <span class="hint" id="mcp-svc-empty" style="display:none;color:#c0392b">暂无服务账号：请先到「管理员和权限 → 操作员管理」新建，账号类型选「服务账号」</span>
+      </div>
+      <div class="form-row">
+        <label>授权范围：</label>
+        <span class="hint">默认授予全部 scope，权限面实际由角色收敛（scope 仅作额外裁剪，高级场景经接口调整）</span>
+      </div>
+      <div class="form-row">
+        <label></label>
+        <button class="btn btn-primary" type="submit">注册并生成密钥</button>
+        <span class="hint">密钥仅注册成功后显示一次</span>
+      </div>
+    </form>
+  </div>
+
+  <h5>待审批客户端（<{$pending_count}>）</h5>
+  <div class="division">
+    <{if $pending_count eq 0}>
+    <p style="color:#999;margin:4px 0">暂无待审批客户端</p>
+    <{else}>
+    <table class="list">
+      <thead><tr><th>应用名</th><th>client_id</th><th>类型</th><th>来源</th><th>注册时间</th><th>操作</th></tr></thead>
+      <tbody>
+        <{foreach from=$pending item=item}>
+        <tr>
+          <td><{$item.name}></td>
+          <td class="mono" title="<{$item.client_id}>"><{$item.client_id|substr:0:20}>…</td>
+          <td><{if $item.client_kind eq 'agent'}>Agent型<{else}>操作员型<{/if}></td>
+          <td>动态注册</td>
+          <td><{if $item.created_at}> <{$item.created_at|date:'Y-m-d H:i'}> <{/if}></td>
+          <td>
+            <form action="index.php?app=mcpapi&ctl=admin_client&act=save_approve" method="post" style="display:inline">
+              <input type="hidden" name="client_id" value="<{$item.client_id}>">
+              <button class="btn btn-primary" type="submit">批准</button>
+            </form>
+            <form action="index.php?app=mcpapi&ctl=admin_client&act=save_reject" method="post" style="display:inline">
+              <input type="hidden" name="client_id" value="<{$item.client_id}>">
+              <button class="btn btn-danger" type="submit">拒绝</button>
+            </form>
+          </td>
+        </tr>
+        <{/foreach}>
+      </tbody>
+    </table>
+    <{/if}>
+  </div>
+
+  <h5>全部客户端（<{$clients|count}>）</h5>
+  <div class="division">
+    <table class="list">
+      <thead><tr><th>应用名</th><th>类型</th><th>client_id</th><th>归属</th><th>状态</th><th>scope</th><th>过期</th><th>创建时间</th><th>操作</th></tr></thead>
+      <tbody>
+        <{foreach from=$clients item=item}>
+        <tr>
+          <td><{$item.name}></td>
+          <td><{$item.kind_label}> / <{$item.origin_label}></td>
+          <td class="mono" title="<{$item.client_id}>"><{$item.client_id|substr:0:20}>…</td>
+          <td><{$item.owner_name|default:'—'}></td>
+          <td><span class="<{$item.status_class}>"><{$item.status_label}></span></td>
+          <td><{$item.scopes_label|default:'—'}></td>
+          <td><{$item.expires_fmt}></td>
+          <td><{$item.created_fmt}></td>
+          <td>
+            <{if $item.status_label ne '已吊销'}>
+            <form action="index.php?app=mcpapi&ctl=admin_client&act=save_revoke" method="post" style="display:inline" onsubmit="return confirm('确定吊销 <{$item.name}>？其所有令牌将立即失效')">
+              <input type="hidden" name="client_id" value="<{$item.client_id}>">
+              <button class="btn btn-danger" type="submit">吊销</button>
+            </form>
+            <{else}>
+            <span style="color:#bbb">—</span>
+            <{/if}>
+          </td>
+        </tr>
+        <{/foreach}>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function mcpSwitchKind(kind) {
+  document.getElementById('mcp-row-redirect').classList.toggle('on', kind === 'operator');
+  var agentOn = kind === 'agent';
+  document.getElementById('mcp-row-svc').classList.toggle('on', agentOn);
+  mcpSwitchSvc(agentOn ? (document.getElementById('mcp-row-svc').querySelector('select').value || '') : '');
+}
+function mcpSwitchSvc(val) {
+  // 服务账号统一在用户管理创建，注册表单仅绑定（空列表时提示去向）
+  var empty = document.getElementById('mcp-svc-empty');
+  if (empty) empty.style.display = val === '' ? 'inline' : 'none';
+}
+(function(){ mcpSwitchKind('operator'); })();
+</script>

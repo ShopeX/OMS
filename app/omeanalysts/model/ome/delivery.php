@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class omeanalysts_mdl_ome_delivery extends dbeav_model{
 
     var $has_export_cnf = true;
@@ -23,20 +22,15 @@ class omeanalysts_mdl_ome_delivery extends dbeav_model{
 
     /**
      * 须加密字段
-     * 
+     *
      * @var string
-     * */
+     **/
     private $__encrypt_cols = array(
         'ship_name'   => 'simple',
         'ship_tel'    => 'phone',
         'ship_mobile' => 'phone',
     );
 
-        /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
     public function table_name($real=false){
         $table_name = 'ome_delivery';
         if($real){
@@ -46,11 +40,6 @@ class omeanalysts_mdl_ome_delivery extends dbeav_model{
         }
     }
 
-    /**
-     * 获取_delivery
-     * @param mixed $filter filter
-     * @return mixed 返回结果
-     */
     public function get_delivery($filter=null){
 
         $nums = 0;
@@ -88,11 +77,6 @@ class omeanalysts_mdl_ome_delivery extends dbeav_model{
         return array('num'=>$nums,'cost'=>$cost,'costfreight'=>$costfreights[0]['sum_freight']);
     }
 
-    /**
-     * count
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function count($filter=null){
         $sql = 'SELECT count(*) as _count FROM sdb_ome_delivery WHERE parent_id=0 and '.
             'is_cod=\'false\' and process=\'true\' and '.$this->_filter($filter);
@@ -230,10 +214,6 @@ class omeanalysts_mdl_ome_delivery extends dbeav_model{
         return $rowAll;
     }
     
-    /**
-     * 搜索Options
-     * @return mixed 返回值
-     */
     public function searchOptions(){
         $parentOptions = parent::searchOptions();
         $childOptions = array(
@@ -242,13 +222,6 @@ class omeanalysts_mdl_ome_delivery extends dbeav_model{
         return $Options = array_merge($parentOptions,$childOptions);
     }
 
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter,$tableAlias=null,$baseWhere=null){
         $where = array(1);
         if(isset($filter['time_from']) && $filter['time_from']){
@@ -326,10 +299,6 @@ class omeanalysts_mdl_ome_delivery extends dbeav_model{
         return parent::_filter($filter,'sdb_ome_delivery',$baseWhere)." AND ".implode(' AND ', $where);
     }
 
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema(){
         $ordersColumns   = app::get('ome')->model('orders')->get_schema();
         $deliveryColumns = app::get('ome')->model('delivery')->get_schema();
@@ -343,7 +312,7 @@ class omeanalysts_mdl_ome_delivery extends dbeav_model{
                     'editable' => false,
                     'width' =>140,
                     'searchtype' => 'has',
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                     'is_title' => true,
                 ),
@@ -455,7 +424,7 @@ class omeanalysts_mdl_ome_delivery extends dbeav_model{
                     'editable' => false,
                     'width' =>200,
                     'searchtype' => 'has',
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                     'is_title' => true,
                 ),

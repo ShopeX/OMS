@@ -17,10 +17,13 @@
 
 class dealer_finder_extend_filter_bs
 {
-    /**
-     * 获取_extend_colums
-     * @return mixed 返回结果
-     */
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public function get_extend_colums()
     {
         $betcMdl  = app::get('dealer')->model('betc');

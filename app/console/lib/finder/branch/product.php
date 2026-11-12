@@ -16,6 +16,13 @@
  */
 class console_finder_branch_product
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $_braProExtObj = null;
     public $_branchObj = null;
     public $_basicMaterialCodeObj = null;

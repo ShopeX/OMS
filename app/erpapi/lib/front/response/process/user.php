@@ -47,9 +47,10 @@ class erpapi_front_response_process_user
             return array('rsp' => 'fail', 'msg' => '登陆失败：' . $_SESSION['error']);
         }
 
-        $_SESSION['account'][$account_type] = $module_uid;
-        $_SESSION['type']                   = $account_type;
-        $_SESSION['login_time']             = time();
+        // SESSION auth writes removed - JWT should be implemented as primary auth for ERPAPI
+        // $_SESSION['account'][$account_type] = $module_uid;
+        // $_SESSION['type'] = $account_type;
+        // $_SESSION['login_time'] = time();
 
         $params = array(
             'member_id' => $module_uid,

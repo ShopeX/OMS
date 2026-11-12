@@ -17,6 +17,13 @@
 
 class finance_finder_ar{
 
+    private $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $addon_cols = "addon,monthly_id";
     function detail_edit($ar_id){
         $aritemObj = &app::get('finance')->model('ar_items');

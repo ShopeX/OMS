@@ -1,20 +1,5 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/**
  * 出库单推送
  *
  * @category
@@ -42,11 +27,10 @@ class erpapi_wms_request_stockout extends erpapi_wms_request_abstract
 
     /**
      * 出库单创建
-     * 
+     *
      * @return void
      * @author
-     * */
-
+     **/
     public function stockout_create($sdf){
         $stockout_bn = $sdf['io_bn'];
 
@@ -118,12 +102,6 @@ class erpapi_wms_request_stockout extends erpapi_wms_request_abstract
         } while (true);
     }
 
-        /**
-     * stockout_create_callback
-     * @param mixed $response response
-     * @param mixed $callback_params 参数
-     * @return mixed 返回值
-     */
     public function stockout_create_callback($response, $callback_params)
     {
         // 更新外部编码
@@ -210,6 +188,12 @@ class erpapi_wms_request_stockout extends erpapi_wms_request_abstract
             $sdf['shipper_name'] = ($sdf['shipper_name'] ? $sdf['shipper_name'] : $supplierInfo['name']);
         }
         
+        // 物流公司ID
+        $sdf['logi_id'] = ($sdf['logi_id'] ? $sdf['logi_id'] : $sdf['corp_id']);
+        
+        // 获取与WMS的物流映射关系
+        $logistics_code = $this->_getCpCode(['corp_id' => $sdf['logi_id'], 'type' => $sdf['logi_code']]);
+        
         //params
         $params = array(
             'uniqid'            => self::uniqid(),
@@ -219,7 +203,7 @@ class erpapi_wms_request_stockout extends erpapi_wms_request_abstract
             'created'           => $create_time,
             'wms_order_code'    => $stockout_bn,
             'shipping_type'     => 'EXPRESS',// TODO: 运输方式 EXPRESS-快递 EMS-邮政速递
-            'logistics_code'    => $sdf['logi_code'],// TODO: 快递公司（如果是汇购传递快递公司，则该项目不能为空，否则可以为空处理）
+            'logistics_code'    => $logistics_code ? $logistics_code : $sdf['logi_code'],// TODO: 快递公司（如果是汇购传递快递公司，则该项目不能为空，否则可以为空处理）
             'remark'            => $sdf['memo'],
             'total_amount'      => $sdf['total_goods_fee'],// 订单商品总价（精确到小数点后2位）
             'receiver_name'     => $sdf['receiver_name']  ? $sdf['receiver_name'] : '未知',

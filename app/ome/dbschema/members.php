@@ -90,7 +90,7 @@ $db['members'] = array(
             'type'            => 'region',
             'sdfpath'         => 'contact/area',
             'editable'        => false,
-            'filtertype'      => 'yes',
+            'filtertype'      => 'normal',
             'filterdefault'   => 'true',
             'in_list'         => true,
             'default_in_list' => true,
@@ -262,6 +262,11 @@ $db['members'] = array(
                 1 => 'shop_id',
             ),
             'prefix' => 'unique',
+        ),
+        'ind_mobile' => array(
+            'columns' => array(
+                0 => 'mobile',
+            ),
         ),
     ),
     'comment' => '会员表',

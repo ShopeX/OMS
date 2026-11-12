@@ -17,6 +17,13 @@
 
 
 class desktop_finder_colset{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function run($task,$ctl){
         $user_id = $ctl->user->user_id;
 		$finder_model = (key($task));

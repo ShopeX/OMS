@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 /*
  * 供应商
  */
@@ -30,7 +14,6 @@ class purchase_mdl_supplier extends dbeav_model{
     /*
      * 添加/修改供应商信息
      */
-
     public function save_supplierDo($data,$op_type=false){
         //供应商入库
         $contacter = array();
@@ -98,7 +81,6 @@ class purchase_mdl_supplier extends dbeav_model{
      * @param int
      * @return ArrayObject
      */
-
     public function supplier_detail($supplier_id='', $cols='*')
     {
         if ($supplier_id){
@@ -112,7 +94,6 @@ class purchase_mdl_supplier extends dbeav_model{
      * 获取供应商采购单预付款
      * @package get_balance
      */
-
     public function get_balance($supplier_id=null)
     {
         $oPo = $this->app->model('po');
@@ -128,12 +109,6 @@ class purchase_mdl_supplier extends dbeav_model{
     
     /*
      * 供应商商品历史价格：history_price
-     */
-    /**
-     * history_price_search
-     * @param mixed $supplier_id ID
-     * @param mixed $goods_id ID
-     * @return mixed 返回值
      */
     public function history_price_search($supplier_id,$goods_id)
     {
@@ -157,10 +132,6 @@ class purchase_mdl_supplier extends dbeav_model{
     }
     
     //信用等级
-    /**
-     * 获取Creditlve
-     * @return mixed 返回结果
-     */
     public function getCreditlve(){
         for ($i=1;$i<=5;$i++){
             $arr[$i] = $i;
@@ -207,12 +178,6 @@ class purchase_mdl_supplier extends dbeav_model{
     }
     
     //填写供应商表单数据过滤
-    /**
-     * filterFormItem
-     * @param mixed $data 数据
-     * @param mixed $needFilter needFilter
-     * @return mixed 返回值
-     */
     public function filterFormItem($data=null,$needFilter=null){
         
         if ($data)
@@ -306,11 +271,11 @@ EOF;
    /*
      * 快速查找供应商
      */
-
     public function getSupplier($name=null)
     {
+        $quoted = $this->db->quote((string) $name);
         $sql = " SELECT name,brief,supplier_id,arrive_days FROM `sdb_purchase_supplier` 
-        WHERE name regexp '".$name."' or brief regexp '".$name."' ";
+        WHERE name regexp ". $quoted ." or brief regexp ". $quoted;
         $data = $this->db->select($sql);
         $result = array();
         if ($data)

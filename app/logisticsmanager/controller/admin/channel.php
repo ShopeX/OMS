@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class logisticsmanager_ctl_admin_channel extends desktop_controller
 {
     //1.渠道能获取哪些快递单号
@@ -224,16 +223,18 @@ EOF;
         // 有赞店铺
         $this->pagedata['youzanshopList'] = $shopModel->getList('shop_id,name',array('node_type'=>['youzan'],'filter_sql'=>'node_id IS NOT NULL'));
 
-        //物流公司信息
-        if ($channel['channel_type']) {
-            $wlbObj                      = kernel::single('logisticsmanager_waybill_' . $channel['channel_type']);
-            $logistics                   = $wlbObj->logistics('', $channel['shop_id']);
-            $this->pagedata['logistics'] = $logistics;
-        }
-        if (isset($channel['pay_method'])) {
-            $wlbObj                       = kernel::single('logisticsmanager_waybill_' . $channel['channel_type']);
-            $pay_method                   = $wlbObj->pay_method();
-            $this->pagedata['pay_method'] = $pay_method;
+        //物流公司信息。缺 lib 文件时自动加载会抛 Don't find lib file，编辑页不能因此打不开。
+        if (!empty($channel['channel_type']) && preg_match('/^[A-Za-z0-9_]+$/', $channel['channel_type'])) {
+            $waybillLib = app::get('logisticsmanager')->app_dir . '/lib/waybill/' . $channel['channel_type'] . '.php';
+            if (file_exists($waybillLib)) {
+                $wlbObj                      = kernel::single('logisticsmanager_waybill_' . $channel['channel_type']);
+                $logistics                   = $wlbObj->logistics('', $channel['shop_id']);
+                $this->pagedata['logistics'] = $logistics;
+                if (isset($channel['pay_method'])) {
+                    $pay_method                   = $wlbObj->pay_method();
+                    $this->pagedata['pay_method'] = $pay_method;
+                }
+            }
         }
         $this->pagedata['channel'] = $channel;
 

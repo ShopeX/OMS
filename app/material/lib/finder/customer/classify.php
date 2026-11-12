@@ -22,6 +22,13 @@
  */
 class material_finder_customer_classify
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     private $_appName = 'material';
     public $addon_cols = 'class_id';
     
@@ -36,8 +43,23 @@ class material_finder_customer_classify
 
     public function column_edit($row)
     {
+        // legacy builder 注入 col_prefix；vue 模式未设置 ⇒ 优先读 addon_cols 顺序下发的原始值别名
+        $id = $this->vue_mode
+            ? ($row['_0_class_id'] ?? $row['class_id'] ?? 0)
+            : $row[$this->col_prefix . 'class_id'];
+
+        if ($this->vue_mode) {
+            // Vue Finder 契约：结构化行操作（不再下发 legacy <a> HTML 片段，SPA 不解析 legacy 链接）
+            return array(
+                array(
+                    'key'    => 'edit',
+                    'label'  => '编辑',
+                    'action' => 'index.php?app=' . $this->_appName . '&ctl=admin_customer_classify&act=edit&p[0]=' . $id,
+                ),
+            );
+        }
+
         $finder_id = $_GET['_finder']['finder_id'];
-        $id = $row[$this->col_prefix.'class_id'];
         
         $button = '<a href="index.php?app='. $this->_appName . '&ctl=admin_customer_classify&act=edit&p[0]='. $id .'&finder_id='. $finder_id .'" target="dialog::{width:600,height:300,title:\'编辑客户分类\'}">编辑</a>';
         

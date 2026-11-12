@@ -18,12 +18,7 @@
 class omevirtualwms_mdl_allocate extends dbeav_model{
     public $queue = [];
 
-    /**
-     * count
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
-    public function count($filter=null){
+     public function count($filter=null){
         $branch_ids = $this->getBranchidByselfwms();
         $sqlstr = '';
         if ($branch_ids)
@@ -53,10 +48,6 @@ class omevirtualwms_mdl_allocate extends dbeav_model{
         return $rows;
     }
 
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema(){
         $schema = array (
             'columns' => array (
@@ -67,7 +58,7 @@ class omevirtualwms_mdl_allocate extends dbeav_model{
                     'editable' => false,
                     'width' =>180,
                     'searchtype' => 'has',
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                     'is_title' => true,
                 ),

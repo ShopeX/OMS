@@ -34,11 +34,6 @@ class eccommon_regions_operation
 	public $regions;
 
     // 构造方法
-    /**
-     * __construct
-     * @param mixed $app app
-     * @return mixed 返回值
-     */
     public function __construct($app)
     {
         if(!isset(self::$model)){
@@ -53,7 +48,7 @@ class eccommon_regions_operation
         }
     }
 
-    /**
+	 /**
      * 主要用于后台显示，判断当前的数据是否超过100，显示方式不同
      * @params null
      * @return boolean
@@ -68,7 +63,7 @@ class eccommon_regions_operation
         }
     }
 
-    /**
+	/**
      * 获取指定parent region id的下级地区数量
      * @params string region id
      * @return int 数量
@@ -79,7 +74,7 @@ class eccommon_regions_operation
 		return $cnt;
     }
 
-    /**
+	/**
      * 得到地区信息 - parent region id， 层级，下级地区
      * @params string region id
      * @return array 指定信息的数组
@@ -105,8 +100,42 @@ class eccommon_regions_operation
         return $aTemp;
     }
 
-	/**
-	 * 得到地区的结构图
+    /**
+     * 获取所有地区（完整树形结构）
+     * @return array 扁平列表，包含所有层级的地区
+     */
+    public function getAllRegions(): array
+    {
+        // 使用原生SQL获取所有地区数据
+        $sql = "SELECT region_id, p_region_id, local_name, ordernum, region_grade, " .
+               "(SELECT count(*) FROM " . self::$model->table_name(1) . " WHERE p_region_id = r.region_id) AS child_count " .
+               "FROM " . self::$model->table_name(1) . " AS r " .
+               "ORDER BY ordernum ASC, region_id ASC";
+
+        $rows = self::$model->db->select($sql);
+
+        if (!$rows || count($rows) === 0) {
+            return [];
+        }
+
+        // 构建扁平列表，与原有 API 格式兼容
+        $list = [];
+        foreach ($rows as $region) {
+            $list[] = [
+                'region_id' => (string) $region['region_id'],
+                'parent_id' => $region['p_region_id'] ? (string) $region['p_region_id'] : '',
+                'name' => $region['local_name'],
+                'ordernum' => (int) ($region['ordernum'] ?? 0),
+                'region_grade' => (int) ($region['region_grade'] ?? 0),
+                'child_count' => (int) ($region['child_count'] ?? 0),
+            ];
+        }
+
+        return $list;
+    }
+
+ 	/**
+  	 * 得到地区的结构图
 	 * @params int parent region id
 	 * @return array 结构图数组
 	 */
@@ -286,7 +315,7 @@ class eccommon_regions_operation
         return ($is_save && $this->updateSubPath($cPath['region_path'],$aData['region_path']));
     }
 
-    /**
+	/**
      * 删除指定id的地区信息
      * @params int region id
      * @return boolean 删除成功与否

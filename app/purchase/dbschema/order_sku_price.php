@@ -42,7 +42,7 @@ $db['order_sku_price']=array (
                     'default_in_list' => true,
                     'searchtype' => 'nequal',
                     'filterdefault' => true,
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'order' => 2,
             ),
             'barcode' =>
@@ -54,7 +54,7 @@ $db['order_sku_price']=array (
                     'default_in_list' => true,
                     'searchtype' => 'nequal',
                     'filterdefault' => true,
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
             ),
             'actual_market_price' =>
             array (

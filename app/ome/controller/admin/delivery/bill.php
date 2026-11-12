@@ -121,18 +121,20 @@ class ome_ctl_admin_delivery_bill extends desktop_controller
      */
     public function doExceptionQuery()
     {
-        $post = $_POST; 
+        $post = $_POST;
         $pageNo = $_GET['pageNo'] ?? 1;
 
         $filter = array_filter($post);
 
         // 验证必填字段
         if (empty($filter['shop_id'])) {
-            $this->splash('error', null, '请选择店铺');
+            echo json_encode(['rsp' => 'fail', 'message' => '请选择店铺']);
+            return;
         }
-        
+
         if (empty($filter['exception_code'])) {
-            $this->splash('error', null, '请选择一级异常类型');
+            echo json_encode(['rsp' => 'fail', 'message' => '请选择一级异常类型']);
+            return;
         }
 
         // 构建请求参数
@@ -146,10 +148,26 @@ class ome_ctl_admin_delivery_bill extends desktop_controller
         $result = kernel::single('ome_delivery_bill')->queryExceptionAndUpdate($params, $filter['shop_id']);
 
         if ($result['rsp'] == 'fail') {
-            $this->splash('error', null, $result['msg']);
+            echo json_encode(['rsp' => 'fail', 'message' => $result['msg']]);
+            return;
         }
 
-        $this->splash('success', null, $result['msg']);
+        echo json_encode(['rsp' => 'succ', 'message' => $result['msg']]);
+    }
+
+    /**
+     * 获取店铺列表 (API)
+     */
+    public function getShops()
+    {
+        $shopModel = app::get('ome')->model('shop');
+        $shops = $shopModel->getList('shop_id,shop_bn,name', [
+            's_type' => 1,
+            'node_type' => 'taobao',
+            'filter_sql' => 'node_id is not null and node_id != ""',
+        ]);
+
+        echo json_encode(['rsp' => 'succ', 'shops' => $shops]);
     }
 
     /**
@@ -222,59 +240,61 @@ class ome_ctl_admin_delivery_bill extends desktop_controller
     {
         try {
             $shop_id = $_POST['shop_id'] ?? '';
-            
+
             if (empty($shop_id)) {
-                $this->splash('error', null, '请选择店铺');
+                echo json_encode(['rsp' => 'fail', 'message' => '请选择店铺']);
                 return;
             }
-            
+
             // 调用ERPAPI查询预警配置
             $result = kernel::single('erpapi_router_request')->set('shop', $shop_id)->logistics_exception_config_query([
                 'shop_id' => $shop_id,
-                'request_id' => $shop_id // 使用shop_id作为request_id，用于幂等性控制
+                'request_id' => $shop_id
             ]);
-            
-                       if ($result['rsp'] == 'succ') {
-               $config_data = $result['data'] ?? [];
-               
-               // 定义配置项的中文名称和说明
-               $configLabels = array(
-                   'transporting_stop_warn_value' => array(
-                       'name' => '运输停滞预警值',
-                       'desc' => '被判断为"运输停滞"X前计入"即将超时"',
-                       'unit' => '小时'
-                   ),
-                   'consign_fake_warn_value' => array(
-                       'name' => '虚假发货预警值',
-                       'desc' => '被判断为"虚假发货"X前计入"即将虚假发货"',
-                       'unit' => '小时'
-                   ),
-                   'consign_delay_warn_value' => array(
-                       'name' => '延迟发货预警值',
-                       'desc' => '延迟发货前X小时计入"即将延迟"',
-                       'unit' => '小时'
-                   ),
-                   'collected_stop_warn_value' => array(
-                       'name' => '揽收后停滞预警值',
-                       'desc' => '被判断为"揽收后停滞"X前计入"即将超时"',
-                       'unit' => '小时'
-                   ),
-                   'deliverying_stop_warn_value' => array(
-                       'name' => '派签停滞预警值',
-                       'desc' => '被判断为"派签停滞"X前计入"即将超时"',
-                       'unit' => '小时'
-                   )
-               );
-               
-               $this->pagedata['config_data'] = $config_data;
-               $this->pagedata['config_labels'] = $configLabels;
-               $this->display('admin/delivery/bill/exception_config_result.html');
-           } else {
-                $this->splash('error', null, '查询失败：' . ($result['msg'] ?? '未知错误'));
+
+            if ($result['rsp'] == 'succ') {
+                $config_data = $result['data'] ?? [];
+
+                // 定义配置项的中文名称和说明
+                $configLabels = [
+                    'transporting_stop_warn_value' => [
+                        'name' => '运输停滞预警值',
+                        'desc' => '被判断为"运输停滞"X前计入"即将超时"',
+                        'unit' => '小时'
+                    ],
+                    'consign_fake_warn_value' => [
+                        'name' => '虚假发货预警值',
+                        'desc' => '被判断为"虚假发货"X前计入"即将虚假发货"',
+                        'unit' => '小时'
+                    ],
+                    'consign_delay_warn_value' => [
+                        'name' => '延迟发货预警值',
+                        'desc' => '延迟发货前X小时计入"即将延迟"',
+                        'unit' => '小时'
+                    ],
+                    'collected_stop_warn_value' => [
+                        'name' => '揽收后停滞预警值',
+                        'desc' => '被判断为"揽收后停滞"X前计入"即将超时"',
+                        'unit' => '小时'
+                    ],
+                    'deliverying_stop_warn_value' => [
+                        'name' => '派签停滞预警值',
+                        'desc' => '被判断为"派签停滞"X前计入"即将超时"',
+                        'unit' => '小时'
+                    ]
+                ];
+
+                echo json_encode([
+                    'rsp' => 'succ',
+                    'config_data' => $config_data,
+                    'config_labels' => $configLabels
+                ]);
+            } else {
+                echo json_encode(['rsp' => 'fail', 'message' => '查询失败：' . ($result['msg'] ?? '未知错误')]);
             }
-            
+
         } catch (Exception $e) {
-            $this->splash('error', null, '查询异常：' . $e->getMessage());
+            echo json_encode(['rsp' => 'fail', 'message' => '查询异常：' . $e->getMessage()]);
         }
     }
 

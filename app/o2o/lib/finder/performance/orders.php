@@ -16,6 +16,13 @@
  */
 
 class o2o_finder_performance_orders {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     var $addon_cols = 'print_status,confirm,dt_begin,status,process_status,tax_no,ship_status,op_id,group_id,mark_text,auto_status,custom_mark,mark_type,tax_company,createtime,paytime,sync,pay_status,is_cod,source,order_type';
     var $overtime    = 0;

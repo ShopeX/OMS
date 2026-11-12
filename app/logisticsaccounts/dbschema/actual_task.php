@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 $db['actual_task']=array (
   'columns' =>
   array (
@@ -34,7 +33,7 @@ $db['actual_task']=array (
         'label' => '任务名称',
       'width' => 100,
       'editable' => false,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
        'is_title' => true,
       'searchtype' => 'has',
@@ -155,7 +154,7 @@ $db['actual_task']=array (
 
       'width' => 75,
       'editable' => false,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
       'in_list' => true,
       'default_in_list' => true,

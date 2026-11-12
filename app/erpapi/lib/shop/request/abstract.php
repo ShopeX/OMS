@@ -65,7 +65,7 @@ abstract class erpapi_shop_request_abstract
      * @return array
      * @author 
      **/
-    final public function error($msg, $msgcode, $data=null)
+    final public function error($msg, $msgcode='', $data=null)
     {
         return array('rsp'=>'fail','msg'=>$msg,'err_msg'=>$msg,'msg_code'=>$msgcode,'data'=>$data);
     }

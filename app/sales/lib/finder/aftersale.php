@@ -14,8 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class sales_finder_aftersale{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     
     public $return_type = array(
                             'return' => '退货',
@@ -161,12 +167,6 @@ class sales_finder_aftersale{
     public $column_reship_type_width = 120;
     public $column_reship_type_order = 1;
     protected $reship_type = [];
-    /**
-     * column_reship_type
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_reship_type($row, $list){
         $reship_id = $row[$this->col_prefix.'reship_id'];
         if($this->reship_type){

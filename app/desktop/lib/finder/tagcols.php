@@ -17,6 +17,13 @@
 
 
 class desktop_finder_tagcols{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $column_tag = '标签';
     var $column_tag_order = COLUMN_IN_TAIL;
     function column_tag($row){

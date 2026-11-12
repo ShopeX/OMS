@@ -16,6 +16,13 @@
  */
 
 class ome_finder_product_serial_history{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     var $detail_basic = '基本信息';
     

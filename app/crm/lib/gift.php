@@ -29,6 +29,9 @@ class crm_gift{
         $shop_name = $sdf['shop_name'];
         $shop_id = $sdf['shop_id'];
         $buyer_nick = $sdf['buyer_nick'];
+        
+        // 优先落 buyer_open_uid（脱敏昵称如 w** 会撞名），为空时再回退 buyer_nick
+        $buyer_account = !empty($sdf['buyer_open_uid']) ? $sdf['buyer_open_uid'] : $buyer_nick;
 
         $order_id = $sdf['order_id'];
         $order_bn = $sdf['order_bn'];
@@ -226,7 +229,8 @@ class crm_gift{
                     $log_arr = array(
                         'order_source'=>$shop_name,
                         'order_bn'=>$order_bn,
-                        'buyer_account'=>$buyer_nick,
+                        'buyer_account'=>$buyer_account,
+                        'member_id'=>isset($sdf['member_id']) ? intval($sdf['member_id']) : 0,
                         'shop_id'=>$shop_id,
                         'paid_amount'=>$payed,
                         'gift_num'=>$num,
@@ -389,6 +393,10 @@ class crm_gift{
         $shop_id = $orderInfo['shop_id'];
         $shop_name = $orderInfo['shop_name'];
         $buyer_nick = $orderInfo['buyer_nick'];
+        
+        // 优先落 buyer_open_uid（脱敏昵称如 w** 会撞名），为空时再回退 buyer_nick
+        $buyer_account = !empty($orderInfo['buyer_open_uid']) ? $orderInfo['buyer_open_uid'] : $buyer_nick;
+        
         $payed = floatval($orderInfo['payed']);
         $pay_time = floatval($orderInfo['paytime']);
         $createtime = floatval($orderInfo['createtime']);
@@ -681,7 +689,8 @@ class crm_gift{
                 $logSdf = array(
                     'order_source' => $shop_name,
                     'order_bn' => $order_bn,
-                    'buyer_account' => $buyer_nick,
+                    'buyer_account' => $buyer_account,
+                    'member_id' => isset($orderInfo['member_id']) ? intval($orderInfo['member_id']) : 0,
                     'shop_id' => $shop_id,
                     'paid_amount' => $payed,
                     'gift_num' => $num,

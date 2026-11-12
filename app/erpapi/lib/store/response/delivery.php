@@ -53,9 +53,16 @@ class erpapi_store_response_delivery extends erpapi_store_response_abstract
         );
 
         if ($data['logi_id']) {
-            $erModel = app::get('wmsmgr')->model('express_relation');
-            $r = $erModel->dump(array('wms_id'=>$this->__channelObj->wms['channel_id'],'wms_express_bn'=>$data['logi_id']), 'sys_express_bn');
-            $data['logi_id'] = $r['sys_express_bn'] ? $r['sys_express_bn'] : $data['logi_id'];
+            $wmsFunc = kernel::single('wmsmgr_func');
+            
+            // shop_type
+            $shop_type = $wmsFunc->getShopTypeByDeliveryBn($data['delivery_bn']);
+            
+            // 根据wms_id、wms物流公司编号获取系统物流公司编号
+            $mapped = $wmsFunc->getlogiCode($this->__channelObj->wms['channel_id'], $data['logi_id'], $shop_type);
+            
+            // 物流公司编码
+            $data['logi_id'] = $mapped ? $mapped : $data['logi_id'];
         }
 
         if ($params['out_delivery_bn']) $data['out_delivery_bn'] = $params['out_delivery_bn'];

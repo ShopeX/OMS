@@ -13,9 +13,11 @@ class ome_order_marktext
      * @param int $order_id 订单ID
      * @param string $content 备注内容
      * @param string $op_name 操作人名称，默认为系统
+     * @pram string $mark_type 旗标（b0 ~ b10）
+     *
      * @return array [true,'成功'] 或 [false,'失败原因']
      */
-    public static function add($order_id, $content, $op_name = '系统')
+    public static function add($order_id, $content, $op_name = '系统', $mark_type='')
     {
         if (empty($order_id) || empty($content)) {
             return array(false, '订单ID或备注内容不能为空');
@@ -42,13 +44,20 @@ class ome_order_marktext
         $newmemo = htmlspecialchars($content);
         $newmemo = array(
             'op_name' => $op_name, 
-            'op_time' => date('Y-m-d H:i:s', time()), 
+            'op_time' => date('Y-m-d H:i:s', time()),
+            'mark_type' => $mark_type, // 旗标（b0 ~ b10）
             'op_content' => $newmemo
         );
         $memo[] = $newmemo;
         
         // 更新订单备注
         $updateData = array('mark_text' => serialize($memo));
+        
+        // 旗标
+        if($mark_type){
+            $updateData['mark_type'] = $mark_type;
+        }
+        
         $result = $oOrders->update($updateData, array('order_id' => $order_id));
         
         if ($result) {

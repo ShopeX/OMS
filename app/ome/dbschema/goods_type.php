@@ -64,7 +64,7 @@ $db['goods_type']=array (
       'default_in_list' => false,
       'filterdefault' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'schema_id' =>
     array (

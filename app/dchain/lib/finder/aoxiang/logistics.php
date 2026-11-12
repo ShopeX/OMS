@@ -22,6 +22,13 @@
  */
 class dchain_finder_aoxiang_logistics
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = '';
     
     var $_url = 'index.php?app=dchain&ctl=admin_aoxiang_logistics';

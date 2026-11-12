@@ -16,6 +16,13 @@
  */
 
 class o2o_finder_branch_product {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = 'id';
     
     var $column_edit = "操作";

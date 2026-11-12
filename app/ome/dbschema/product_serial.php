@@ -89,7 +89,7 @@ $db['product_serial']=array (
       'editable' => false,
       'in_list' => true,
       'default_in_list' => false,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'expire_bn' =>

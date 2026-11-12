@@ -16,6 +16,13 @@
  */
 
 class inventorydepth_finder_regulation_apply{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     public $addon_cols = 'supply_branch_id,regulation_id';
     

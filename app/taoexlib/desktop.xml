@@ -14,13 +14,12 @@
         </menugroup> -->
 		<menugroup name="短信配置" en="sms-configuration">
             <!-- menu controller='admin_account' action='index' permission='rolescfg' display='true' order='1000410'>短信开通</menu -->
-			<menu controller='admin_setting' action='index' permission='rolescfg' display='true' order='1000420'>短信设置</menu>
+			<menu controller='admin_setting' action='index' permission='rolescfg' display='true' order='1000420' target='/m-taoexlib/setting/index'>短信设置</menu>
             <menu controller='admin_sms_sample' action='index' permission='rolescfg' display='true' order='1000430'>模板列表</menu>
             <menu controller='admin_sms_rule' action='index' permission='rolescfg' display='true' order='1000440'>分组规则</menu>
 			<menu controller='admin_sms_bind' action='index' permission='rolescfg' display='true' order='1000450'>发送设置</menu>
-			<menu controller='admin_log' action='index' permission='rolescfg' display='true' order='1000460'>短信日志</menu>
-			<menu controller='admin_setting' action='blacklist' permission='rolescfg' display='true' order='1000470'>免打扰设置</menu>
-
+			<menu controller='admin_log' action='index' permission='rolescfg' display='true' order='1000460' target='/m-taoexlib/log/index'>短信日志</menu>
+			<menu controller='admin_setting' action='blacklist' permission='rolescfg' display='true' order='1000470' target='/m-taoexlib/setting/blacklist'>免打扰设置</menu>
         </menugroup>
     </workground>
     <workground name="下载中心" id="xiazai_center" order="1810" icon="icon-xiazai-01">

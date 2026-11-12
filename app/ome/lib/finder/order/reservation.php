@@ -7,6 +7,13 @@
  */
 class ome_finder_order_reservation
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     static $_reSellerNameList = array();
     
     private $_appName = 'ome';

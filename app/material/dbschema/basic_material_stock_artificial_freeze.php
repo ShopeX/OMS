@@ -68,7 +68,7 @@ $db['basic_material_stock_artificial_freeze']=array (
         'editable' => false,
         'in_list' => true,
         'default_in_list' => true,
-        'width' => 100,
+        'width' => 150,
         'order' => 90,
     ),
     'freeze_reason' => array (
@@ -80,7 +80,7 @@ $db['basic_material_stock_artificial_freeze']=array (
     'freeze_time' => array(
         'type' => 'time',
         'label' => '预占时间',
-        'width' => 130,
+        'width' => 150,
         'in_list' => true,
         'default_in_list' => true,
         'order' => 92,
@@ -102,16 +102,16 @@ $db['basic_material_stock_artificial_freeze']=array (
         'label' => '状态',
         'in_list' => false,
         'default_in_list' => false,
-        'width' => 80,
+        'width' => 150,
         'order' => 95,
     ),
     'update_modified' => array (
         'label' => '更新时间',
         'type' => 'time',
-        'width' => 130,
+        'width' => 150,
         'in_list' => true,
         'default_in_list' => true,
-        'width' => 130,
+        'width' => 150,
         'order' => 99,
     ),
     'group_id' => array (

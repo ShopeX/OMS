@@ -1,22 +1,18 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
+ * ShopEx licence
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */ 
 class taoexlib_finder_ietask {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
 	var $addon_cols = 'file_name,export_ver,total_count,app,model,status';
     
@@ -35,11 +31,6 @@ class taoexlib_finder_ietask {
     public $column_progress_bar       = '进度%';
     public $column_progress_bar_width = 100;
     public $column_progress_bar_order = 51;
-    /**
-     * column_progress_bar
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_progress_bar($row)
     {
         kernel::single('taskmgr_interface_cache', $row['task_id'])->fetch('exp_task_' . $row['task_id'] . '_counter', $count);
@@ -60,11 +51,6 @@ class taoexlib_finder_ietask {
     public $column_cur_records       = '当前条数';
     public $column_cur_records_width = 100;
     public $column_cur_records_order = 51;
-    /**
-     * column_cur_records
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_cur_records($row)
     {
         kernel::single('taskmgr_interface_cache', $row['task_id'])->fetch('exp_task_' . $row['task_id'] . '_records', $records);

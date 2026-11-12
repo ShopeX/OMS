@@ -14,9 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
 class desktop_finder_builder_filter2packet extends desktop_finder_builder_prototype{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function main(){
         $render = app::get('desktop')->render();
         $render->pagedata['app'] = $_GET['app'];

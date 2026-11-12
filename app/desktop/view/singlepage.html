@@ -49,11 +49,15 @@
 	 <{script src="coms/validate.js" app="desktop"}>
 	 <{script src="coms/wpage.js" app="desktop"}>     
 	 <{script src="coms/dialog.js" app="desktop"}>
-	 <{script src="coms/dropmenu.js" app="desktop"}>     
+     <{script src="coms/dropmenu.js" app="desktop"}>     
+     <{script src="coms/csrf-request.js" app="desktop"}>
+     <{script src="coms/iframe-activity.js" app="desktop"}>
      <{script src="tail.select-full.js" app="desktop"}>
      <{script src="image-magnifier.js" app="desktop"}>
  <{else}>
-	<script src="<{$desktop_path}>/js_mini/moo_min.js?v=20210423" ></script>	
+	<script src="<{$desktop_path}>/js_mini/moo_min.js?v=20210423" ></script>
+	<script src="<{$desktop_path}>/js/coms/csrf-request.js"></script>
+	<script src="<{$desktop_path}>/js/coms/iframe-activity.js"></script>
 	<script src="<{$desktop_path}>/js_mini/tools_min.js"></script>
     <script src="<{$desktop_path}>/js_mini/tail.select-full.min.js"></script>
                     <script src="<{$desktop_path}>/js_mini/image-magnifier.js"></script>

@@ -1,35 +1,20 @@
-<!--
-  Copyright 2012-2026 ShopeX (https://www.shopex.cn)
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
--->
 <desktop>
     <workground name="模拟仓储" id="ocswms" controller='admin_wms' action='show' order="1600" icon="icon-monicangwuliu-01">
         <menugroup name="仓储物流状态回传" order='2' en="wms-logistics-status-return">
             <menu controller='admin_wms' action='getinfo' permission='start_ocswms' display='false' order='8000101'>开始模拟</menu>
-            <menu controller='admin_wms' action='show2' permission='ocswms'  params='flag:stockin' display='true'  order='5'>入库单回传</menu>
-            <menu controller='admin_wms' action='show2' permission='ocswms'  params='flag:stockout' display='true'  order='6'>出库单回传</menu>
-            <menu controller='admin_wms' action='show2' permission='ocswms'  params='flag:stockdump' display='true'  order='7'>转储单回传</menu>
-            <menu controller='admin_wms' action='show2' permission='ocswms'  params='flag:delivery' display='true'  order='8'>发货单回传</menu>
+            <menu controller='admin_wms' action='show2' permission='ocswms'  params='flag:stockin' display='true'  order='5' target='/m-omevirtualwms/wms/index?flag=stockin'>入库单回传</menu>
+            <menu controller='admin_wms' action='show2' permission='ocswms'  params='flag:stockout' display='true'  order='6' target='/m-omevirtualwms/wms/index?flag=stockout'>出库单回传</menu>
+            <menu controller='admin_wms' action='show2' permission='ocswms'  params='flag:stockdump' display='true'  order='7' target='/m-omevirtualwms/wms/index?flag=stockdump'>转储单回传</menu>
+            <menu controller='admin_wms' action='show2' permission='ocswms'  params='flag:delivery' display='true'  order='8' target='/m-omevirtualwms/wms/index?flag=delivery'>发货单回传</menu>
             <menu controller='admin_wms' action='show' permission='ocswms' params='flag:inventory' display='true' order='10'>盘点结果回传</menu>
-            <menu controller='admin_wms' action='show2' permission='ocswms'  params='flag:reship' display='true'  order='9'>退货单回传</menu>
+            <menu controller='admin_wms' action='show2' permission='ocswms'  params='flag:reship' display='true'  order='9' target='/m-omevirtualwms/wms/index?flag=reship'>退货单回传</menu>
             <menu controller='admin_wms' action='show' permission='ocswms'  params='flag:account' display='true'  order='11'>库存异动回传</menu>
-            <menu controller='admin_wms' action='show2' permission='ocswms'  params='flag:vopstockout' display='true'  order='99'>唯品会出库单回传</menu>
-            <menu controller='admin_wms' action='show2' permission='ocswms'  params='flag:storeprocess' display='true'  order='999'>加工单回传</menu>
+            <menu controller='admin_wms' action='show2' permission='ocswms'  params='flag:vopstockout' display='true'  order='99' target='/m-omevirtualwms/wms/index?flag=vopstockout'>唯品会出库单回传</menu>
+            <menu controller='admin_wms' action='show2' permission='ocswms'  params='flag:storeprocess' display='true'  order='999' target='/m-omevirtualwms/wms/index?flag=storeprocess'>加工单回传</menu>
         </menugroup> 
          <menugroup name="配置" order='1' en="mock-wms-setting">
             <menu controller='admin_wms' action='config' permission='ocswms' display='false'>wms配置</menu>
-            <menu controller='admin_wms' action='callback_config' permission='ocswms' display='true'>callback配置</menu>
+            <menu controller='admin_wms' action='callback_config' permission='ocswms' display='true' target='/m-omevirtualwms/callback-config/index'>callback配置</menu>
         </menugroup>
 		<menugroup name="前端店铺模拟" order='3' en="front-shop-simulation">
 			<menu controller='admin_order' action='virtual_order' permission='ocswms' display='true'>订单添加模拟</menu>

@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+use app\desktop\lib\annotation\RequirePermission;
 
 class desktop_ctl_users extends desktop_controller
 {
@@ -49,10 +50,7 @@ class desktop_ctl_users extends desktop_controller
         parent::__construct($app);
         header("cache-control: no-store, no-cache, must-revalidate");
     }
-    /**
-     * index
-     * @return mixed 返回值
-     */
+    #[RequirePermission('users')]
     public function index()
     {
         $params = array(
@@ -81,10 +79,7 @@ class desktop_ctl_users extends desktop_controller
 
     }
 
-    /**
-     * 添加new
-     * @return mixed 返回值
-     */
+    #[RequirePermission('operator_add')]
     public function addnew()
     {
         $roles = $this->app->model('roles');
@@ -100,6 +95,8 @@ class desktop_ctl_users extends desktop_controller
 
         if ($_POST) {
             $_POST['super'] = 0;
+            $_POST['mcp_enabled'] = $this->normalizeMcpEnabled($_POST['mcp_enabled'] ?? 1);
+            $_POST['account_type'] = ($_POST['account_type'] ?? '') === 'service' ? 'service' : 'human';
             $this->begin('index.php?app=desktop&ctl=users&act=index');
             $_POST['pam_account']['login_name'] = trim($_POST['pam_account']['login_name']);
             $_POST['op_no']                     = strtoupper(trim($_POST['op_no']));
@@ -108,7 +105,7 @@ class desktop_ctl_users extends desktop_controller
                 if ($_POST['super'] == 0 && (!$_POST['role'])) {
                     $this->end(false, app::get('desktop')->_('请至少选择一个工作组'));
                 } elseif ($_POST['super'] == 0 && ($_POST['role'])) {
-                    foreach ($_POST['role'] as $roles) {
+                    foreach ((array) $_POST['role'] as $roles) {
                         $_POST['roles'][] = array('role_id' => $roles);
                     }
 
@@ -203,15 +200,13 @@ class desktop_ctl_users extends desktop_controller
             $this->pagedata['workgroup_order']  = $workgroup_order;
             $this->pagedata['workgroup_dealer']  = $workgroup_dealer;
             $this->pagedata['workgroup']        = $workgroups;
+            $this->pagedata['mcp_enabled']      = '1';
             $this->display('users/users_add.html');
         }
     }
 
     ####修改密码
-    /**
-     * chkpassword
-     * @return mixed 返回值
-     */
+    #[RequirePermission('operator_edit')]
     public function chkpassword()
     {
         $this->begin('index.php?app=desktop&ctl=users&act=index');
@@ -282,6 +277,7 @@ class desktop_ctl_users extends desktop_controller
      * 
      */
 
+    #[RequirePermission('operator_edit')]
     public function saveUser()
     {
         $this->begin();
@@ -311,9 +307,14 @@ class desktop_ctl_users extends desktop_controller
             $_POST['name']                      = trim($_POST['name']);
             $_POST['pam_account']['account_id'] = $param_id;
             $_POST['op_no']                     = strtoupper(trim($_POST['op_no']));
+            $_POST['mcp_enabled']               = $this->normalizeMcpEnabled($_POST['mcp_enabled'] ?? ($sdf_users['mcp_enabled'] ?? 1));
+
             // 编辑用户时，将 is_hash256 设置为 1（新加密方式）
             $_POST['pam_account']['is_hash256'] = '1';
+
             if ($sdf_users['super'] == 1) {
+                // Legacy 编辑页不传 super 字段；Vue 也不应覆盖超管标识
+                unset($_POST['super']);
                 $users->editUser($_POST);
                 //保存成功后加判断是否启用状态有变更
                 $user_data  = $users->dump($sdf_users['user_id'], '*', array(':account@pam' => array('*')));
@@ -334,26 +335,31 @@ class desktop_ctl_users extends desktop_controller
                 
                 $this->end(true, app::get('desktop')->_('编辑成功！'));
             } elseif ($_POST['super'] == 0 && $_POST['role']) {
-                foreach ($_POST['role'] as $roles) {
+                foreach ((array) $_POST['role'] as $roles) {
                     $_POST['roles'][] = array('role_id' => $roles);
                 }
                 // 编辑用户时，将 is_hash256 设置为 1（新加密方式）
                 $_POST['pam_account']['is_hash256'] = '1';
                 $users->editUser($_POST);
                 
-                // 门店组织权限处理 - 双重保存策略
-                if (isset($_POST['store_org_conf']['orgIds'][0]) && !empty($_POST['store_org_conf']['orgIds'][0])) {
-                    $orgIds = explode(',', $_POST['store_org_conf']['orgIds'][0]);
+                // 门店组织权限处理 - 独立保存，不影响门店角色权限
+                $storeOrgIds = $_POST['store_org_conf']['orgIds'] ?? [];
+                if (!empty($storeOrgIds)) {
+                    // 兼容两种格式：数组 ['5','6'] 或逗号拼接 ['5,6']
+                    if (count($storeOrgIds) === 1 && strpos($storeOrgIds[0], ',') !== false) {
+                        $orgIds = explode(',', $storeOrgIds[0]);
+                    } else {
+                        $orgIds = array_filter($storeOrgIds);
+                    }
                     
-                    // 1. 保存原始组织权限到 organization_ops（新增）
+                    // 保存组织权限到 organization_ops（数据权限维度）
                     $this->saveOrganizationPermission($_POST['user_id'], $orgIds);
-                    
-                    // 2. 展开并保存具体门店到 branch_ops（向下兼容）
-                    $_POST['store_id'] = $this->expandOrgIdsToStoreIds($orgIds);
                 } else {
                     // 如果没有组织权限，清空原有的组织权限
                     $this->saveOrganizationPermission($_POST['user_id'], []);
                 }
+                
+                // 注意：store_id[] 通过 save_per 保存到 branch_ops（角色权限维度），与组织权限独立
                 
                 $users->save_per($_POST);
 
@@ -395,7 +401,7 @@ class desktop_ctl_users extends desktop_controller
      * @return mixed This is the return value description
      * 
      */
-
+    #[RequirePermission('operator_edit')]
     public function edit($param_id)
     {
         $users     = $this->app->model('users');
@@ -460,6 +466,7 @@ class desktop_ctl_users extends desktop_controller
         $this->pagedata['name']       = $sdf_users['name'];
         $this->pagedata['super']      = $sdf_users['super'];
         $this->pagedata['status']     = $sdf_users['status'];
+        $this->pagedata['mcp_enabled'] = $sdf_users['mcp_enabled'] ?? 1;
         $this->pagedata['email']     = $sdf_users['email'];
         $this->pagedata['ismyself']   = $user->user_id === $param_id ? 'true' : 'false';
 
@@ -547,10 +554,7 @@ class desktop_ctl_users extends desktop_controller
     }
 
     //获取工作组细分
-    /**
-     * detail_ground
-     * @return mixed 返回值
-     */
+    #[RequirePermission('operator_edit')]
     public function detail_ground()
     {
         // //获取订单角色中的选中项
@@ -668,7 +672,7 @@ class desktop_ctl_users extends desktop_controller
      */
     public function save_ground($aData)
     {
-        $workgrounds = $aData['role'];
+        $workgrounds = (array) ($aData['role'] ?? []);
         $menus       = $this->app->model('menus');
         $roles       = $this->app->model('roles');
         foreach ($workgrounds as $val) {
@@ -903,10 +907,7 @@ class desktop_ctl_users extends desktop_controller
         echo json_encode($result);
     }
 
-    /**
-     * exportTemplate
-     * @return mixed 返回值
-     */
+    #[RequirePermission('operator_add')]
     public function exportTemplate()
     {
         header("Content-Type: text/csv");
@@ -918,21 +919,13 @@ class desktop_ctl_users extends desktop_controller
         echo '"' . implode('","', $title) . '"';
     }
 
-    /**
-     * unLock
-     * @param mixed $userId ID
-     * @return mixed 返回值
-     */
+    #[RequirePermission('operator_edit')]
     public function unLock($userId) {
         app::get('desktop')->model('users')->update(['is_lock'=>'0','lock_reason'=>''],['user_id'=>$userId]);
         $this->splash('success','index.php?app=desktop&ctl=users&act=index','操作成功');
     }
 
-    /**
-     * showSensitiveData
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
+    #[RequirePermission('operator_edit')]
     public function showSensitiveData($id) {
         $data = app::get('desktop')->model('users')->db_dump(['user_id'=>$id]);
         $row = app::get('pam')->model('account')->db_dump(['account_id'=>$id], 'login_name');
@@ -1073,5 +1066,10 @@ class desktop_ctl_users extends desktop_controller
         }
         
         return $storeIds;
+    }
+
+    private function normalizeMcpEnabled($value): string
+    {
+        return in_array($value, [true, 1, '1', 'true', 'on'], true) ? '1' : '0';
     }
 }

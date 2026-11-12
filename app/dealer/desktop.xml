@@ -49,7 +49,7 @@
 
     <workground name="代发管理" id="dealer_manager"  order="600" icon="icon-daifa">
         <menugroup name="组织设置" en="dealer-organization">
-            <menu controller='admin_bbu' action='index' permission='dealer_bbu' display='true' order='6001010'>公司业务组织</menu>
+            <menu controller='admin_bbu' action='index' permission='dealer_bbu' display='true' order='6001010' target='/m-dealer/bbu/index'>公司业务组织</menu>
             <menu controller='admin_betc' action='index' permission='dealer_betc' display='true' order='6001020'>业务贸易公司</menu>
             <menu controller='admin_bs' action='index' permission='dealer_bs' display='true' order='6001030'>经销商</menu>
         </menugroup>
@@ -61,7 +61,7 @@
         </menugroup>
         <menugroup name="代发业务设置" en="dealer-operation">
             <menu controller='admin_shop' action='index' permission='dealer_shop' display='true' order='6003010'>代发店铺管理</menu>
-            <menu controller='admin_material_sales' action='index' permission='dealer_sales_material_sku' display='true' order='6003020'>代发销售商品</menu>
+            <menu controller='admin_material_sales' action='index' permission='dealer_sales_material_sku' display='true' order='6003020' target='/m-dealer/material-sales/index'>代发销售商品</menu>
             <menu controller='admin_series_endorse_products' action='index' permission='dealer_series_endorse_products' display='true' order='6003030'>商品代发设置</menu>
             <menu controller='admin_shop_stocksync' action='index' permission='dealer_shop_stocksync' display='true' order='6003040'>代发库存同步管理</menu>
             <menu controller='admin_shop_stocksku' action='index' permission='dealer_shop_stocksku' display='true' order='6003050'>库存同步列表</menu>

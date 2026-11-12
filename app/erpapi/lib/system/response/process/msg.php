@@ -34,7 +34,13 @@ class erpapi_system_response_process_msg
         }
 
         if (isset($sdf['content']['access_token_available'])) {
-            return $this->processAccessTokenNotify($shopMdl, $shop, $sdf);
+            $sdf['msg_type'] = 'system'; // 消息类型
+            $sdf['event_type'] = $event_type;
+            $sdf['shop_type'] = ($shopInfo['node_type'] ? $shopInfo['node_type'] : $shopInfo['shop_type']);
+            $sdf['shop_bn'] = $shopInfo['shop_bn'];
+            $sdf['org_id'] = intval($shopInfo['org_id']);
+            
+            return $this->processAccessTokenNotify($shopMdl, $shopInfo, $sdf);
         }
         
         $rpcNotifyMdl = app::get('base')->model('rpcnotify');
@@ -45,13 +51,56 @@ class erpapi_system_response_process_msg
             'msg'        => json_encode($sdf['content'],JSON_UNESCAPED_UNICODE),
             'notifytime' => strtotime($sdf['date'])
         ];
-        $rpcNotifyMdl->insert($data);
-       
-        // 店铺到期主动提醒
-        kernel::single('monitor_event_notify')->addNotify('system_message', [
-            'errmsg'         => $sdf['content']['info'],
-        ]);
-
+        $insert_id = $rpcNotifyMdl->insert($data);
+        
+        // check
+        if($event_type == 'system_auth_expire'){
+            // 店铺即将到期提醒
+            $data['rpcnotify_id'] = $insert_id;
+            $data['content'] = $sdf['content']; // 完整 content，供到期天数/占位符解析
+            kernel::single('ome_system_rpcnotify')->addShopEventNotify($data, $error_msg);
+        }else{
+            // 店铺服务提醒
+            $notifyParams = [
+                'rpcnotify_id' => $insert_id,
+                'event_type' => $data['event_type'],
+                'shop_type' => $data['shop_type'],
+                'shop_bn' => $data['shop_bn'],
+                'errmsg' => $sdf['content']['info'],
+            ];
+            kernel::single('monitor_event_notify')->addNotify($event_type, $notifyParams);
+            
+            // 授权已过期：回写店铺 is_expired / expired_time（已过期则跳过）
+            if (isset($sdf['content']['info']) && mb_strpos($sdf['content']['info'], '授权已过期') !== false) {
+                if((string) $shopInfo['is_expired'] !== 'true'){
+                    // 店铺到期时间
+                    $deadLine = isset($sdf['content']['dead_line']) ? trim((string) $sdf['content']['dead_line']) : '';
+                    $expiredTime = $deadLine !== '' ? strtotime($deadLine) : false;
+                    
+                    // 是否需要更新到期时间
+                    $is_update_expired_time = true;
+                    if (!$expiredTime) {
+                        // 矩阵未传过期时间，只有店铺未存在到期时间时，才更新到期时间
+                        $expiredTime = time();
+                        $is_update_expired_time = false;
+                    }
+                    
+                    // data
+                    $updateShopData = [
+                        'is_expired' => 'true',
+                    ];
+                    
+                    // 是否需要更新到期时间
+                    if(empty($shopInfo['expired_time']) || $is_update_expired_time){
+                        $updateShopData['expired_time'] = $expiredTime;
+                    }
+                    
+                    // 更新店铺到期
+                    $shopMdl->update($updateShopData, array('shop_id' => $shopInfo['shop_id']));
+                }
+            }
+        }
+        
         return array('rsp' => 'succ', 'msg' => '消息已接收');
     }
 

@@ -17,6 +17,13 @@
 
 class o2o_finder_server
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     public $addon_cols        = "server_id";
     public $column_edit       = "操作";

@@ -17,6 +17,13 @@
 
 
 class pam_finder_log{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     public $column_event_time = '时间';
     public $column_event_time_width = '160';

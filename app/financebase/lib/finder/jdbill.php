@@ -23,6 +23,13 @@
  */
 class financebase_finder_jdbill
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     //调用扩展字段
     public $addon_cols = 'error_data';
     

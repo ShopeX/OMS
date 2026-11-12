@@ -16,6 +16,13 @@
  */
 
 class material_finder_extend_filter_sales_material{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function get_extend_colums(){
         //获取销售物料类型
         $salesMLib = kernel::single('material_sales_material');

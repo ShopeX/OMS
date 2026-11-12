@@ -36,7 +36,7 @@ $db['goods']=array (
       'width' => 120,
       'searchtype' => 'head',
       'editable' => false,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
       'in_list' => true,
       'default_in_list' => true,
@@ -85,7 +85,7 @@ $db['goods']=array (
       'editable' => false,
       'filterdefalut' => true,
       //'searchtype' => 'tequal',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'in_list' => true,
       'default_in_list' => true,
     ),
@@ -105,7 +105,7 @@ $db['goods']=array (
       'hidden' => true,
       'filterdefault' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'in_list' => true,
     ),
     'brand_id' =>
@@ -118,7 +118,7 @@ $db['goods']=array (
       'hidden' => true,
       'in_list' => true,
       'default_in_list' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'brief' =>
@@ -220,7 +220,7 @@ $db['goods']=array (
       'editable' => false,
       'in_list' => true,
       'default_in_list' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'unit' =>
     array (

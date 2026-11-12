@@ -16,6 +16,13 @@
  */
 
 class console_finder_return_product{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     
 
     function __construct($app)

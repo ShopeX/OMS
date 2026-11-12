@@ -1,0 +1,62 @@
+<div class="tableform">
+    <div class="division">
+        <form method="post" action="index.php?<{$env.server.QUERY_STRING}>" id="branchWmsChannelForm">
+            <table class="gridlist" cellspacing="0" cellpadding="0" border="0">
+                <tbody id="branchWmsChannelTable">
+                <tr>
+                    <th>平台</th>
+                    <th>第三方仓储</th>
+                    <th>操作</th>
+                </tr>
+                <tr>
+                    <td>默认</td>
+                    <td><{$default_wms_name}></td>
+                    <td><{button id="addBranchWmsChannel" label='添加'}></td>
+                </tr>
+                <{foreach from=$branch_wms_channel item=item}>
+                    <tr data-id="<{$item.id}>">
+                        <td><{input type="select" name="shop_type[]" required="true" options=$shop_type value=$item.shop_type}></td>
+                        <td><{input type="select" name="channel_id[]" required="true" rows=$wms_list valueColumn='channel_id' labelColumn='channel_name' value=$item.channel_id}></td>
+                        <td><{button class="delBranchWmsChannel" label='删除'}></td>
+                    </tr>
+                <{/foreach}>
+                </tbody>
+            </table>
+            <div class="table-action">
+                <{button class="btn-primary" type="submit" id="saveBranchWmsChannel" name="submit" label="保存"}>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    (function () {
+        var wmsList = JSON.decode('<{$wms_list|json_encode}>');
+        var shopType = JSON.decode('<{$shop_type|json_encode}>');
+
+        $('addBranchWmsChannel').addEvent('click', function () {
+            if (wmsList.length) {
+                var oTr = document.createElement('TR');
+                var sHtml = '<td><{input type="select" name="shop_type[]" required="true" options=$shop_type}></td>';
+                sHtml += '<td><{input type="select" name="channel_id[]" required="true" rows=$wms_list valueColumn="channel_id" labelColumn="channel_name"}></td>';
+                sHtml += '<td><{button class="delBranchWmsChannel" label="删除"}></td>';
+                oTr.setHTML(sHtml);
+                oTr.getElement('.delBranchWmsChannel').addEvent('click', function () {
+                    delBranchWmsChannel(this);
+                });
+                oTr.inject($('branchWmsChannelTable'));
+            } else {
+                MessageBox.show('没有可用的第三方仓储（需已绑定且非自有仓）');
+            }
+        });
+
+        $$('.delBranchWmsChannel').each(function (item) {
+            item.addEvent('click', function () {
+                delBranchWmsChannel(this);
+            });
+        });
+
+        function delBranchWmsChannel(obj) {
+            obj.getParent('TR').remove();
+        }
+    })();
+</script>

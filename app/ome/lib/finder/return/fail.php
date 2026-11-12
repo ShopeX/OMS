@@ -16,6 +16,13 @@
  */
 
 class ome_finder_return_fail{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $detail_fail = '货品修正';
 
     function detail_fail($return_id){

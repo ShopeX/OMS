@@ -14,8 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class logisticsaccounts_finder_statements{
+
+    private $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
 
     var $addon_cols = "sid,status";
     var $column_edit = "操作";

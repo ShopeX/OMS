@@ -721,6 +721,12 @@ class utils{
     static function _filter_input($data){
         if(is_array($data)){
             foreach($data as $key=>$v){
+                // Drop user-controllable raw SQL fragments (CNVD filter_sql SQLi).
+                // PHP-built filters (base_filter / getList) never pass through this helper.
+                if(is_string($key) && $key === 'filter_sql'){
+                    unset($data[$key]);
+                    continue;
+                }
                 if(is_string($key) && $key == 'finder_id' && $v) {
                     if(!preg_match_all('/^[a-zA-Z0-9]+$/', $v, $arr)) {
                         trigger_error('finder_id unvalid',E_USER_ERROR);

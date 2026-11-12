@@ -16,6 +16,13 @@
  */
 
 class ome_finder_return_process{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $detail_basic = "收货/质检详情";
     
     function detail_basic($por_id){

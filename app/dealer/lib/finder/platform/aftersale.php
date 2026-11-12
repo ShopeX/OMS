@@ -16,6 +16,13 @@
  */
 
 class dealer_finder_platform_aftersale {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     public $addon_cols = "plat_aftersale_id";
 

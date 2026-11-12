@@ -23,6 +23,13 @@
  * ============================
  */
 class console_finder_difference {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = 'status,diff_bn,operate_type,out_status,in_status';
 
     public $detail_item = "详情";
@@ -44,7 +51,8 @@ class console_finder_difference {
         $render->pagedata['diff'] = $diff;
         $render->pagedata['rows'] = $rows;
         if($diff['operate_type'] == 'store'){
-            return $render->fetch("admin/difference/item.html");
+            if ($this->vue_mode) { return []; }
+        return $render->fetch("admin/difference/item.html");
         }else{
             return $render->fetch("admin/difference/item.html");
 

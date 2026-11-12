@@ -16,6 +16,13 @@
  */
 
 class financebase_finder_extend_filter_bill_import_order{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function get_extend_colums(){
 
 //        http://www.qc.local/index.php/#app=financebase&ctl=admin_shop_settlement_cainiao&act=index&view=&page=

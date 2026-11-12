@@ -156,6 +156,27 @@ class erpapi_shop_response_qianniu extends erpapi_shop_response_abstract
      */
     public function modifysku($sdf)
     {
+        // params
+        $sdf = $this->_formatModifysku($sdf);
+        
+        // shop_type
+        $sdf['shop_type'] = $this->__channelObj->channel['shop_type'];
+        $sdf['shop_id'] = $this->__channelObj->channel['shop_id'];
+        
+        // apilog
+        $this->__apilog['original_bn'] = $sdf['order_bn'];
+        $this->__apilog['title'] = '更换sku校验';
+        
+        // 淘宝自助改sku需要在1S之内返回是否允许修改SKU
+        if(in_array($sdf['shop_type'], ['taobao'])){
+            // 记录开始执行时间（微秒）
+            $sdf['_modifysku_start_time'] = microtime(true);
+            
+            // 直接返回相关参数
+            return $sdf;
+        }
+        
+        // 其它平台走以下逻辑
         $orders_obj = app::get('ome')->model('orders');
         $order_objects_obj = app::get('ome')->model('order_objects');
         $delivery_order_obj = app::get('ome')->model('delivery_order');
@@ -166,12 +187,9 @@ class erpapi_shop_response_qianniu extends erpapi_shop_response_abstract
         $sales_material_obj = app::get('material')->model('sales_material');
         $material_sales_basic_material_obj = app::get('material')->model('sales_basic_material');
         $basicMStockFreezeLib   = kernel::single('material_basic_material_stock_freeze');
-        $sdf = $this->_formatModifysku($sdf);
+        
+        // 订单信息
         $order_filter = array('order_bn'=>$sdf['order_bn'],'shop_id'=>$this->__channelObj->channel['shop_id']);
-
-        $this->__apilog['original_bn'] = $sdf['order_bn'];
-        $this->__apilog['title'] = '更换sku校验';
-
         $orders_info = $orders_obj->dump($order_filter);
         if (!$orders_info) {
             //如果没有找到，先去拉取订单
@@ -191,11 +209,13 @@ class erpapi_shop_response_qianniu extends erpapi_shop_response_abstract
                 return false;
             }
         }
+        
         if($orders_info['is_modify'] == 'true') {
             $this->__apilog['result']['msg'] = '订单已被修改';
             $this->__apilog['result']['msg_code'] = '3003';
             return false;
         }
+        
         //获得店铺对应的仓库的库存
         $shop_info = $shop_obj->dump(['shop_id' => $orders_info['shop_id']]);
         $shop_bn = $shop_info['shop_bn'];
@@ -281,7 +301,6 @@ class erpapi_shop_response_qianniu extends erpapi_shop_response_abstract
                 }
             }
         }
-
         
         $params = [
             'order_id' => $orders_info['order_id'],

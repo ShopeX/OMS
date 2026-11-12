@@ -23,6 +23,28 @@
                     <{$templateInfo.content}>
                 </td>
             </tr>
+            <{if $templateInfo.event_type == 'order_fail_notify'}>
+            <tr>
+                <th><{t}>发送方式：<{/t}></th>
+                <td>定时批量通知（仅邮箱，CSV 附件）</td>
+            </tr>
+            <tr>
+                <th><{t}>发送频次：<{/t}></th>
+                <td>每天 <{$templateInfo.template_config.digest_frequency}> 次</td>
+            </tr>
+            <tr>
+                <th><{t}>发送时刻：<{/t}></th>
+                <td><{if $templateInfo.template_config.digest_times}><{$templateInfo.template_config.digest_times|implode:','}><{/if}></td>
+            </tr>
+            <tr>
+                <th><{t}>汇总水位：<{/t}></th>
+                <td><{if $templateInfo.template_config.last_check_time}><{$templateInfo.template_config.last_check_time}><{else}>（空，首次=模板启用时间）<{/if}></td>
+            </tr>
+            <tr>
+                <th><{t}>启用时间：<{/t}></th>
+                <td><{if $templateInfo.template_config.enabled_at}><{$templateInfo.template_config.enabled_at}><{else}>-<{/if}></td>
+            </tr>
+            <{/if}>
         </table>
     </div>
 </div>

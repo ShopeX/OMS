@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 $db['delivery']=array (
   'columns' =>
   array (
@@ -87,7 +86,7 @@ $db['delivery']=array (
       'editable' => false,
       'width' =>140,
       'searchtype' => 'nequal',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
       'in_list' => true,
       'default_in_list' => true,

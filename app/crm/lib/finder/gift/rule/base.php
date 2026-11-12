@@ -16,6 +16,13 @@
  */
 
 class crm_finder_gift_rule_base{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     
     var $addon_cols = "disabled,gift_list,filter_arr";
     
@@ -26,6 +33,24 @@ class crm_finder_gift_rule_base{
     {
         $finder_id = $_GET['_finder']['finder_id'];
         $id = $row['id'];
+
+        if ($this->vue_mode) {
+            // Vue Finder 契约：结构化行操作（legacy HTML 链接不下发，避免 SPA 被 legacy 页整页跳走）；
+            // 与 legacy 逐字对齐：编辑 → act=editRuleBase、复制 → act=copy_rulebase（均以弹窗承载）
+            return [
+                [
+                    'key'    => 'edit',
+                    'label'  => '编辑',
+                    'action' => 'index.php?app=crm&ctl=admin_gift_rulebase&act=editRuleBase&id=' . $id,
+                ],
+                [
+                    'key'    => 'copy',
+                    'label'  => '复制',
+                    'action' => 'index.php?app=crm&ctl=admin_gift_rulebase&act=copy_rulebase&id=' . $id,
+                ],
+            ];
+        }
+
         $button = '';
       
         $button .= '<a href="index.php?app=crm&ctl=admin_gift_rulebase&act=editRuleBase&id='.$id.'&finder_id='.$finder_id . '">编辑</a>';
@@ -50,6 +75,12 @@ class crm_finder_gift_rule_base{
             $gift_logs = $db->selectRow($sql);
             $show_limit = '限量赠送:'.$filter_arr['buy_goods']['limit_orders'];
             $show_limit.='已送:'.$gift_logs['total_orders'].'';
+
+            if ($this->vue_mode) {
+                // Vue Finder 契约：结构化下发可见文案，不下发 legacy HTML 片段
+                // （与 column_edit 的 vue_mode 分支同口径；SPA 不解析 legacy HTML）
+                return $show_limit;
+            }
 
             return sprintf("<div onmouseover='bindFinderColTip(event)' rel='%s' style='height:20px;background-color:%s;float:left;color:#ffffff;'>&nbsp;%s&nbsp;</div>", $show_limit, 'green', $show_limit);
         }else{

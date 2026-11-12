@@ -16,6 +16,13 @@
  */
 
 class ome_finder_api_stock{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     var $detail_basic = '同步信息';
     function detail_basic($id){

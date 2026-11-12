@@ -1,5 +1,6 @@
 <?php
 /**
+
  * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,7 +30,7 @@ $db['basic_material_feature_group']=array (
     array (
       'type' => 'int unsigned',
       'required' => true,
-      'width' => 110,
+      'width' => 150,
       'hidden' => true,
       'editable' => false,
       'pkey' => true,
@@ -40,7 +41,7 @@ $db['basic_material_feature_group']=array (
       'default' => 0,
       'required' => true,
       'hidden' => true,
-      'width' => 110,
+      'width' => 150,
       'editable' => false,
     ),
   ),

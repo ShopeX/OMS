@@ -138,6 +138,19 @@ class ome_ctl_admin_api_log extends desktop_controller{
         $retry_type = $_GET['retry_type'];
         $isSelectedAll = $_GET['isSelectedAll'];
         $cursor = $_GET['cursor'];
+        // CNVD api_log retry: harden log_id before model layer (segments alnum/_/- only).
+        if ($isSelectedAll !== '_ALL_') {
+            $log_id = (string) $log_id;
+            $segments = ($retry_type === 'batch' && strpos($log_id, '|') !== false)
+                ? explode('|', $log_id)
+                : array($log_id);
+            foreach ($segments as $segment) {
+                if ($segment === '' || !preg_match('/^[A-Za-z0-9_-]+$/', $segment)) {
+                    echo json_encode(array('task_name' => 'invalid log_id', 'status' => 'fail'));
+                    exit;
+                }
+            }
+        }
         $return = $this->app->model('api_log')->retry($log_id, $retry_type, $isSelectedAll, $cursor);
         echo json_encode($return);
         exit;

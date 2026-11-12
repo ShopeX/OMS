@@ -174,12 +174,6 @@ class dealer_ctl_admin_delivery extends desktop_controller
             'disabled' => 'false',
         );
         
-//        //check shop permission
-//        $organization_permissions = kernel::single('desktop_user')->get_organization_permission();
-//        if($organization_permissions){
-//            $base_filter['org_id'] = $organization_permissions;
-//        }
-        
         //获取操作人员的企业组织架构ID权限
         $cosData = $this->_businessLib->getOperationCosIds();
         if($cosData[1]){
@@ -326,6 +320,7 @@ class dealer_ctl_admin_delivery extends desktop_controller
             if (!$detail) {
                 $this->end(false, '发货单未生成 不走此流程', '', $autohide);
             }
+            
             $detail['consignee']['name'] = $detail['ship_name'];
             $detail['consignee']['area'] = $detail['ship_area'];
             $detail['consignee']['province'] = $detail['ship_province'];
@@ -338,24 +333,32 @@ class dealer_ctl_admin_delivery extends desktop_controller
             $detail['consignee']['email'] = $detail['ship_email'];
             $detail['consignee']['r_time'] = $detail['ship_name'];
         }
+        
         $items = $OiObj->getList('*',array('delivery_id'=>$detail['delivery_id']));
+        
         if(empty($detail)){
             $this->end(false, '没有该单号的发货单', '', $autohide);
         }
+        
         if($detail['status'] == 'back'){
             $this->end(false, '该发货单已经被打回，无法继续操作', '', $autohide);
         }
+        
         #获取订单
         $order_bn = $ObjdlyOrder->getOrderInfo('order_bn',$detail['delivery_id']);
+        
         if($detail['status'] == 'cancel'){
             $this->end(false, '该发货单已经被取消，无法继续操作'."<br>".'订单号:'.$order_bn[0]['order_bn'], '', $autohide);
         }
+        
         if($detail['delivery_logi_number'] > 0){
             $this->end(false, '该发货单已部分发货，无法继续操作', '', $autohide);
         }
+        
         if($detail['pause'] == 'true'){
             $this->end(false, '该发货单已暂停，无法继续操作', '', $autohide);
         }
+        
         if($detail['process'] == 'true'){
             $this->end(false, '该发货单已经发货，无法继续操作', '', $autohide);
         }
@@ -401,6 +404,7 @@ class dealer_ctl_admin_delivery extends desktop_controller
         if (empty($_POST['memo'])){
             $this->end(false, '备注请不要留空', '', $autohide);
         }
+        
         $delivery_id = $_POST['delivery_id'];
         $dlyObj = app::get('ome')->model("delivery");
         $orderObj = app::get('ome')->model("orders");

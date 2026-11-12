@@ -147,7 +147,7 @@ class desktop_roles{
         $workgrounds = $menuModel->getList('*',array('menu_type'=>'workground','disabled'=>'false','display'=>'true'));
         foreach ($workgrounds as $key => $value) {
 
-            $value['permissions'] = $wg_permissions[$value['workground']];
+            $value['permissions'] = $wg_permissions[$value['workground']] ?? [];
 
             $workgrounds_permissions[] = $value;
         }

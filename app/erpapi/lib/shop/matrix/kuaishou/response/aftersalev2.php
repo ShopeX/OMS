@@ -24,7 +24,7 @@ class erpapi_shop_matrix_kuaishou_response_aftersalev2 extends erpapi_shop_respo
     protected function _formatAddParams($params) {
         $sdf = parent::_formatAddParams($params);
 
-         //tag_type
+        //tag_type
         $tag_type = $params['tag_type'];
         if($tag_type){
             //价保退款
@@ -39,7 +39,8 @@ class erpapi_shop_matrix_kuaishou_response_aftersalev2 extends erpapi_shop_respo
         //识别如果是已完成的售后，转成退款单更新的逻辑
          if($sdf['has_good_return'] == 'true' && strtolower($params['status']) == 'success'){
             $refundOriginalObj = app::get('ome')->model('return_product');
-            #退货状态必须是已完成
+            
+            //退货状态必须是已完成
             $refundOriginalInfo = $refundOriginalObj->getList('return_id', array('return_bn'=>$sdf['refund_bn'],'status' =>'4') , 0 , 1);
             if($refundOriginalInfo){
                 $refundApplyObj = app::get('ome')->model('refund_apply');
@@ -62,12 +63,15 @@ class erpapi_shop_matrix_kuaishou_response_aftersalev2 extends erpapi_shop_respo
         //判断是否换货后生成的
         $shopId = $sdf['shop_id'] = $this->__channelObj->channel['shop_id'];
         $tgOrder = $this->getOrder('order_id,ship_status,order_bn', $shopId, $sdf['order_bn']);
+        
+        // order_id
+        if (!empty($tgOrder['order_id'])) {
+            $sdf['order']['order_id'] = $tgOrder['order_id'];
+        }
 
-
-
+        // ship_status
         if(in_array($tgOrder['ship_status'],array('3','4'))){
             $change_flag = $this->_tranChange($sdf,$tgOrder);
-
             if($change_flag){
                 $sdf['change_order_flag'] = true;
                 $sdf['change_order_id'] = $change_flag['change_order_id'];
@@ -75,8 +79,11 @@ class erpapi_shop_matrix_kuaishou_response_aftersalev2 extends erpapi_shop_respo
                 $sdf['memo'] = '换货订单转换生成,原订单号:'.$params['tid'];
                 $this->_tranChangeItems($sdf);
             }
-
         }
+        
+        // 平台售后商品申请退货金额大于订单商品的实付金额
+        $sdf = $this->_resetRefundFee($sdf);
+        
         return array_merge($sdf, $kuaishouSdf);
     }
     protected function _getAddType($sdf) {

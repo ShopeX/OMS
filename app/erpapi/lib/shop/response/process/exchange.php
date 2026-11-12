@@ -48,6 +48,15 @@ class erpapi_shop_response_process_exchange {
             $this->_dealExchangeReceiver($sdf['return_product']['return_id'], $sdf);
             //更新售后申请附加信息表
             $this->_dealTableAdditional($sdf['table_additional'], $idBn);
+
+            // 天猫极速换货：漏传后仍按已有标补打 / 新报文补打
+            if (!empty($sdf['is_topspeed_exchange'])) {
+                $reshipId = !empty($sdf['reship']['reship_id']) ? $sdf['reship']['reship_id'] : 0;
+                kernel::single('ome_order_platform_taobao_aftersale')->markTopspeedOnReturnAndReship(
+                    $sdf['return_product']['return_id'],
+                    $reshipId
+                );
+            }
             
              //退转换处理
             kernel::single('ome_return')->processChange($sdf);
@@ -87,6 +96,11 @@ class erpapi_shop_response_process_exchange {
                 return array('rsp'=>'fail', 'msg'=>'售后申请单新建失败');
             }
             $this->_insertReturnProductItems($returnProductItems, $insertData['return_id']);
+            
+            // 天猫极速换货打标
+            if (!empty($sdf['is_topspeed_exchange'])) {
+                kernel::single('ome_order_platform_taobao_aftersale')->markTopspeedOnReturnAndReship($insertData['return_id']);
+            }
             //防止并发赠品多次携带到售后申请单明细，update阻塞查询判断。
 //            $giftMsg = '';
 //            if ($returnGiftItems) {
@@ -120,8 +134,10 @@ class erpapi_shop_response_process_exchange {
                 'return_bn' => $insertData['return_bn']
             );
             $this->_dealTableAdditional($sdf['table_additional'], $idBn);
+            
             //提前冻结库存
             kernel::single('ome_return_product')->addExchangeFreeze($insertData['return_id'], $sdf['branch_id']);
+            
             //自动审核售后申请单
             $is_auto_approve = app::get('ome')->getConf('aftersale.auto_approve');
             $is_gift_auto_approve = app::get('ome')->getConf('aftersale.gift_auto_approve');
@@ -157,11 +173,7 @@ class erpapi_shop_response_process_exchange {
                 $sdf['return_id'] = $insertData['return_id'];
                 $sdf['status'] = in_array($sdf['status'],array('3','4','6')) ? '3' : $sdf['status'];
                 $this->_returnProductUpdateStatus($sdf);
-            } else {
-                //[未开启]售后申请单自动审批,提前冻结库存
-                kernel::single('ome_return_product')->addExchangeFreeze($insertData['return_id'], $sdf['branch_id']);
             }
-            
         }
         
         //退换货单自动审核
@@ -181,6 +193,22 @@ class erpapi_shop_response_process_exchange {
                 //处理退换货单
                 if($reshipdata['reship_id']){
                     $result = $reshipLib->batch_reship_queue($reshipdata['reship_id']);
+                }
+            }
+        }
+
+        // 极速换货：reship 生成后补打标；平台 17 提前建换出单
+        $return_id = ($sdf['return_product'] ? $sdf['return_product']['return_id'] : (isset($insertData['return_id']) ? $insertData['return_id'] : 0));
+        if (!empty($sdf['is_topspeed_exchange']) && $return_id) {
+            $topspeedLib = kernel::single('ome_order_platform_taobao_aftersale');
+            $topspeedLib->markTopspeedOnReturnAndReship($return_id);
+            $platformRaw = !empty($sdf['platform_status_raw']) ? $sdf['platform_status_raw'] : strtoupper((string)$sdf['platform_status']);
+            if ($platformRaw === 'WAIT_SELLER_SEND_GOODS') {
+                $Oreship = app::get('ome')->model('reship');
+                $reshipRow = $Oreship->dump(array('return_id' => $return_id, 'return_type' => 'change'), 'reship_id,change_order_id');
+                if ($reshipRow['reship_id']) {
+                    $createMsg = '';
+                    $topspeedLib->tryCreateChangeOrderForTopspeed($reshipRow['reship_id'], $createMsg);
                 }
             }
         }
@@ -266,8 +294,18 @@ class erpapi_shop_response_process_exchange {
         }
         
         //新换货标识
+        $flagType = 0;
         if($sdf['attributes'] && $sdf['attributes']['newExchangeRepair'] == '1'){
-            $data['flag_type'] = ome_reship_const::__NEW_EXCHANGE_REPAIR;
+            $flagType = $flagType | ome_reship_const::__NEW_EXCHANGE_REPAIR;
+        }
+        // 天猫极速换货
+        if (!empty($sdf['is_topspeed_exchange'])
+            || kernel::single('ome_order_platform_taobao_aftersale')->isTopspeedExchangeParams($sdf)
+        ) {
+            $flagType = kernel::single('ome_order_platform_taobao_aftersale')->applyTopspeedFlagType($flagType);
+        }
+        if ($flagType) {
+            $data['flag_type'] = $flagType;
         }
 
         // 经销店铺的单据，delivery_mode冗余到售后申请表
@@ -392,6 +430,9 @@ class erpapi_shop_response_process_exchange {
                             'content'       =>$sdf['reason'],
                         );
                         $modelReturnProduct->tosave($data, true, $error_msg);
+                        
+                        // 换货冻结释放
+                        kernel::single('ome_return_product')->releaseChangeFreeze($data['return_id']);
                     }
                 }
                 
@@ -462,17 +503,44 @@ class erpapi_shop_response_process_exchange {
                     );
                     kernel::single('ome_return_product')->releaseChangeFreeze($data['return_id']);
                     $modelReturnProduct->tosave($data, true, $error_msg);
+                    // tosave 后刷新 reship
+                    $reshipData = $reshipObj->dump(array('return_id'=>$returnProduct['return_id'], 'return_type'=>'change'), 'reship_id,change_order_id,flag_type,shop_type');
+                    if ($reshipData) {
+                        $sdf['reship'] = $reshipData;
+                    }
                 }
                 $upData = array();//array('status'=>'4');
                 
-                //平台售后单状态
-                if($sdf['platform_status']){
-                    $upData['platform_status'] = $sdf['platform_status'];
+                //平台售后单状态：优先落平台原始字符串
+                $platformRaw = !empty($sdf['platform_status_raw']) ? $sdf['platform_status_raw'] : $sdf['platform_status'];
+                if($platformRaw){
+                    $upData['platform_status'] = $platformRaw;
                 }
                 if($sdf['real_refund_amount']) {
                     $upData['real_refund_amount'] = $sdf['real_refund_amount'];
                 }
                 
+                // 极速 17：不把售后申请打完成；仅更新 platform_status / 时间
+                $isTopspeed17 = !empty($sdf['is_topspeed_exchange'])
+                    && strtoupper((string)$platformRaw) === 'WAIT_SELLER_SEND_GOODS';
+                if ($isTopspeed17) {
+                    $upData['outer_lastmodify'] = $sdf['modified'];
+                    $modelReturnProduct->update($upData, array('return_id'=>$returnProduct['return_id']));
+                    $operateLog->write_log('return@ome', $returnProduct['return_id'], '极速换货：待商家寄出新货(17)');
+
+                    $reshipId = !empty($sdf['reship']['reship_id']) ? $sdf['reship']['reship_id'] : 0;
+                    if (!$reshipId) {
+                        $r = $reshipObj->dump(array('return_id'=>$returnProduct['return_id'], 'return_type'=>'change'), 'reship_id');
+                        $reshipId = $r['reship_id'];
+                    }
+                    if ($reshipId) {
+                        kernel::single('ome_order_platform_taobao_aftersale')->markTopspeedOnReturnAndReship($returnProduct['return_id'], $reshipId);
+                        $createMsg = '';
+                        kernel::single('ome_order_platform_taobao_aftersale')->tryCreateChangeOrderForTopspeed($reshipId, $createMsg);
+                    }
+                    break;
+                }
+
                 $rs = $modelReturnProduct->update($upData, array('return_id'=>$returnProduct['return_id'], 'status|noequal'=>'4'));
                 if(is_bool($rs)) {
                     break;
@@ -491,6 +559,35 @@ class erpapi_shop_response_process_exchange {
                     }
                 }
                 break;
+            case '18':
+                // 极速换货：商家拒绝发新品 — 可恢复拦截
+                $platformRaw = !empty($sdf['platform_status_raw']) ? $sdf['platform_status_raw'] : 'SELLER_REFUSED_SEND_NEW_GOODS';
+                $modelReturnProduct->update(array(
+                    'platform_status' => $platformRaw,
+                    'outer_lastmodify' => $sdf['modified'],
+                    'last_modified' => time(),
+                ), array('return_id'=>$returnProduct['return_id']));
+                $operateLog->write_log('return@ome', $returnProduct['return_id'], '极速换货：商家拒绝发新品(18)');
+
+                $changeOrderId = !empty($sdf['reship']['change_order_id']) ? (int)$sdf['reship']['change_order_id'] : 0;
+                if (!$changeOrderId) {
+                    $r = $reshipObj->dump(array('return_id'=>$returnProduct['return_id'], 'return_type'=>'change'), 'change_order_id,reship_id');
+                    $changeOrderId = (int)$r['change_order_id'];
+                    if (!empty($r['reship_id'])) {
+                        kernel::single('ome_order_platform_taobao_aftersale')->markTopspeedOnReturnAndReship($returnProduct['return_id'], $r['reship_id']);
+                    }
+                }
+                if ($changeOrderId > 0) {
+                    $interceptMsg = '';
+                    kernel::single('ome_order_platform_taobao_aftersale')->interceptRefuseSendNewGoods($changeOrderId, $interceptMsg);
+                    if ($sdf['reship']['reship_id']) {
+                        $reshipObj->update(array('platform_status'=>$platformRaw), array('reship_id'=>$sdf['reship']['reship_id']));
+                        $operateLog->write_log('reship@ome', $sdf['reship']['reship_id'], '极速换货18：'.$interceptMsg);
+                    }
+                } else {
+                    $operateLog->write_log('return@ome', $returnProduct['return_id'], '极速换货18：尚无换出订单，跳过拦截');
+                }
+                break;
             case '5':
                 $error_msg = '';
                 $data = array(
@@ -500,7 +597,10 @@ class erpapi_shop_response_process_exchange {
                     'outer_lastmodify' => $sdf['modified'],
                 );
                 $modelReturnProduct->tosave($data, true, $error_msg);
+                
+                // 换货冻结释放
                 kernel::single('ome_return_product')->releaseChangeFreeze($data['return_id']);
+                
                 // 同步拒绝退货单
                 if ($sdf['reship']){
                     $reship = $sdf['reship'];
@@ -713,6 +813,33 @@ class erpapi_shop_response_process_exchange {
         }
         
         return false;
+    }
+
+    /**
+     * 平台拒绝发出新品：取消换出新订单
+     *
+     * @param array $sdf
+     * @return array
+     */
+    public function consigngoods_refuse($sdf)
+    {
+        // check
+        if(!isset($sdf['return_bn']) || empty($sdf['return_bn'])){
+            return array('rsp' => 'fail', 'msg' => '换货单号不能为空!');
+        }
+        
+        // 取消换出新订单
+        $result = kernel::single('ome_order_platform_taobao_aftersale')->cancelChangeOrderOnConsigngoodsRefuse($sdf);
+        if (empty($result) || !is_array($result)) {
+            $error_msg = '拒绝发出新品处理失败';
+            if($result['error_msg']){
+                $error_msg = '：' . $result['error_msg'];
+            }
+            
+            return array('rsp' => 'fail', 'msg' => $error_msg);
+        }
+        
+        return $result;
     }
 
 }

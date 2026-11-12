@@ -17,6 +17,13 @@
 
 class console_finder_dailyinventory_wmsdinv
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = "outer_stock";
 
     public $column_opt       = '操作';

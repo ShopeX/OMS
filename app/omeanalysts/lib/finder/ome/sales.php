@@ -14,28 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class omeanalysts_finder_ome_sales{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 	var $column_gross_sales = '毛利';
 
-    /**
-     * column_gross_sales
-     * @param mixed $rows rows
-     * @return mixed 返回值
-     */
-    public function column_gross_sales($rows) {
+	public function column_gross_sales($rows) {
 
 		return "1.00";
 	}
 
 	var $column_gross_sales_rate = '毛利率';
 
-    /**
-     * column_gross_sales_rate
-     * @param mixed $rows rows
-     * @return mixed 返回值
-     */
-    public function column_gross_sales_rate($rows) {
+	public function column_gross_sales_rate($rows) {
         #echo "<pre>";
         #print_r($rows);exit;
 	}

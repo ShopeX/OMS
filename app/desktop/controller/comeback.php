@@ -54,7 +54,17 @@ class desktop_ctl_comeback extends desktop_controller{
     function recover(){
         kernel::single('base_session')->close();
         set_time_limit(0);
-        $filename = $_GET['file'];
+        $filename = isset($_GET['file']) ? (string) $_GET['file'] : '';
+        // CNVD-2026-43974: reject path traversal / absolute paths; basename only.
+        if($filename === ''
+            || strpos($filename, '..') !== false
+            || strpos($filename, '/') !== false
+            || strpos($filename, '\\') !== false
+            || $filename !== basename($filename)
+        ){
+            echo '{error:"'.app::get('desktop')->_('非法备份文件名').'"}';
+            return;
+        }
         $fileid = intval($_GET['fileid']) ? intval($_GET['fileid']) : 1;
         $vols = $_GET['vols'] ? $_GET['vols'] : 1;
         $oDSB = kernel::single("desktop_system_backup");
@@ -62,7 +72,10 @@ class desktop_ctl_comeback extends desktop_controller{
         //$objB2c = app::get('b2c');
     	//$objB2c->setConf('member.attr','');
        // $attr_model = $objB2c->model('member_attr')->init();
-        $oDSB->recover($filename, $vols, $fileid, $app);//exit;
+        if($oDSB->recover($filename, $vols, $fileid, $app) === false){
+            echo '{error:"'.app::get('desktop')->_('恢复失败或非法备份文件').'"}';
+            return;
+        }
         if($vols<=$fileid){
             ob_start();
             kernel::single('base_shell_loader')->exec_command('kvrecovery'); //还原kvstore

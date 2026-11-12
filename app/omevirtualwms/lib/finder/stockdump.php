@@ -16,12 +16,32 @@
  */
 
 class omevirtualwms_finder_stockdump{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     
     var $column_control = '操作';
 	var $column_control_width = 100;
+
+    /** vue_mode 下发 _0_<col> 原始值别名（结构化行操作取主键用） */
+    public $addon_cols = "stockdump_bn";
     function column_control($row){
     	$flag = "stockdump";
+        if ($this->vue_mode) {
+            $stockdumpBn = $row['_0_stockdump_bn'] ?? $row['stockdump_bn'] ?? '';
+            return array(
+                array(
+                    'key'    => 'start_mock',
+                    'label'  => '开始模拟',
+                    'action' => 'index.php?app=omevirtualwms&ctl=admin_wms&act=getinfo&p[0]=' . $stockdumpBn . '&p[1]=' . $flag,
+                ),
+            );
+        }
        return '<a  href="index.php?app=omevirtualwms&ctl=admin_wms&act=getinfo&p[0]='.$row['stockdump_bn'].'&p[1]='.$flag.'">开始模拟</a>';
     }
 

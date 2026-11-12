@@ -17,6 +17,13 @@
 
 class console_finder_branch_product_extend
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     //model类
     public $_braProExtObj = null;
     public $_branchObj = null;

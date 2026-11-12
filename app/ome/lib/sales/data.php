@@ -131,7 +131,11 @@ class ome_sales_data
             $totalStored += $v;
         }
         $orderRefund = isset($original_data['refund_money']) ? (float) $original_data['refund_money'] : 0.0;
-        $gap = round($orderRefund - $totalStored, 4);
+        // PJ3270-85：扣除已删除子单（售前全额退款删除）上已记录的退款金额，
+        // 该部分退款归属被删除子单，不再作为未归属差额分摊给存活子单
+        $deletedRefund = isset($original_data['deleted_objects_refund_money'])
+            ? (float) $original_data['deleted_objects_refund_money'] : 0.0;
+        $gap = round($orderRefund - $deletedRefund - $totalStored, 4);
         if ($gap <= 0.00001) {
             return $byObj;
         }

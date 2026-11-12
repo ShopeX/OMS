@@ -165,44 +165,41 @@ class erpapi_idaas_request_account extends erpapi_idaas_request_abstract
             $params['login_password'] = $this->_passwordPre . $params['login_password'];
         }
 
+        if (!empty($sdf['captcha_code'])) {
+            $params['captcha_code'] = $sdf['captcha_code'];
+        }
+        if (isset($sdf['captcha_value']) && $sdf['captcha_value'] !== '') {
+            $params['captcha_value'] = $sdf['captcha_value'];
+        }
+
         $rsp = $this->__caller->call(IDAAS_ACCOUNT_LOGIN, $params, array(), $title, 10, $sdf['login_name']);
 
-        // 二次验证
-        if ($rsp['rsp'] == 'fail' && $rsp['data'] && $rsp['data']['needSecondFactor'] == true) {
+        return $rsp;
+    }
 
-            $idaas = $rsp['data'];
+    /**
+     * 获取 IDAAS 图形验证码
+     *
+     * @param array $sdf
+     * @return array
+     */
+    public function captcha($sdf = array())
+    {
+        $title = 'IDAAS获取图形验证码';
 
-            // 发送短信
-            $rsp = kernel::single('erpapi_router_request')->set('idaas', 'aliyun')->account_getMobileVerifyCode(array(
-                'login_name' => $idaas['username'],
-                'fid'        => $idaas['fid'],
-            ));
-
-            // 发送短信失败
-            if ($rsp['rsp'] != 'succ') {
-                return $rsp;
-            }
-
-            // $s = $_SESSION;
-
-            // 缓存SESSION，10分钟
-            // kernel::single('base_session')->appointStore($rsp['data']['fid'], 600);
-            
-            base_kvstore::instance('idaas')->store($rsp['data']['fid'], $_SESSION, 600);
-            
-            // 销毁SESSION
-            kernel::single('base_session')->destory();
-
-            $render = kernel::single('base_render');
-
-            $render->pagedata['fid']         = $rsp['data']['fid'];
-            $render->pagedata['username']    = $idaas['username'];
-            $render->pagedata['phoneNumber'] = $idaas['phoneNumber'];
-
-            $render->display('login_second_factor.html', 'desktop');
-
-            exit;
+        $params = array();
+        if (!empty($sdf['login_name'])) {
+            $params['login_name'] = base_shopnode::node_id('ome') . '.' . $sdf['login_name'];
         }
+
+        $rsp = $this->__caller->call(
+            IDAAS_ACCOUNT_CAPTCHA,
+            $params,
+            array(),
+            $title,
+            10,
+            $sdf['login_name'] ?? ''
+        );
 
         return $rsp;
     }
@@ -236,24 +233,6 @@ class erpapi_idaas_request_account extends erpapi_idaas_request_abstract
     {
         $title = 'IDAAS验证短信验证码';
 
-        $s = kernel::single('base_session')->appointFetch($sdf['fid']);
-
-        $user = [];
-
-        $accountType = pam_account::get_account_type('desktop');
-        if ($s['account'][$accountType]) {
-            $user = app::get('desktop')->model('users')->db_dump(['user_id' => $s['account'][$accountType]], 'mobile');
-        }
-
-        $shopMdl = app::get('ome')->model('shop');
-
-        $seller_nick = [];
-        foreach ($shopMdl->getList('addon', ['node_type' => 'taobao', 'filter_sql' => 'node_id is not null and node_id !=""']) as $v) {
-            if ($v['addon']['nickname']) {
-                $seller_nick[] = (string) $v['addon']['nickname'];
-            }
-        }
-
         $params = array(
             'username'     => $sdf['login_name'],
             'code'         => $sdf['mobileverifycode'],
@@ -264,8 +243,8 @@ class erpapi_idaas_request_account extends erpapi_idaas_request_abstract
             'loginFrom'         => kernel::this_url(1) . '?' . $_SERVER['QUERY_STRING'],
             'REMOTE_ADDR'       => $_SERVER['HTTP_X_FORWARDED_FOR'] ?: $_SERVER["REMOTE_ADDR"],
             'HTTP_USER_AGENT'   => $_SERVER['HTTP_USER_AGENT'],
-            'mobile'            => $user['mobile'],
-            'merchantName'      => (string) implode(',', $seller_nick),
+            'mobile'            => $sdf['mobile'] ?? '',
+            'merchantName'      => $sdf['merchantName'] ?? '',
         );
         $rsp = $this->__caller->call(IDAAS_ACCOUNT_CODE_VERIFY, $params, array(), $title, 10, $sdf['login_name']);
         return $rsp;

@@ -205,7 +205,7 @@ class wap_ctl_authorize extends base_controller{
         
         //登录
         $account_id    = $rows['account_id'];
-        
+
         $params  = array('module'=>'pam_passport_wap', 'type'=>$auth_type, 'appid'=>$app_id);
         $auth    = pam_auth::instance($params['type']);
         $auth->set_appid($params['appid']);
@@ -223,6 +223,15 @@ class wap_ctl_authorize extends base_controller{
         
         //设置免登标识
         setcookie('relogin', 1, time()+30*24*3600, '/');
+
+        // Issue HttpOnly JWT cookie for WAP authorize (免登)
+        $loginName = $uname;
+        $userModel = app::get('desktop')->model('users');
+        $userRow = $userModel->getList('super', ['user_id' => $account_id], 0, 1);
+        $isSuper = ($userRow[0]['super'] ?? 0) == 'true' || ($userRow[0]['super'] ?? 0) == 1;
+        $profile = ['is_super' => $isSuper];
+        $tokens = desktop_auth_jwt_flow::issueTokensForUser($account_id, $loginName, $profile, true);
+        desktop_auth_jwt_transport::setWapAuthCookies($tokens);
         
         //跳转到工作台
         $_GOTO    = app::get('wap')->router()->gen_url(array('ctl'=>'store','act'=>'index'), true);

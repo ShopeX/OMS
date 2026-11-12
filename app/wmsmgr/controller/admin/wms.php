@@ -165,104 +165,26 @@ class wmsmgr_ctl_admin_wms extends desktop_controller {
     }
 
     function saveWms() {
-        $oWms = $this->app->model("wms");
-
         $url = 'index.php?app=wmsmgr&ctl=admin_wms&act=index';
         $this->begin($url);
-        // $save_data = $_POST['wms'];
-        // $api_url = isset($save_data['api_url']) ? $save_data['api_url'] : '';
 
-        // if(empty($save_data['channel_id'])){
-        // }
+        // legacy 事务由 begin()/end() 托管 ⇒ capability ownTransaction=false
+        $input = array(
+            'wms'          => isset($_POST['wms']) ? $_POST['wms'] : array(),
+            'config'       => isset($_POST['config']) ? $_POST['config'] : array(),
+            'adapter'      => isset($_POST['adapter']) ? $_POST['adapter'] : '',
+            'shipper'      => isset($_POST['shipper']) ? $_POST['shipper'] : '',
+            'divisionCode' => isset($_POST['divisionCode']) ? $_POST['divisionCode'] : '',
+        );
 
-        // if($save_data['adapter'] == 'selfwms'){
-        // $save_data['node_id'] = $save_data['node_type'] = 'selfwms';
-        // }
-        $wms = array('channel_name' => $_POST['wms']['channel_name'], 'channel_type' => 'wms');
-        if ($_POST['wms']['channel_id'])
-            $wms['channel_id'] = $_POST['wms']['channel_id'];
-        if ($_POST['wms']['channel_bn'])
-            $wms['channel_bn'] = $_POST['wms']['channel_bn'];
-        if ($wms['channel_id'] && $_POST['adapter'] != $_POST['wms']['adapter']) {
-            $wms_detail = $oWms->dump(array('channel_id' => $wms['channel_id']), 'node_id');
-            if ($wms_detail['node_id']) {
-                $this->end(false, '绑定关系已存在情况下不可切换仓储适配器!');
-            }
-        }
-        switch ($_POST['wms']['adapter']) {
-            case 'selfwms':
-                $wms['node_id'] = 'selfwms';
-                $wms['node_type'] = 'selfwms';
-                break;
-            case 'openapiwms':
-                $wms['node_type'] = $_POST['config']['node_type'];
-                $wms['node_id'] = sprintf('o%u', crc32(utils::array_md5($_POST['config']) . kernel::base_url()));
-
-                if (!$wms['node_type']) {
-                    $this->end(false, app::get('base')->_('请选择仓储平台'));
-                }
-
-                // 验证node_id是否存在
-                $valid = true;
-                if ($wms['channel_id']) {
-                    if ($oWms->dump(array('channel_id|noequal' => $wms['channel_id'], 'node_id' => $wms['node_id']))) {
-                        $valid = false;
-                    }
-                } else {
-                    if ($oWms->dump(array('node_id' => $wms['node_id']))) {
-                        $valid = false;
-                    }
-                }
-
-                if ($valid == false) {
-                    $this->end(false, app::get('base')->_('node_id重复，请更换秘钥，同时通知仓储更改秘钥'));
-                }
-
-                // 判断参数是否都填了
-                $params = kernel::single('wmsmgr_auth_config')->getPlatformParam($wms['node_type']);
-                if ($params) {
-                    foreach ($params as $key => $label) {
-                        if (!$_POST['config'][$key]) {
-                            $this->end(false, $label . '不能为空');
-                        }
-                    }
-                }
-
-                break;
-            case 'ilcwms':
-                $wms['node_id'] = $_POST['config']['node_id'];
-                break;
-            case 'mixturewms':
-                $wms['shipper'] = $_POST['shipper'];
-                break;
-            default:
-                # code...
-                break;
+        try {
+            kernel::single('wmsmgr_capability_wms')->saveWms($input, false);
+        } catch (Throwable $exception) {
+            $this->end(false, $exception->getMessage() !== '' ? $exception->getMessage() : '保存失败');
+            return;
         }
 
-
-        if ($oWms->dump(array('channel_bn' => $save_data['channel_bn']))) {
-            $this->end(false, app::get('base')->_('第三方仓储编码重复'));
-        } else {
-
-            // $save_data['channel_type'] = 'wms';
-            $wms['config'] = serialize($_POST['config']);
-            if ($rt = $oWms->save($wms)) {
-                // kernel::single('wmsmgr_func')->saveChannelAdapter($save_data['channel_id'],$save_data['adapter']);
-                $adapter = array('channel_id' => $wms['channel_id'], 'adapter' => $_POST['wms']['adapter'], 'config' => serialize($_POST['config']));
-                app::get('channel')->model('adapter')->save($adapter);
-            }
-            if ($_POST['divisionCode']){
-                app::get('wms')->setConf('wms_storage_division_code_' . $wms['channel_id'], $_POST['divisionCode']);
-            }
-            #存储节点通信api地址
-            // if($api_url){
-            //     app::get('wmsmgr')->setConf('api_url'.$save_data['node_id'],$api_url);
-            // }
-
-            $rt = $rt ? true : false;
-            $this->end($rt, app::get('base')->_($rt ? '保存成功' : '保存失败'));
-        }
+        $this->end(true, app::get('base')->_('保存成功'));
     }
 
     /**
@@ -271,67 +193,22 @@ class wmsmgr_ctl_admin_wms extends desktop_controller {
      */
     public function deleteChannel() {
         $this->begin('index.php?app=wmsmgr&ctl=admin_wms&act=index');
-        $obj_channel = kernel::single('channel_channel');
-        $obj_branch = kernel::single('ome_branch');
 
-        if (is_array($_POST['channel_id']) && count($_POST['channel_id']) > 0) {
-            $filter['channel_id'] = $_POST['channel_id'];
-        } elseif (isset($_POST['isSelectedAll']) && $_POST['isSelectedAll'] == '_ALL_') {
-            $filter = $_POST;
-            unset($filter['app']);
-            unset($filter['ctl']);
-            unset($filter['act']);
-            unset($filter['flt']);
-            unset($filter['_finder']);
-        }
-        #获取所有已经绑定的应用channel_id
-        $_bind_info = $obj_channel->getList($filter, '*');
-        $_branch_bind_wms_info = $obj_branch->getBindWmsBranchList();
-        $bind_channel_id = array(); #所有已经绑定的channel_id
-        $bind_wms_id = array();
-        $channel_name = array();
+        // legacy 事务由 begin()/end() 托管 ⇒ capability ownTransaction=false
+        $input = array(
+            'channel_id'     => isset($_POST['channel_id']) ? $_POST['channel_id'] : null,
+            'selection_mode' => (isset($_POST['isSelectedAll']) && $_POST['isSelectedAll'] == '_ALL_') ? '_ALL_' : '',
+            'filters'        => $_POST,
+        );
 
-        if (!empty($_bind_info)) {
-            foreach ($_bind_info as $v) {
-                $channel_name[$v['channel_id']] = $v['channel_name'];
-                $channel_id[] = $v['channel_id'];
-
-                #把已经存在的绑定节点存起来
-                if (strlen($v['node_id']) > 0 && !in_array($v['node_type'], array('selfwms', 'mobile', 'webpos'))) {
-                    $bind_channel_id[] = $v['channel_id'];
-                }
-
-                if (in_array($v['node_type'], array('mobile', 'webpos'))) {
-                    $this->end(false, $this->app->_('虚拟门店仓储类型不允许被删除!'));
-                    exit;
-                }
-            }
+        try {
+            kernel::single('wmsmgr_capability_wms')->deleteChannel($input, false);
+        } catch (Throwable $exception) {
+            $this->end(false, $exception->getMessage() !== '' ? $exception->getMessage() : '删除失败');
+            return;
         }
 
-        if (!empty($_branch_bind_wms_info)) {
-            foreach ($_branch_bind_wms_info as $v) {
-                if (in_array($v['wms_id'], $channel_id)) {
-                    $this->end(false, $this->app->_('仓储:' . $channel_name[$v['wms_id']] . '，已经绑定了仓库，请先解除绑定!'));
-                    exit;
-                }
-            }
-        }
-
-        #验证即将被删除的这条channel_id是否已经解除绑定
-        foreach ($channel_id as $id) {
-            $result = array_search($id, $bind_channel_id);
-            if ($result !== false) {
-                $this->end(false, $this->app->_('删除前，请解除绑定!'));
-                exit;
-            }
-        }
-
-        #验证完毕，开始删除
-        if ($obj_channel->delete(array('channel_id' => $channel_id))) {
-            $this->end(true, $this->app->_('删除成功'));
-        } else {
-            $this->end(false, $this->app->_('删除失败'));
-        }
+        $this->end(true, $this->app->_('删除成功'));
     }
 
     /**
@@ -745,123 +622,17 @@ class wmsmgr_ctl_admin_wms extends desktop_controller {
     public function doInitializeLogi()
     {
         $this->begin('index.php?app=wmsmgr&ctl=admin_wms&act=index');
-        
-        $wmsmgrObj = app::get('wmsmgr')->model('wms');
-        $dlyCorpObj = app::get('ome')->model('dly_corp');
-        $relationObj = app::get('wmsmgr')->model('express_relation');
-        
-        $wmsLib = kernel::single('wmsmgr_func');
-        
-        //check
-        $channel_id = $_POST['channel_id'];
-        if(empty($channel_id)){
-            $this->end(false, '没有获取到channel_id');
+
+        // legacy 事务由 begin()/end() 托管 ⇒ capability ownTransaction=false
+        try {
+            kernel::single('wmsmgr_capability_wms')->doInitializeLogi(array(
+                'channel_id' => isset($_POST['channel_id']) ? $_POST['channel_id'] : '',
+            ), false);
+        } catch (Throwable $exception) {
+            $this->end(false, $exception->getMessage() !== '' ? $exception->getMessage() : '初始化失败');
+            return;
         }
-        
-        //wms
-        $wmsInfo = $wmsmgrObj->dump($channel_id);
-        if(empty($wmsInfo)){
-            $this->end(false, '没有获取到WMS仓储信息');
-        }
-        
-        $logiList = $wmsLib->getKeplerLogi();
-        if(empty($logiList)){
-            $this->end(false, '没有获取到物流公司列表');
-        }
-        
-        //创建OMS物流公司
-        foreach ($logiList as $key => $item)
-        {
-            if(empty($item['logi_code'])){
-                continue;
-            }
-            
-            //info
-            $corpInfo = array (
-                    'branch_mode' => 'multi',
-                    'tmpl_type' => 'normal', //'normal' => '普通面单'
-                    'name' => trim($item['logi_name']), //物流公司名称
-                    'type' => trim($item['logi_code']), //物流公司编码
-                    'website' => '', //网址
-                    'request_url' => '', //网址
-                    'setting' => '1',
-                    'firstunit' => '1', //首重重量
-                    'continueunit' => '1000', //续重重量
-                    'firstprice' => '1', //首重费用
-                    'continueprice' => '1', //续重费用
-                    'dt_expressions' => '',
-                    'dt_useexp' => '0',
-                    'disabled' => 'false',
-                    'cainiao_tmpl_id' => '',
-                    'pdd_tmpl_id' => '',
-                    'jd_tmpl_id' => '',
-                    'douyin_tmpl_id' => '',
-                    'weight' => '0', //权重
-                    'prt_tmpl_id' => '1', //普通面单模板
-                    'shop_id' => '',
-                    'channel_id' => 0,
-                    'area_fee_conf' => array(),
-                    'protect' => 'false',
-            );
-            
-            if(empty($corpInfo['type'])){
-                continue;
-            }
-            
-            //check
-            $sql = "SELECT * FROM sdb_ome_dly_corp WHERE type='". $corpInfo['type'] ."' AND name='". $corpInfo['name'] ."'";
-            $checkInfo = $dlyCorpObj->db->selectrow($sql);
-            if($checkInfo){
-                continue;
-            }
-            
-            //save
-            $isSave = $dlyCorpObj->save($corpInfo);
-            if(!$isSave){
-                $this->end(false, '创建物流公司：'. $corpInfo['name'] .'失败');
-            }
-        }
-        
-        //创建京东云交易仓储映射物流关系
-        foreach ($logiList as $key => $item)
-        {
-            $jd_logi_code = trim($item['logi_code']);
-            $jd_logi_id = trim($item['logi_id']);
-            
-            //check
-            if(empty($jd_logi_id)){
-                continue;
-            }
-            
-            //物流公司信息
-            $sql = "SELECT * FROM sdb_ome_dly_corp WHERE type='". $jd_logi_code ."'";
-            $logiInfo = $dlyCorpObj->db->selectrow($sql);
-            if(empty($logiInfo)){
-                //die('empty...logi_code：'.$jd_logi_code);
-                continue;
-            }
-            
-            $omsLogiId = $logiInfo['corp_id'];
-            
-            //check
-            $checkInfo = $relationObj->dump(array('wms_id'=>$channel_id, 'logi_id'=>$omsLogiId), '*');
-            if($checkInfo && !empty($checkInfo['wms_express_bn'])){
-                continue;
-            }
-            
-            //save
-            $sdf = array(
-                    'wms_id' => $channel_id,
-                    'logi_id' => $omsLogiId,
-                    'sys_express_bn' => $jd_logi_code,
-                    'wms_express_bn' => $jd_logi_id,
-            );
-            $isSave = $relationObj->save($sdf);
-            if(!$isSave){
-                $this->end(false, '创建仓储映射物流关系：'. $jd_logi_code .'失败');
-            }
-        }
-        
+
         $this->end(true, app::get('base')->_('同步WMS异常错误码成功'), 3);
     }
 }

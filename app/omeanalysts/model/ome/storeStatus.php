@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class omeanalysts_mdl_ome_storeStatus extends dbeav_model{
 
     var $has_export_cnf = true;
@@ -23,11 +22,6 @@ class omeanalysts_mdl_ome_storeStatus extends dbeav_model{
 
     var $table_name = 'sale_products';
 
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
     public function table_name($real=false)
     {
         if($real){
@@ -37,10 +31,6 @@ class omeanalysts_mdl_ome_storeStatus extends dbeav_model{
         }
     }
 
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema()
     {
         $schema['columns'] = array(
@@ -50,7 +40,7 @@ class omeanalysts_mdl_ome_storeStatus extends dbeav_model{
                 'label' => '线上仓库',
                 'width' =>120,
                 'orderby' => false,
-                'filtertype' => 'yes',
+                'filtertype' => 'normal',
                 'filterdefault' => true,
                 'order' => 1,
                 'in_list' => true,
@@ -62,7 +52,7 @@ class omeanalysts_mdl_ome_storeStatus extends dbeav_model{
                 'label' => '品牌',
                 'width' =>130,
                 'orderby' => false,
-                'filtertype' => 'yes',
+                'filtertype' => 'normal',
                 'filterdefault' => true,
                 'order' => 2,
                 'in_list' => true,
@@ -74,7 +64,7 @@ class omeanalysts_mdl_ome_storeStatus extends dbeav_model{
                 'label' => '货号',
                 'width' =>130,
                 'orderby' => false,
-                'filtertype' => 'yes',
+                'filtertype' => 'normal',
                 'filterdefault' => true,
                 'order' => 3,
                 'in_list' => true,
@@ -86,7 +76,7 @@ class omeanalysts_mdl_ome_storeStatus extends dbeav_model{
                 'label' => '周转率%',
                 'width' =>130,
                 'orderby' => false,
-                'filtertype' => 'yes',
+                'filtertype' => 'normal',
                 'filterdefault' => true,
                 'order' => 5,
                 'in_list' => true,
@@ -98,7 +88,7 @@ class omeanalysts_mdl_ome_storeStatus extends dbeav_model{
                 'label' => '名称',
                 'width' =>130,
                 'orderby' => false,
-                'filtertype' => 'yes',
+                'filtertype' => 'normal',
                 'filterdefault' => true,
                 'order' => 4,
                 'in_list' => true,
@@ -110,7 +100,7 @@ class omeanalysts_mdl_ome_storeStatus extends dbeav_model{
                 'label' => '当前库存',
                 'width' =>130,
                 'orderby' => false,
-                'filtertype' => 'yes',
+                'filtertype' => 'normal',
                 'filterdefault' => true,
                 'order' => 7,
                 'in_list' => true,
@@ -122,7 +112,7 @@ class omeanalysts_mdl_ome_storeStatus extends dbeav_model{
                 'label' => '可售天数',
                 'width' =>130,
                 'orderby' => false,
-                'filtertype' => 'yes',
+                'filtertype' => 'normal',
                 'filterdefault' => true,
                 'order' => 8,
                 'in_list' => true,
@@ -139,23 +129,11 @@ class omeanalysts_mdl_ome_storeStatus extends dbeav_model{
         return $schema;
     }
 
-    /**
-     * count
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function count($filter=null){
         $data = $this->getList('*',$filter);
         return count($data);
     }
 
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter,$tableAlias=null,$baseWhere=null){
         return parent::_filter($filter,$tableAlias,$baseWhere);
     }
@@ -263,23 +241,10 @@ class omeanalysts_mdl_ome_storeStatus extends dbeav_model{
 
     }
 
-    /**
-     * exportName
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function exportName(&$data){
         $data['name'] = $_POST['time_from'].'到'.$_POST['time_to'].'库存状况分析';
     }
 
-    /**
-     * fgetlist_csv
-     * @param mixed $data 数据
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $exportType exportType
-     * @return mixed 返回值
-     */
     public function fgetlist_csv( &$data,$filter,$offset,$exportType = 1 ){
 
         @ini_set('memory_limit','1024M');
@@ -318,12 +283,6 @@ class omeanalysts_mdl_ome_storeStatus extends dbeav_model{
         echo implode("\n",$output);
     }
 
-    /**
-     * io_title
-     * @param mixed $filter filter
-     * @param mixed $ioType ioType
-     * @return mixed 返回值
-     */
     public function io_title( $filter=null,$ioType='csv'){
         switch( $ioType ){
             case 'csv':
@@ -342,11 +301,6 @@ class omeanalysts_mdl_ome_storeStatus extends dbeav_model{
         return $this->ioTitle[$ioType][$filter];
     }
 
-    /**
-     * header_getlist
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function header_getlist($filter = null){
         unset($filter['order_status']);
         $time_from = strtotime($filter['time_from']);
@@ -405,11 +359,6 @@ class omeanalysts_mdl_ome_storeStatus extends dbeav_model{
         return $rows;
     }
 
-    /**
-     * maketime
-     * @param mixed $date date
-     * @return mixed 返回值
-     */
     public function maketime($date)
     {
          list($_date,$_time) = explode(' ',$date);
@@ -418,10 +367,6 @@ class omeanalysts_mdl_ome_storeStatus extends dbeav_model{
          return mktime($hour,$minute,$second,$month,$day,$year);
     }
     
-    /**
-     * export_params
-     * @return mixed 返回值
-     */
     public function export_params(){
         //获取框架filter信息
         $params = unserialize($_POST['params']);
@@ -444,10 +389,6 @@ class omeanalysts_mdl_ome_storeStatus extends dbeav_model{
         return $params;
     }
 
-    /**
-     * 获取_export_main_title
-     * @return mixed 返回结果
-     */
     public function get_export_main_title(){
         $title = array(
            'col:线上仓库',
@@ -458,14 +399,6 @@ class omeanalysts_mdl_ome_storeStatus extends dbeav_model{
     }
 
      //注：$filter是在export_params()方法里获取到的filter,$offset,$limit已做处理，直接带到getList里即可
-    /**
-     * 获取_export_main
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $limit limit
-     * @param mixed $data 数据
-     * @return mixed 返回结果
-     */
     public function get_export_main($filter,$offset,$limit,&$data){
         if($offset > 0) return;
         $list=$this->getList('*',$filter,$offset*$limit,$limit);

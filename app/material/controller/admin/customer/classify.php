@@ -179,61 +179,16 @@ class material_ctl_admin_customer_classify extends desktop_controller
     public function save()
     {
         $this->begin($this->url.'&act=index');
-        
-        //post
-        $class_id = intval($_POST['class_id']);
-        $class_bn = $_POST['class_bn'];
-        $class_name = addslashes($_POST['class_name']);
-        $disabled = ($_POST['disabled'] == 'true' ? 'true' : 'false');
-        
-        //检查物料名称
-        if(empty($class_bn)){
-            $error_msg = '客户分类编码不能为空';
+
+        try {
+            $result = (new material_capability_customer_classify())->saveClassify($_POST, false);
+        } catch (Throwable $exception) {
+            $error_msg = $exception->getMessage() !== '' ? $exception->getMessage() : '保存客户分类失败';
             $this->end(false, $error_msg);
+
+            return;
         }
-        
-        if(empty($class_name)){
-            $error_msg = '客户分类名称不能为空';
-            $this->end(false, $error_msg);
-        }
-        
-        //判断物料编码和物料条码只能是由数字英文下划线组成
-        $reg_bn_code = "/^[0-9a-zA-Z\_\#\-\/]*$/";
-        if(!preg_match($reg_bn_code, $class_bn)){
-            $error_msg = '客户分类编码只支持(数字、英文、_下划线、-横线)';
-            $this->end(false, $error_msg);
-        }
-        
-        //info
-        $dataInfo = [];
-        if($class_id){
-            $dataInfo = $this->_mdl->dump(array($this->_primary_id=>$class_id), '*');
-        }
-        
-        //data
-        $saveData = [
-            'class_bn' => $class_bn,
-            'class_name' => $class_name,
-            'disabled' => $disabled,
-        ];
-        
-        //add or update
-        if($dataInfo){
-            unset($saveData['class_bn']);
-            
-            //update
-            $rs = $this->_mdl->update($saveData, array($this->_primary_id=>$class_id));
-        }else{
-            //insert
-            $rs = $this->_mdl->insert($saveData);
-        }
-        
-        //check
-        if(is_bool($rs)) {
-            $error_msg = ($dataInfo ? '更新' : '添加').'客户分类失败';
-            $this->end(false, $error_msg);
-        }
-        
-        $this->end(true, ($dataInfo ? '更新' : '添加').'客户分类成功');
+
+        $this->end(true, (string) ($result['message'] ?? '保存成功'));
     }
 }

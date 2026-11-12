@@ -35,8 +35,12 @@ class base_storage_filesystem implements base_interface_storager{
     }
 
     function save($file,&$url,$type,$addons,$ext_name=""){
+        // CNVD upload RCE: never force executable .php for private storage.
+        // Keep caller-provided extension; default to non-executable .dat when empty.
         if($this->is_private){
-            $ext_name = '.php';
+            if($ext_name === '' || $ext_name === null){
+                $ext_name = '.dat';
+            }
         }
         $id = $this->_get_ident($file,$type,$addons,$url,$path,$ext_name);
         if($path && copy($file,$path)){

@@ -99,8 +99,27 @@ $db['rpcnotify']=array (
       'default_in_list' => true,
     ),
     ),
-  'index' => 
-  array (
+    'shop_bn' => array (
+        'type' => 'varchar(20)',
+        'required' => false,
+        'label' => '店铺编码',
+        'filtertype' => 'normal',
+        'filterdefault' => true,
+        'in_list' => true,
+        'default_in_list' => false,
+        'width' => 110,
+    ),
+    'org_id' => array(
+        'type'            => 'number',
+        'label'           => '运营组织',
+        'default'         => 0,
+        'editable'        => false,
+        'in_list'         => true,
+        'default_in_list' => false,
+        'width'           => 160,
+    ),
+  ),
+  'index' => array (
     'ind_status' => 
     array (
       'columns' => 

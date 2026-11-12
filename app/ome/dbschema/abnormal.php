@@ -46,7 +46,7 @@ $db['abnormal']=array (
        'is_title' => true,
       'editable' => false,
       'width' => 75,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'order_id' => 

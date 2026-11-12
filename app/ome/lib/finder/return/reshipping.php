@@ -1,6 +1,13 @@
 <?php
 class ome_finder_return_reshipping
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $addon_cols = "reshipping_id,shop_id,order_id,status,at_time,up_time,is_confirm_goods";
 
     var $detail_basic = "补寄申请单详情";

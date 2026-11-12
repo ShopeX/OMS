@@ -84,7 +84,7 @@ class ome_mdl_supply_product extends dbeav_model{
              '.$this->_filter($filter);
             //var_dump($sql);
 			
-        if($orderType)$sql.=' ORDER BY '.(is_array($orderType)?implode($orderType,' '):$orderType);
+        if($orderType)$sql.=' ORDER BY '.(is_array($orderType)?implode(' ',$orderType):$orderType);
 
         $rows = $this->db->selectLimit($sql,$limit,$offset);
         $this->tidy_data($rows, $cols);
@@ -183,7 +183,7 @@ class ome_mdl_supply_product extends dbeav_model{
             }
         }
         
-        return implode($where,' AND ');
+        return implode(' AND ', $where);
         //return parent::_filter($filter,$tableAlias,$baseWhere)." AND ".implode($where,' AND ');
     }
 
@@ -200,7 +200,7 @@ class ome_mdl_supply_product extends dbeav_model{
                     'label' => '商品名称',
                     'width' =>280,
                     'searchtype' => 'has',
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                     'is_title' => true,
                     'order'=>10
@@ -211,7 +211,7 @@ class ome_mdl_supply_product extends dbeav_model{
                     'label' => '货号',
                     'width' =>100,
                     'searchtype' => 'has',
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                     'is_title' => true,
                     'order'=>20

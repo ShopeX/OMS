@@ -16,6 +16,13 @@
  */
 
 class wms_finder_print_tmpl{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $addon_cols = "prt_tmpl_id";
     var $column_print = "快递单模板操作";
     var $column_print_width = "125";

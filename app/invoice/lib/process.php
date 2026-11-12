@@ -37,7 +37,9 @@ class invoice_process
                 $analysisResult = $object->check_blue_invoice($params);
                 if($analysisResult['rsp'] == 'fail'){
                     $error_msg = ($analysisResult['error_msg'] ? $analysisResult['error_msg'] : '不允许开蓝发票!');
-                    return [false, ['msg'=>$error_msg]];
+                    
+                    //return [false, ['msg'=>$error_msg]];
+                    return false;
                 }
             }
         }
@@ -345,7 +347,7 @@ class invoice_process
                 $analysisResult = $object->check_blue_invoice($params);
                 if($analysisResult['rsp'] == 'fail'){
                     $error_msg = ($analysisResult['error_msg'] ? $analysisResult['error_msg'] : '不允许开蓝发票。');
-                    return [false, ['msg'=>$error_msg]];
+                    return [false, $error_msg];
                 }
             }
         }
@@ -901,16 +903,16 @@ class invoice_process
             $update_arr['mode'] = $params['mode'];
         }
         
-        // 验证手机号、电话
-        if(!empty($update_arr['ship_tel'])){
-            $is_mobile = kernel::single('ome_func')->isMobile($update_arr['ship_tel']);
-            $is_tel = kernel::single('ome_func')->isTel($update_arr['ship_tel']);
-            
-            if(!$is_mobile && !$is_tel){
-                $error_msg = '收票人手机号、电话不正确，请正确填写后再提交！';
-                return [false, $error_msg];
-            }
-        }
+//        // 验证手机号、电话
+//        if(!empty($update_arr['ship_tel'])){
+//            $is_mobile = kernel::single('ome_func')->isMobile($update_arr['ship_tel']);
+//            $is_tel = kernel::single('ome_func')->isTel($update_arr['ship_tel']);
+//
+//            if(!$is_mobile && !$is_tel){
+//                $error_msg = '收票人手机号、电话不正确，请正确填写后再提交！';
+//                return [false, $error_msg];
+//            }
+//        }
         
         // 收票人Email
         if(!empty($update_arr['ship_email'])){
@@ -957,6 +959,7 @@ class invoice_process
                 $invoiceOrderLib->updateInvoice($params["id"],['invoice_amount'=>$params["amount"]]);
             }
             kernel::database()->commit();
+            
             //编辑快照
             $log_memo        = serialize(['invoice'=>$rs_invoice_order,'invoice_order_items'=>$invoice_order_items]);
             $opObj->write_log('invoice_edit@invoice', $params["id"], $log_memo);

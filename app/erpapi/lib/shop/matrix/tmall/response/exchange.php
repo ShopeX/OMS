@@ -53,17 +53,18 @@ class erpapi_shop_matrix_tmall_response_exchange extends erpapi_shop_response_ex
             'time_out'              =>  $sdf['time_out'],
             'operation_contraint'   =>  $sdf['operation_contraint'],
             'refund_version'        =>  $sdf['refund_version'],
+            'speed_exchange'        =>  kernel::single('ome_order_platform_taobao_aftersale')->extractSpeedExchange($sdf), // 极速换货(1：代表是)，兼容 extend_field
             'shop_type'             =>  'tmall',
             'shop_id'               =>  $this->__channelObj->channel['shop_id'],
             'org_oid'               =>  $sdf['tid'],   
         );
-
         
         $formatSdf = parent::_formatAddParams($params);
         $tmallSdf = array_merge($formatSdf, $tmallSdf);
         if($params['status']=='EXCHANGE_SUCCESS' && $params['cs_status']=='6'){
             $tmallSdf['status']= 'EXCHANGE_CLOSE';
         }
+        
         //平台订单信息
         $orders_detail = $this->getOrderByoid($this->__channelObj->channel['shop_id'],$sdf);
         if (!$orders_detail){
@@ -88,9 +89,11 @@ class erpapi_shop_matrix_tmall_response_exchange extends erpapi_shop_response_ex
             'pay_status'    =>  $orders_detail['pay_status'],
             'order_bn'      =>  $orders_detail['order_bn'],
         );
+        
         if ($orders_detail['tran_type'] == 'archive'){
             $tmallSdf['order']['tran_type'] = 'archive';
         }
+        
         $return_items = array();
         foreach($orders_detail['item_list'] as $o_v){
             $price = round($o_v['divide_order_fee']/$o_v['nums'],2);
@@ -107,8 +110,6 @@ class erpapi_shop_matrix_tmall_response_exchange extends erpapi_shop_response_ex
         }
 
         $change_items = array();
-
-
         if ($params['exchange_bn']){
             $change_items[] = array(
                 'bn'    =>  $params['exchange_bn'],
@@ -153,19 +154,9 @@ class erpapi_shop_matrix_tmall_response_exchange extends erpapi_shop_response_ex
         );
         return $ret;
     }
-
-
-
-
-    /**
-     * 获取OrderByoid
-     * @param mixed $shop_id ID
-     * @param mixed $sdf sdf
-     * @return mixed 返回结果
-     */
-
-    public function getOrderByoid($shop_id, $sdf){
-
+    
+    public function getOrderByoid($shop_id, $sdf)
+    {
         $oid = $sdf['tid'];
         $orderModel = app::get('ome')->model('orders');
 
@@ -189,7 +180,6 @@ class erpapi_shop_matrix_tmall_response_exchange extends erpapi_shop_response_ex
                 $order_detail = $orderModel->db->selectrow("SELECT ob.order_id,ob.obj_id FROM  sdb_ome_order_objects as ob left join sdb_ome_order_items as i on ob.obj_id=i.obj_id WHERE ob.order_id='".$sdf['order']['order_id']."'  AND i.`delete`='false'");
             }
         }
-
         
         if(!$order_detail){
             $archive_detail = $orderModel->db->selectrow("SELECT o.order_bn,o.order_id,o.status,o.process_status,o.ship_status,o.pay_status FROM sdb_archive_orders as o  WHERE  o.order_bn='".$sdf['alipay_no']."' AND o.shop_id='".$shop_id."' ");
@@ -206,6 +196,7 @@ class erpapi_shop_matrix_tmall_response_exchange extends erpapi_shop_response_ex
                 }
                 
             }
+            
             return false;
         }
         
@@ -219,20 +210,18 @@ class erpapi_shop_matrix_tmall_response_exchange extends erpapi_shop_response_ex
         if(!$items_list){
             return false;
         }
+        
         $orders['item_list'] = $items_list;
 
         return $orders;
-
-
     }
-
-
-
-    /*
-    * 判断是否已产生换货后退货订单
-    *
-    *
-    */
+    
+    /**
+     * 判断是否已产生换货后退货订单
+     *
+     * @param $sdf
+     * @return false|mixed|void
+     */
     protected function _tranChange($sdf){
         $order = $sdf['order'];
         $order_id = $order['order_id'];
@@ -243,9 +232,7 @@ class erpapi_shop_matrix_tmall_response_exchange extends erpapi_shop_response_ex
         $org_order_bn = $sdf['org_order_bn'];
         $db = kernel::database();
         $sql = "SELECT r.change_order_id FROM  sdb_ome_return_product_tmall as t LEFT JOIN sdb_ome_reship as r ON t.return_bn=r.reship_bn WHERE  r.is_check not in('5','9') AND r.return_type='change' AND  t.org_oid='".$oid."' limit 5";
-
         $reship_detail = $db->select($sql);
-     
         if($reship_detail){
             $change_order_ids = array_column($reship_detail,'change_order_id');
 
@@ -254,6 +241,5 @@ class erpapi_shop_matrix_tmall_response_exchange extends erpapi_shop_response_ex
 
             return $order_detail;
         }
-
     }
 }

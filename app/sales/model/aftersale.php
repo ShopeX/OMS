@@ -27,7 +27,7 @@ class sales_mdl_aftersale extends dbeav_model{
     //是否有导出配置
     var $has_export_cnf = true;
     
-      var $export_name = '售后单';
+    var $export_name = '售后单';
 
     var $defaultOrder = array('aftersale_time DESC');
 
@@ -78,8 +78,8 @@ class sales_mdl_aftersale extends dbeav_model{
         }
         $this->ioTitle[$ioType]['aftersale'] = array_keys( $this->oSchema[$ioType]['aftersale'] );
         $this->ioTitle[$ioType]['aftersale_items'] = array_keys( $this->oSchema[$ioType]['aftersale_items'] );
+        
         return $this->ioTitle[$ioType][$filter];
-
     }
 
     /**
@@ -90,9 +90,7 @@ class sales_mdl_aftersale extends dbeav_model{
      * @author 
      **/
     public function get_return_type($main,$type){
-      
       return kernel::single('sales_export_aftersale')->io_title($main,$this->common_type[$type]);
-
     }
 
      //csv导出
@@ -118,9 +116,8 @@ class sales_mdl_aftersale extends dbeav_model{
           $memberIds[] = $v['member_id']; 
           $shopIds[] = $v['shop_id'];  
           $returnIds[] = $v['return_id'];
-          $reshipIds[] = $v['reship_id'];  
-          $returnapplyIds[] = $v['return_apply_id'];  
-                                     
+          $reshipIds[] = $v['reship_id'];
+          $returnapplyIds[] = $v['return_apply_id'];
         }
 
         $Oshop = app::get('ome')->model('shop');
@@ -205,7 +202,6 @@ class sales_mdl_aftersale extends dbeav_model{
         }
 
         foreach( $list as $aFilter ){
-
           $aOrderRow = array();
           $check_op_id = $accounts[$aFilter['check_op_id']];
           $op_id = $accounts[$aFilter['op_id']];
@@ -294,6 +290,7 @@ class sales_mdl_aftersale extends dbeav_model{
             }
           }
         }
+        
         $data['name'] = 'aftersale'.date("YmdHis");
         return true;
     }
@@ -312,17 +309,45 @@ class sales_mdl_aftersale extends dbeav_model{
        if(isset($filter['order_bn'])){
              $orders = array(0);
              $Oorder = $Obj->model("orders");
-          $order = $Oorder->getList('order_id',array('order_bn|head'=>$filter['order_bn']));
-          foreach ($order as $v) {
-               $orders[] = $v['order_id'];
-          }
-          $archive_ordObj = kernel::single('archive_interface_orders');
-            $archiveorder =$archive_ordObj->getOrders(array('order_bn'=>$filter['order_bn']),'order_id');
-           
-            if ($archiveorder){
-                $orders[] = $archiveorder['order_id'];
-            }
-            
+             
+             // 订单支持批量搜索多个
+             $orderBn = $filter['order_bn'];
+             
+             // 多行精确匹配；单行仍前缀匹配
+             if (is_string($orderBn) && strpos($orderBn, "\n") !== false) {
+                 $orderBns = array_unique(array_map('trim', array_filter(explode("\n", $orderBn))));
+                 
+                 // 获取订单ID
+                 $order = $orderBns ? $Oorder->getList('order_id', array('order_bn' => $orderBns)) : array();
+                 foreach ((array)$order as $v) {
+                     $orders[] = $v['order_id'];
+                 }
+                 
+                 // 获取归档订单ID
+                 $archive_ordObj = kernel::single('archive_interface_orders');
+                 if ($orderBns) {
+                     $archiveList = $archive_ordObj->getOrder_list(array('order_bn' => $orderBns), 'order_id');
+                     foreach ((array)$archiveList as $archiveRow) {
+                         if (!empty($archiveRow['order_id'])) {
+                             $orders[] = $archiveRow['order_id'];
+                         }
+                     }
+                 }
+             } else {
+                 // 获取订单ID
+                 $order = $Oorder->getList('order_id',array('order_bn|head'=>$orderBn));
+                 foreach ((array)$order as $v) {
+                      $orders[] = $v['order_id'];
+                 }
+                 
+                 // 获取归档订单ID
+                 $archive_ordObj = kernel::single('archive_interface_orders');
+                 $archiveorder =$archive_ordObj->getOrders(array('order_bn'=>$orderBn),'order_id');
+                 if ($archiveorder){
+                     $orders[] = $archiveorder['order_id'];
+                 }
+             }
+
           $where .= 'and order_id in ('.implode(',',$orders).')';
           unset($filter['order_bn']);
        }
@@ -385,9 +410,7 @@ class sales_mdl_aftersale extends dbeav_model{
           $where .= ' and problem_name = "'.$problemdata['problem_name'].'"';
           unset($filter['problem_id']);
        }
-
        
-
        return $where.' and '.parent::_filter($filter,$tableAlias,$baseWhere);
     }
 
@@ -398,19 +421,6 @@ class sales_mdl_aftersale extends dbeav_model{
      */
     public function get_aftersale_bn()
     {
-        /***
-        $i = rand(0,9999);
-        do{
-            if(9999==$i){
-                $i=0;
-            }
-            $i++;
-            $aftersale_bn = 'A'.time().str_pad($i,4,'0',STR_PAD_LEFT);
-            $row = $this->dump($aftersale_bn, 'aftersale_bn');
-        }while($row);
-        return $aftersale_bn;
-        ***/
-        
         //防止并发同分同秒生成同样的售后单号
         $prefix = 'A' . date('ymd', time());
         $aftersale_bn = kernel::single('eccommon_guid')->incId('aftersale', $prefix, 7, true);
@@ -469,7 +479,6 @@ class sales_mdl_aftersale extends dbeav_model{
      */
     function modifier_archive($row)
     {
-        
         if($row == '1'){
            $row = sprintf("<div style='background-color:%s;float:left;'><span alt='%s' title='%s' style='color:#eeeeee;'>&nbsp;%s&nbsp;</span></div>", 'red', '归档', '归档', '归档');
         }else{
@@ -514,8 +523,7 @@ class sales_mdl_aftersale extends dbeav_model{
                     $normal_num     = $aftersale_item['normal_num'];
                     $defective_num  = $aftersale_item['defective_num'];
                 }
-//                $current_aftersale_bn = mb_convert_encoding($aftersale_bn[$aftersale_item['aftersale_id']], 'GBK', 'UTF-8');
-//                $aftersaleItemRow['*:销售单号'] = $current_aftersale_bn;
+                
                 $aftersaleItemRow['pay_type'] = $pay_type;
                 $aftersaleItemRow['account'] = $aftersale_item['account'] ?  : '-';
                 $aftersaleItemRow['bank'] = $aftersale_item['bank'] ?  : '-';
@@ -617,8 +625,7 @@ class sales_mdl_aftersale extends dbeav_model{
         if ($curr_sheet == 1) {
             $data['content']['main'][] = $this->getCustomExportTitle($aftersalesListData['title']);
         }
-
-
+        
         $aftersales_items_value = array_values($this->aftersalesItemsExportTitle());
         $main_columns = array_values($aftersalesListData['title']);
 
@@ -796,5 +803,4 @@ HTML;
 HTML;
         return $mobile ? $return : $mobile;
     }
-    
 }

@@ -21,7 +21,7 @@ class desktop_service_vcode{
         $this->app = $app;
     }
     function status(){
-        if($_SESSION['error_count'][$this->app->app_id] >= 3) return true;
+        if(kernel::single('pam_login_error_counter')->shouldShowVcode($this->app->app_id)) return true;
         return app::get('desktop')->getConf('shopadminVcode') == 'true' ? true : false;
     }
 }

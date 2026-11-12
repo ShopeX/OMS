@@ -20,6 +20,13 @@
  * by wangjianjun 20170811
  */
 class material_finder_extend_filter_basic_material{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function get_extend_colums(){
         //获取物料类型
         $mdl_goods_type = app::get('ome')->model('goods_type');

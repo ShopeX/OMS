@@ -67,7 +67,7 @@ $db['tasklog']=array (
       'in_list' => true,
       'default_in_list' => true,
       'editable' => false,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
       'label' => '状态',
       'width' => '60',
@@ -99,7 +99,7 @@ $db['tasklog']=array (
       'type' => 'longtext',
       'editable' => false,
       'label' => '日志参数',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'msg' =>
     array (

@@ -37,7 +37,7 @@ $db['order_coupon'] = array(
             'type'          => 'varchar(50)',
             'label'         => '金额类型',
             'editable'      => false,
-            'filtertype'    => 'yes',
+            'filtertype' => 'normal',
             'filterdefault' => true,
         ),
         'type_name'     => array(

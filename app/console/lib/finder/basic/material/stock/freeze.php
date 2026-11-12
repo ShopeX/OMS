@@ -21,6 +21,13 @@
 
 class console_finder_basic_material_stock_freeze
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = 'bm_id,obj_type,bmsq_id,obj_id,obj_bn,branch_id,shop_id,bill_type';//调用字段
     
     var $_type_list   = array();

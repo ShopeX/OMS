@@ -16,6 +16,13 @@
  */
 
 class console_finder_vopstockout{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     var $addon_cols    ='status,confirm_status,o_status,dly_mode,carrier_code,receive_status';
     var $_status       = array();
@@ -343,6 +350,7 @@ EOF;
         }
         
         $render->pagedata['logs']    = $logs;
+        if ($this->vue_mode) { return []; }
         return $render->fetch('admin/vop/logs.html');
     }
 

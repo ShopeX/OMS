@@ -16,6 +16,13 @@
  */
 
 class omedlyexport_finder_delivery{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $actions = array(
   
     );

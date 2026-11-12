@@ -81,9 +81,10 @@ class openapi_api_params_v1_orders extends openapi_api_params_abstract implement
      */
     public function description($method){
         $desccription = array(
-                'getList'=>array('name'=>'查询订单信息(根据订单创建时间)','description'=>'批量获取一个时间段内的订单信息数据'),
-                // 'decrypt'=>array('name'=>'敏感数据解密', 'description'=>'敏感数据解密'),
-                );
-        return $desccription[$method];
+            'getList'       => array('name' => '查询订单信息', 'description' => '批量获取一个时间段内的订单信息数据'),
+            'getCouponList' => array('name' => '订单优惠券明细', 'description' => '按完成状态时间查询订单优惠券明细'),
+            'getPmtList'    => array('name' => '订单促销明细', 'description' => '按完成状态时间查询订单促销明细'),
+        );
+        return isset($desccription[$method]) ? $desccription[$method] : null;
     }
 }

@@ -17,6 +17,13 @@
 
 class ome_finder_order_fail
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $addon_cols = "abnormal_status";
     
     var $detail_fail = '失败商品修正';

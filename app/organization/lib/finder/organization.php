@@ -19,6 +19,13 @@
  * 企业组织管理finder
  */
 class organization_finder_organization{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
 	var $addon_cols = "del_mark";
 	var $column_edit = '操作';

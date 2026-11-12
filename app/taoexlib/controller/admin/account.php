@@ -43,134 +43,24 @@ class taoexlib_ctl_admin_account extends desktop_controller {
 			$this->page('admin/bind.html');
         }
     }
-    
     public function register() {
-    	$region = $_POST['region'];
-    	$region = explode(':', $_POST['region']);
-		$regionArr = explode('/', $region[1]);
-		
+    	// SCRUM-7781：实现已抽到 taoexlib_account（与 Vue api 共用），此处仅保留 legacy 页的 begin/end 语义
     	$this->begin('index.php?app=taoexlib&ctl=admin_account');
-    	if (!trim(trim($_POST['email']))) {
-    		$this->end(false, 'email不能为空！');
-    	}
-    	
-    	if (!trim($_POST['password'])) {
-    		$this->end(false, '密码不能为空！');
-    	}
-    	
-        if (trim($_POST['confirm']) != trim($_POST['password'])) {
-    		$this->end(false, '两次输入密码不一致！');
-    	}
-    	
-//    	if (!trim($_POST['mobile'])) {
-//    		$this->end(false, '手机号不能为空！');
-//    	}
-    	
-    	if (!trim($_POST['owner'])) {
-    		$this->end(false, '联系人不能为空！');
-    	}
-    	
-    	if (!trim($_POST['wangwang']) && !trim($_POST['paipai'])) {
-    		$this->end(false, '旺旺号和拍拍号必须输入一个！');
-    	}
-    	
-    	if (!$_POST['tel']) {
-    		$this->end(false, '联系电话不能为空！');
-    	}
-    	
-    	if (!$regionArr[0] || !$regionArr[1]) {
-    		$this->end(false, '请选择所属地区！');
-    	}
-    	
-    	if (!trim($_POST['address'])) {
-    		$this->end(false, '详细地址不能为空！');
-    	}
-    	
-    	if (!trim($_POST['postcode'])) {
-   			$this->end(false, '邮编不能为空！'); 		
-    	}
-    	
-    	$param = array();
-    	$param['email'] = trim($_POST['email']);
-    	$param['entPwd'] = trim($_POST['password']);
-    	$param['source'] = 'shopex_tcrm';
-//    	$param['mobile'] = trim($_POST['mobile']);
-    	$param['owner'] = trim($_POST['owner']);
-    	$param['biz_user'] = trim($_POST['wangwang']);
-    	$param['biz_paipai'] = trim($_POST['paipai']);
-    	$param['tel'] = trim($_POST['tel']);
-    	$param['province'] = taoexlib_utils::province_mapping($regionArr[0]);
-    	$param['city'] = $regionArr[1];
-    	$param['address'] = trim($_POST['address']);
-    	$param['postalcode'] = trim($_POST['postcode']);
-   	    
-    	$result = taoexlib_utils::register($param);
-    	if ('succ' == $result->res) {
-    		$info = $result->info;
-    		$data = array(
-    			'entid' => $info->entid,
-    			'password' => $param['entPwd'],
-    			'email' => $info->email,
-    			'status' => 1
-    		);
-			base_kvstore::instance('taoexlib')->store('account', serialize($data));
-			base_kvstore::instance('taoexlib')->store('hasRegister', 1);
-			base_kvstore::instance('taoexlib')->store('regEmail', $info->email);//增加默认email显示 
-
-	    	base_kvstore::instance('taoexlib')->fetch('present', $present);				
-			if ('yes' !== $present && defined('TAOEXLIB_PRESENT_ID')) {
-			    base_kvstore::instance('taoexlib')->fetch('account', $account);
-		    	if (!unserialize($account)) {
-		    		return false;
-		    	}
-		    	
-				$param = unserialize($account);
-				$result = taoexlib_utils::buy($param, TAOEXLIB_PRESENT_ID, time());
-	
-				if ('succ' == $result->res) {
-					base_kvstore::instance('taoexlib')->store('present', 'yes');
-				}	
-			}		
-    		$this->end(true, '注册成功！');
-    	}
-    	else {   		
-    		$msg = $result->msg;
-    		$this->end(false, $msg ? $msg : '注册失败！');
-    	}
-	}
-	
-	public function bind() {
-	    $this->begin('index.php?app=taoexlib&ctl=admin_account');
-    	if (!trim(trim($_POST['bindemail']))) {
-			$this->end(false, 'email不能为空！');
-    	}
-    	
-    	if (!trim($_POST['bindpassword'])) {
-    		$this->end(false, '密码不能为空！');
-    	}
-    	
-    	$param = array();
-    	$param['identifier'] = trim($_POST['bindemail']);
-    	$param['password'] = trim($_POST['bindpassword']);
-    	$result = taoexlib_utils::login($param);
-    	if ('succ' == $result->res) {
-    		$data = array(
-    			'entid' => $result->info->entid,
-    			'password' => trim($_POST['bindpassword']),
-    			'email' => $result->info->email,
-    			'status' => 1
-    		);
-    		base_kvstore::instance('taoexlib')->store('account', serialize($data));
-    		$this->end(true, $result->res);
-    	}
-    	$this->end(false, '帐号或密码错误！');
-	}
-	
-	public function unbind() {
-		$this->begin('index.php?app=taoexlib&ctl=admin_account');
-		base_kvstore::instance('taoexlib')->store('account', serialize(array()));
-		$this->end(true, '操作成功！');
-	}
+    	$result = kernel::single('taoexlib_account')->register($_POST);
+    	$this->end($result['ok'], $result['message']);
+    }
+    public function bind() {
+    	// SCRUM-7781：实现已抽到 taoexlib_account（与 Vue api 共用）
+    	$this->begin('index.php?app=taoexlib&ctl=admin_account');
+    	$result = kernel::single('taoexlib_account')->bind($_POST['bindemail'], $_POST['bindpassword']);
+    	$this->end($result['ok'], $result['message']);
+    }
+    public function unbind() {
+    	// SCRUM-7781：实现已抽到 taoexlib_account（与 Vue api 共用）
+    	$this->begin('index.php?app=taoexlib&ctl=admin_account');
+    	$result = kernel::single('taoexlib_account')->unbind();
+    	$this->end($result['ok'], $result['message']);
+    }
 		
 	/*
 	 * sendOne:发送短信

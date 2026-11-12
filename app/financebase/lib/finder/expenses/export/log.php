@@ -23,6 +23,13 @@
  * ============================
  */
 class financebase_finder_expenses_export_log {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     public $addon_cols = 'export_type,filter';
 

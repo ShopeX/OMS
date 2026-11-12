@@ -1,0 +1,36 @@
+<?php
+/**
+ * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * 京东虎符WMS相关业务Lib类
+ *
+ * @author wangbiao@shopex.cn
+ * @version 2026.10.30
+ */
+class erpapi_wms_matrix_hufu_request_stockdump extends erpapi_wms_request_stockdump
+{
+    protected function _format_stockdump_create_params($sdf)
+    {
+        $params = parent::_format_stockdump_create_params($sdf);
+    
+        if (isset($sdf['owner_code'])) {
+            $params['ownerCode'] = $sdf['owner_code'];
+        }
+        
+        return $params;
+    }
+}

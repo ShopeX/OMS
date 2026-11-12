@@ -16,6 +16,13 @@
  */
 
 class dealer_finder_reship {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     var $addon_cols = 'reship_id,is_check,source,order_id,changebranch_id,return_id,return_type,change_order_id,shop_type,shop_id,reship_bn';
 

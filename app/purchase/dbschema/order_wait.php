@@ -37,7 +37,7 @@ $db['order_wait'] = array(
                 'default_in_list' => true,
                 'searchtype' => 'nequal',
                 'filterdefault' => true,
-                'filtertype' => 'yes',
+                'filtertype' => 'normal',
                 'order' => 2,
             ),
         'shop_id' =>

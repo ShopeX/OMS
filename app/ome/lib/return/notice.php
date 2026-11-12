@@ -47,13 +47,16 @@ class ome_return_notice
             $error_msg = '经销店铺退货单不能推送第三方';
             return false;
         }
+        
+        $shop_type = isset($data['shop_type']) ? $data['shop_type'] : '';
+        
         //根据仓库识别是否门店仓还是电商仓
         $store_id = kernel::single('ome_branch')->isStoreBranch($data['branch_id']);
         if($store_id){
             $channel_type = 'store';
             $channel_id = $store_id;
         }else{
-            $wms_id = kernel::single('ome_branch')->getWmsIdById($data['branch_id']);
+            $wms_id = kernel::single('ome_branch')->getWmsIdById($data['branch_id'], $shop_type);
             $channel_type = 'wms';
             $channel_id = $wms_id;
         }
@@ -90,7 +93,7 @@ class ome_return_notice
             $saveData = array('sync_status'=>'2', 'sync_code'=>$error_code, 'sync_msg'=>$error_msg);
             
             //[京东云交易]一件代发
-            $wms_type = kernel::single('ome_branch')->getNodetypBybranchId($data['branch_id']);
+            $wms_type = kernel::single('ome_branch')->getNodetypBybranchId($data['branch_id'], $shop_type);
             if($wms_type == 'yjdf'){
                 $saveData['is_check'] = '2';
             }
@@ -130,7 +133,8 @@ class ome_return_notice
         $reshipInfo['branch_bn'] = $branchLib->getBranchBnById($reshipInfo['branch_id']);
         
         //wms_id
-        $channel_id = $branchLib->getWmsIdById($reshipInfo['branch_id']);
+        $shop_type = isset($reshipInfo['shop_type']) ? $reshipInfo['shop_type'] : '';
+        $channel_id = $branchLib->getWmsIdById($reshipInfo['branch_id'], $shop_type);
         
         //request
         $result = kernel::single('erpapi_router_request')->set('wms', $channel_id)->reship_query($reshipInfo);
@@ -173,7 +177,8 @@ class ome_return_notice
         $order_id = $reshipInfo['order_id'];
         
         //wms_id
-        $channel_id = $branchLib->getWmsIdById($reshipInfo['branch_id']);
+        $shop_type = isset($reshipInfo['shop_type']) ? $reshipInfo['shop_type'] : '';
+        $channel_id = $branchLib->getWmsIdById($reshipInfo['branch_id'], $shop_type);
         
         //branch_bn
         $branch_bn = $branchLib->getBranchBnById($reshipInfo['branch_id']);
@@ -219,7 +224,8 @@ class ome_return_notice
         $reship_bn = $reshipInfo['reship_bn'];
         
         //wms_id
-        $channel_id = $branchLib->getWmsIdById($reshipInfo['branch_id']);
+        $shop_type = isset($reshipInfo['shop_type']) ? $reshipInfo['shop_type'] : '';
+        $channel_id = $branchLib->getWmsIdById($reshipInfo['branch_id'], $shop_type);
         
         //branch_bn
         $branch_bn = $branchLib->getBranchBnById($reshipInfo['branch_id']);
@@ -272,10 +278,11 @@ class ome_return_notice
         $branchLib = kernel::single('ome_branch');
         
         //退换货单信息
-        $reshipInfo = $reshipObj->dump(array('reship_id'=>$reship_id), 'reship_id,branch_id,ship_area,ship_addr');
+        $reshipInfo = $reshipObj->dump(array('reship_id'=>$reship_id), '*');
         
         //wms_id
-        $channel_id = $branchLib->getWmsIdById($reshipInfo['branch_id']);
+        $shop_type = isset($reshipInfo['shop_type']) ? $reshipInfo['shop_type'] : '';
+        $channel_id = $branchLib->getWmsIdById($reshipInfo['branch_id'], $shop_type);
         
         //WMS配置信息
         $channelInfo = $channelObj->dump(array('channel_id'=>$channel_id), 'channel_id,crop_config');

@@ -351,6 +351,21 @@ $db['shop']=array (
       'in_list' => true,
       'default_in_list' => true,
     ),
+    'is_expired' => array (
+        'type' => 'bool',
+        'default' => 'false',
+        'label' => '授权是否过期',
+        'in_list' => true,
+        'default_in_list' => true,
+    ),
+    'expired_time' => array (
+        'type' => 'time',
+        'default' => 0,
+        'editable' => false,
+        'label' => '授权过期时间',
+        'in_list' => true,
+        'default_in_list' => true,
+    ),
   ),
   'index' =>
   array (

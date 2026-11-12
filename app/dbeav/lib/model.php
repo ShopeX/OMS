@@ -20,6 +20,13 @@ class dbeav_model extends base_db_model{
     var $dbschema = null; //ݱļ
     var $api_id = null;
 
+    public $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $use_meta = false;
 
     public $defaultOrder = [];

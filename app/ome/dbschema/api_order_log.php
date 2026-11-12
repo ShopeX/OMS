@@ -114,7 +114,7 @@ $db['api_order_log']=array(
     'msg_id' =>
     array(
       'type' => 'varchar(60)',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
       'in_list' => true,
       'default_in_list' => true,
@@ -184,7 +184,7 @@ $db['api_order_log']=array(
       'in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
         'filterdefault' => true,
         'order' => 20,
     ),

@@ -16,6 +16,13 @@
  */
 
 class vop_finder_bill {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     public $addon_cols = 'id,status,sync_status,discount_sync_status,detail_sync_status,bill_number,sku_count,get_count,get_detail_count,get_discount_count';
     

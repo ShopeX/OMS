@@ -24,9 +24,15 @@
  +----------------------------------------------------------
  */
 
-
 class material_finder_basic_material_storage_life
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = 'guarantee_period,date_type';//调用字段
     
     var $date_type    = array(1=>'天', '月', '年');
@@ -107,7 +113,6 @@ class material_finder_basic_material_storage_life
     //-- 显示行样式[粗体：highlight-row]
     //-- [加绿：list-even 加黄：selected 加红：list-warning]
     /*------------------------------------------------------ */
-
     function row_style($row)
     {
         $style = '';

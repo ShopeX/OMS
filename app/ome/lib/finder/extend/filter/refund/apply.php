@@ -1,26 +1,13 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class ome_finder_extend_filter_refund_apply
 {
-    /**
-     * 获取_extend_colums
-     * @return mixed 返回结果
-     */
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public function get_extend_colums()
     {
         $problem      = kernel::single('ome_mdl_return_product_problem');
@@ -74,7 +61,7 @@ class ome_finder_extend_filter_refund_apply
                 'abnormal_status' => array(
                     'type'          => $abnormal_status_options,
                     'label'         => '异常标识',
-                    'filtertype'    => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                     'editable'      => false,
                 ),
@@ -83,7 +70,7 @@ class ome_finder_extend_filter_refund_apply
                     'label' => '单据种类',
                     'editable' => false,
                     'default' => '0',
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                 ),
                 'paytime'            => array(

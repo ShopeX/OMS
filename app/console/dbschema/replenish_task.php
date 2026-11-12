@@ -44,7 +44,7 @@ $db['replenish_task'] = array(
             'default_in_list' => true,
             'in_list' => true,
             'searchtype' => 'head',
-            'filtertype' => 'yes',
+            'filtertype' => 'normal',
             'filterdefault' => true,
             'order' => 20,
         ),

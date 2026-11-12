@@ -16,6 +16,13 @@
  */
 
 class logistics_finder_area_router {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $addon_cols = "area_id";
     var $column_edit = "操作";
     var $column_edit_width = "100";

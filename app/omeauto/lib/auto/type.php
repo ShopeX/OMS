@@ -44,6 +44,11 @@ class omeauto_auto_type
             $obj = kernel::single(sprintf('omeauto_auto_type_%s', $tagName));
             if (method_exists($obj, $method)) {
 
+                // 支持 vue_mode 参数
+                if (isset($params['vue_mode'])) {
+                    $obj->setVueMode((bool) $params['vue_mode']);
+                }
+
                 return $obj->$method($params);
             } else {
 

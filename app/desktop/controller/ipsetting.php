@@ -22,10 +22,15 @@
  * @liwei@shopex.cn
  *
  */
-class desktop_ctl_ipsetting extends desktop_controller{
-    
+
+use app\desktop\lib\annotation\RequirePermission;
+
+class desktop_ctl_ipsetting extends desktop_controller
+{
+
     var $workground = 'desktop_ctl_system';
-    
+
+    #[RequirePermission('users')]
     function index(){
         if((kernel::single('desktop_user')->is_super())!='1'){
             die("<h3>对不起，您无权限操作当前页面！</h3>");
@@ -38,11 +43,7 @@ class desktop_ctl_ipsetting extends desktop_controller{
     }
     
     //@保存新增IP地址
-    /**
-     * 保存
-     * @return mixed 返回操作结果
-     */
-
+    #[RequirePermission('users')]
     public function save(){
         $this->begin('index.php?app=desktop&ctl=ipsetting&act=index');
         $op_name = kernel::single('desktop_user')->get_login_name();

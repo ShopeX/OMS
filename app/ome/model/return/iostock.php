@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class ome_mdl_return_iostock extends dbeav_model
 {
 
@@ -28,10 +27,6 @@ class ome_mdl_return_iostock extends dbeav_model
 
     //return parent::searchOptions();
     //}
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema()
     {
         $schema = array(
@@ -49,7 +44,7 @@ class ome_mdl_return_iostock extends dbeav_model
                     'editable'        => false,
                     'label'           => '退换货单号',
                     'filterdefault'   => true,
-                    'filtertype'      => 'yes',
+                    'filtertype' => 'normal',
                     'in_list'         => true,
                     'default_in_list' => true,
                     'order'           => 1,
@@ -81,7 +76,7 @@ class ome_mdl_return_iostock extends dbeav_model
                     'editable'        => false,
                     'label'           => '货号',
                     'filterdefault'   => true,
-                    'filtertype'      => 'yes',
+                    'filtertype' => 'normal',
                     'in_list'         => true,
                     'default_in_list' => true,
                     'order'           => 4,
@@ -111,7 +106,7 @@ class ome_mdl_return_iostock extends dbeav_model
                     'label'           => '质检人',
                     'in_list'         => true,
                     'filterdefault'   => true,
-                    'filtertype'      => 'yes',
+                    'filtertype' => 'normal',
                     'default_in_list' => true,
                     'order'           => 6,
                     'width'           => 130,
@@ -197,7 +192,7 @@ class ome_mdl_return_iostock extends dbeav_model
                     'label'           => '订单号',
                     'searchtype'      => 'has',
                     'filterdefault'   => true,
-                    'filtertype'      => 'yes',
+                    'filtertype' => 'normal',
                     'in_list'         => true,
                     'default_in_list' => true,
                     'order'           => 13,
@@ -209,7 +204,7 @@ class ome_mdl_return_iostock extends dbeav_model
                     'editable'        => false,
                     'label'           => '售后单号',
                     'filterdefault'   => true,
-                    'filtertype'      => 'yes',
+                    'filtertype' => 'normal',
                     'in_list'         => false,
                     'default_in_list' => false,
                     'order'           => 14,
@@ -463,15 +458,6 @@ class ome_mdl_return_iostock extends dbeav_model
         return $aData;
     }
 
-    /**
-     * fgetlist_csv
-     * @param mixed $data 数据
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $exportType exportType
-     * @param mixed $pass_data 数据
-     * @return mixed 返回值
-     */
     public function fgetlist_csv(&$data, $filter, $offset, $exportType = 1, $pass_data = false)
     {
 
@@ -505,12 +491,6 @@ class ome_mdl_return_iostock extends dbeav_model
         return true;
     }
 
-    /**
-     * export_csv
-     * @param mixed $data 数据
-     * @param mixed $exportType exportType
-     * @return mixed 返回值
-     */
     public function export_csv($data, $exportType = 1)
     {
 
@@ -520,23 +500,12 @@ class ome_mdl_return_iostock extends dbeav_model
         echo implode("\n", $output);
     }
 
-    /**
-     * exportName
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function exportName(&$data)
     {
 
         $data['name'] = '售后入库单';
     }
 
-    /**
-     * io_title
-     * @param mixed $filter filter
-     * @param mixed $ioType ioType
-     * @return mixed 返回值
-     */
     public function io_title($filter = null, $ioType = 'csv')
     {
         switch ($ioType) {
@@ -566,13 +535,6 @@ class ome_mdl_return_iostock extends dbeav_model
         return $this->ioTitle[$ioType][$filter];
     }
 
-    /**
-     * 获取returnIostock
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $limit limit
-     * @return mixed 返回结果
-     */
     public function getreturnIostock($filter, $offset, $limit)
     {
 
@@ -705,16 +667,6 @@ class ome_mdl_return_iostock extends dbeav_model
     }
 
     //根据主键id获取导出数据
-    /**
-     * 获取ExportDataByCustom
-     * @param mixed $fields fields
-     * @param mixed $filter filter
-     * @param mixed $has_detail has_detail
-     * @param mixed $curr_sheet curr_sheet
-     * @param mixed $start start
-     * @param mixed $end end
-     * @return mixed 返回结果
-     */
     public function getExportDataByCustom($fields, $filter, $has_detail, $curr_sheet, $start, $end)
     {
         $oOrder         = $this->app->model('orders');
@@ -839,13 +791,6 @@ class ome_mdl_return_iostock extends dbeav_model
     }
 
     //格式化输出的内容字段
-    /**
-     * convert
-     * @param mixed $rows rows
-     * @param mixed $fields fields
-     * @param mixed $has_detail has_detail
-     * @return mixed 返回值
-     */
     public function convert($rows, &$fields = '', $has_detail = 1)
     {
 

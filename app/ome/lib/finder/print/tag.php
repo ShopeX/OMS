@@ -16,6 +16,13 @@
  */
 
 class ome_finder_print_tag{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $column_confirm = "操作";
     var $column_confirm_width = "60";
     function column_confirm($row){

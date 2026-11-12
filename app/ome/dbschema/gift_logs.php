@@ -55,6 +55,15 @@ $db['gift_logs']=array (
             'width' => 120,
             'order' => 30
         ),
+        'member_id' => array (
+            'type' => 'int unsigned',
+            'editable' => false,
+            'default' => 0,
+            'width' => 180,
+            'in_list' => true,
+            'default_in_list' => true,
+            'label' => '会员ID',
+        ),
         'order_source' => array (
             'type' => 'varchar(50)',
             'required' => false,
@@ -209,6 +218,12 @@ $db['gift_logs']=array (
                 'md5_key',
             ),
             'prefix' => 'unique',
+        ),
+        'ind_gift_rule_member' => array (
+            'columns' => array (
+                'gift_rule_id',
+                'member_id',
+            ),
         ),
     ),
     'comment' => '赠品发送日志表',

@@ -69,7 +69,7 @@ $db['specification']=array (
       'editable' => false,
       'filterdefault' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'spec_type' => 
     array (
@@ -85,7 +85,7 @@ $db['specification']=array (
       'editable' => false,
       'filterdefault' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'spec_memo' => 
     array (

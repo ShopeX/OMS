@@ -16,6 +16,13 @@
  */
 
 class tbo2o_finder_store{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     var $addon_cols = "store_id,outer_store_id,sync";
     var $column_edit = "操作";

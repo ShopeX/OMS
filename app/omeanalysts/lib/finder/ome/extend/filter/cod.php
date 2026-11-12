@@ -16,6 +16,13 @@
  */
 
 class omeanalysts_finder_ome_extend_filter_cod{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function get_extend_colums(){
         //物流公司列表
         $logi_ids = array();

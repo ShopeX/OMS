@@ -17,6 +17,13 @@
 
 class ediws_finder_accountorders
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     
     
     public $detail_items = '详情列表';

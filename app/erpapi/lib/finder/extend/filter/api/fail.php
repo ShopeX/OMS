@@ -16,6 +16,13 @@
  */
 
 class erpapi_finder_extend_filter_api_fail{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function get_extend_colums(){
 
         $type_list = array(

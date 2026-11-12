@@ -97,7 +97,8 @@ class console_ctl_admin_iostockorder extends desktop_controller
     {
         $io               = $_GET['io'];
         $iostock_instance = kernel::single('siso_receipt_iostock');
-
+        
+        $type = 0;
         if ($io) {
             $title = '调拨入库';
             eval('$type=' . get_class($iostock_instance) . '::ALLOC_STORAGE;');
@@ -154,7 +155,8 @@ class console_ctl_admin_iostockorder extends desktop_controller
 
         $brObj = app::get('ome')->model('branch');
         $row   = $brObj->getList('branch_id, name',['is_ctrl_store'=>'1']);
-
+        $branch_id = ($row[0]['branch_id'] ? $row[0]['branch_id'] : 0);
+        
         /* 获取操作员管辖仓库 */
         $is_super = kernel::single('desktop_user')->is_super();
         if (!$is_super) {
@@ -539,8 +541,9 @@ class console_ctl_admin_iostockorder extends desktop_controller
         if (!in_array($iso['type_id'], array('5', '50'))) {
             $damagedbranch = $iostockObj->getDamagedbranch($iso['branch_id']);
             if (empty($damagedbranch)) {
-                $this->end(false, $item['bn'] . '有不良品，但未设置主仓对应的残仓');
+                $this->end(false, $iso['iso_bn'] . '有不良品，但未设置主仓对应的残仓');
             }
+            
             $branch_id = $damagedbranch['branch_id'];
         } else {
             $branch_id = $iso['branch_id'];
@@ -1051,7 +1054,8 @@ class console_ctl_admin_iostockorder extends desktop_controller
     {
         $io               = $_GET['io'];
         $iostock_instance = kernel::single('siso_receipt_iostock');
-
+        
+        $type = 0;
         if ($io) {
             $title = '调拨入库列表';
             eval('$type=' . get_class($iostock_instance) . '::ALLOC_STORAGE;');

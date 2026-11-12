@@ -16,6 +16,13 @@
  */
 
 class ome_finder_return_product{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $detail_basic = "售后服务详情";
     
     //平台售后状态
@@ -213,6 +220,7 @@ class ome_finder_return_product{
 
         $render->pagedata['logs'] = $opLogModel->read_log($logFilter,0,20,'log_id');
 
+        if ($this->vue_mode) { return []; }
         return $render->fetch('admin/return_product/detail/operation_log.html');
     }
 
@@ -324,7 +332,7 @@ class ome_finder_return_product{
     
     //退货单标识
     var $column_fail_status = '标识';
-    var $column_fail_status_width = 110;
+    var $column_fail_status_width = 260;
     var $column_fail_status_order = 110;
     
     function column_fail_status($row)

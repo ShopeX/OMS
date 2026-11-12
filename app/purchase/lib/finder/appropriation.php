@@ -16,6 +16,13 @@
  */
 
 class purchase_finder_appropriation{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $detail_basic = "调拔单详情";
      
     function detail_basic($appropriation_id){

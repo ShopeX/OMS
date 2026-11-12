@@ -1065,11 +1065,18 @@ class erpapi_rpc_service
         if ('front.' == substr($_REQUEST['method'], 0, 6)) {
             $_REQUEST['task'] = uniqid();
         }
-
+        
+        // 当接收$_REQUEST['task']=null时，设置为空值
+        if(isset($_REQUEST['task'])){
+            if ($_REQUEST['task'] === null || $_REQUEST['task'] === '' || $_REQUEST['task'] === 'null') {
+                $_REQUEST['task'] = '';
+            }
+        }
+        
         //todo: uncompress post data
-        $rpc_id       = $_REQUEST['task'] ? md5($_REQUEST['task'] . $_REQUEST['method'] . $_SERVER['HTTP_HOST']) : md5($_REQUEST['task'] . $_REQUEST['sign'] . $_REQUEST['method'] . $_SERVER['HTTP_HOST']);
+        $rpc_id = md5($_REQUEST['task'] . $_REQUEST['sign'] . $_REQUEST['method'] . $_SERVER['HTTP_HOST']);
         $this->rpc_id = $rpc_id;
-
+        
         // 判断是否重复
         $apilogModel = app::get('ome')->model('api_log');
         if ($apilogModel->is_repeat($rpc_id)) {

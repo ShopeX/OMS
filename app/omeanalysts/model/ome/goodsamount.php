@@ -178,7 +178,7 @@ class omeanalysts_mdl_ome_goodsamount extends dbeav_model{
             }
             unset($filter['goods_bn']);
         }
-        return parent::_filter($filter,'g',$baseWhere)." AND ".implode($where,' AND ');
+        return parent::_filter($filter,'g',$baseWhere)." AND ".implode(' AND ', $where);
     }
 
     public function getlist($cols='*', $filter=array(), $offset=0, $limit=-1, $orderType=null){
@@ -209,7 +209,7 @@ class omeanalysts_mdl_ome_goodsamount extends dbeav_model{
                 ';
         if($orderType && $orderType!='sold_out_rate asc' && $orderType!='sold_out_rate desc')
         {
-        	$sql.= 'ORDER BY  '.(is_array($orderType)?implode($orderType,' '):$orderType);
+        	$sql.= 'ORDER BY  '.(is_array($orderType)?implode(' ',$orderType):$orderType);
         }
         $rows = $this->db->selectLimit($sql,$limit,$offset);
 
@@ -295,7 +295,7 @@ class omeanalysts_mdl_ome_goodsamount extends dbeav_model{
                      'width' => 120,
                      'searchtype' => 'head',
                      'editable' => false,
-                     'filtertype' => 'yes',
+                     'filtertype' => 'normal',
                      'filterdefault' => true,
                      'filtertype' => 'normal',
                      'required' => true,

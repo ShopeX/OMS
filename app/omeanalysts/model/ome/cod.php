@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class omeanalysts_mdl_ome_cod extends dbeav_model{
 
     var $has_export_cnf = true;
@@ -23,20 +22,15 @@ class omeanalysts_mdl_ome_cod extends dbeav_model{
 
     /**
      * 须加密字段
-     * 
+     *
      * @var string
-     * */
+     **/
     private $__encrypt_cols = array(
         'ship_name'   => 'simple',
         'ship_tel'    => 'phone',
         'ship_mobile' => 'phone',
     );
 
-        /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
     public function table_name($real=false){
         $table_name = 'ome_delivery';
         if($real){
@@ -45,11 +39,6 @@ class omeanalysts_mdl_ome_cod extends dbeav_model{
             return 'ome_cod';
         }
     }
-    /**
-     * 获取_cod
-     * @param mixed $filter filter
-     * @return mixed 返回结果
-     */
     public function get_cod($filter=null){
         $wsql = 'sdb_ome_delivery as D LEFT JOIN '.
             'sdb_ome_delivery_order as DO ON D.delivery_id=DO.delivery_id LEFT JOIN '.
@@ -118,11 +107,6 @@ class omeanalysts_mdl_ome_cod extends dbeav_model{
         return $row;
     }
 
-    /**
-     * count
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function count($filter=null){
         $sql = 'SELECT count(DISTINCT sod.delivery_id) as _count FROM sdb_ome_delivery as sod'.
             ' LEFT JOIN sdb_ome_delivery_order as DO ON sod.delivery_id=DO.delivery_id'.
@@ -218,10 +202,6 @@ class omeanalysts_mdl_ome_cod extends dbeav_model{
         return $rowbill;
     }
 
-    /**
-     * 搜索Options
-     * @return mixed 返回值
-     */
     public function searchOptions(){
         $parentOptions = parent::searchOptions();
         $childOptions = array(
@@ -230,13 +210,6 @@ class omeanalysts_mdl_ome_cod extends dbeav_model{
         return $Options = array_merge($parentOptions,$childOptions);
     }
 
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter,$tableAlias=null,$baseWhere=null){
         $where = array(1);
         if(isset($filter['time_from']) && $filter['time_from']){
@@ -288,10 +261,6 @@ class omeanalysts_mdl_ome_cod extends dbeav_model{
         return parent::_filter($filter,$tableAlias,$baseWhere)." AND ".implode(' AND ', $where);
     }
 
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema(){
         $schema = array (
             'columns' => array (
@@ -303,7 +272,7 @@ class omeanalysts_mdl_ome_cod extends dbeav_model{
                     'editable' => false,
                     'width' =>140,
                     'searchtype' => 'has',
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                     'is_title' => true,
                 ),
@@ -414,7 +383,7 @@ class omeanalysts_mdl_ome_cod extends dbeav_model{
                     'editable' => false,
                     'width' =>200,
                     'searchtype' => 'has',
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                     'is_title' => true,
                 ),
@@ -608,12 +577,6 @@ class omeanalysts_mdl_ome_cod extends dbeav_model{
         return true;
     }
 
-    /**
-     * io_title
-     * @param mixed $filter filter
-     * @param mixed $ioType ioType
-     * @return mixed 返回值
-     */
     public function io_title($filter=null,$ioType='csv'){
         switch( $ioType ){
             case 'csv':
@@ -651,12 +614,6 @@ class omeanalysts_mdl_ome_cod extends dbeav_model{
     }
 
     //根据过滤条件获取导出发货单的主键数据数组
-    /**
-     * 获取PrimaryIdsByCustom
-     * @param mixed $filter filter
-     * @param mixed $op_id ID
-     * @return mixed 返回结果
-     */
     public function getPrimaryIdsByCustom($filter, $op_id){
         $rows = array();
         $sql = 'SELECT DISTINCT sod.delivery_id '.
@@ -678,17 +635,6 @@ class omeanalysts_mdl_ome_cod extends dbeav_model{
     }
 
     //根据主键id获取导出数据
-    /**
-     * 获取ExportDataByCustom
-     * @param mixed $fields fields
-     * @param mixed $filter filter
-     * @param mixed $has_detail has_detail
-     * @param mixed $curr_sheet curr_sheet
-     * @param mixed $start start
-     * @param mixed $end end
-     * @param mixed $op_id ID
-     * @return mixed 返回结果
-     */
     public function getExportDataByCustom($fields, $filter, $has_detail, $curr_sheet, $start, $end, $op_id){
 
         $ids = $filter['delivery_id'];

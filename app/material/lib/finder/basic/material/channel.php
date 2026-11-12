@@ -17,6 +17,13 @@
 
 class material_finder_basic_material_channel
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function row_style($row)
     {
         $style = '';

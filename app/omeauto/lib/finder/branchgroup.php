@@ -16,6 +16,13 @@
  */
 
 class omeauto_finder_branchgroup {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = "branch_group";
     public $column_edit = '操作';
     public $column_edit_width = "100";

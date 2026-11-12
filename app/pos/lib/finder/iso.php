@@ -17,6 +17,13 @@
 
 class pos_finder_iso
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $detail_basic = '商品明细';
     
     function detail_basic($iso_id)

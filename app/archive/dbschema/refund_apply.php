@@ -37,7 +37,7 @@ $db['refund_apply']=array (
       'editable' => false,
       'in_list' => true,
       'is_title' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'order_id' =>
@@ -63,7 +63,7 @@ $db['refund_apply']=array (
       'label' => '支付类型',
       'width' => 110,
       'editable' => false,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
       'in_list' => true,
     ),
@@ -155,7 +155,7 @@ $db['refund_apply']=array (
       'in_list' => true,
       'default_in_list' => true,
       'label' => '退款状态',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     

@@ -100,6 +100,13 @@ class ome_sales_original_data
             }
             
             if($items_count==$item_delete_flag){//明细数量和删除数量一致，删除OBJ
+                // PJ3270-85：累计被删除子单上已记录的退款金额，销售单差额分摊时
+                // 扣除该部分（退款归属被删除子单，不再分摊给存活子单）
+                $order_info['deleted_objects_refund_money'] = round(
+                    (isset($order_info['deleted_objects_refund_money']) ? (float) $order_info['deleted_objects_refund_money'] : 0.0)
+                    + (isset($obj['refund_money']) ? (float) $obj['refund_money'] : 0.0),
+                    4
+                );
                 unset($order_info['order_objects'][$key]);
                 $is_obj_delete = true;
             }

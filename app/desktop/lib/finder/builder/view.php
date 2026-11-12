@@ -17,6 +17,13 @@
 
 
 class desktop_finder_builder_view extends desktop_finder_builder_prototype {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     public $use_buildin_new_dialog = false;
     public $use_buildin_set_tag = false;
@@ -69,6 +76,7 @@ class desktop_finder_builder_view extends desktop_finder_builder_prototype {
         }
         $this->__view_filter = $view_filter;
 
+        $get_filter = array();
         if ($_GET['filter']) {
             $get_filter = (array) $_GET['filter'];
             if (!is_array($_GET['filter'])) {
@@ -77,9 +85,13 @@ class desktop_finder_builder_view extends desktop_finder_builder_prototype {
                 }
             }
         }
+        // Defense in depth: never accept user-supplied filter_sql (server view/base_filter may still set it).
+        unset($get_filter['filter_sql']);
+        $post_filter = (array) $_POST;
+        unset($post_filter['filter_sql']);
         #if( $_POST ) $view_filter = array();
         $this->params = array_merge(
-                (array) $view_filter, (array) $_POST, (array) $get_filter, (array) $this->base_filter);
+                (array) $view_filter, $post_filter, (array) $get_filter, (array) $this->base_filter);
 
         unset($this->params['_finder']);
 

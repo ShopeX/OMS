@@ -1,0 +1,1 @@
+import{l as o,aG as t,d as n,p as r,m as a}from"./vue-Myi12l60.js";const m=o({__name:"index",setup(s){const e=t();return n(()=>{e.replace("/m-desktop/rpcnotify/index")}),(c,p)=>(a(),r("div"))}});export{m as default};

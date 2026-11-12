@@ -70,6 +70,15 @@ class erpapi_shop_response_plugins_order_orderlabels extends erpapi_shop_respons
                 }
             }
         }
+        
+        // 淘宝/天猫加价发顺丰平台集采
+        if (!empty($platform->_ordersdf['__paid_sf_jicai'])) {
+            $labels[] = [
+                'label_code' => 'SOMS_PAID_EXPRESS',
+                'label_value' => 0x0004,
+            ];
+        }
+        
         //晚发赔
         if(is_array($platform->_ordersdf['extend_field']['sendpayMap'])) {
             foreach($platform->_ordersdf['extend_field']['sendpayMap'] as $spVal){
@@ -595,6 +604,13 @@ class erpapi_shop_response_plugins_order_orderlabels extends erpapi_shop_respons
         if(isset($platform->_ordersdf['is_bufa_order']) && $platform->_ordersdf['is_bufa_order'] == 'true'){
             $labels[] = [
                 'label_code' => 'SOMS_BUFA_PKG',
+            ];
+        }
+        
+        // 京配订单：指定只能使用京东快递发货;
+        if (!empty($platform->_ordersdf['__jd_dispatch_order'])) {
+            $labels[] = [
+                'label_code' => 'SOMS_JD_DISPATCH',
             ];
         }
         

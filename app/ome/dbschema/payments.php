@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 $db['payments'] = array(
     'columns' => array(
         'payment_id'    => array(
@@ -33,7 +17,7 @@ $db['payments'] = array(
             'width'           => 240,
             'editable'        => false,
             // 'searchtype'      => 'has',
-            'filtertype'      => 'yes',
+            'filtertype' => 'normal',
             'filterdefault'   => true,
             'in_list'         => true,
             'default_in_list' => true,
@@ -120,7 +104,7 @@ $db['payments'] = array(
             'label'         => '支付类型',
             'width'         => 110,
             'editable'      => false,
-            'filtertype'    => 'yes',
+            'filtertype' => 'normal',
             'filterdefault' => true,
             'in_list'       => true,
         ),
@@ -196,7 +180,7 @@ $db['payments'] = array(
             'label'         => '支付状态',
             'width'         => 75,
             'editable'      => false,
-            'filtertype'    => 'yes',
+            'filtertype' => 'normal',
             'hidden'        => true,
             'filterdefault' => true,
             'in_list'       => true,

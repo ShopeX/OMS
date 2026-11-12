@@ -17,6 +17,14 @@
 
 class tbo2o_finder_shop_skus
 {
+
+    private $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols    = 'id,product_id,is_bind,bind_time';
     
     //操作

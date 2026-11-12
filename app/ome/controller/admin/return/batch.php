@@ -14,10 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * 批量操作设置（legacy 入口，保留至另行批准下线；SCRUM-7771）
+ *
+ * 写链路已收口（skill: capability-backed-write）：本控制器不再自己做校验与持久化，
+ * 只保留页面渲染、店铺列表读取与 begin()/end() 响应语义，写动作委托给
+ * ome_capability_return_batch（与 Vue API 控制器共用同一 capability）。
+ */
 class ome_ctl_admin_return_batch extends desktop_controller {
 
     var $workground = "setting_tools";
-   
+
     function index()
     {
         $params['use_buildin_recycle']=false;
@@ -29,17 +37,16 @@ class ome_ctl_admin_return_batch extends desktop_controller {
                     'target' => "dialog::{width:600,height:400,title:'添加设置'}",
                   ),
            );
-        
+
         $this->finder ( 'ome_mdl_return_batch' , $params );
     }
 
-    
+
     /**
      * 批量设置
-     * @param   
-     * @return  
+     * @param   int $batch_id 待编辑记录 ID（0 = 新增）
+     * @return  void
      * @access  public
-     * @author cyyr24@sina.cn
      */
     function set($batch_id = 0)
     {
@@ -59,56 +66,23 @@ class ome_ctl_admin_return_batch extends desktop_controller {
         }
         if ($_POST) {
             $this->begin();
-            $data = $_POST;
-            if ($data['shop_id'] == '') {
-                $this->end(false,'请选择店铺！');
-            }
-            if (in_array($data['batch_type'],array('refuse','refuse_return'))) {
-                if (!$data['batch_id'] && $_FILES ['picurl']['size']==0) {
-                    $this->end(false,'请上传图片!');
-                }
-            }
-            
-            if($_FILES ['picurl']['size'] != 0){
-                if ($_FILES ['picurl'] ['size'] > 512000) {
-                    $this->end(false,'上传文件不能超过500K!');
-                }
+            $uploadedImage = isset($_FILES['picurl']) && is_array($_FILES['picurl']) ? $_FILES['picurl'] : null;
 
-                $type = array ('gif','jpg','png');
-                $imgext = strtolower ( substr ( strrchr ( $_FILES ['picurl'] ['name'], '.' ), 1 ) );
-                if ($_FILES ['picurl'] ['name'])
-                    if (! in_array ( $imgext, $type )) {
-                        $text = implode ( ",", $type );
-                        $this->end(false,"您只能上传以下类型文件{$text}!");
-                    }
-                $ss = kernel::single ( 'base_storager' );
-                $id = $ss->save_upload ( $_FILES ['picurl'], "file", "", $msg ); //返回file_id;
-                $picurl = $ss->getUrl ( $id, "file" );
-                
-           }
-            
-            $batchdata = array(
-                'shop_id'   => $data['shop_id'],
-                'batch_type'=> $data['batch_type'],
-                'memo'      => $data['memo'],
-                'is_default'=> $data['is_default'],
-            );
-            if ($picurl) {
-                $batchdata['picurl'] = $picurl;
-                $batchdata['imgext'] = $imgext;
+            try {
+                $capability = new ome_capability_return_batch();
+                $capability->save($_POST, $uploadedImage);
+            } catch (InvalidArgumentException $exception) {
+                $this->end(false, $exception->getMessage());
+                return;
+            } catch (Throwable $exception) {
+                $this->end(false, '保存失败');
+                return;
             }
-            if ($data['batch_id']) {
-                $batchdata['batch_id'] = $data['batch_id'];
-            }
-            if ($batchdata['is_default'] == 'true') {#默认只能有一个
-                $filter = array('shop_id'=>$data['shop_id'],'batch_type'=>$data['batch_type'],'is_default'=>'true');
-                $oReturn_batch->update(array('is_default'=>'false'),$filter);
-            }
-            $oReturn_batch->save($batchdata);
-            $this->end(true,'设置成功');
+
+            $this->end(true, '设置成功');
         }
-        
-        
+
+
         $batch_type = array('refuse'=>'拒绝退款','accept_refund'=>'同意退款','accept_return'=>'同意退货','refuse_return'=>'拒绝退货');
         $this->pagedata['batch_type'] = $batch_type;
         $this->pagedata['shop'] = $shop_list;
@@ -116,7 +90,7 @@ class ome_ctl_admin_return_batch extends desktop_controller {
         $this->pagedata['return_batch'] = $return_batch;
         $this->display('admin/return_product/set/batch.html');
     }
-   
+
 }
 
 ?>

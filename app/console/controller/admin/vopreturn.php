@@ -15,6 +15,9 @@
  * limitations under the License.
  */
 
+/**
+ * 退供单管理
+ */
 class console_ctl_admin_vopreturn extends desktop_controller{
 
     var $name = "退供单";
@@ -22,21 +25,13 @@ class console_ctl_admin_vopreturn extends desktop_controller{
 
     function _views(){
         $billMdl = app::get('console')->model('vopreturn');
-        $base_filter = array(
-           
-        );
+        $base_filter = array();
         $sub_menu = array(
-           
             0 => array('label'=>app::get('base')->_('全部'),'filter'=>array(),'optional'=>false),
-            
             1 => array('label'=>app::get('base')->_('未确认'),'filter'=>array('status'=>'0'),'optional'=>false),
-           
             2 => array('label'=>app::get('base')->_('已确认'),'filter'=>array('status'=>'1'),'optional'=>false),
-            
-          
         );
-
-       
+        
         foreach($sub_menu as $k=>$v){
             if (!IS_NULL($v['filter'])){
                 $v['filter'] = array_merge($v['filter'], $base_filter);
@@ -66,8 +61,8 @@ class console_ctl_admin_vopreturn extends desktop_controller{
                 'target' => "dialog::{width:700,height:400,title:'获取退供单'}",
             );
         }
+        
         if ($_GET['view'] == 1){
-            
             $actions[] = array(
                 'label'     =>  app::get('console')->_('刷新退供单'),
                 'submit'    =>  "index.php?app=console&ctl=admin_vopreturn&act=batchRefreshrefund",
@@ -152,14 +147,9 @@ class console_ctl_admin_vopreturn extends desktop_controller{
 
             kernel::single('ediws_task_shippackage')->getShipPackage($sdf);
 
-             $ret['succ'] += 1;
-
-
+            $ret['succ'] += 1;
         }else{
-
-            
             $sdf = ['start_date' => date('Y-m-d H:i:s', strtotime($start_time)), 'end_date' => date('Y-m-d H:i:s', strtotime($end_time)), 'warehouse'=>$warehouse, 'page_no'=>$pageNo, 'page_size'=>'10'];
-
 
             $result = kernel::single('erpapi_router_request')->set('shop', $shop_id)->purchase_getReturnInfo($sdf);
             if (empty($result['data'])) {
@@ -209,12 +199,7 @@ class console_ctl_admin_vopreturn extends desktop_controller{
         $this->pagedata['data'] = $rObj->db_dump($id, 'id,return_sn');
         $this->display('admin/vop/return_cancel.html');
     }
-
-   
-    /**
-     * doCancel
-     * @return mixed 返回值
-     */
+    
     public function doCancel() {
         $id = $_POST['id'];
         if(!$id) {
@@ -306,14 +291,7 @@ class console_ctl_admin_vopreturn extends desktop_controller{
         $this->display('admin/vop/return_import.html');
     }
 
-    /**
-     * exportTemplate
-     * @param mixed $shop_type shop_type
-     * @return mixed 返回值
-     */
-    public function exportTemplate($shop_type) {
-
-
+     public function exportTemplate($shop_type) {
         $row = app::get('console')->model('vopreturn')->getTemplateColumn($shop_type);
         if($shop_type=='360buy'){
 
@@ -325,12 +303,7 @@ class console_ctl_admin_vopreturn extends desktop_controller{
         $lib = kernel::single('omecsv_phpexcel');
         $lib->newExportExcel(null, $exporttitle, 'xls', $row);
     }
-
-
-    /**
-     * batchRefreshrefund
-     * @return mixed 返回值
-     */
+    
     public function batchRefreshrefund(){
 
         $this->begin('');
@@ -438,7 +411,6 @@ class console_ctl_admin_vopreturn extends desktop_controller{
         $this->splash('success', $this->url, '保存成功');
     }
     
-    
     function getProducts($branch_id = null)
     {
         $basicMaterialSelect    = kernel::single('material_basic_select');
@@ -452,10 +424,9 @@ class console_ctl_admin_vopreturn extends desktop_controller{
         if (is_array($pro_id)){
             $filter['bm_id'] = $pro_id;
         }
-        
-        #选定全部
-        if(is_array($filter['bm_id'][0]) && $filter['bm_id'][0]['_ALL_'])
-        {
+    
+        // 选定全部
+        if(is_array($filter['bm_id'][0]) && $filter['bm_id'][0]['_ALL_']){
             if (isset($_POST['filter']['advance']) && $_POST['filter']['advance'])
             {
                 $arr_filters    = explode(',', $_POST['filter']['advance']);
@@ -479,9 +450,8 @@ class console_ctl_admin_vopreturn extends desktop_controller{
             );
         }
         
-        if($pro_barcode)
-        {
-            #查询条形码对应的bm_id
+        if($pro_barcode){
+            // 查询条形码对应的bm_id
             $bm_ids    = $basicMaterialBarcode->getBmidListByBarcode($pro_barcode);
             $filter = array('bm_id'=>$bm_ids);
         }
@@ -506,26 +476,24 @@ class console_ctl_admin_vopreturn extends desktop_controller{
             }
             foreach ($data as $k => $item)
             {
-                #查询关联的条形码
+                // 查询关联的条形码
                 $item['barcode']    = $basicMaterialBarcode->getBarcodeById($item['product_id']);
                 
-                #基础物料规格
+                // 基础物料规格
                 $item['spec_info']    = $item['specifications'];
                 
                 $item['num'] = 0;
-                if($supplier_id > 0)
-                {
+                if($supplier_id > 0){
                     $item['price'] = $this->app->model('po')->getPurchsePriceBySupplierId($supplier_id, $item['product_id'], 'desc');
                     
                     if (!$item['price'])
                     {
                         $item['price'] = 0;
                     }
+                }else{
+                    $item['price']    = $item['cost']; //成本价
                 }
-                else
-                {
-                    $item['price']    = $item['cost'];#成本价
-                }
+                
                 $unitCost = $branch_product[$branch_id][$item['product_id']]['unit_cost'];
                 $item['price'] = $unitCost > 0 ? $unitCost : $item['cost'];
                 $item['unit_cost'] = $unitCost > 0 ? $unitCost : $item['cost'];
@@ -557,9 +525,8 @@ class console_ctl_admin_vopreturn extends desktop_controller{
      */
     function findMaterial($supplier_id=null)
     {
-        #供应商频道
-        if ($supplier_id)
-        {
+        // 供应商频道
+        if ($supplier_id){
             //根据供应商商品
             $oSupplierGoods = app::get('purchase')->model('supplier_goods');
             $supplier_goods = $oSupplierGoods->getSupplierGoods($supplier_id);
@@ -569,8 +536,7 @@ class console_ctl_admin_vopreturn extends desktop_controller{
         //只能选择可见的物料作为组合的明细内容
         $base_filter['visibled'] = 1;
         
-        if($_GET['type'] == 1)
-        {
+        if($_GET['type'] == 1){
             $base_filter['type'] = 1;
         }
         

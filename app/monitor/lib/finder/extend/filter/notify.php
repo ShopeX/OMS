@@ -17,6 +17,13 @@
 
 class monitor_finder_extend_filter_notify
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function get_extend_colums()
     {
         $eventTemplateLib   = kernel::single('monitor_event_template');

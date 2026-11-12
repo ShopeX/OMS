@@ -12,7 +12,8 @@ class ome_mdl_platform_set extends dbeav_model{
     {
         // 默认所有平台都有的场景
         $scenes = array(
-            'delivery' => '发货时效'
+            'delivery' => '发货时效',
+            'wms_express_relation' => 'WMS物流公司编码映射',
         );
         
         // 如果指定了平台，根据平台返回可用场景
@@ -29,6 +30,7 @@ class ome_mdl_platform_set extends dbeav_model{
         // 未指定平台时返回所有场景
         $scenes['tmyp_commission'] = '天猫优品佣金';
         $scenes['tmsd_commission'] = '天猫喵速达佣金';
+        
         return $scenes;
     }
 

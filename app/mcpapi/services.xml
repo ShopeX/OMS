@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<services>
+    <service id="desktop_finder.mcpapi_mdl_agent_log">
+        <class>mcpapi_finder_agent_log</class>
+    </service>
+</services>

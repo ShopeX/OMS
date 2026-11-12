@@ -11,4 +11,5 @@ $urlmap = array(
     '/'=> array('app'=>'desktop'),
     '/setup' => array('app'=>'setup'),
     '/wap'=> array('app'=>'wap'),
+    '/mcp-api'=> array('app'=>'mcpapi'),
 );

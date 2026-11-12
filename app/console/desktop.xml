@@ -240,7 +240,7 @@
             <menu controller='admin_warehouse' action='index' permission='console_vop_warehouse' display='true' order="9000090">仓库管理</menu>
             <menu controller='admin_carrier' action='index' permission='console_vop_carrier' display='true' order="9000091">承运商管理</menu>
             <menu controller='admin_vopsetting' action='index' permission='console_vop_setting' display='true' order="9000092">自动规则配置</menu>
-            <menu controller='admin_vopsku' action='index' permission='console_vop_sku' display='true' order="9000092">供货价</menu>
+            <menu controller='admin_vopsku' action='index' permission='console_vop_sku' display='true' order="9000092" target='/m-console/vopsku/index'>供货价</menu>
             <menu controller='admin_vopurchase' action='index' permission='console_vop_purchase' display='true' order="9000100">采购单</menu>
             <menu controller='admin_vopick' action='index' permission='console_vop_pick' display='true' order="9000200">拣货单</menu>
             <menu controller='admin_vopstockout' action='index' permission='console_vop_stockout' display='true' order="9000300">出库单</menu>

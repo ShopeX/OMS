@@ -108,6 +108,12 @@ $constants = array(
     'OPEN_SOURCE_STAT_REPORT_URL' => getenv('OPEN_SOURCE_STAT_REPORT_URL') ?: 'https://gwnextapi.shopex.cn/usercenter/open_source/stat/report',
     'OPEN_SOURCE_STAT_HTTP_TIMEOUT' => (int) (getenv('OPEN_SOURCE_STAT_HTTP_TIMEOUT') ?: 20),
     'OPEN_SOURCE_STAT_SENTINEL_NAME' => getenv('OPEN_SOURCE_STAT_SENTINEL_NAME') ?: '.opensource_install_stat_reported',
+    // JWT Token 配置（可被 config/config.php 覆盖）
+    'JWT_TTL'             => 3600,         // access_token 有效期（秒），默认 1 小时
+    'JWT_REFRESH_TTL'     => 86400,        // refresh_token 有效期（秒），默认 24 小时；自登录起固定，刷新时不滑动续期
+    'IDLE_TIMEOUT_MINUTES' => 60,          // 前端 idle 超时（分钟），默认 60 分钟
+    'JWT_REFRESH_GRACE_SECONDS' => 90,    // refresh 轮换宽限期（秒）：竞态页签对刚消费的 jti 重放按同一次轮换幂等放行；窗口外重放仍按盗用灭全家
+    // 会话边界：access 约 1h 可静默 refresh；refresh exp 自登录起 24h 绝对过期，须重新登录。
 );
 
 $constants_ext = array();

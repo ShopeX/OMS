@@ -20,8 +20,8 @@
     </permissions>
     <workground name="单据报表" id="invoice_center"  order="1200" icon="icon-danjubaobiao-01">
         <menugroup name="供销单据" en="gx-bill">
-            <menu controller='admin_sales' action='index' permission='billcenter_sales' display='true' order='1000101'>销售单</menu>
-            <menu controller='admin_aftersales' action='index' permission='billcenter_aftersales' display='true' order='1000102'>售后单</menu>
+            <menu controller='admin_sales' action='index' permission='billcenter_sales' display='true' order='1000101' target='/m-billcenter/sales/index'>销售单</menu>
+            <menu controller='admin_aftersales' action='index' permission='billcenter_aftersales' display='true' order='1000102' target='/m-billcenter/aftersales/index'>售后单</menu>
         </menugroup>
     </workground>
 </desktop>

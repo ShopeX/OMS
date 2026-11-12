@@ -30,8 +30,7 @@ class ome_ctl_admin_reship extends desktop_controller{
             'use_buildin_filter'=>true,
        ));
     }
-
-
+    
     /**
      * @sunjing@shopex.cn
      * @DateTime  2017-12-20T09:57:40+0800
@@ -209,6 +208,7 @@ class ome_ctl_admin_reship extends desktop_controller{
         $return_tmall_detail =$aftersaleObj->get_return_type(array('return_id' => $return_id));
         if ($return_tmall_detail['refund_type'] == 'change'){
             //$refuse_reason = $return_tmall_detail['refusereason'];
+            $refuse_reason = '';
             if ($refuse_reason){
                 $refuse_reason = json_decode($refuse_reason,true);
             }else{
@@ -240,11 +240,11 @@ class ome_ctl_admin_reship extends desktop_controller{
         $reship = $reshipObj->dump(array('reship_id'=>$reship_id),'reship_bn,return_id,return_type,changebranch_id,is_check,change_status,reship_id');
 
         if($reship){
-
             console_reship::cancel($reship,'强制取消');
 
             $oOperation_log = app::get('ome')->model('operation_log');//写日志
             if($reship['return_id']){
+                $memo = '强制取消换货单';
                 $oOperation_log->write_log('return@ome',$reship['return_id'],$memo);
                 $data = array ('return_id' => $reship['return_id'], 'status' => '5', 'last_modified' => time () );
                 $oProduct = app::get('ome')->model ( 'return_product' );

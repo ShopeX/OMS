@@ -39,7 +39,7 @@ $db['pick_bill_item_inventory']=array (
             'default_in_list' => true,
             'searchtype'      => 'nequal',
             'filterdefault'   => true,
-            'filtertype'      => 'yes',
+            'filtertype' => 'normal',
             'order'           => 2,
         ),
         // 'stockout_id'           => array (
@@ -136,7 +136,7 @@ $db['pick_bill_item_inventory']=array (
             'in_list'         => true,
             'default_in_list' => true,
             'filterdefault'   => true,
-            'filtertype'      => 'yes',
+            'filtertype' => 'normal',
         ),
         'sales_no'              => array(
             'type'            => 'varchar(32)',

@@ -22,6 +22,13 @@
  */
 class material_finder_fukubukuro_combine
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     //model
     private $_appName = 'material';
     private $_modelName = 'fukubukuro_combine';

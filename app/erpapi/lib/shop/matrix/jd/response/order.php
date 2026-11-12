@@ -69,17 +69,55 @@ class erpapi_shop_matrix_jd_response_order extends erpapi_shop_response_order
                 $object['estimate_con_time'] = (int)$this->_ordersdf['timing_confirm'];
             }
             $arrField = explode('/', $field);
-            $object['actually_amount'] = current($object['order_items'])[$arrField[0]][$arrField[1]];
-            // 因为厂直是跟平台结算,所以商家结算(settlement_amount)要取采购价 
-            $object['settlement_amount'] = $object['purchase_price'];
+            
+            // 订单商品数量
+            $qty = (int)($object['quantity'] ?? ($object['items_num'] ?? 0));
+            if ($qty <= 0 && !empty($object['order_items'])) {
+                $first = current($object['order_items']);
+                $qty = (int)($first['quantity'] ?? ($first['num'] ?? 1));
+            }
+            
+            if ($qty <= 0) {
+                $qty = 1;
+            }
+            
+            $unitActually = current($object['order_items'])[$arrField[0]][$arrField[1]];
+            $object['actually_amount'] = sprintf('%.2f', floatval($unitActually) * $qty);
+            
+            // 因为厂直是跟平台结算,所以商家结算(settlement_amount)要取采购价合计
+            $purchasePrice = floatval($object['purchase_price'] ?? 0);
+            if ($purchasePrice <= 0 && !empty($object['order_items'])) {
+                $firstItem = current($object['order_items']);
+                $purchasePrice = floatval($firstItem['purchase_price'] ?? 0);
+            }
+            
+            // 结算金额
+            $object['settlement_amount'] = sprintf('%.2f', $purchasePrice * $qty);
+            
+            // items
             foreach ($object['order_items'] as &$item) {
-                // 因为厂直是跟平台结算,所以商家结算(settlement_amount)要取采购价 
-                $item['settlement_amount'] = $item['purchase_price'];
+                // 数量
+                $itemQty = (int)($item['quantity'] ?? ($item['num'] ?? $qty));
+                if ($itemQty <= 0) {
+                    $itemQty = 1;
+                }
+                
+                $itemCost = $item[$arrField[0]][$arrField[1]] ?? $unitActually;
+                $item['actually_amount'] = sprintf('%.2f', floatval($itemCost) * $itemQty);
+                
+                // 因为厂直是跟平台结算,所以商家结算(settlement_amount)要取采购价合计
+                $item['settlement_amount'] = sprintf('%.2f', floatval($item['purchase_price'] ?? 0) * $itemQty);
+                
+                // 预约发货 hold 时间
                 if ($this->_ordersdf['timing_confirm']) {
                     $item['estimate_con_time'] = (int)$this->_ordersdf['timing_confirm'];
                 }
             }
+            
+            unset($item);
         }
+        
+        unset($object);
     }
     
     //创建订单的插件

@@ -1,0 +1,18 @@
+<tr>
+    <th>配置键名：</th>
+    <td>
+        <input type="text" name="kname" value="<{$kname}>" id="kname" size="32" maxlength="20" onkeyup="value=value.replace(/[^A-Za-z0-9_#\/-]/ig,'')" placeholder="例如：WMS-SF、WMS-ZTO、WMS-JD" vtype="required" /> <span class="nt form-remark" style="color:red"> * WMS物流公司编码</span>
+    </td>
+</tr>
+<tr>
+    <th>配置值：</th>
+    <td>
+        <input type="text" name="kvalue" value="<{$kvalue}>" id="kvalue" size="32" maxlength="20" onkeyup="value=value.replace(/[^A-Za-z0-9_#\/-]/ig,'')" placeholder="例如：OMS-SF、OMS-ZTO、OMS-JD" vtype="required" /> <span class="nt form-remark" style="color:red"> * OMS物流公司编码</span>
+    </td>
+</tr>
+<tr id="tmyp_tip">
+    <th></th>
+    <td style="color:#999;font-size:12px;">
+        提示：当配置【WMS物流公司编码映射】时，优先使用这里的WMS物流映射；<br>如果没有配置，则使用【第三方仓储管理-->WMS管理-->物流公司编码配置】。
+    </td>
+</tr>

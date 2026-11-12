@@ -52,7 +52,7 @@ $db['iso'] = array(
             'in_list'         => true,
             'default_in_list' => true,
             'searchtype'      => 'has',
-            'filtertype'      => 'yes',
+            'filtertype' => 'normal',
             'filterdefault'   => true,
         ),
         'iso_bn'           => array(
@@ -384,7 +384,7 @@ $db['iso'] = array(
             'in_list'         => true,
             'default_in_list' => false,
             'searchtype'      => 'has',
-            'filtertype'      => 'yes',
+            'filtertype' => 'normal',
             'filterdefault'   => true,
         ),
         'at_time'          => array(
@@ -432,7 +432,7 @@ $db['iso'] = array(
             'width'           => 75,
             'required'        => true,
             'label'           => 'WMS同步状态',
-            'filtertype'      => 'yes',
+            'filtertype' => 'normal',
             'filterdefault'   => true,
             'in_list'         => true,
             'default_in_list' => false,

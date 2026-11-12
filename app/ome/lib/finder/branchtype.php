@@ -16,6 +16,13 @@
  */
 
 class ome_finder_branchtype{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     var $addon_cols = 'source';
     public $column_edit       = "操作";

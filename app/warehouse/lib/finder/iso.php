@@ -16,6 +16,13 @@
  */
 
 class warehouse_finder_iso{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     
     var $addon_cols = 'iso_status,iso_id,check_status,defective_status';
     

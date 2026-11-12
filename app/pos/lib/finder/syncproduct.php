@@ -17,6 +17,13 @@
 
 class pos_finder_syncproduct
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
    var $addon_cols ='bm_id';
     var $column_skunum = 'SKU统计';

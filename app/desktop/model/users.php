@@ -348,9 +348,22 @@ class desktop_mdl_users extends dbeav_model
 
         if (!$is_encrypt) return $col;
 
-        $id = $row['user_id'];
+
+
+        $id = $row['user_id'] ?? $this->pkvalue;
         $encryptCol = kernel::single('ome_view_helper2')->modifier_ciphertext($col,'member','name');
 
+        // Vue API 模式：返回结构化数据，不用 HTML
+        // user_id 由 Vue 直接从 row.user_id 取，不需要放在这里返回
+        if ($this->vue_mode) {
+            return [
+                '_sensitive' => true,
+                'masked'     => $encryptCol,
+                'field'      => 'mobile',
+            ];
+        }
+
+        // Legacy HTML 模式
         $return =<<<HTML
 <a class="data-hide" href="javascript:void(0);" onclick="Ex_Loader('security',function(){new Security({url:'index.php?app=desktop&ctl=users&act=showSensitiveData&p[0]={$id}',clickElement:\$(event.target)}).desHtml(\$(event.target).getNext()); });"></a><span><span sensitive-field="mobile">{$encryptCol}</span></span>
 HTML;
@@ -367,9 +380,22 @@ HTML;
 
         if (!$is_encrypt) return $col;
 
-        $id = $row['user_id'];
+
+
+        $id = $row['user_id'] ?? $this->pkvalue;
         $encryptCol = kernel::single('ome_view_helper2')->modifier_ciphertext($col,'member','name');
 
+        // Vue API 模式：返回结构化数据，不用 HTML
+        // user_id 由 Vue 直接从 row.user_id 取，不需要放在这里返回
+        if ($this->vue_mode) {
+            return [
+                '_sensitive' => true,
+                'masked'     => $encryptCol,
+                'field'      => 'name',
+            ];
+        }
+
+        // Legacy HTML 模式
         $return =<<<HTML
 <a class="data-hide" href="javascript:void(0);" onclick="Ex_Loader('security',function(){new Security({url:'index.php?app=desktop&ctl=users&act=showSensitiveData&p[0]={$id}',clickElement:\$(event.target)}).desHtml(\$(event.target).getNext()); });"></a><span><span sensitive-field="name">{$encryptCol}</span></span>
 HTML;
@@ -384,8 +410,19 @@ HTML;
 
         if (!$is_encrypt) return $col;
 
+        // $row['user_id'] 在 modifier 运行前仍是数据库原始值（数字 ID）
         $id = $row['user_id'];
         $encryptCol = kernel::single('ome_view_helper2')->modifier_ciphertext($col,'member','name');
+
+        // Vue API 模式：返回结构化数据，不用 HTML
+        if ($this->vue_mode) {
+            // Vue 需要：1) 显示用 masked login_name；2) 原始 ID 用于查看原文
+            return [
+                '_sensitive' => true,
+                'masked'     => $encryptCol,
+                'field'      => 'name', // login_name 列在 pam_account 表
+            ];
+        }
 
         $return =<<<HTML
 <a class="data-hide" href="javascript:void(0);" onclick="Ex_Loader('security',function(){new Security({url:'index.php?app=desktop&ctl=users&act=showSensitiveData&p[0]={$id}',clickElement:\$(event.target)}).desHtml(\$(event.target).getNext()); });"></a><span><span sensitive-field="login_name">{$encryptCol}</span></span>
@@ -450,11 +487,11 @@ HTML;
 
     }
 
-    public function getTemplateColumn()
+    public function getTemplateColumn($convertEncoding = true)
     {
         $title = array();
         foreach (array_keys($this->templateColumn) as $v) {
-            $title[] = kernel::single('base_charset')->utf2local($v);
+            $title[] = $convertEncoding ? kernel::single('base_charset')->utf2local($v) : $v;
         }
         return $title;
     }

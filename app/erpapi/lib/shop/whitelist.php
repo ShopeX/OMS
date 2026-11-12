@@ -395,6 +395,8 @@ class erpapi_shop_whitelist {
         SHOP_RESHIPPING_REFUSEREASON_GET, //查询拒绝原因列表
         STORE_VIRTUAL_NUMBER_GROUP_UPDATE,
         SHOP_SUPPLIER_PRODUCTS_FIND, //供应商商品查询
+        SHOP_UPDATE_TRADE_MEMO_RPC, // 更新订单备注
+        SHOP_EXCHANGE_CONSIGNGOODS_REFUSE, // 卖家拒绝发新品
     );
 
     /**
@@ -471,6 +473,7 @@ class erpapi_shop_whitelist {
         SHOP_ORDER_SPLIT,
         SHOP_REFUND_NEGOTIATION_GET,
         STORE_JD_NPS_TOKEN,
+        SHOP_USER_PIN2XID,
          SHOP_JDLVMI_GET_ITEMS_ALL_RPC,
         SHOP_JDLVMI_ITEMS_PRODUCT_GET,
         SHOP_JDVMI_UPDATE_ITEMS_QUANTITY_LIST_RPC,
@@ -485,6 +488,7 @@ class erpapi_shop_whitelist {
         SHOP_BILL_PAYABLE_SETTLEMENT_QUERY,
         SHOP_LOGISTICS_CONSIGN_RESEND,
         STORE_VIRTUAL_NUMBER_GROUP_UPDATE,
+        SHOP_UPDATE_TRADE_MEMO_RPC, // 更新订单备注
     );
 
     /**
@@ -719,6 +723,7 @@ class erpapi_shop_whitelist {
             SHOP_GET_ADDRESS_PROVINCE,
             STORE_ADDRESS_GETBY_PROVINCE,
             SHOP_ISV_PAGE_CODE,
+            SHOP_UPDATE_TRADE_MEMO_RPC, // 更新订单备注
     );
 
    private $weimob = array(
@@ -849,6 +854,7 @@ class erpapi_shop_whitelist {
         SHOP_EXCHANGE_CONFIRMCONSIGN,
         STORE_STANDARD_XHS_TEMPLATE,
         STORE_STANDARD_XHS_SEARCH,
+        SHOP_UPDATE_TRADE_MEMO_RPC, // 更新订单备注
     );
     
     //顺逛
@@ -1043,6 +1049,8 @@ class erpapi_shop_whitelist {
         SHOP_RESHIPPING_REFUSE, //拒绝补寄申请
         SHOP_RESHIPPING_CONSIGNGOODS, //补寄发货
         SHOP_RESHIPPING_REFUSEREASON_GET, //查询拒绝原因列表
+        SHOP_GET_PRODUCT_SUGGESTION_LIST, // 查询诊断商品列表及其处理建议
+        SHOP_UPDATE_TRADE_MEMO_RPC, // 更新订单备注
     );
     
     private $yangsc = array(
@@ -1106,6 +1114,7 @@ class erpapi_shop_whitelist {
         SHOP_REFUSE_CHANGE_I_GOOD_TMALL,
         STORE_KS_SUB_RETURNINFO,
         SHOP_CONFIRM_ADDRESS_MODIFY,
+        SHOP_UPDATE_TRADE_MEMO_RPC, // 更新订单备注
     );
 
     private $yunji4fx = array(

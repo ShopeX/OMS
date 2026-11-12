@@ -1,21 +1,11 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
+ * ShopEx licence
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
  */
-
-
+ 
 class desktop_system_backup {
     private $header = "<?php exit; ?>";  //追加头文件内容
     private $tar_ext = '.zip';  //下载扩展名
@@ -25,28 +15,15 @@ class desktop_system_backup {
     
     
     
-    /**
-     * __construct
-     * @return mixed 返回值
-     */
     public function __construct() {
         $this->backdir = DATA_DIR.'/backup';
     }
     
-    /**
-     * 获取
-     * @param mixed $var var
-     * @return mixed 返回结果
-     */
     public function get($var='') {
         if(!$var) return false;
         return $this->$var;
     }
     
-    /**
-     * 获取List
-     * @return mixed 返回结果
-     */
     public function getList(){
 
         $dir = $this->backdir;
@@ -98,11 +75,6 @@ class desktop_system_backup {
         return $return;
     }
     
-    /**
-     * uninstall_backup
-     * @param mixed $app app
-     * @return mixed 返回值
-     */
     public function uninstall_backup( $app ) {
         $oMysqlDump = kernel::single("desktop_system_mysqldumper");
         $backdir = $this->backdir;
@@ -113,12 +85,6 @@ class desktop_system_backup {
     }
     
     
-    /**
-     * start_backup_sdf
-     * @param mixed $params 参数
-     * @param mixed $nexturl nexturl
-     * @return mixed 返回值
-     */
     public function start_backup_sdf(&$params,&$nexturl){ 
         set_time_limit(0);
         header("Content-type:text/html;charset=utf-8");
@@ -207,11 +173,6 @@ class desktop_system_backup {
     
     
 
-    /**
-     * download
-     * @param mixed $file file
-     * @return mixed 返回值
-     */
     public function download($file) {
         $dir = DATA_DIR.'/backup/';
         $file = str_replace($this->tar_ext, '.php', $file);
@@ -253,23 +214,96 @@ class desktop_system_backup {
     
     
     
+    /**
+     * Whether a backup file name is confined to DATA_DIR/backup (CNVD-2026-43974).
+     *
+     * @param string $name
+     * @return bool
+     */
+    public function isSafeBackupName($name){
+        if(!is_string($name) || $name === ''){
+            return false;
+        }
+        if(strpos($name, '..') !== false || strpos($name, '/') !== false || strpos($name, '\\') !== false){
+            return false;
+        }
+        if($name !== basename($name)){
+            return false;
+        }
+        return (bool) preg_match('/^[A-Za-z0-9_.-]+$/', $name);
+    }
+
+    /**
+     * Resolve a path under the backup directory; reject traversal.
+     *
+     * @param string $relativeName
+     * @return string|false absolute path when safe
+     */
+    private function resolveBackupPath($relativeName){
+        if(!$this->isSafeBackupName($relativeName)){
+            return false;
+        }
+        $base = realpath($this->backdir);
+        if($base === false){
+            if(!is_dir($this->backdir)){
+                @mkdir($this->backdir, 0755, true);
+            }
+            $base = realpath($this->backdir);
+        }
+        if($base === false){
+            return false;
+        }
+        $candidate = $this->backdir . '/' . $relativeName;
+        $real = realpath($candidate);
+        // File may not exist yet for convert output; validate dirname + basename.
+        if($real === false){
+            $parent = realpath(dirname($candidate));
+            if($parent === false || strpos($parent, $base) !== 0){
+                return false;
+            }
+            if(basename($candidate) !== $relativeName && basename($candidate) !== basename($relativeName)){
+                // still require leaf name has no traversal
+                if(!$this->isSafeBackupName(basename($candidate))){
+                    return false;
+                }
+            }
+            return $candidate;
+        }
+        if(strpos($real, $base) !== 0){
+            return false;
+        }
+        return $real;
+    }
+
     function recover($sTgz,&$vols,$fileid,&$pre_app){
+        if(!$this->isSafeBackupName($sTgz)){
+            return false;
+        }
         $prefix = substr($sTgz,0,23);
         $sTmpDir = DATA_DIR.'/tmp/'.md5($sTgz).'/';
         $sTgz = str_replace($this->tar_ext, '.php', $sTgz);
+        if(!$this->isSafeBackupName($sTgz)){
+            return false;
+        }
         
         
         if($fileid==1){
             $vols = 0;
             $rTar = kernel::single("base_tar");
             is_dir($sTmpDir) or mkdir($sTmpDir, 0755, true);
-            $file = DATA_DIR.'/backup/'.$sTgz;
+            $file = $this->resolveBackupPath($sTgz);
+            if($file === false || !is_file($file)){
+                return false;
+            }
             
             $size = filesize($file);
             $size = ceil($size/1024/1024) + 128;
             ini_set("memory_limit", "{$size}M");
             
             $newFile = $this->convertFile(DATA_DIR.'/backup/', $sTgz, $this->tar_ext);
+            if($newFile === false){
+                return false;
+            }
 
             if($rTar->openTAR($newFile, null)){
                 
@@ -463,12 +497,24 @@ class desktop_system_backup {
     }
 
 
-    /**
-     * 文件类型转换
-     */
+   /**
+    * 文件类型转换
+    */
     private function convertFile($dir, $file, $type='.php') {
+        // CNVD-2026-43974: only convert files inside the backup directory.
+        if(!$this->isSafeBackupName($file)){
+            return false;
+        }
         $dir = rtrim($dir, '/') . '/';
+        $backupRoot = realpath($this->backdir);
+        $dirReal = realpath(rtrim($dir, '/'));
+        if($backupRoot === false || $dirReal === false || strpos($dirReal, $backupRoot) !== 0){
+            return false;
+        }
         $new_file_name = substr($file, 0, -(strpos(strrev($file), '.')+1)) . $type;
+        if(!$this->isSafeBackupName($new_file_name)){
+            return false;
+        }
         $newFile = $dir . $new_file_name;
         
         $flag = true;
@@ -487,12 +533,26 @@ class desktop_system_backup {
             return $newFile;
         }
 
+        $srcPath = $dir . $file;
+        $srcReal = realpath($srcPath);
+        if($srcReal === false || strpos($srcReal, $backupRoot) !== 0){
+            return false;
+        }
+
         $handle = fopen($newFile, 'x');
+        if($handle === false){
+            return false;
+        }
         
         if($flag) {
             fwrite($handle, $this->header);
         }
-        $src = fopen($dir . $file, 'r');
+        $src = fopen($srcPath, 'r');
+        if($src === false){
+            fclose($handle);
+            @unlink($newFile);
+            return false;
+        }
 
         while (!feof($src)) {
             $contents = fgets($src);

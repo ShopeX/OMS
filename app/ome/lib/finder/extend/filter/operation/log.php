@@ -20,6 +20,13 @@
  *
  */
 class ome_finder_extend_filter_operation_log {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function get_extend_colums(){
         $usersModel = app::get('desktop')->model('users');
         $result = $usersModel->getList('user_id,name');
@@ -57,7 +64,10 @@ class ome_finder_extend_filter_operation_log {
                     'in_list' => true,
                     'default_in_list' => true,
                     'filterdefault' => true,
-                    'filtertype' => 'time',
+                    // Vue 模式(desktop_finder_vue_context:526-529 会先 setVueMode(true))返回 date:
+                    // 前端渲染单日期选择器并以裸键 st_time 直传,由 ome_mdl_operation_log::_filter()
+                    // 翻译为 operate_time|bthan;legacy 面板保持 time 口径不变
+                    'filtertype' => $this->vue_mode ? 'date' : 'time',
                     'width' => 140,
                     'panel_id' => 'ome_operation_log_finder_top',
                 ),
@@ -68,7 +78,8 @@ class ome_finder_extend_filter_operation_log {
                     'in_list' => true,
                     'default_in_list' => true,
                     'filterdefault' => true,
-                    'filtertype' => 'time',
+                    // 同 st_time:Vue 裸键 et_time 直传,模型 _filter() +1 天实现含当天;legacy 保持 time
+                    'filtertype' => $this->vue_mode ? 'date' : 'time',
                     'width' => 140,
                     'panel_id' => 'ome_operation_log_finder_top',
                 ),

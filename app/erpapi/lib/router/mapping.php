@@ -50,6 +50,7 @@ class erpapi_router_mapping
         'ome.order.express'              => 'shop.express.assign', //指定快递
         'ome.order.getcorp'              => 'shop.express.getcorp', //指定快递可用物流公司
         'ome.exchange.add'               => 'shop.exchange.add',
+        'ome.exchange.consigngoods.refuse' => 'shop.exchange.consigngoods_refuse', // 换货拒绝发出新品
         'ome.xc.order.add'               => 'shop.branch.wait',
         'system.msg.notify'              => 'system.msg.notify',
         'ome.goods.add'                 => 'shop.goods.add',

@@ -16,6 +16,13 @@
  */
 
 class dchain_finder_branch{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = "channel_id,config,node_id,node_type";
     
     public $column_edit = "操作";

@@ -17,5 +17,12 @@
 
 class brush_finder_orders extends ome_finder_orders
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     
 }

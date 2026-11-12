@@ -18,6 +18,18 @@
 class omeauto_finder_order_type {
 
     static $oRlue = null;
+    var $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+        // API ctl is api_order_type (not order_type/autobranchset); restore labels blanked in __construct.
+        if ($vue) {
+            $this->column_autoconfirm = '自动审单规则';
+            $this->column_autodispatch = '自动分配规则';
+            $this->column_autobranch = '发货仓库';
+        }
+    }
     function __construct() {
         if (self::$oRlue === null) {
             $rows = app::get('omeauto')->model('autoconfirm')->getList('oid,name,disabled');//, array('disabled' => 'false'));
@@ -40,6 +52,8 @@ class omeauto_finder_order_type {
                 'disabled' => 'false'
             );
         }
+        // Legacy HTML pages share this finder; blank unrelated column titles by ctl.
+        // Vue/API restores labels via setVueMode(true).
         if($_GET['ctl'] != 'order_type') {
             $this->column_autodispatch = '';
             $this->column_autoconfirm = '';
@@ -54,35 +68,64 @@ class omeauto_finder_order_type {
     var $column_confirm = '操作';
     var $column_confirm_width = "90";
     function column_confirm($row) {
-        $btn = '';
-        if(in_array($row['_0_group_type'], array('order','branch','hold'))){
-            if ($row['_0_disabled'] == 'true') { 
-                $btn .= "<a href='javascript:void(0);' target='download' onclick='if(confirm(\"你确定要启用指定规则的使用吗？？？\\n\\n注意：你还可以随时暂停指定规则。\")) {href=\"index.php?app=omeauto&ctl=order_type&act=setStatus&p[0]={$row['tid']}&p[1]=true&finder_id={$_GET['_finder']['finder_id']}\";}'>启用</a>"; 
-            } else {
-                $btn .= "<a href='javascript:void(0);' target='download' onclick='if(confirm(\"你确定要暂时停止指定规则的使用吗？？？\\n\\n注意：你还可以随时启用指定规则。\")) {href=\"index.php?app=omeauto&ctl=order_type&act=setStatus&p[0]={$row['tid']}&p[1]=false&finder_id={$_GET['_finder']['finder_id']}\";}'>暂停</a>"; 
-                //$btn .= "<a href='javascript:void(0);' onclick='new ConfrimBox(\"你确定要暂时停止指定规则的使用吗？？？\\n\\n注意：你还可以随时启用指定规则。\", {url:\"index.php?app=omeauto&ctl=autodispatch&act=switch&p[0]={$row[oid]}\", method:\"get\", onComplete:function(data){json=JSON.decode(data);if(json.flag==true){ window.location.reload();}else{alert(json.msg);}} }).show();'>暂停</a>";
-            }
-            
-            $btn .= "&nbsp;<a href='javascript:voide(0);' onclick=\"new Dialog('index.php?app=omeauto&ctl=order_type&act=edit&p[0]={$row['tid']}&finder_id={$_GET['_finder']['finder_id']}',{width:760,height:480,title:'修改分组规则'}); \">修改</a>";
-            if ($row['_0_group_type']=='branch') {
-                 $btn .= "&nbsp;<a href='javascript:void(0);' onclick=\"new Dialog('index.php?app=omeauto&ctl=autobranchset&act=setBind&p[0]={$row['tid']}&finder_id={$_GET['_finder']['finder_id']}',{width:760,height:500,title:'设置仓库'}); \">设置</a>";
-            } else if ($row['_0_group_type']=='hold') {
-                 $btn .= "&nbsp;<a href='javascript:void(0);' onclick=\"new Dialog('index.php?app=omeauto&ctl=autohold&act=set&p[0]={$row['tid']}&finder_id={$_GET['_finder']['finder_id']}',{width:550,height:200,title:'设置hold单'}); \">设置</a>";
-            }
-        } else if($row['_0_group_type']=='sms'){
-            if ($row['_0_disabled'] == 'true') { 
-                $btn .= "&nbsp;<a href='javascript:void(0);' target='download' onclick='if(confirm(\"你确定要启用指定规则的使用吗？？？\\n\\n注意：你还可以随时暂停指定规则。\")) {href=\"index.php?app=taoexlib&ctl=admin_sms_rule&act=setStatus&p[0]={$row['tid']}&p[1]=true&finder_id={$_GET['_finder']['finder_id']}\";}'>启用</a>"; 
-            } else {
-                $btn .= "&nbsp;<a href='javascript:void(0);' target='download' onclick='if(confirm(\"你确定要暂时停止指定规则的使用吗？？？\\n\\n注意：你还可以随时启用指定规则。\")) {href=\"index.php?app=taoexlib&ctl=admin_sms_rule&act=setStatus&p[0]={$row['tid']}&p[1]=false&finder_id={$_GET['_finder']['finder_id']}\";}'>暂停</a>"; 
-                //$btn .= "<a href='javascript:void(0);' onclick='new ConfrimBox(\"你确定要暂时停止指定规则的使用吗？？？\\n\\n注意：你还可以随时启用指定规则。\", {url:\"index.php?app=omeauto&ctl=autodispatch&act=switch&p[0]={$row[oid]}\", method:\"get\", onComplete:function(data){json=JSON.decode(data);if(json.flag==true){ window.location.reload();}else{alert(json.msg);}} }).show();'>暂停</a>";
-            }
-            
-            $btn .= "&nbsp;|&nbsp;<a href='javascript:voide(0);' onclick=\"new Dialog('index.php?app=taoexlib&ctl=admin_sms_rule&act=edit_rule&p[0]={$row['tid']}&finder_id={$_GET['_finder']['finder_id']}',{width:760,height:480,title:'修改分组规则'}); \">修改</a>";
-
-        }
+        $tid       = $row['tid'];
+        $groupType = $row['_0_group_type'];
+        $disabled  = ($row['_0_disabled'] == 'true');
+        $finderId  = $_GET['_finder']['finder_id'] ?? '';
+        $finder_vid = $_GET['_finder']['finder_vid'];
         
+        // Define action configs once (same data for both Vue and HTML modes)
+        $actions = [];
+        if (in_array($groupType, ['order', 'branch', 'hold'])) {
+            $actions[] = ['key' => 'toggle', 'label' => $disabled ? '启用' : '暂停', 'action' => 'setStatus',     'params' => [$tid, $disabled ? 'false' : 'true']];
+            $actions[] = ['key' => 'edit',   'label' => '修改',           'action' => 'edit',          'params' => [$tid]];
+            if ($groupType === 'branch') {
+                $actions[] = ['key' => 'set', 'label' => '设置', 'action' => 'autobranchset', 'params' => [$tid]];
+            } elseif ($groupType === 'hold') {
+                $actions[] = ['key' => 'set', 'label' => '设置', 'action' => 'autohold',      'params' => [$tid]];
+            }
+        } elseif ($groupType === 'sms') {
+            $actions[] = ['key' => 'toggle', 'label' => $disabled ? '启用' : '暂停', 'action' => 'sms_setStatus', 'params' => [$tid, $disabled ? 'false' : 'true']];
+            $actions[] = ['key' => 'edit',   'label' => '修改',                    'action' => 'sms_edit',     'params' => [$tid]];
+        }
 
-        return $btn;
+        if ($this->vue_mode) {
+            return $actions;
+        }
+
+        // Legacy HTML mode — render each action config to HTML
+        $html = '';
+        foreach ($actions as $a) {
+            if ($a['key'] === 'toggle') {
+                $act = ($a['action'] === 'sms_setStatus')
+                    ? "index.php?app=taoexlib&ctl=admin_sms_rule&act=setStatus&finder_id=".$finderId."&finder_vid=".$finder_vid
+                    : "index.php?app=omeauto&ctl=order_type&act=setStatus&finder_id=".$finderId."&finder_vid=".$finder_vid;
+                $url = "{$act}&p[0]={$tid}&p[1]=" . ($disabled ? 'true' : 'false') . "&finder_id={$finderId}";
+                $label = $a['label'];
+                $confirm = $disabled
+                    ? "你确定要启用指定规则的使用吗？？？\\n\\n注意：你还可以随时暂停指定规则。"
+                    : "你确定要暂时停止指定规则的使用吗？？？\\n\\n注意：你还可以随时启用指定规则。";
+                $html .= "<a href='javascript:void(0);' target='download' onclick='if(confirm(\"{$confirm}\")) {href=\"{$url}\";}'>{$label}</a>&nbsp;";
+            } elseif ($a['key'] === 'edit') {
+                $act = ($a['action'] === 'sms_edit')
+                    ? "index.php?app=taoexlib&ctl=admin_sms_rule&act=edit_rule"
+                    : "index.php?app=omeauto&ctl=order_type&act=edit";
+                
+                $title = ($a['action'] === 'sms_edit') ? '修改分组规则' : '修改分组规则';
+                $width = 760; $height = 480;
+                $sep = ($groupType === 'sms') ? '&nbsp;|&nbsp;' : '&nbsp;';
+                $html .= "{$sep}<a href='javascript:void(0);' onclick=\"new Dialog('{$act}&p[0]={$tid}&finder_id={$finderId}',{width:{$width},height:{$height},title:'{$title}'}); \">修改</a>";
+            } elseif ($a['key'] === 'set') {
+                if ($groupType === 'branch') {
+                    $dlgUrl = "index.php?app=omeauto&ctl=autobranchset&act=setBind&p[0]={$tid}&finder_id={$finderId}";
+                    $html .= "&nbsp;<a href='javascript:void(0);' onclick=\"new Dialog('{$dlgUrl}',{width:760,height:500,title:'设置仓库'}); \">设置</a>";
+                } elseif ($groupType === 'hold') {
+                    $dlgUrl = "index.php?app=omeauto&ctl=autohold&act=set&p[0]={$tid}&finder_id={$finderId}";
+                    $html .= "&nbsp;<a href='javascript:void(0);' onclick=\"new Dialog('{$dlgUrl}',{width:550,height:200,title:'设置hold单'}); \">设置</a>";
+                }
+            }
+        }
+        return $html;
     }
     function getsampleno($tid){
         $sr         = app::get('taoexlib')->model('sms_bind');
@@ -94,52 +137,95 @@ class omeauto_finder_order_type {
     var $column_autoconfirm = '自动审单规则';
     var $column_autoconfirm_width = "150";
     function column_autoconfirm($row) {
-        
         $oid = intval($row['_0_oid']);
-        if ( $oid > 0) {
-            if (self::$oRlue['oc'][$oid]['disabled'] == 'false') {
-                return "<a href='javascript:voide(0);' onclick=\"new Dialog('index.php?app=omeauto&ctl=autoconfirm&act=edit&p[0]={$oid}&finder_id={$_GET['_finder']['finder_id']}',{width:750,height:480,title:'修改审单规则'}); \">".self::$oRlue['oc'][$oid]['name']."</a>";
-            } else {
-                return "<span style='color:#DDDDDD;' title='该规则已经暂停使用'>(".self::$oRlue['oc'][$oid]['name'].")</span>";
-            }
-        } else {
-            
-            return "";
+        $finderId = $_GET['_finder']['finder_id'] ?? '';
+
+        if ($oid <= 0) {
+            return $this->vue_mode ? null : '';
         }
+
+        $rule = self::$oRlue['oc'][$oid] ?? null;
+        if (!$rule) {
+            return $this->vue_mode ? null : '';
+        }
+
+        $disabled = ($rule['disabled'] == 'true');
+        $link = "index.php?app=omeauto&ctl=autoconfirm&act=edit&p[0]={$oid}&finder_id={$finderId}";
+
+        if ($this->vue_mode) {
+            return [
+                'label' => $rule['name'],
+                'link'  => $link,
+                'disabled' => $disabled,
+            ];
+        }
+
+        if ($disabled) {
+            return "<span style='color:#DDDDDD;' title='该规则已经暂停使用'>(".$rule['name'].")</span>";
+        }
+        return "<a href='javascript:void(0);' onclick=\"new Dialog('{$link}',{width:750,height:480,title:'修改审单规则'}); \">".$rule['name']."</a>";
     }
     
     var $column_autodispatch = '自动分配规则';
     var $column_autodispatch_width = "150";
     function column_autodispatch($row) {
-        
         $did = intval($row['_0_did']);
-        if ( $did > 0) {
-            if (self::$oRlue['od'][$did]['disabled'] == 'false') {
-                return "<a href='javascript:voide(0);' onclick=\"new Dialog('index.php?app=omeauto&ctl=autodispatch&act=edit&p[0]={$did}&finder_id={$_GET['_finder']['finder_id']}',{width:760,height:400,title:'修改自动分派规则'}); \">".self::$oRlue['od'][$did]['name']."</a>";
-            } else {
-                return "<span style='color:#DDDDDD;' title='该规则已经暂停使用'>(".self::$oRlue['od'][$did]['name'].")</span>";
-            }
-        } else {
-            
-            return "";
+        $finderId = $_GET['_finder']['finder_id'] ?? '';
+
+        if ($did <= 0) {
+            return $this->vue_mode ? null : '';
         }
+
+        $rule = self::$oRlue['od'][$did] ?? null;
+        if (!$rule) {
+            return $this->vue_mode ? null : '';
+        }
+
+        $disabled = ($rule['disabled'] == 'true');
+        $link = "index.php?app=omeauto&ctl=autodispatch&act=edit&p[0]={$did}&finder_id={$finderId}";
+
+        if ($this->vue_mode) {
+            return [
+                'label' => $rule['name'],
+                'link'  => $link,
+                'disabled' => $disabled,
+            ];
+        }
+
+        if ($disabled) {
+            return "<span style='color:#DDDDDD;' title='该规则已经暂停使用'>(".$rule['name'].")</span>";
+        }
+        return "<a href='javascript:void(0);' onclick=\"new Dialog('{$link}',{width:760,height:400,title:'修改自动分派规则'}); \">".$rule['name']."</a>";
     }
     
     var $column_autobranch = '发货仓库';
     var $column_autobranch_width = "150";
     function column_autobranch($row) {
-
         $bid = intval($row['_0_bid']);
-        if ( $bid != 0) {
-            if (self::$oRlue['bd'][$bid]['disabled'] == 'false') {
-                return "".self::$oRlue['bd'][$bid]['name']."";
-            } else {
-                return "<span style='color:#DDDDDD;' title='该仓库已经暂停使用'>(".self::$oRlue['bd'][$bid]['name'].")</span>";
-            }
-        } else {
-            
-            return "";
+        $finderId = $_GET['_finder']['finder_id'] ?? '';
+
+        if ($bid == 0) {
+            return $this->vue_mode ? null : '';
         }
+
+        $branch = self::$oRlue['bd'][$bid] ?? null;
+        if (!$branch) {
+            return $this->vue_mode ? null : '';
+        }
+
+        $disabled = ($branch['disabled'] == 'true');
+
+        if ($this->vue_mode) {
+            return [
+                'label' => $branch['name'],
+                'disabled' => $disabled,
+            ];
+        }
+
+        if ($disabled) {
+            return "<span style='color:#DDDDDD;' title='该仓库已经暂停使用'>(".$branch['name'].")</span>";
+        }
+        return $branch['name'];
     }
     
     var $column_memo = '简单说明';
@@ -152,27 +238,38 @@ class omeauto_finder_order_type {
     var $column_content = '类型内容';
     var $column_content_width = "250";
     function column_content($row) {
-        
-        $html = '';
+        $items = [];
         if (!empty($row['_0_config'])) {
-            
-            foreach ($row['_0_config'] as $row) {
-                
-                $role = json_decode($row, true);
-                $html .= $role['caption'] . "<br/>";
+            foreach ($row['_0_config'] as $cfg) {
+                $role = json_decode($cfg, true);
+                if (!empty($role['caption'])) {
+                    $items[] = $role['caption'];
+                }
             }
         }
-
-        return "<div onmouseover='bindFinderColTip(event)' rel='{$html}'>" . str_replace("<br/>", "&nbsp;;&nbsp;", $html) . "<div>";
+        $text = implode(' ; ', $items);
+        if ($this->vue_mode) {
+            return $text;
+        }
+        return "<div onmouseover='bindFinderColTip(event)' rel='{$text}'>" . str_replace(';', '&nbsp;;&nbsp;', $text) . "<div>";
     }
     
     var $column_disabled = '是否启用';
     var $column_disabled_width = "80";
     function column_disabled($row) {
-        if ($row['_0_disabled'] == 'true') {
-            return "<span style='color:red;'>停用</span>";
-        } else {
-           return "<span style='color:green;'>启用</span>"; 
+        $disabled = ($row['_0_disabled'] == 'true');
+
+        // vue_mode: return {label, value} array so Vue slot receives a structured object
+        if ($this->vue_mode) {
+            return [
+                'label' => $disabled ? '停用' : '启用',
+                'value' => $disabled ? '1' : '0',
+            ];
         }
+
+        if ($disabled) {
+            return "<span style='color:red;'>停用</span>";
+        }
+        return "<span style='color:green;'>启用</span>";
     }
 }

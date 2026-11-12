@@ -281,6 +281,28 @@ class erpapi_shop_matrix_360buy_response_order extends erpapi_shop_response_orde
             $orderExt = json_decode($orderExt, 1);
         }
         
+        if (!is_array($orderExt)) {
+            $orderExt = [];
+        }
+        
+        // 京配订单：指定只能使用京东快递发货;
+        //@todo：京东平台会推送（idSopShipmentType = 68），矩阵推送给OMS为（aerfaTime.idSopShipmentType = 68）；
+        $sopType = null;
+        if (isset($orderExt['idSopShipmentType'])) {
+            $sopType = $orderExt['idSopShipmentType'];
+        } elseif (isset($orderExt['aerfaTime.idSopShipmentType'])) {
+            $sopType = $orderExt['aerfaTime.idSopShipmentType'];
+        } elseif (isset($this->_ordersdf['extend_field']['idSopShipmentType'])) {
+            $sopType = $this->_ordersdf['extend_field']['idSopShipmentType'];
+        }
+        
+        if ((string)$sopType === '68') {
+            $this->_ordersdf['__jd_dispatch_order'] = true;
+            
+            // 指定物流公司编码
+            $this->_ordersdf['assign_express_code'] = 'JD';
+        }
+        
         $paymentDetailList = [];
         if($this->_ordersdf['extend_field']['version'] >= 3){ 
             if($orderExt

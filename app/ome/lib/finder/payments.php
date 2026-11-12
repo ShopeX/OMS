@@ -16,6 +16,13 @@
  */
 
 class ome_finder_payments{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $detail_basic = "支付单详情";
     
     function detail_basic($payment_id){
@@ -49,6 +56,11 @@ class ome_finder_payments{
         
         $render->pagedata['detail'] = $pay_detail;
         $render->pagedata['orderinfo'] = $orderinfo;
+
+        if ($this->vue_mode) {
+            return ['detail' => $pay_detail, 'orderinfo' => $orderinfo];
+        }
+
         return $render->fetch('admin/payment/detail.html');
     }
     var $addon_cols = 'archive,order_id';

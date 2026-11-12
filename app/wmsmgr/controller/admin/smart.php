@@ -133,107 +133,18 @@ class wmsmgr_ctl_admin_smart extends desktop_controller
 
     function savesmart()
     {
-        $smartMdl = $this->app->model("wms");
-        
+        // 写实现唯一一份在 wmsmgr_capability_smart（Vue / legacy 两入口共用）；
+        // legacy 事务由 begin()/end() 托管 ⇒ ownTransaction=false
         $url = 'index.php?app=wmsmgr&ctl=admin_smart&act=index';
         $this->begin($url);
-        
-        //post
-        $postData = array(
-            'channel_type' => $this->_channel_type,
-            'channel_bn' => $_POST['wms']['channel_bn'],
-            'channel_name' => $_POST['wms']['channel_name'],
-            'adapter' => $_POST['wms']['adapter'],
-            'node_type' => $_POST['config']['node_type'],
-        );
-        
-        //check
-        if(empty($postData['channel_bn'])){
-            $this->end(false, '请填写系统编码!');
+
+        try {
+            (new wmsmgr_capability_smart())->saveSmart($_POST, false);
+        } catch (Throwable $exception) {
+            $this->end(false, $exception->getMessage() !== '' ? $exception->getMessage() : '保存失败');
         }
-        
-        if(empty($postData['channel_name'])){
-            $this->end(false, '请填写系统名称!');
-        }
-        
-        if(empty($postData['adapter'])){
-            $this->end(false, '请选择系统适配器!');
-        }
-        
-        if(empty($postData['node_type'])){
-            $this->end(false, '请选择授权平台!');
-        }
-        
-        //add OR update
-        $channelInfo = array();
-        $filter = array('channel_bn'=>$postData['channel_bn']);
-        if($_POST['wms']['channel_id']){
-            $channelInfo = $smartMdl->dump(array('channel_id'=>$_POST['wms']['channel_id']), '*');
-            if($channelInfo){
-                $filter['channel_id|noequal'] = $channelInfo['channel_id'];
-            }
-        }
-        
-        //判断数据是否已经存在
-        $channelRow = $smartMdl->dump($filter, '*');
-        if($channelRow){
-            $this->end(false, '系统编码已经存在,不能重复!');
-        }
-        
-        //check
-        if ($channelInfo['node_id'] && $_POST['adapter'] != $_POST['wms']['adapter']) {
-            $this->end(false, '绑定关系已存在情况下：不可切换仓储适配器!');
-        }
-        
-        switch ($_POST['wms']['adapter']) {
-            case 'openapiwms':
-                $postData['node_id'] = sprintf('o%u', crc32(utils::array_md5($_POST['config']) . kernel::base_url()));
-                
-                //检验node_id是否存在
-                $filter = array('node_id'=>$postData['node_id']);
-                if ($channelInfo) {
-                    $filter['channel_id|noequal'] = $channelInfo['channel_id'];
-                }
-                
-                $checkInfo = $smartMdl->dump($filter, '*');
-                if($checkInfo){
-                    $this->end(false, app::get('base')->_('node_id重复：请更换秘钥,同时通知报价系统更改秘钥!'));
-                }
-                
-                //判断config参数是否填写
-                $params = kernel::single('wmsmgr_smart_config')->getPlatformParam($postData['node_type']);
-                if ($params) {
-                    foreach ($params as $key => $label)
-                    {
-                        if (!$_POST['config'][$key]) {
-                            $this->end(false, $label .'：不能为空');
-                        }
-                    }
-                }
-            default:
-                # code...
-                break;
-        }
-        
-        //config
-        $postData['config'] = serialize($_POST['config']);
-        
-        //data
-        if($channelInfo){
-            $postData['channel_id'] = $channelInfo['channel_id'];
-        }
-        
-        //save
-        $isSave = $smartMdl->save($postData);
-        if(!$isSave){
-            $this->end(false, app::get('base')->_('保存数据失败!'));
-        }
-        
-        //save adapter
-        $adapter = array('channel_id'=>$postData['channel_id'], 'adapter'=>$postData['adapter'], 'config'=>$postData['config']);
-        app::get('channel')->model('adapter')->save($adapter);
-        
-        $this->end(true, app::get('base')->_($rt ? '保存成功' : '保存失败'));
+
+        $this->end(true, app::get('base')->_('保存成功'));
     }
     
     /**

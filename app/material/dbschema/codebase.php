@@ -29,7 +29,7 @@ $db['codebase']=array (
     array (
       'type' => 'int unsigned',
       'required' => true,
-      'width' => 110,
+      'width' => 150,
       'hidden' => true,
       'editable' => false,
     ),

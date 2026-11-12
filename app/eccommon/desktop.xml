@@ -21,10 +21,9 @@
     
     <workground name="基础档案" id="goods_manager"  order="600" icon="icon-jichudangan-01">
         <menugroup name="地区管理" en="area-management">
-            <menu controller='regions' action='index' permission='regions' display='true' order='3000100'>地区管理</menu>
-            <menu controller='regions_setting' action='index' permission='regions' display='true' order='3000200'>地区设置</menu>
-             <menu controller='platform_regions' action='index' permission='regions' display='true' order='3000200'>平台地区管理</menu>
-             
+            <menu controller='regions' action='index' permission='regions' display='true' order='3000100' target='/m-eccommon/regions/index'>地区管理</menu>
+            <menu controller='regions_setting' action='index' permission='regions' display='true' order='3000200' target='/m-eccommon/regions-setting/index'>地区设置</menu>
+            <menu controller='platform_regions' action='index' permission='regions' display='true' order='3000201'>平台地区管理</menu>
         </menugroup>
     </workground>
 </desktop>

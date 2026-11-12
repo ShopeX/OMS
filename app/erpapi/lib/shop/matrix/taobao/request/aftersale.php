@@ -67,4 +67,37 @@ class erpapi_shop_matrix_taobao_request_aftersale extends erpapi_shop_request_af
         }
         return $params;
     }
+    
+    /**
+     * 换货拒绝发出新品请求参数，回传平台接口名
+     *
+     * @return null
+     */
+    protected function get_consigngoods_refuse_apiname()
+    {
+        return SHOP_EXCHANGE_CONSIGNGOODS_REFUSE;
+    }
+    
+    /**
+     * 换货拒绝发出新品请求参数
+     *
+     * @param $sdf
+     * @return void
+     */
+    protected function get_consigngoods_refuse_params($params=[])
+    {
+        // 返回字段列表，必填。支持dispute_id、bizorder_id、modified、status、speed_exchange；speed_exchange按需返回1。
+        $fields = 'dispute_id,bizorder_id,modified,status,speed_exchange';
+        
+        // params
+        $params = [
+            'dispute_id' => $params['dispute_id'],
+            'seller_refuse_reason_id' => $params['seller_refuse_reason_id'], // 拒绝原因ID，需属于当前换货单允许的原因；
+            'leave_message' => isset($params['leave_message']) ? $params['leave_message'] : '',
+            //'leave_message_pics' => '', // 拒绝发新品的凭证图片，可选。
+            'fields' => $fields,
+        ];
+        
+        return $params;
+    }
 }

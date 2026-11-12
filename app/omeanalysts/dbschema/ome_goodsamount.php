@@ -37,7 +37,7 @@ $db['ome_goodsamount']=array (
       'width' => 120,
       'searchtype' => 'head',
       'editable' => false,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
       'in_list' => true,
       'default_in_list' => true,
@@ -74,7 +74,7 @@ $db['ome_goodsamount']=array (
       'hidden' => true,
       'in_list' => true,
       'default_in_list' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
 	'sales_num' =>

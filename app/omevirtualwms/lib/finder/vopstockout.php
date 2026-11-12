@@ -19,10 +19,30 @@
  * 唯品会出库单模拟回传
  */
 class omevirtualwms_finder_vopstockout{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $column_control = '操作';
 	var $column_control_width = 100;
+
+    /** vue_mode 下发 _0_<col> 原始值别名（结构化行操作取主键用） */
+    public $addon_cols = "stockout_no";
     function column_control($row){
         $flag = "vopstockout";
+        if ($this->vue_mode) {
+            $stockoutNo = $row['_0_stockout_no'] ?? $row['stockout_no'] ?? '';
+            return array(
+                array(
+                    'key'    => 'start_mock',
+                    'label'  => '开始模拟',
+                    'action' => 'index.php?app=omevirtualwms&ctl=admin_wms&act=getinfo&p[0]=' . $stockoutNo . '&p[1]=' . $flag,
+                ),
+            );
+        }
         return '<a  href="index.php?app=omevirtualwms&ctl=admin_wms&act=getinfo&p[0]='.$row['stockout_no'].'&p[1]='.$flag.'">开始模拟</a>';
     }
     

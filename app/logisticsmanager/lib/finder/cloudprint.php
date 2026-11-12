@@ -17,6 +17,13 @@
 
 class logisticsmanager_finder_cloudprint
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = "id,node_id";
     public $column_control = '操作';
     public $column_control_width = '100';

@@ -15,11 +15,15 @@
  * limitations under the License.
  */
 
+declare(strict_types=1);
+
+use app\desktop\lib\annotation\RequirePermission;
 
 class desktop_ctl_roles extends desktop_controller{
     
     var $workground = 'desktop_ctl_system';    
     var $obj_roles;
+    private desktop_capability_roles $capability;
     
     /**
      * __construct
@@ -30,9 +34,11 @@ class desktop_ctl_roles extends desktop_controller{
     {
         parent::__construct($app);
         $this->obj_roles = kernel::single('desktop_roles');
+        $this->capability = new desktop_capability_roles();
         header("cache-control: no-store, no-cache, must-revalidate");
     }
     
+    #[RequirePermission('users')]
     function index(){
         $params = array(
             'title'=>app::get('desktop')->_('角色'),
@@ -47,6 +53,7 @@ class desktop_ctl_roles extends desktop_controller{
         $this->finder('desktop_mdl_roles',$params);
     }
 
+    #[RequirePermission('user_roles_add')]
     function addnew(){
 
         // 老的权限加载逻辑（注释掉，保留作为参考）
@@ -87,59 +94,35 @@ class desktop_ctl_roles extends desktop_controller{
 
         $this->page('users/add_roles.html');
     }
-    
+    #[RequirePermission('user_roles_add')]
     function save()
     {
         $this->begin();
-        $roles = $this->app->model('roles');
-        if($roles->validate($_POST,$msg))
-        {
-            if($roles->save($_POST))
-                $this->end(true,app::get('desktop')->_('保存成功'));
-            else
-                $this->end(false,app::get('desktop')->_('保存失败')); 
-            
-        }
-        else
-        {
-            $this->end(false,$msg);
+        try {
+            $this->capability->create($_POST);
+            $this->end(true, '保存成功');
+        } catch (Throwable $exception) {
+            $this->end(false, $exception->getMessage());
         }
     }
-    
-    
+    #[RequirePermission('user_roles_edit')]
     function edit($roles_id){
         $param_id = $roles_id;
-        $this->begin();
         if($_POST){
-            if($_POST['role_name']==''){
-                 $this->end(false,app::get('desktop')->_('工作组名称不能为空'));
-            }
-
-            if(!$_POST['workground']){
-                $this->end(false,app::get('desktop')->_('请至少选择一个权限'));
-            }
-
-            $opctl = $this->app->model('roles');
-            $result = $opctl->check_gname($_POST['role_name']);
-            if($result && ($result!=$_POST['role_id'])) {
-                $this->end(false,app::get('desktop')->_('该工作组名称已存在'));
-            }
-
-            if(!isset($_POST['data_authority'])){
-                $_POST['data_authority'] = '';
-            }
-
-            if($opctl->save($_POST)){
-                 $this->end(true,app::get('desktop')->_('保存成功'));
-            }else{
-               $this->end(false,app::get('desktop')->_('保存失败'));
+            $this->begin();
+            try {
+                $roleId = (int) ($_POST['role_id'] ?? $param_id);
+                $this->capability->update($roleId, $_POST);
+                $this->end(true, '保存成功');
+            } catch (Throwable $exception) {
+                $this->end(false, $exception->getMessage());
             }
         }else{
             $opctl = $this->app->model('roles');
             $menus = $this->app->model('menus');
             $sdf_roles = $opctl->dump($param_id);
             $this->pagedata['roles'] = $sdf_roles;
-            $workground = unserialize($sdf_roles['workground']);
+            $workground = !empty($sdf_roles['workground']) ? unserialize((string)$sdf_roles['workground']) : [];
             foreach((array)$workground as $v){
                 $menuname = $menus->getList('*',array('menu_type' =>'menu','permission' => $v));
                 foreach($menuname as $val){
@@ -164,7 +147,7 @@ class desktop_ctl_roles extends desktop_controller{
             }
 
             //数据权限
-            $data_authority = unserialize($sdf_roles['data_authority']);
+            $data_authority = !empty($sdf_roles['data_authority']) ? unserialize((string)$sdf_roles['data_authority']) : [];
             if($data_authority){
                 foreach($data_authority as $k => $v){
                     if($v){

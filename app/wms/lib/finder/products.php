@@ -16,6 +16,13 @@
  */
 
 class wms_finder_products{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     var $detail_basic = "库存详情";
 

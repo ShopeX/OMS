@@ -17,6 +17,13 @@
 
 class ome_finder_api_log
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public static $row = array();
 
     public $addon_cols = "log_id";

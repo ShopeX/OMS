@@ -140,7 +140,12 @@ class erpapi_shop_matrix_tmall_request_aftersale extends erpapi_shop_request_aft
             'logistics_type'        =>  '200',
             'logistics_company_name'=>  $data['logistics_company_name'],
         );
-        if (kernel::single('ome_reship_const')->isNewExchange($data['flag_type'])) {
+        $topspeedLib = kernel::single('ome_order_platform_taobao_aftersale');
+        $flagType = isset($data['flag_type']) ? $data['flag_type'] : 0;
+        $forceConsigngoods = $topspeedLib->shouldForceConsigngoods($flagType);
+        if ($forceConsigngoods) {
+            // 天猫极速换货：强制 consigngoods，禁止走新换货升级 confirm.consign
+        } elseif (kernel::single('ome_reship_const')->isNewExchange($data['flag_type'])) {
             $api_name               = SHOP_EXCHANGE_CONFIRMCONSIGN;
             $params['company_code'] = $data['corp_type'];
             $params['company_name'] = $data['logistics_company_name'];
@@ -189,6 +194,11 @@ class erpapi_shop_matrix_tmall_request_aftersale extends erpapi_shop_request_aft
             );
 
             $orderModel->update($updateOrderData,array('order_id'=>$data['order_id'],'sync|noequal'=>'succ'));
+
+            // 极速换货发货成功：解除 18 拒发禁发标
+            if ($status === 'succ' && $forceConsigngoods) {
+                $topspeedLib->releaseRefuseSendIntercept($data['order_id']);
+            }
 
         }
 
@@ -260,5 +270,46 @@ class erpapi_shop_matrix_tmall_request_aftersale extends erpapi_shop_request_aft
 
         return $result;
 
+    }
+    
+    /**
+     * 换货拒绝发出新品请求参数，回传平台接口名
+     *
+     * @return null
+     */
+    protected function get_consigngoods_refuse_apiname()
+    {
+        return SHOP_EXCHANGE_CONSIGNGOODS_REFUSE;
+    }
+    
+    /**
+     * 换货拒绝发出新品请求参数
+     *
+     * @param $sdf
+     * @return void
+     */
+    protected function get_consigngoods_refuse_params($params=[])
+    {
+        // 返回字段列表，必填。支持dispute_id、bizorder_id、modified、status、speed_exchange；speed_exchange按需返回1。
+        $fields = 'dispute_id,bizorder_id,modified,status,speed_exchange';
+        
+        // params
+        $sdf = [
+            'dispute_id' => $params['dispute_id'], // 换货单号，必选项。
+            'fields' => $fields,
+            //'leave_message_pics' => '', // 拒绝发新品的凭证图片，可选。
+        ];
+        
+        // 拒绝原因ID，需属于当前换货单允许的原因，必选项。
+        if(isset($params['seller_refuse_reason_id']) && $params['seller_refuse_reason_id']){
+            $sdf['seller_refuse_reason_id'] = $params['seller_refuse_reason_id'];
+        }
+        
+        // 拒绝发新品备注信息，可选。
+        if(isset($params['leave_message']) && $params['leave_message']){
+            $sdf['leave_message'] = $params['leave_message'];
+        }
+        
+        return $sdf;
     }
 }

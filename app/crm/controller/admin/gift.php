@@ -19,6 +19,8 @@ class crm_ctl_admin_gift extends desktop_controller{
 
     var $workground = 'channel_center';
     
+    /** @var crm_capability_gift 写链路唯一实现（与 crm_ctl_api_gift 共用） */
+    protected $capability;
 
     /**
      * __construct
@@ -29,6 +31,7 @@ class crm_ctl_admin_gift extends desktop_controller{
     {
         parent::__construct($app);
         $this->_request = kernel::single('base_component_request');
+        $this->capability = new crm_capability_gift();
     }
 
     /**
@@ -126,26 +129,15 @@ class crm_ctl_admin_gift extends desktop_controller{
     
         if(empty($sm_ids)){
             $this->splash('error', $this->url.'&act=index', '缺少物料');
+            return;
         } 
-       
-        $giftObj = $this->app->model('gift');
-        $salesMObj = app::get('material')->model('sales_material');
 
-        $gifts = $giftObj->getList('gift_id,product_id',array('product_id|in'=>$sm_ids));
-        foreach($gifts as $v){
-             $gift[$v['product_id']] = $v['gift_id'];
-        }
-
-        $salesMs = $salesMObj->getList('sm_id,sales_material_bn,sales_material_name',array('sm_id|in'=>$sm_ids,'sales_material_type'=>'3'));
-
-        $data = array();
-        foreach((array)$salesMs as $k=>$salesM){
-            $data[$k]['product_id'] = $salesM['sm_id'];
-            $data[$k]['gift_bn'] = $salesM['sales_material_bn'];
-            $data[$k]['gift_name'] = $salesM['sales_material_name'];
-            $data[$k]['gift_id'] = $gift[$salesM['sm_id']];
-            $data[$k]['status'] = 1;
-            $giftObj->save($data[$k]);
+        // 写链路委托 capability（单一实现；事务由 capability 持有）
+        try {
+            $this->capability->addGifts((array)$sm_ids);
+        } catch (InvalidArgumentException $e) {
+            $this->splash('error', $this->url.'&act=index', $e->getMessage());
+            return;
         }
 
         $this->splash('success', $this->url.'&act=index', '操作成功');
@@ -157,24 +149,32 @@ class crm_ctl_admin_gift extends desktop_controller{
      */
     public function delGift(){
        $this->begin('index.php?app=crm&ctl=admin_gift&act=index');
-       $giftObj = $this->app->model('gift');
        $isSelectedAll = $this->_request->get_post('isSelectedAll');
        $giftids = $this->_request->get_post('gift_id');
 
-       if($isSelectedAll != '_ALL_' && $giftids){
-           $gift_id = array('gift_id'=>$giftids);
+       if($isSelectedAll == '_ALL_'){
+           $selectionMode = '_ALL_';
+           $ids = array();
        }elseif($giftids){
-           $gift_id = array();
+           $selectionMode = '';
+           $ids = (array)$giftids;
        }else{
            $this->end(false,$this->app->_('请选择赠品!'));
+           return;
        }
-        
-       if($giftObj->delete($gift_id)){
-          $this->end(true, $this->app->_('删除成功'));
-       }else{
-          $this->end(false, $this->app->_('删除失败'));
+
+       // 写链路委托 capability（事务归属由其按连接状态自动判定：legacy begin() 已开事务则自动交给外层）
+       try {
+           $this->capability->deleteGifts($ids, array(), $selectionMode);
+       } catch (InvalidArgumentException $e) {
+           $this->end(false, $e->getMessage());
+           return;
+       } catch (Throwable $e) {
+           $this->end(false, $this->app->_('删除失败'));
+           return;
        }
-       
+
+       $this->end(true, $this->app->_('删除成功'));
     }
 
     function setStatus($gid, $status) {
@@ -193,35 +193,15 @@ class crm_ctl_admin_gift extends desktop_controller{
     {
         if($_POST){
             $this->begin('index.php?app=crm&ctl=admin_gift&act=index');
-            $data = $_POST;
-            $data['gift_id'] = intval($data['id']);
-            $data['update_time'] = time();
-            //新增设置数量不可大于当前可售库存
-            $salesMStockLib = kernel::single('material_sales_material_stock');
-            $store = $salesMStockLib->getSalesMStockById($data['product_id']);
 
-            if($data['giftset'] ==='0' && $data['gift_num']>$store){
-                $this->end(false, '设置赠品数量不可以大于当前可用库存数!');
+            // 写链路委托 capability（校验/归一化/持久化集中；legacy 持事务 ⇒ 传 false）
+            try {
+                $this->capability->updateGift($_POST);
+            } catch (InvalidArgumentException $e) {
+                $this->end(false, $e->getMessage());
+                return;
             }
-            if($data['giftset'] =='1'){
-                $data['gift_num'] = 0;
-                $data['is_yujing'] = 'false';
-            }
-            if($data['is_yujing'] == 'true') {
-                if(!$data['yj_num']) {
-                    $this->end(false, '预警数量必填');
-                }
-                if(!$data['yj_mobile']) {
-                    $this->end(false, '预警手机号必填');
-                }
-                $yjMobile = explode('#', $data['yj_mobile']);
-                foreach ($yjMobile as $v) {
-                    if(!preg_match("/^[0-9]{11}$/", $v)) {
-                        $this->end(false, '预警手机号必须为11位数字');
-                    }
-                }
-            }
-            $this->app->model('gift')->save($data);
+
             $this->end(true, '保存成功');
         }
 

@@ -4,19 +4,44 @@
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
  */
 
 class logisticsmanager_template_lodop{
     protected $dpi = 96;
+
+    /**
+     * OpenAPI write endpoints must require a logged-in desktop user (CNVD upload RCE).
+     *
+     * @return bool
+     */
+    protected function requireDesktopLogin()
+    {
+        if (class_exists('desktop_auth_request', false) || class_exists('desktop_auth_request')) {
+            desktop_auth_request::bootstrap();
+        }
+        if (class_exists('desktop_auth_context', false) || class_exists('desktop_auth_context')) {
+            if (desktop_auth_context::isAuthenticated()) {
+                return true;
+            }
+        }
+        kernel::single('base_session')->start();
+        $user = kernel::single('desktop_user');
+        return is_object($user) && (int) $user->get_id() > 0;
+    }
+
+    /**
+     * Reject unauthenticated openapi write calls with a JSON body.
+     *
+     * @return bool true when caller may proceed
+     */
+    protected function assertDesktopLoginOrFail()
+    {
+        if ($this->requireDesktopLogin()) {
+            return true;
+        }
+        echo json_encode(array('status' => 0, 'msg' => 'unauthorized', 'data' => null));
+        return false;
+    }
     //面单组件
     protected  $plugins_map = array(
         'report_label'=>'sp-label',
@@ -501,6 +526,9 @@ class logisticsmanager_template_lodop{
      * @return mixed 返回操作结果
      */
     public function saveTmpl(){
+        if (!$this->assertDesktopLoginOrFail()) {
+            return;
+        }
         $request_body = file_get_contents('php://input');
         $params = json_decode($request_body,true);
         $this->save($params);
@@ -511,6 +539,9 @@ class logisticsmanager_template_lodop{
      * @return mixed 返回操作结果
      */
     public function save($params){
+        if (!$this->assertDesktopLoginOrFail()) {
+            return;
+        }
         $data = array(
             'template_type'   => $params['template_type'],
             'template_name'   => $params['template_name'],
@@ -572,13 +603,18 @@ class logisticsmanager_template_lodop{
 
     //处理上传的图片
     function uploadBg(){
+        if (!$this->assertDesktopLoginOrFail()) {
+            return;
+        }
         $ss = kernel::single('base_storager');
         $extname = strtolower($this->extName($_FILES['file']['name']));
         $res = array(
             'msg'=>'success',
             'status'=>1
         );
-        if($extname=='.jpg' || $extname=='.jpeg' || $extname=='.png'){
+        $tmp = isset($_FILES['file']['tmp_name']) ? $_FILES['file']['tmp_name'] : '';
+        $isImage = $tmp && is_uploaded_file($tmp) && @getimagesize($tmp);
+        if(($extname=='.jpg' || $extname=='.jpeg' || $extname=='.png') && $isImage){
             $id = $ss->save_upload($_FILES['file'],"file","",$msg);//返回file_id;
         }else{
             $res['msg'] = '请上传jpg格式的图片';

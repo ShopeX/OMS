@@ -73,7 +73,7 @@ $db['pick_order_items'] = array (
             ),
             'default' => 'none',
             'required' => true,
-            'filtertype' => 'yes',
+            'filtertype' => 'normal',
             'filterdefault' => true,
             'label' => '处理状态',
             'width' => 110,

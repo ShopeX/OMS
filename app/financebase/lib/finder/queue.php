@@ -17,6 +17,13 @@
 
 class financebase_finder_queue
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = 'is_file_ready';
 
     public $column_edit       = "操作";

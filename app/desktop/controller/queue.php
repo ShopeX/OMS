@@ -15,11 +15,13 @@
  * limitations under the License.
  */
 
+use app\desktop\lib\annotation\RequirePermission;
 
 class desktop_ctl_queue extends desktop_controller{
 
     var $workground = 'desktop_ctl_system';
 
+    #[RequirePermission('performance')]
     function index(){
         $params = array(
             'title'=>app::get('desktop')->_('队列列表'),
@@ -31,6 +33,7 @@ class desktop_ctl_queue extends desktop_controller{
         $this->finder('base_mdl_queue',$params);
     }
 
+    #[RequirePermission('performance')]
     function run(){
         $this->begin('index.php?app=desktop&ctl=queue&act=index');
         $queue_model = app::get('base')->model('queue');
@@ -43,6 +46,7 @@ class desktop_ctl_queue extends desktop_controller{
         $this->end(true,app::get('desktop')->_('启动成功'));
     }
     
+    #[RequirePermission('performance')]
     function pause(){
         $this->begin('index.php?app=desktop&ctl=queue&act=index');
         $queue_model = app::get('base')->model('queue');

@@ -24,6 +24,13 @@
  * ============================
  */
 class ome_finder_refund_reason {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     var $column_edit = "操作";
     var $column_edit_width = "200";

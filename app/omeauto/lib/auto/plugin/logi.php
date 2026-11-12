@@ -474,8 +474,8 @@ class omeauto_auto_plugin_logi extends omeauto_auto_plugin_abstract implements o
                }
            }
            
-           //[指定快递]针对淘宝和天猫订单
-           if ($shopData['shop_type']=='taobao') {
+           //[指定快递]针对淘宝/天猫、京东（京配等）订单
+           if (in_array($shopData['shop_type'], array('taobao', '360buy'))) {
                $order_ids = array();
                foreach($orders as $val){
                    $order_ids[] = $val['order_id'];

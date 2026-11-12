@@ -17,6 +17,13 @@
 
 class o2o_finder_branch_products extends console_finder_branch_product
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $column_branch_name = '门店名称';
 
     function __construct()

@@ -361,7 +361,17 @@ class desktop_ctl_default extends desktop_controller {
             echo json_encode(array('count'=>0));
             exit();
         }
-        $mdl = kernel::single($_POST['mdl']);
+        // CNVD-2026-42947: only allow reflecting dbeav model classes.
+        $mdlName = (string) $_POST['mdl'];
+        if(!preg_match('/^[a-z0-9]+_mdl_[a-z0-9_]+$/', $mdlName) || !class_exists($mdlName)) {
+            echo json_encode(array('count'=>0));
+            exit();
+        }
+        $mdl = kernel::single($mdlName);
+        if(!is_object($mdl) || !($mdl instanceof dbeav_model)) {
+            echo json_encode(array('count'=>0));
+            exit();
+        }
         if($_POST['filter']) {
             $filter = urldecode($_POST['filter']);
             parse_str($filter, $filter);
@@ -487,25 +497,35 @@ class desktop_ctl_default extends desktop_controller {
             } else {
                 $_POST['pam_account']['account_id']     = $account_id;
                 $_POST['pam_account']['login_password'] = $loginPassword;
-                $users->save($_POST);
+                $_POST = desktop_auth_password_security::stampPasswordChangedAt($_POST);
+                $saved = $users->save($_POST);
+                if ($saved === false) {
+                    $msg = '密码保存失败，请稍后重试';
+                } else {
+                    $desktop_users   = app::get('desktop')->model('users');
+                    $sdf['modifyip'] = $_SERVER["REMOTE_ADDR"];
+                    $desktop_users->update($sdf, array ('user_id' => $account_id));
+                    //echo "密码修改成功";
+                    $userLib->checkUpdatePwd($_POST['pam_account']['account_id'], true);
+                    //新增插入日志
+                    $this->app->model('user_logs')->changePwd($account_id);
 
-                $desktop_users   = app::get('desktop')->model('users');
-                $sdf['modifyip'] = $_SERVER["REMOTE_ADDR"];
-                $desktop_users->update($sdf, array ('user_id' => $account_id));
-                //echo "密码修改成功";
-                $userLib->checkUpdatePwd($_POST['pam_account']['account_id'], true);
-                //新增插入日志
-                $this->app->model('user_logs')->changePwd($account_id);
-
-                // IDAAS
-                list($rs, $msg) = kernel::single('desktop_user_auth')->sync_account(array (
-                    'account_id'     => $_POST['pam_account']['account_id'],
-                    'login_name'     => $sdf['account']['login_name'],
-                    'login_password' => $_POST['pam_account']['login_password'],
-                ), 'password');
-                if ($rs === false) {} else {
-                    $status = true;
-                    $msg    = '密码修改成功';
+                    // IDAAS
+                    list($rs, $msg) = kernel::single('desktop_user_auth')->sync_account(array (
+                        'account_id'     => $_POST['pam_account']['account_id'],
+                        'login_name'     => $sdf['account']['login_name'],
+                        'login_password' => $_POST['pam_account']['login_password'],
+                    ), 'password');
+                    if ($rs === false) {} else {
+                        desktop_auth_password_security::revokeAfterSuccessfulChange(
+                            (int) $account_id,
+                            static function (int $userId): void {
+                                desktop_auth_jwt::incrementTokenVersion($userId);
+                            }
+                        );
+                        $status = true;
+                        $msg    = '密码修改成功';
+                    }
                 }
             }
             if ($status) {

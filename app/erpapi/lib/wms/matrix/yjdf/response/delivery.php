@@ -47,8 +47,7 @@ class erpapi_wms_matrix_yjdf_response_delivery extends erpapi_wms_response_deliv
         $data = parent::status_update($params);
         
         //发货单信息
-        $fields = 'delivery_id,delivery_bn,status,shop_id,branch_id,is_wms_gift,original_delivery_bn,wms_channel_id';
-        $delivery = $deliveryObj->db_dump(array('delivery_bn'=>$data['delivery_bn']), $fields);
+        $delivery = $deliveryObj->db_dump(array('delivery_bn'=>$data['delivery_bn']), '*');
         if(empty($delivery)) {
             $this->__apilog['result']['msg'] = '没找到对应的发货单';
             return false;
@@ -296,7 +295,7 @@ class erpapi_wms_matrix_yjdf_response_delivery extends erpapi_wms_response_deliv
                     
                     //[映射WMS仓储物流编码]兼容京东传的物流单号是ID
                     if($v['logistics']){
-                        $v['logistics'] = $this->getLogiCode($v['logistics'], $data['wms_id']);
+                        $v['logistics'] = $this->getLogiCode($v['logistics'], $data['wms_id'], isset($delivery['shop_type']) ? $delivery['shop_type'] : '');
                         
                         //物流公司编码
                         $data['logi_id'] = $v['logistics'];
@@ -397,7 +396,7 @@ class erpapi_wms_matrix_yjdf_response_delivery extends erpapi_wms_response_deliv
                 
                 //[映射WMS仓储物流编码]兼容京东传的物流单号是ID
                 if($v['logistics']){
-                    $v['logistics'] = $this->getLogiCode($v['logistics'], $data['wms_id']);
+                    $v['logistics'] = $this->getLogiCode($v['logistics'], $data['wms_id'], isset($delivery['shop_type']) ? $delivery['shop_type'] : '');
                     
                     //物流公司编码
                     $data['logi_id'] = $v['logistics'];
@@ -549,17 +548,17 @@ class erpapi_wms_matrix_yjdf_response_delivery extends erpapi_wms_response_deliv
      * @todo：兼容京东传的物流单号是ID
      * 
      * @param string $logi_code
+     * @param string $wms_id
+     * @param string $shop_type
      * @return string
      */
-    public function getLogiCode($logi_code, $wms_id)
+    public function getLogiCode($logi_code, $wms_id, $shop_type = '')
     {
-        $relationObj = app::get('wmsmgr')->model('express_relation');
+        // 根据wms_id、wms物流公司编号获取系统物流公司编号
+        $mapped = kernel::single('wmsmgr_func')->getlogiCode($wms_id, $logi_code, $shop_type);
         
-        $logiMapInfo = $relationObj->dump(array('wms_id'=>$wms_id, 'wms_express_bn'=>$logi_code), 'sys_express_bn');
-        
-        $logi_code = ($logiMapInfo['sys_express_bn'] ? $logiMapInfo['sys_express_bn'] : $logi_code);
-        
-        return $logi_code;
+        // 物流公司编码
+        return $mapped ? $mapped : $logi_code;
     }
     
     /**

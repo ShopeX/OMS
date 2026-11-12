@@ -74,5 +74,4 @@ class erpapi_shop_matrix_kuaishou_request_order extends erpapi_shop_request_orde
         $rs = $this->__caller->call(SHOP_CONFIRM_ADDRESS_MODIFY,$params,array(),$title,20,$sdf['order_bn']);
         return $rs;
     }
-
 }

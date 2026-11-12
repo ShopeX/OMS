@@ -17,6 +17,13 @@
 
 class billcenter_finder_aftersales
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $detail_items = '明细信息';
     
     function detail_items($aftersale_id){
@@ -47,7 +54,19 @@ class billcenter_finder_aftersales
             'header' => $itemMdl->_columns(),
             'body' => $items,
         ];
-        
+
+        // 前后端分离（Vue）模式：返回结构化数据，交给框架 FinderDetailTemplate 渲染
+        if ($this->vue_mode) {
+            return array(
+                'header' => $columns,
+                'body'   => $sales,
+                'lines'  => array(
+                    'header' => $itemMdl->_columns(),
+                    'body'   => is_array($items) ? $items : array(),
+                ),
+            );
+        }
+
         return $render->fetch('finder/detail.html', 'desktop');
     }
 }

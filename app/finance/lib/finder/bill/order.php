@@ -16,6 +16,13 @@
  */
 
 class finance_finder_bill_order{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 	var $type_money = array();
 
     var $column_trade = "销售收支款";

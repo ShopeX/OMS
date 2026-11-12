@@ -6,40 +6,14 @@ class financebase_ctl_admin_shop_settlement_match_notify extends desktop_control
 {
     public function index()
     {
-        $notifyLib = kernel::single('financebase_bill_match_notify');
-        $monitorConfig = $notifyLib->checkMonitorConfig();
+        // 与 Vue api 共用同一 capability（读取/校验/归一化/持久化集中一处，避免两处漂移）
+        $data = kernel::single('financebase_capability_shop_settlement_match_notify')->loadPageData();
 
-        $cronTime = $notifyLib->getCronTime();
-        $todayStatus = $notifyLib->getTodayStatusSummary();
-        $configuredHourPassed = false;
-        if (preg_match('/^(\d{2}):00$/', $cronTime, $m)) {
-            $configuredHourPassed = (int) date('G') >= (int) $m[1];
-        }
-
-        $this->pagedata['config'] = array(
-            'enabled' => app::get('financebase')->getConf('bill.match_fail_notify.enabled'),
-            'cron_time' => $cronTime,
-        );
-        $todayStatus['pending_dates_text'] = !empty($todayStatus['pending_dates'])
-            ? implode('、', $todayStatus['pending_dates'])
-            : '';
-        $todayStatus['pending_dates_rows'] = !empty($todayStatus['pending_dates'])
-            ? array_chunk($todayStatus['pending_dates'], 8)
-            : array();
-        $todayStatus['sent_all'] = (
-            (int) $todayStatus['failure_days'] > 0
-            && (int) $todayStatus['pending_count'] === 0
-        );
-        $todayStatus['daily_sent'] = (int) $todayStatus['sent_today_count'] > 0;
-        $this->pagedata['today_status'] = $todayStatus;
-        $this->pagedata['configured_hour_passed'] = $configuredHourPassed;
-        $this->pagedata['monitor_config'] = $monitorConfig;
-        $this->pagedata['monitor_links'] = array(
-            'template' => 'index.php?app=monitor&ctl=admin_alarm_template&act=index',
-            'group' => 'index.php?app=monitor&ctl=admin_alarm_group&act=index',
-            'receiver' => 'index.php?app=monitor&ctl=admin_alarm_receiver&act=index',
-            'email' => 'index.php?app=monitor&ctl=admin_setting&act=index',
-        );
+        $this->pagedata['config']                 = $data['config'];
+        $this->pagedata['today_status']           = $data['today_status'];
+        $this->pagedata['configured_hour_passed'] = $data['configured_hour_passed'];
+        $this->pagedata['monitor_config']         = $data['monitor_config'];
+        $this->pagedata['monitor_links']          = $data['monitor_links'];
         $this->page('admin/shop/settlement/match/notify.html');
     }
 
@@ -47,29 +21,14 @@ class financebase_ctl_admin_shop_settlement_match_notify extends desktop_control
     {
         $this->begin();
 
-        $notifyLib = kernel::single('financebase_bill_match_notify');
-        $oldCronTime = $notifyLib->getCronTime();
-
-        $enabled = (!empty($_POST['enabled']) && $_POST['enabled'] === 'true') ? 'true' : 'false';
-        $cronTime = trim((string) $_POST['cron_time']);
-        if ($cronTime === '' || !preg_match('/^\d{2}:\d{2}$/', $cronTime)) {
-            $cronTime = '10:00';
-        } elseif (!preg_match('/^\d{2}:00$/', $cronTime)) {
-            $this->end(false, app::get('desktop')->_('发送时间须为整点（分钟须为 00），例如 14:00、15:00'));
+        try {
+            $message = kernel::single('financebase_capability_shop_settlement_match_notify')
+                ->saveConfig((array) $_POST);
+        } catch (InvalidArgumentException $exception) {
+            $this->end(false, $exception->getMessage());
+            return;
         }
 
-        app::get('financebase')->setConf('bill.match_fail_notify.enabled', $enabled);
-        app::get('financebase')->setConf('bill.match_fail_notify.cron_time', $cronTime);
-
-        if ($cronTime !== $oldCronTime) {
-            $notifyLib->clearTodayCache();
-        }
-
-        $msg = app::get('desktop')->_('保存成功');
-        if (preg_match('/^(\d{2}):00$/', $cronTime, $m) && (int) date('G') >= (int) $m[1]) {
-            $msg .= '；今日 ' . $cronTime . ' 整点已过，将于明日该时刻自动发送';
-        }
-
-        $this->end(true, $msg);
+        $this->end(true, $message);
     }
 }

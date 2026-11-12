@@ -72,32 +72,26 @@
 
     <workground name="控制面板" id="adminpanel" order="1800" icon="icon-kongzhimianban-01">
         <menugroup name="管理员和权限" en="administrators-permissions">
-            <menu controller='users' permission='users' display='true'>操作员管理</menu>
-            <menu controller='roles' permission='users' display='true'>角色管理</menu>
-            <menu controller='ipsetting' permission='users' display='true'>IP白名单</menu>
+            <menu controller='users' permission='users' display='true' >操作员管理</menu>
+            <menu controller='roles' permission='users' display='true' target='/m-desktop/roles/index'>角色管理</menu>
+            <menu controller='ipsetting' permission='users' display='true' target='/m-desktop/ipsetting/index'>IP白名单</menu>
             <menu permission='operator_edit' controller='users' action='edit'  display='false'>操作员编辑</menu>
             <menu permission='operator_add' controller='users' action='addnew'  display='false'>操作员新增</menu>
             <menu permission='user_roles_edit' controller='roles' action='edit'  display='false'>角色编辑</menu>
             <menu permission="user_roles_add" controller="roles" action='addnew' display='false'>角色新增</menu>
         </menugroup>
 
-        <workground name="日志管理" id="monitor_center"  order="1820" icon="icon-caozuorizhi-01">
-            <menugroup name="登陆日志" en="login-log">
-                <menu controller='login' permission='users' display='true'>登陆日志</menu>
-            </menugroup>
-        </workground>
-
         <menugroup name="其他" en="other">
-            <menu controller='rpcnotify' permission='message_notify' display='true'>消息通知</menu>
-            <menu controller='queue' permission='performance' display='true'>队列列表</menu>
+            <menu controller='rpcnotify' permission='message_notify' display='true' target='/m-desktop/rpcnotify/index'>消息通知</menu>
+            <menu controller='queue' permission='performance' display='true' target='/m-desktop/queue/index'>队列列表</menu>
         </menugroup>
     </workground>
 
     <workground name="系统设置" id="setting_tools"  order="1100" icon="icon-xitongshezhi-01">
 
         <menugroup name="基本设置" en="basic-set">
-            <menu controller='system' action='siteSetPage' permission='shopsetting' display='true' order='1000100'>站点设置</menu>
-            <menu controller='pagecols_setting' action='index' permission='page_config_setting' display='true' order='1000101'>页面设置</menu>
+            <menu controller='system' action='siteSetPage' permission='shopsetting' display='true' order='1000100' target='/m-desktop/system-site/index'>站点设置</menu>
+            <menu controller='pagecols_setting' action='index' permission='page_config_setting' display='true' order='1000101' target='/m-desktop/pagecols-setting/index'>页面设置</menu>
         </menugroup>
 
     </workground>

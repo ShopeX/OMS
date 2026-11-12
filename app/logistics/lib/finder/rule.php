@@ -14,8 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class logistics_finder_rule {
+
+    private $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $addon_cols = "rule_id,branch_id";
     var $column_edit = "操作";
     var $column_edit_width = "100";
@@ -130,7 +137,7 @@ class logistics_finder_rule {
     public $column_child_branch_width = "280";
     /**
      * 复用子仓
-     * 
+     *
      * @return void
      * @author 
      */

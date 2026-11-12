@@ -46,10 +46,18 @@ class erpapi_account_request_user extends erpapi_account_request_abstract {
                 break;
                 
             case 'okta':
+                $definition['logout_redirect_uri'] = 'post_logout_redirect_uri';
                 $definition['userinfo_uname']      = 'preferred_username';
                 $definition['userinfo_name']       = 'name';
                 // $definition['userinfo_mobile']     = 'phone_number';
                 $definition['userinfo_uid']        = 'sub';
+                $definition['userinfo_search']     = 'email';
+                break;
+            case 'azure':
+                $definition['userinfo_uname']      = 'unique_name';
+                $definition['userinfo_name']       = 'name';
+                $definition['userinfo_mobile']     = 'phone_number';
+                $definition['userinfo_uid']        = 'oid';
                 $definition['userinfo_search']     = 'email';
                 break;
         }
@@ -76,7 +84,9 @@ class erpapi_account_request_user extends erpapi_account_request_abstract {
         if(!$oidcInfo['authorization']) {
             return $this->error('need authorization', 100);
         }
-        $params = ['client_id'=>$oidcInfo['client_id'], 'response_type'=>'code', 'scope' => 'openid', 'state'=>time()];
+        [$state, $nonce] = desktop_auth_oidc::beginChallenge();
+
+        $params = ['client_id'=>$oidcInfo['client_id'], 'response_type'=>'code', 'scope' => 'openid', 'state'=>$state, 'nonce' => $nonce];
 
         if($oidcInfo['redirect']) {
             $params['redirect_uri'] = $oidcInfo['redirect'];
@@ -86,10 +96,11 @@ class erpapi_account_request_user extends erpapi_account_request_abstract {
             $params['scope'] = 'openid phone profile';
         }
 
+        // Always return the authorize URL as data. Never HTTP-redirect here:
+        // Vue meta / legacy login form call this via PHP (or XHR) and must not
+        // follow Location into Okta /authorize (CORS). Force jump is done by
+        // the browser entry (window.location / <a href>) using oidc_login.force_redirect.
         $url = $oidcInfo['authorization'] . '?' . http_build_query($params);
-        if($oidcInfo['to_out'] == 'true') {
-            header('Location:' . $url);exit();
-        }
         return $this->succ('成功', 0, $url);
     }
 
@@ -117,12 +128,12 @@ class erpapi_account_request_user extends erpapi_account_request_abstract {
             $params[$redirectUriField] = $oidcInfo['redirect'];
         }
 
-        if ($redirectUriField == 'post_logout_redirect_uri') {
-            $params['id_token_hint'] = $_SESSION['id_token'];
-            
-            if (!$params['id_token_hint']){
-                return $this->error('need id_token', 100);
-            }
+        // Okta/CIAM: id_token_hint 能精确结束会话；缺失时仍返回 endsession URL，
+        // 由浏览器携带 IdP Cookie 访问，避免「仅清 OMS、Okta 仍 SSO」。
+        $userId = (int)($sdf['user_id'] ?? 0);
+        $idTokenHint = $userId > 0 ? desktop_auth_oidc::recallIdToken($userId) : '';
+        if ($idTokenHint !== '') {
+            $params['id_token_hint'] = $idTokenHint;
         }
 
         if (in_array(strtolower($oidcInfo['oidctype']), ['ciam', 'okta'])) {
@@ -140,19 +151,31 @@ class erpapi_account_request_user extends erpapi_account_request_abstract {
      * @return mixed 返回值
      */
     public function login($sdf) {
+        $oidcState = (string)($sdf['oidc_state'] ?? '');
         $tokenRs = $this->getToken($sdf);
         if($tokenRs['rsp'] != 'succ') {
+            if ($oidcState !== '') {
+                desktop_auth_oidc::discardChallenge($oidcState);
+            }
             return $tokenRs;
+        }
+        if (!$this->validateOidcNonce($tokenRs['data'], $oidcState)) {
+            error_log('OIDC nonce validation failed');
+            return ['rsp' => 'fail', 'msg' => 'OIDC 会话校验失败'];
         }
         $info = $this->getInfo($tokenRs['data']);
         if($info['rsp'] != 'succ') {
             return $info;
         }
-        $permission = $this->getPermission($tokenRs['data']);
+        $userId = (int)($info['user_id'] ?? 0);
+        if ($userId <= 0) {
+            return ['rsp' => 'fail', 'msg' => 'OIDC 用户识别失败'];
+        }
+        $permission = $this->getPermission($tokenRs['data'], $userId);
         if($permission['rsp'] != 'succ') {
             return $permission;
         }
-        return ['rsp'=>'succ'];
+        return ['rsp'=>'succ', 'user_id' => $userId];
     }
 
     /**
@@ -168,7 +191,7 @@ class erpapi_account_request_user extends erpapi_account_request_abstract {
         if($oidcInfo['redirect']) {
             $params['redirect_uri'] = $oidcInfo['redirect'];
         }
-        $result= $this->__caller->call($method,$params,array(),$title,500,$sdf['code']);
+        $result= $this->__caller->call($method, $params, [], $title, 500, self::apiLogOriginalBn('oidc:token', $sdf['code'] ?? ''));
         $data = @json_decode($result['data'], 1);
         if($data['access_token']) {
             return ['rsp'=>'succ', 'data'=>$data];
@@ -185,7 +208,14 @@ class erpapi_account_request_user extends erpapi_account_request_abstract {
         $title = '刷新token';
         $method = 'token';
         $params = ['grant_type'=>'refresh_token', 'refresh_token'=>$sdf['refresh_token']];
-        $result= $this->__caller->call($method,$params,array(),$title,500,$sdf['access_token']);
+        $result= $this->__caller->call(
+            $method,
+            $params,
+            [],
+            $title,
+            500,
+            self::apiLogOriginalBn('oidc:refresh', $sdf['refresh_token'] ?? $sdf['access_token'] ?? '')
+        );
         $data = @json_decode($result['data'], 1);
         if($data['access_token']) {
             $data['refresh'] = 1;
@@ -224,9 +254,13 @@ class erpapi_account_request_user extends erpapi_account_request_abstract {
             }
             
             if (!$data['username'] && $sdf['id_token']) {
-                $jwt = $sdf['id_token'];
-                $header = base64_decode(strtr(substr($jwt, 0, strpos($jwt, '.')), '-_', '+/'));
-                $idToken = base64_decode(strtr(substr($jwt, strpos($jwt, '.') + 1, strpos($jwt, '.', strpos($jwt, '.') + 1) - strpos($jwt, '.') - 1), '-_', '+/'));
+                $parts = explode('.', $sdf['id_token']);
+
+                $idToken = [];
+                if (count($parts) == 3) {
+                    $idToken = base64_decode(strtr($parts[1], '-_', '+/'));
+                    $idToken = json_decode($idToken, 1);
+                }
                 
                 if ($idToken[$unamefield]) {
                     $data['username'] = $idToken[$unamefield];
@@ -234,9 +268,13 @@ class erpapi_account_request_user extends erpapi_account_request_abstract {
             }
             
             if (!$data['username'] && $sdf['access_token']) {
-                $jwt = $sdf['access_token'];
-                $header = base64_decode(strtr(substr($jwt, 0, strpos($jwt, '.')), '-_', '+/'));
-                $idToken = base64_decode(strtr(substr($jwt, strpos($jwt, '.') + 1, strpos($jwt, '.', strpos($jwt, '.') + 1) - strpos($jwt, '.') - 1), '-_', '+/'));
+                $parts = explode('.', $sdf['access_token']);
+
+                $idToken = [];
+                if (count($parts) == 3) {
+                    $idToken = base64_decode(strtr($parts[1], '-_', '+/'));
+                    $idToken = json_decode($idToken, 1);
+                }
                 
                 if ($idToken[$unamefield]) {
                     $data['username'] = $idToken[$unamefield];
@@ -255,7 +293,7 @@ class erpapi_account_request_user extends erpapi_account_request_abstract {
         $userMdl = app::get('desktop')->model('users');
 
         // 判断管理员是否存在
-        if (in_array(strtolower($oidcInfo['oidctype']), ['ciam','okta'])) {
+        if (in_array(strtolower($oidcInfo['oidctype']), ['ciam','okta','azure'])) {
            $login_name = $data['username'];
            
            if ($searchfield){
@@ -286,26 +324,15 @@ class erpapi_account_request_user extends erpapi_account_request_abstract {
         }
 
         $isSuper    = $login_name == trim($oidcInfo['super_account']) ? 1 : 0;
-        $session_id = kernel::single('base_session')->sess_id();
 
         $accountType = pam_account::get_account_type('desktop');
         if($old = $authMdl->db_dump(['module_uid'=>$data['uid']], 'auth_id,account_id')) {
-            $_SESSION['account'][$accountType]  = $old['account_id'];
-            $_SESSION['id_token']               = $sdf['id_token'];
-            $_SESSION['login_trust']            = true;
+            $userId = (int)$old['account_id'];
+            desktop_auth_oidc::storeIdToken($userId, (string)($sdf['id_token'] ?? ''));
 
-            $user = $userMdl->db_dump($old['account_id'], 'session_id');
+            $userMdl->update(['super'=>$isSuper], ['user_id'=>$userId]);
 
-            //注销同账号,其它电脑上登录的session_id
-            if ('false' !== app::get('ome')->getConf('desktop.account.equal.restrict')
-                && $user['session_id']
-                && $user['session_id'] != $session_id
-            ) {
-                kernel::single('base_session')->deleteSessionId($user['session_id']);
-            }
-
-            $userMdl->update(['super'=>$isSuper, 'session_id' => $session_id],['user_id'=>$old['account_id']]);
-            return ['rsp'=>'succ'];
+            return ['rsp'=>'succ', 'user_id' => $userId];
         }
 
         $inData = [
@@ -318,7 +345,6 @@ class erpapi_account_request_user extends erpapi_account_request_abstract {
             'status'        => 1,
             'mobile'        => (string) $data['mobile'],
             'super'         => $isSuper,
-            'session_id'    => $session_id,
         ];
 
         $userMdl->save($inData);
@@ -329,19 +355,13 @@ class erpapi_account_request_user extends erpapi_account_request_abstract {
             'data'       => json_encode($data)
         ];
         $authMdl->insert($authInData);
-        $_SESSION['account'][$accountType]  = $inData['pam_account']['account_id'];
-        $_SESSION['id_token']               = $sdf['id_token'];
-        $_SESSION['login_trust']            = true;
+        $userId = (int)$inData['pam_account']['account_id'];
+        desktop_auth_oidc::storeIdToken($userId, (string)($sdf['id_token'] ?? ''));
 
-        return ['rsp'=>'succ'];
+        return ['rsp'=>'succ', 'user_id' => $userId];
     }
 
-    /**
-     * 获取Permission
-     * @param mixed $sdf sdf
-     * @return mixed 返回结果
-     */
-    public function getPermission($sdf) {
+    public function getPermission($sdf, int $userId = 0) {
         $title = '获取用户权限';
         $method = 'permission';
         $oidcInfo = app::get('ome')->getConf('pam.passport.oidc.info');
@@ -353,24 +373,22 @@ class erpapi_account_request_user extends erpapi_account_request_abstract {
         if($data['code']) {
             return ['rsp'=>'fail', 'msg'=>$data['msg']];
         }
-        $accountType = pam_account::get_account_type('desktop');
-        $userId = $_SESSION['account'][$accountType];
+        if ($userId <= 0) {
+            return ['rsp'=>'fail', 'msg'=>'缺少用户 ID'];
+        }
         $operationOpsObj = app::get('ome')->model('operation_ops');
         $operationOpsObj->delete(array('op_id' => $userId));
         app::get('ome')->model('branch_ops')->delete(array('op_id' => $userId));
         $permission = [];
         foreach ($data['data'] as $v) {
-            $tmpPer = $this->getUserPermission($v);
+            $tmpPer = $this->getUserPermission($v, $userId);
             $permission = array_merge($permission, $tmpPer);
         }
-        $_SESSION['account']['user_permission'] = $permission;
         return ['rsp'=>'succ'];
     }
 
-    protected function getUserPermission($v) {
+    protected function getUserPermission($v, int $userId) {
         $per = [];
-        $accountType = pam_account::get_account_type('desktop');
-        $userId = $_SESSION['account'][$accountType];
         if($v['extId'] == 'operation_organization') {
             $operationOpsObj = app::get('ome')->model('operation_ops');
             foreach ($v['children'] as $vv) {
@@ -392,7 +410,7 @@ class erpapi_account_request_user extends erpapi_account_request_abstract {
         }
         if($v['children']) {
             foreach ($v['children'] as $vv) {
-                $temPer = $this->getUserPermission($vv);
+                $temPer = $this->getUserPermission($vv, $userId);
                 $per = array_merge($per, $temPer);
             }
         }
@@ -419,6 +437,7 @@ class erpapi_account_request_user extends erpapi_account_request_abstract {
         // 记日志
         $apilogModel = app::get('ome')->model('api_log');
         $log_id = $apilogModel->gen_id();
+        $now = time();
         $logsdf = [
             'log_id'        => $log_id,
             'task_name'     => $title ?: $method,
@@ -428,6 +447,8 @@ class erpapi_account_request_user extends erpapi_account_request_abstract {
             'response'      => is_array($response) ? json_encode($response) : $response,
             'api_type'      => 'request',
             'original_bn'   => $method,
+            'createtime'    => $now,
+            'last_modified' => $now,
         ];
         $apilogModel->insert($logsdf);
 
@@ -478,5 +499,24 @@ class erpapi_account_request_user extends erpapi_account_request_abstract {
             "updatedAt"=> ""
         ];
         return $tmpData;
+    }
+
+    protected function validateOidcNonce(array $tokenData, string $oidcState): bool
+    {
+        $idToken = isset($tokenData['id_token']) ? (string)$tokenData['id_token'] : '';
+
+        return desktop_auth_oidc::validateNonce($oidcState, $idToken);
+    }
+
+    /**
+     * Build api_log.original_bn within varchar(50); never pass raw OIDC code/JWT.
+     */
+    private static function apiLogOriginalBn(string $prefix, string $value = ''): string
+    {
+        if ($value === '') {
+            return $prefix;
+        }
+
+        return substr($prefix . ':' . md5($value), 0, 50);
     }
 }

@@ -22,13 +22,25 @@
  */
 class monitor_finder_event_notify
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     var $detail_basic = '详情';
     function detail_basic($notify_id)
     {
-        $render = app::get('ome')->render();
         $eventNotifyMdl = app::get('monitor')->model('event_notify');
         $notifyInfo = $eventNotifyMdl->db_dump($notify_id);
+
+        if ($this->vue_mode) {
+            return ['notifyInfo' => $notifyInfo];
+        }
+
+        $render = app::get('ome')->render();
         $render->pagedata['detail'] = $notifyInfo;
     
         return $render->fetch('admin/alarm/event/detail_basic.html','monitor');

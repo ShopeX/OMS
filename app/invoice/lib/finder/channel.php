@@ -16,6 +16,13 @@
  */
 
 class invoice_finder_channel{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $addon_cols = "channel_type,shop_id,node_id";
     
     var $column_control = '操作';

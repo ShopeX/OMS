@@ -16,6 +16,13 @@
  */
 
 class finance_finder_extend_filter_monthly_report_items{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function get_extend_colums(){
         $db['monthly_report_items']=array (
             'columns' => array (

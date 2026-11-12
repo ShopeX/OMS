@@ -1758,4 +1758,112 @@ class erpapi_shop_response_order extends erpapi_shop_response_abstract
         
         return true;
     }
+
+    /**
+     * 是否命中淘宝/天猫「加价发顺丰平台集采」（asdp_ads=218）
+     *
+     * @param array|null $ordersdf
+     * @return bool
+     */
+    protected function _isPaidSfPlatformJicai($ordersdf = null)
+    {
+        $sdf = $ordersdf !== null ? $ordersdf : $this->_ordersdf;
+        $cnInfo = (isset($sdf['cn_info']) && is_array($sdf['cn_info'])) ? $sdf['cn_info'] : array();
+        $agreement = (isset($cnInfo['logistics_agreement']) && is_array($cnInfo['logistics_agreement']))
+            ? $cnInfo['logistics_agreement'] : array();
+
+        $asdpAds = '';
+        if (isset($sdf['asdp_ads']) && $sdf['asdp_ads'] !== '' && $sdf['asdp_ads'] !== null) {
+            $asdpAds = $sdf['asdp_ads'];
+        } elseif (isset($cnInfo['asdp_ads']) && $cnInfo['asdp_ads'] !== '' && $cnInfo['asdp_ads'] !== null) {
+            $asdpAds = $cnInfo['asdp_ads'];
+        } elseif (isset($agreement['asdp_ads']) && $agreement['asdp_ads'] !== '' && $agreement['asdp_ads'] !== null) {
+            $asdpAds = $agreement['asdp_ads'];
+        }
+
+        $serviceMsg = '';
+        if (!empty($sdf['logistics_service_msg'])) {
+            $serviceMsg = $sdf['logistics_service_msg'];
+        } elseif (!empty($cnInfo['logistics_service_msg'])) {
+            $serviceMsg = $cnInfo['logistics_service_msg'];
+        } elseif (!empty($agreement['logistics_service_msg'])) {
+            $serviceMsg = $agreement['logistics_service_msg'];
+        }
+
+        return ((string) $asdpAds === '218') && ($serviceMsg === '加价发顺丰平台集采');
+    }
+
+    /**
+     * 加价发顺丰平台集采：指定 SF，写入 cpup/promise 标记（对齐抖音 paid_shunfeng_express_tk）
+     *
+     * @return bool 是否命中
+     */
+    protected function _applyPaidSfPlatformJicai()
+    {
+        if (!$this->_isPaidSfPlatformJicai()) {
+            return false;
+        }
+
+        $this->_ordersdf['__paid_sf_jicai'] = true;
+        $this->_ordersdf['shipping_name'] = 'SF';
+        $this->_ordersdf['assign_express_code'] = 'SF';
+
+        $cpupParts = array();
+        if (!empty($this->_ordersdf['cpup_service'])) {
+            $cpupParts = array_filter(array_map('trim', explode(',', (string) $this->_ordersdf['cpup_service'])));
+        }
+        if (!in_array('218', $cpupParts, true)) {
+            $cpupParts[] = '218';
+        }
+        $this->_ordersdf['cpup_service'] = implode(',', $cpupParts);
+
+        $promiseMsg = '加价发顺丰平台集采';
+        $promiseParts = array();
+        if (!empty($this->_ordersdf['promise_service'])) {
+            $promiseParts = array_filter(array_map('trim', explode(',', (string) $this->_ordersdf['promise_service'])));
+        }
+        if (!in_array($promiseMsg, $promiseParts, true)) {
+            $promiseParts[] = $promiseMsg;
+        }
+        $this->_ordersdf['promise_service'] = implode(',', $promiseParts);
+
+        return true;
+    }
+
+    /**
+     * 更新链路：命中加价发顺丰时挂插件，并标记是否首次变成 218（供打回发货单）
+     *
+     * @param array $plugins
+     * @return array
+     */
+    protected function _appendPaidSfJicaiUpdatePlugins(array $plugins)
+    {
+        if (!$this->_isPaidSfPlatformJicai() && empty($this->_ordersdf['__paid_sf_jicai'])) {
+            return $plugins;
+        }
+
+        if (false === array_search('orderextend', $plugins)) {
+            $plugins[] = 'orderextend';
+        }
+        if (false === array_search('orderlabels', $plugins)) {
+            $plugins[] = 'orderlabels';
+        }
+
+        if (!empty($this->_tgOrder['order_id'])) {
+            $oldExtend = app::get('ome')->model('order_extend')->db_dump(
+                array('order_id' => $this->_tgOrder['order_id']),
+                'cpup_service'
+            );
+            $oldParts = array();
+            if (!empty($oldExtend['cpup_service'])) {
+                $oldParts = array_filter(array_map('trim', explode(',', (string) $oldExtend['cpup_service'])));
+            }
+            if (!in_array('218', $oldParts, true)) {
+                $this->_ordersdf['__paid_sf_jicai_first'] = true;
+                $this->_newOrder['__paid_sf_jicai_first'] = true;
+            }
+        }
+
+        return $plugins;
+    }
 }

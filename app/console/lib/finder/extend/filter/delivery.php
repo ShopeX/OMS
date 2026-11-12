@@ -16,6 +16,13 @@
  */
 
 class console_finder_extend_filter_delivery{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function get_extend_colums()
     {
         //WMS异常错误码
@@ -68,7 +75,7 @@ class console_finder_extend_filter_delivery{
                     'type' => $error_codes,
                     'label' => '同步WMS错误码',
                     'editable' => false,
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                     'in_list' => false,
                     'default_in_list' => false,

@@ -14,8 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
+/**
+* 订单接收函数库
+* @author dqiujing@gmail.com
+* @copyright shopex.cn 2012.06.06
+*/
 class ome_rpc_response_func_order{
 
     public $shop_type2pay_type = array(
@@ -24,11 +27,11 @@ class ome_rpc_response_func_order{
     );
 
     /**
-     * 订单保存
-     * @access public
-     * @param Array $sdf 订单sdf结构数据
-     * @return Array array('rsp'=>'保存状态success/fail','msg'=>'错误消息','data'=>'数据')
-     */
+    * 订单保存
+    * @access public
+    * @param Array $sdf 订单sdf结构数据
+    * @return Array array('rsp'=>'保存状态success/fail','msg'=>'错误消息','data'=>'数据')
+    */
     public function save(&$sdf){
 
         //增加对南极人的处理
@@ -476,6 +479,13 @@ class ome_rpc_response_func_order{
                         $order_update = false;
                         if($oOrder->update($order_update_sdf,$filter)){
                             $order_update = true;
+                            // SCRUM-7468：更新为失败订单时写入进入快照
+                            if (!empty($order_update_sdf['is_fail']) && $order_update_sdf['is_fail'] === 'true') {
+                                try {
+                                    kernel::single('monitor_event_orderfail')->recordEnterByOrderId($order_id);
+                                } catch (Throwable $e) {
+                                }
+                            }
                         }
                     }
 
@@ -551,7 +561,7 @@ class ome_rpc_response_func_order{
      * @params order_update 本地订单是否更新成功
      * @return logInfo
      * @author
-     * */
+     **/
     private function update_order_pay_status( $order_id = NULL,$local_pay_status = NULL ,$order_update = false){
 
         if( empty($order_id) || empty($local_pay_status) || ($order_update == false) ) return '订单暂停状态不需要更新。';
@@ -630,12 +640,12 @@ class ome_rpc_response_func_order{
     }
 
     /**
-     * 添加支付单
-     * @access public
-     * @param Number $order_id 订单ID
-     * @param Array $payments 前端订单支付单数据
-     * @return
-     */
+    * 添加支付单
+    * @access public
+    * @param Number $order_id 订单ID
+    * @param Array $payments 前端订单支付单数据
+    * @return
+    */
     public function add_payment($order_id,$payments,&$pay_list=array()){
         if (empty($order_id) || empty($payments)) return false;
 
@@ -704,7 +714,6 @@ class ome_rpc_response_func_order{
     * @param Array $orders TG订单信息
     * @return
     */
-
     public function refund_apply($order_id,&$sdf,&$orders){
         if (empty($order_id) || empty($sdf) || empty($orders) || $sdf['order_source'] =='taofenxiao') return false;
 
@@ -734,15 +743,15 @@ class ome_rpc_response_func_order{
     }
 
     /**
-     * 更新订单商品明细
-     * @access public
-     * @param Number $order_id 订单ID
-     * @param Array $sdf 前端订单数据
-     * @param Array $orders TG订单数据
-     * @param bool $is_change_goods 商品是否有变化
-     * @param bool $noexists_product 商品是否存在
-     * @return
-     */
+    * 更新订单商品明细
+    * @access public
+    * @param Number $order_id 订单ID
+    * @param Array $sdf 前端订单数据
+    * @param Array $orders TG订单数据
+    * @param bool $is_change_goods 商品是否有变化
+    * @param bool $noexists_product 商品是否存在
+    * @return
+    */
     public function update_items($order_id,$sdf=array(),&$orders,&$is_change_goods,&$noexists_product){
         if (empty($sdf)) return false;
         
@@ -1255,11 +1264,11 @@ class ome_rpc_response_func_order{
 
 
     /**
-     * 订单添加
-     * @access public
-     * @param Array $sdf 订单sdf结构数据
-     * @return Number 订单号
-     */
+    * 订单添加
+    * @access public
+    * @param Array $sdf 订单sdf结构数据
+    * @return Number 订单号
+    */
     public function add(&$sdf,$logInfo){
 
         if (empty($sdf)) return NULL;
@@ -1753,13 +1762,13 @@ class ome_rpc_response_func_order{
     }
 
     /**
-     * 订单过滤
-     * 对于前端打过来的订单，过滤掉不符合条件的:拒绝C2C前端店铺的未支付、已发货和已关闭订单
-     * @access public
-     * @param Array $sdf 订单sdf结构数据
-     * @param Array $shop_info 店铺信息
-     * @return array('rsp'=>'保存状态success/fail','msg'=>'错误消息')
-     */
+    * 订单过滤
+    * 对于前端打过来的订单，过滤掉不符合条件的:拒绝C2C前端店铺的未支付、已发货和已关闭订单
+    * @access public
+    * @param Array $sdf 订单sdf结构数据
+    * @param Array $shop_info 店铺信息
+    * @return array('rsp'=>'保存状态success/fail','msg'=>'错误消息')
+    */
     public function filter(&$sdf,$shop_info=array()){
         $rs = array('rsp'=>'fail','msg'=>'');
         $shipping = $sdf['shipping'];
@@ -1894,11 +1903,11 @@ class ome_rpc_response_func_order{
     }
 
     /**
-     * 支付方式获取
-     * @param String $pay_bn 支付方式编号
-     * @param String $shop_type 店铺类型
-     * @return Array 支付方式信息
-     */
+    * 支付方式获取
+    * @param String $pay_bn 支付方式编号
+    * @param String $shop_type 店铺类型
+    * @return Array 支付方式信息
+    */
     public function get_payment($pay_bn,$shop_type=''){
         $pay_bn = $pay_bn ? $pay_bn :$this->shop_type2pay_type[$shop_type];
         $pay_bn = $pay_bn ? $pay_bn : 'online';

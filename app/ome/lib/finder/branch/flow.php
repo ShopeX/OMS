@@ -17,6 +17,13 @@
 
 class ome_finder_branch_flow
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $column_opt       = "操作";
     public $column_opt_order = 1;
     /**

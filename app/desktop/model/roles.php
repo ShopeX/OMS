@@ -212,6 +212,66 @@ class desktop_mdl_roles extends dbeav_model{
         return false;    
          }
          return true;
-     }
+      }
+
+    /**
+     * Vue finder modifier: transform workground permissions to readable names array
+     * Called by desktop_finder_vue_list::applyFuncColumns()
+     */
+    public function modifier_workground($value, $list = [], $row = [])
+    {
+        // $value may already be unserialized (array) if dbeav auto-unserialize is enabled
+        if (empty($value)) {
+            return [];
+        }
+
+        $workground = is_array($value) ? $value : unserialize($value);
+        if (!is_array($workground) || empty($workground)) {
+            return [];
+        }
+
+        // Batch lookup menu titles from permission and widgets menus
+        static $cache = [];
+        $menusModel = $this->app->model('menus');
+        $uncached = array_filter($workground, function($perm) use (&$cache) {
+            return is_string($perm) && !array_key_exists($perm, $cache);
+        });
+
+        if (!empty($uncached)) {
+            $menuList = $menusModel->getList('permission,menu_title', [
+                'menu_type' => 'permission',
+                'permission' => $uncached
+            ]);
+            foreach ($uncached as $perm) {
+                $cache[$perm] = null;
+            }
+            foreach ($menuList as $m) {
+                $cache[$m['permission']] = $m['menu_title'] ?: $m['permission'];
+            }
+
+            $widgetAddons = array_filter($uncached, function($addon) use (&$cache) {
+                return $cache[$addon] === null;
+            });
+            if (!empty($widgetAddons)) {
+                $widgetList = $menusModel->getList('addon,menu_title', [
+                    'menu_type' => 'widgets',
+                    'addon' => $widgetAddons
+                ]);
+                foreach ($widgetList as $m) {
+                    $cache[$m['addon']] = $m['menu_title'] ?: $m['addon'];
+                }
+            }
+        }
+
+        $names = [];
+        foreach ($workground as $perm) {
+            if (is_string($perm) && isset($cache[$perm])) {
+                $names[] = $cache[$perm];
+            }
+        }
+
+        // 前端列表列期望字符串（roles.ts: workground?: string），数组会被渲染成 "Array"
+        return implode('、', $names);
+    }
 }
 ?>

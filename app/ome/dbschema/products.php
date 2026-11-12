@@ -292,7 +292,7 @@ $db['products']=array (
       'editable' => false,
       'hidden' => true,
    
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
   ),

@@ -24,6 +24,7 @@ class ome_ctl_admin_order_fail extends desktop_controller
     {
         $mdl_order   = $this->app->model('order_fail');
         $base_filter = array('is_fail' => 'true', 'archive' => '1', 'edit_status' => 'true', 'status' => 'active');
+        
         //check shop permission
         $organization_permissions = kernel::single('desktop_user')->get_organization_permission();
         if ($organization_permissions) {
@@ -114,7 +115,31 @@ class ome_ctl_admin_order_fail extends desktop_controller
         if(empty($pbn) || empty($oldPbn)){
             $this->splash('error', $url, '请填写调整货号');
         }
+
+        $orderInfo = app::get('ome')->model('orders')->getList('shop_id', array('order_id' => $order_id), 0, 1);
+        $shop_id = $orderInfo[0]['shop_id'] ?? '';
+        $salesMLib = kernel::single('material_sales_material');
+        $missingBns = array();
+        foreach ($pbn as $bn) {
+            $bn = trim($bn);
+            if ($bn === '') {
+                continue;
+            }
+            
+            if (!$salesMLib->getSalesMByBn($shop_id, $bn)) {
+                $missingBns[] = $bn;
+            }
+        }
         
+        if (empty($missingBns) && !array_filter(array_map('trim', (array) $pbn))) {
+            $this->splash('error', $url, '请填写调整货号');
+        }
+        
+        if ($missingBns) {
+            $missingBns = array_values(array_unique($missingBns));
+            $this->splash('error', $url, '填写的销售物料编码：' . implode('、', $missingBns) . ' 不存在，请检查！');
+        }
+
         //修正订单项
         if (kernel::single('ome_order_fail')->modifyOrderItems($order_id, $oldPbn, $pbn)) {
             $this->splash('success', $url, '订单处理成功');
@@ -128,7 +153,6 @@ class ome_ctl_admin_order_fail extends desktop_controller
      */
     public function batchsave($type = 'bn')
     {
-
         $pbn    = $_POST['pbn'];
         $oldPbn = $type == 'bn' ? $_POST['oldPbn'] : $_POST['oldGoodsId'];
         $finder_id = $_GET['finder_id'];
@@ -158,6 +182,36 @@ class ome_ctl_admin_order_fail extends desktop_controller
             } else {
                 $msg = '没有找到匹配的失败订单！';
             }
+            echo "<button id='close_btn'>{$msg}</button><script>;if(finderGroup['{$finder_id}']) finderGroup['{$finder_id}'].refresh.delay(100,finderGroup['{$finder_id}']);var oDialog = $('close_btn').getParent('.dialog').retrieve('instance');oDialog.close.delay(2000, oDialog);</script>";
+            exit;
+        }
+
+        $orderIds = array_column($orderData, 'order_id');
+        $shopRows = app::get('ome')->model('orders')->getList('shop_id', array('order_id' => $orderIds));
+        $shopIds = array_values(array_unique(array_filter(array_column($shopRows, 'shop_id'))));
+        $salesMLib = kernel::single('material_sales_material');
+        $missingBns = array();
+        foreach ((array) $pbn as $bn) {
+            $bn = trim($bn);
+            if ($bn === '') {
+                continue;
+            }
+            foreach ($shopIds as $shop_id) {
+                if (!$salesMLib->getSalesMByBn($shop_id, $bn)) {
+                    $missingBns[] = $bn;
+                    break;
+                }
+            }
+            if (empty($shopIds)) {
+                if (!$salesMLib->getSalesMByBn('', $bn)) {
+                    $missingBns[] = $bn;
+                }
+            }
+        }
+        
+        if ($missingBns) {
+            $missingBns = array_values(array_unique($missingBns));
+            $msg = '输入的销售物料编码：' . implode('、', $missingBns) . ' 不存在，请检查！';
             echo "<button id='close_btn'>{$msg}</button><script>;if(finderGroup['{$finder_id}']) finderGroup['{$finder_id}'].refresh.delay(100,finderGroup['{$finder_id}']);var oDialog = $('close_btn').getParent('.dialog').retrieve('instance');oDialog.close.delay(2000, oDialog);</script>";
             exit;
         }
@@ -252,7 +306,7 @@ class ome_ctl_admin_order_fail extends desktop_controller
         parent::dialog_batch('ome_mdl_order_fail',true, 500);
     }
 
-    #删除失败订单
+    // 删除失败订单
     public function deleteFailOrder()
     {
         parse_str($_POST['primary_id'], $postdata);

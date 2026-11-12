@@ -64,7 +64,7 @@ $db['event_receiver'] = array(
             'label'           => '发送类型',
             'comment'         => '发送类型',
             'editable'        => false,
-            'filtertype'      => 'yes',
+            'filtertype' => 'normal',
             'filterdefault'   => true,
         ),
         'org_id'             => array(

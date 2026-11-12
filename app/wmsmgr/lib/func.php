@@ -49,10 +49,22 @@ class wmsmgr_func{
 
     /**
     * 根据wms_id、wms物流公司编号获取系统物流公司编号
+    * 优先读平台配置 platform_set.wms_express_relation，未命中再读 express_relation
     * @access public
+    * @param string $channel_id WMS渠道ID
+    * @param string $wms_express_corp_bn WMS物流公司编码
+    * @param string $shop_type 平台编码（可选，有则优先平台映射）
     * @return string
     */
-    public function getlogiCode($channel_id,$wms_express_corp_bn=''){
+    public function getlogiCode($channel_id,$wms_express_corp_bn='',$shop_type=''){
+        // 通过平台类型，获取平台指定的WMS物流公司编码映射的OMS物流公司编号
+        if ($shop_type) {
+            $platformBn = $this->getPlatformOmsExpressBn($shop_type, $wms_express_corp_bn);
+            if ($platformBn !== '') {
+                return $platformBn;
+            }
+        }
+        
         $express_relation_mdl = app::get('wmsmgr')->model('express_relation');
         $data = $express_relation_mdl->getlist('*',array('wms_id'=>$channel_id,'wms_express_bn'=>$wms_express_corp_bn));
         return isset($data[0]['sys_express_bn']) ? $data[0]['sys_express_bn'] : '';
@@ -365,5 +377,65 @@ class wmsmgr_func{
         );
         
         return $logiList;
+    }
+    
+    /**
+     * 按平台读取 WMS物流公司编码 → OMS物流公司编码（仅 platform_set）
+     *
+     * @param string $shop_type 平台编码
+     * @param string $wms_express_bn WMS物流公司编码（kname）
+     * @return string OMS物流公司编码（kvalue），未命中返回空串
+     */
+    public function getPlatformOmsExpressBn($shop_type, $wms_express_bn = '')
+    {
+        $shop_type = $this->normalizeShopTypeForExpressRelation($shop_type);
+        $wms_express_bn = trim((string) $wms_express_bn);
+        if ($shop_type === '' || $wms_express_bn === '') {
+            return '';
+        }
+        
+        $row = app::get('ome')->model('platform_set')->db_dump(array(
+            'shop_type' => $shop_type,
+            'scene'     => 'wms_express_relation',
+            'kname'     => $wms_express_bn,
+        ), 'kvalue');
+        
+        if (!empty($row['kvalue'])) {
+            return trim($row['kvalue']);
+        }
+        
+        return '';
+    }
+    
+    /**
+     * 平台编码归一化（与平台设置页一致：天猫并入淘宝）
+     *
+     * @param string $shop_type
+     * @return string
+     */
+    protected function normalizeShopTypeForExpressRelation($shop_type)
+    {
+        $shop_type = trim((string) $shop_type);
+        if ($shop_type === 'tmall') {
+            return 'taobao';
+        }
+        return $shop_type;
+    }
+    
+    /**
+     * 根据发货单号获取平台编码
+     *
+     * @param string $delivery_bn
+     * @return string
+     */
+    public function getShopTypeByDeliveryBn($delivery_bn = '')
+    {
+        $delivery_bn = trim((string) $delivery_bn);
+        if ($delivery_bn === '') {
+            return '';
+        }
+        
+        $row = app::get('ome')->model('delivery')->db_dump(array('delivery_bn' => $delivery_bn), 'shop_type');
+        return !empty($row['shop_type']) ? $row['shop_type'] : '';
     }
 }

@@ -17,6 +17,13 @@
 
 class channel_finder_channel
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = 'node_id,node_type,channel_type,shipper';
 
     public $column_opt = '操作';
@@ -29,18 +36,50 @@ class channel_finder_channel
     {
         $finder_id = $_GET['_finder']['finder_id'];
 
+        if ($this->vue_mode) {
+            // 注意：$actions 是数字索引列表（非 legacy string 分支的键值数组），
+            // 不能用 unset($actions['apply'])——字符串键不存在，删不掉（SCRUM-7916：
+            // 行上与「更多」里同时出现「申请绑定」）。统一用 removeActionByKey。
+            $actions = [
+                ['key' => 'edit', 'label' => '编辑', 'action' => sprintf('index.php?app=channel&ctl=admin_channel&act=edit&p[0]=%s&finder_id=%s', $row['channel_id'], $finder_id)],
+                ['key' => 'apply', 'label' => '申请绑定', 'action' => sprintf('index.php?app=channel&ctl=admin_channel&act=apply_bindrelation&p[0]=%s', $row['channel_id'], $finder_id)],
+            ];
+            $removeActionByKey = function (string $key) use (&$actions): void {
+                foreach ($actions as $i => $a) {
+                    if (($a['key'] ?? '') === $key) {
+                        unset($actions[$i]);
+                    }
+                }
+            };
+
+            if ($row[$this->col_prefix . 'node_id']) {
+                $removeActionByKey('apply');
+            }
+            if ($row[$this->col_prefix . 'channel_type'] == 'cloudprint') {
+                $removeActionByKey('apply');
+            }
+
+            // 短信 + 商派节点：与 legacy 分支一致，替换为「查看账号 / 申请绑定」
+            if ($row[$this->col_prefix . 'channel_type'] == 'sms' && $row[$this->col_prefix . 'node_type'] == 'shopex') {
+                $removeActionByKey('apply');
+                $adapter = app::get('channel')->model('adapter')->dump(array('channel_id' => $row['channel_id']), 'config');
+                if ($adapter && $adapter['config']) {
+                    $adapter['config'] = unserialize($adapter['config']);
+                }
+                $label = $adapter && $adapter['config'] ? '查看账号' : '申请绑定';
+                $actions['shopex_sms_account'] = [
+                    'key'    => 'shopex_sms_account',
+                    'label'  => $label,
+                    'action' => sprintf('index.php?app=channel&ctl=admin_channel&act=shopex_sms_account&p[0]=%s&finder_id=%s', $row['channel_id'], $finder_id),
+                ];
+            }
+
+            return array_values($actions);
+        }
+
         $buttons = [
-            'edit' => sprintf(
-                '<a href="index.php?app=channel&ctl=admin_channel&act=edit&p[0]=%s&finder_id=%s" target="dialog::{width:700,height:400,title:\'编辑\'}">编辑</a>',
-                $row['channel_id'],
-                $finder_id
-            ),
-            'apply' => sprintf(
-                '<a href="index.php?app=channel&ctl=admin_channel&act=apply_bindrelation&p[0]=%s&finder_id=%s" target="dialog::{width:800,title:\'申请绑定\',onClose:function(){window.finderGroup[\'%s\'].refresh();}}">申请绑定</a>',
-                $row['channel_id'],
-                $finder_id,
-                $finder_id
-            ),
+            'edit'  => sprintf('<a href="index.php?app=channel&ctl=admin_channel&act=edit&p[0]=%s&finder_id=%s" target="dialog::{width:700,height:400,title:\'编辑\'}">编辑</a>', $row['channel_id'], $finder_id),
+            'apply' => sprintf('<a href="index.php?app=channel&ctl=admin_channel&act=apply_bindrelation&p[0]=%s" target="dialog::{width:800,title:\'申请绑定\',onClose:function(){window.finderGroup[\'%s\'].refresh();}}">申请绑定</a>', $row['channel_id'], $finder_id),
         ];
 
         if ($row[$this->col_prefix . 'node_id']) {
@@ -49,6 +88,7 @@ class channel_finder_channel
         if ($row[$this->col_prefix . 'channel_type'] == 'cloudprint') {
             unset($buttons['apply']);
         }
+
         if ($row[$this->col_prefix . 'channel_type'] == 'sms' && $row[$this->col_prefix . 'node_type'] == 'shopex') {
             unset($buttons['apply']);
             $adapter = app::get('channel')->model('adapter')->dump(array('channel_id' => $row['channel_id']), 'config');

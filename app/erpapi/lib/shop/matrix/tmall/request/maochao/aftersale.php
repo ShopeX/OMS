@@ -95,6 +95,16 @@ class erpapi_shop_matrix_tmall_request_maochao_aftersale extends erpapi_shop_req
                 ];
             }
         }
+        
+        // [兼容]淘宝平台必须传zip邮政编码
+        if(!isset($extend_field['receiver_info']['receiverZipCode']) || empty($extend_field['receiver_info']['receiverZipCode']))
+        {
+            if(isset($extend_field['sender_info']['senderZipCode']) && !empty($extend_field['sender_info']['senderZipCode'])){
+                $extend_field['receiver_info']['receiverZipCode'] = $extend_field['sender_info']['senderZipCode'];
+            }
+        }
+        
+        // data
         $data = array(
             'supplier_id' => $extend_field['supplierId'],
             'biz_order_code' => $sdf['return_bn'],

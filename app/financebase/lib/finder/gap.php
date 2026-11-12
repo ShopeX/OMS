@@ -1,6 +1,13 @@
 <?php
 
 class financebase_finder_gap {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     function __construct(){
         if(in_array($_REQUEST['action'], ['exportcnf', 'to_export', 'export'])){
@@ -26,6 +33,17 @@ class financebase_finder_gap {
     var $column_edit_width = "50";
 
     function column_edit($row) {
+        // Vue Finder 契约：结构化行操作（不下发 legacy HTML 片段）
+        if ($this->vue_mode) {
+            if (!kernel::single('desktop_user')->has_permission('shop_settlement_gap_edit')) {
+                return array();
+            }
+
+            return array(
+                array('key' => 'edit', 'label' => '编辑', 'action' => 'edit'),
+            );
+        }
+
         $finder_id = $_GET['_finder']['finder_id'];
 
         // 检查编辑权限
@@ -93,7 +111,24 @@ class financebase_finder_gap {
         // 使用ome模块的read_log方法，与会计科目保持一致
         $omeLogMdl = app::get('ome')->model('operation_log');
         $logList = $omeLogMdl->read_log(array('obj_id' => $gap_id, 'obj_type' => 'gap@financebase'), 0, -1);
-        
+
+        // Vue Finder 契约：结构化下发，不下发 legacy 的 <a> HTML；编辑类日志 can_snapshot=true 供前端跳「查看快照」
+        if ($this->vue_mode) {
+            $list = array();
+            foreach ((array) $logList as $v) {
+                $list[] = array(
+                    'operate_time' => date('Y-m-d H:i:s', $v['operate_time']),
+                    'op_name'      => $v['op_name'],
+                    'operation'    => $v['operation'],
+                    'memo'         => $v['memo'] ?: '',
+                    'log_id'       => $v['log_id'],
+                    'can_snapshot' => strpos((string) $v['operation'], '编辑') !== false,
+                );
+            }
+
+            return array('logs' => $list);
+        }
+
         $finder_id = $_GET['_finder']['finder_id'];
         
         if ($logList) {

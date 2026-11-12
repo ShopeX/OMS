@@ -23,6 +23,13 @@
  */
 class wmsmgr_finder_abnormal_code
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $addon_cols = '';
     
     //操作

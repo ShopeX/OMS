@@ -32,7 +32,7 @@ $db['basic_material_props']=array (
       'pkey' => true,
       'extra' => 'auto_increment',
       'label' => 'ID',
-      'width' => 110,
+      'width' => 150,
       'hidden' => true,
       'editable' => false,
       'comment' => '自增主键ID'
@@ -42,7 +42,7 @@ $db['basic_material_props']=array (
     array(
         'type' => 'int unsigned',
         'required' => true,
-        'width' => 110,
+        'width' => 150,
         'hidden' => true,
         'editable' => false,
 

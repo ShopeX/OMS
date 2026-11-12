@@ -16,6 +16,13 @@
  */
 
 class purchase_finder_credit_sheet{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $detail_basic = "基本信息";
     var $detail_statement = "结算信息";
     var $detail_eoitem = "入库单明细";

@@ -20,25 +20,32 @@ class desktop_user{
 
     private $mark_modified = false;
     private $userGroup = array();
+    public $account_type;
+    public $user_id;
+    public $user_data = array();
+    public $config = array();
 
     function __construct(){
         $this->account_type = pam_account::get_account_type('desktop');
-        if(isset($_SESSION['account'][$this->account_type])){
-            $this->user_id = $_SESSION['account'][$this->account_type];
-            $_inner_key = sprintf("account_user_%s",$this->user_id);
+        // 主要来源：desktop_auth_context（JWT 认证成功后由 desktop_controller 写入）
+        // 不再从 $_SESSION 读取，SESSION 仅作为基础设施
+        $userId = desktop_auth_context::userId();
+
+        if ($userId > 0) {
+            $this->user_id = $userId;
+            $_inner_key = sprintf("account_user_%s", $this->user_id);
             $this->user_data = cachecore::fetch($_inner_key);
             if ($this->user_data === false) {
-                $this->user_data = app::get('desktop')->model('users')->dump($this->user_id,'*',array( ':account@pam'=>array('*') ));
-                //缓存15分钟
-                cachecore::store($_inner_key, $this->user_data, 60*15);
+                $this->user_data = app::get('desktop')->model('users')->dump($this->user_id, '*', [':account@pam' => ['*']]);
+                cachecore::store($_inner_key, $this->user_data, 60 * 15);
             }
 
             if (empty($this->user_data)) {
-                unset($_SESSION['account'][$this->account_type]);
+                $this->user_id = null;
             }
         }
     }
-    
+
     /**
      * 队列导出数据时，设置user_id = op_id 查询数据时来判断权限。
      * @Author: xueding
@@ -132,7 +139,7 @@ class desktop_user{
 
     #获取用户操作权限 permission ID
     function group(){
-        if($_SESSION['account']['user_permission']) {
+        if(isset($_SESSION['account']['user_permission']) && is_array($_SESSION['account']['user_permission'])) {
             return $_SESSION['account']['user_permission'];
         }
         $hasrole = app::get('desktop')->model('hasrole');
@@ -153,17 +160,16 @@ class desktop_user{
         foreach($pass as $key){
             $work = unserialize($key['workground']);
             if(!$work){echo app::get('desktop')->_("无任何权限");exit;}
-            foreach($work as $val){
-                $group[] = $val;
+            if ($work) {
+                $group = array_merge($group, (array)$work);
             }
             //增加数据权限判断
             $data_authority = unserialize($key['data_authority']);
             if ($data_authority) {
-                foreach($data_authority as $val){
-                    $group[] = $val;
-                }
+                $group = array_merge($group, (array)$data_authority);
             }
         }
+        $group = array_values(array_unique(array_map('strval', $group)));
         return $group;
     }
 
@@ -215,9 +221,29 @@ class desktop_user{
 
         $authorityFinderId = $_GET['_finder']['finder_id'] ?: ($_GET['finder_id'] ?: ($_GET['find_id'] ?: substr(md5($_SERVER['QUERY_STRING']),5,6)));
 
+        // 注解权限优先校验：action 方法有 #[RequirePermission] 时，直接校验权限，跳过菜单表查询
+        $annotPerms = $this->_getAnnotationPermissions($_GET['app'], $_GET['ctl'], $_GET['act']);
+        if ($annotPerms === false) {
+            return false;
+        }
+        if ($annotPerms !== null) {
+            foreach ($annotPerms as $annotPerm) {
+                if (!$this->has_permission($annotPerm)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         $menus  = app::get('desktop')->model('menus');
         $group  = $this->group();
         $uriArr = $_GET;
+
+        // Vue 请求带 X-Requested-Permission header → 跳过 DB 查询，直接验权限
+        if ($_SERVER['HTTP_X_REQUESTED_PERMISSION'] ?? null) {
+            return $this->has_permission($_SERVER['HTTP_X_REQUESTED_PERMISSION']);
+        }
+
         if ($_GET['act'] == 'alertpages' && $_GET['hash']) {
             parse_str(substr($_GET['hash'], 1), $uriArr);
             if ($uriArr['find_id']) {
@@ -244,10 +270,8 @@ class desktop_user{
             if ($authorityFinderId) {
                 $_SESSION['authority'][$authorityFinderId] = $authorityFinderId;
             }
-
             // 删除掉KEY为空的
             unset($_SESSION['authority']['']);
-
             return true;
         } else {
             return false;
@@ -264,15 +288,44 @@ class desktop_user{
         if($this->user_id){$users->update($sdf,array('user_id'=>$this->user_id));}
     }
 
+   #注解权限优先校验：解析 action 方法上的 #[RequirePermission] 注解
+   private function _getAnnotationPermissions(string $app, string $ctl, string $act): array|false|null
+   {
+       $className = $app . '_ctl_' . $ctl;
+       if (!class_exists($className)) {
+           return null;
+       }
+       if (!method_exists($className, $act)) {
+           return null;
+       }
+       #注解属性类是命名空间类，omsAutoloader 按下划线类名约定加载不到，须显式引入，
+       #否则 newInstance 抛 "Attribute class not found" 被 catch 吞成 false，子账号全部注解接口 403（SCRUM-7701）
+       if (!class_exists(\app\desktop\lib\annotation\RequirePermission::class, false)) {
+           require_once __DIR__ . '/annotation/RequirePermission.php';
+       }
+       try {
+           $refMethod = new \ReflectionMethod($className, $act);
+           $attrs = $refMethod->getAttributes(\app\desktop\lib\annotation\RequirePermission::class);
+           if (empty($attrs)) {
+               return null;
+           }
+            $attribute = $attrs[0]->newInstance();
+            return $attribute->all !== [] ? $attribute->all : [$attribute->permission];
+       } catch (\Throwable) {
+           return false;
+       }
+   }
+
    #todo根据管理员ID获得工作组菜单和相应的子菜单
    function get_work_menu(){
-        $aWorkground = app::get('desktop')->model('menus')->getList(
+
+         $aWorkground = app::get('desktop')->model('menus')->getList(
             'menu_id,app_id,menu_title,menu_path,menu_type,workground,menu_group,target,icon,en',
             array('menu_type'=>'workground','disabled'=>'false','display' => 'true')
         );
 
         $aMenu = app::get('desktop')->model('menus')->getList(
-            'menu_id,app_id,menu_title,menu_path,menu_type,workground,menu_group,addon,target,icon,en',
+            'menu_id,app_id,menu_title,menu_path,menu_type,workground,menu_group,addon,target,icon,en,permission',
             array('menu_type'=>'menu','disabled'=>'false','display' =>'true')
         );
 
@@ -301,13 +354,15 @@ class desktop_user{
             $aTmpAll  = $meuns->workgroup($group, true);
             $aMenuAll = $meuns->get_menu($group, true);
             foreach($group as $key=>$val){
-                $aTmp = $aTmpAll[$val];
-                foreach($aMenuAll[$val] as $v){
-                    $group= $v['menu_group']?$v['menu_group']:'nogroup';
-                    if(!@in_array($v,(array)$data_menus[$aTmp[0]['workground']][$group])) $data_menus[$aTmp[0]['workground']][$group][] = $v;
+                $aTmp = isset($aTmpAll[$val]) ? $aTmpAll[$val] : array();
+                // 同一 permission 可能跨工作台，按菜单自身 workground 归组，不能都挂到 $aTmp[0]
+                foreach((array)$aMenuAll[$val] as $v){
+                    $menuGroup = $v['menu_group'] ? $v['menu_group'] : 'nogroup';
+                    $workground = $v['workground'];
+                    if(!@in_array($v,(array)$data_menus[$workground][$menuGroup])) $data_menus[$workground][$menuGroup][] = $v;
                 }
-                foreach($aTmp as $val ){
-                    $data[$val['workground']] =$val;
+                foreach($aTmp as $wg){
+                    $data[$wg['workground']] = $wg;
                 }
             }
             $aData['workground'] = $data;
@@ -340,16 +395,28 @@ class desktop_user{
 
                         unset($menu['addon']);
                     }
-                    $finderId = app::get('desktop')->router()->getFinderVid($menu['menu_path'].$query);
+                    $router = app::get('desktop')->router();
+                    $finderId = '';
+                    if (is_object($router) && method_exists($router, 'getFinderVid')) {
+                        $finderId = call_user_func(array($router, 'getFinderVid'), $menu['menu_path'].$query);
+                    }
                     $menu['menu_path'] = $menu['menu_path'].$query.'&finder_vid='.$finderId;
                     
-                    // 如果target有值且以"/"开头，使用target作为route_path，如：/audit-template-list（审批流模板列表）
+                    // route_path 始终为 legacy iframe route
+                    $menu['route_path'] = '/m-'.str_replace('_','',$menu['workground']).'/'.$menu['en'].'/'.$menu['menu_id'];
+
+                    // vue_route_path 和 vue_menu_path 仅在 target 以 "/" 开头时设置
                     if(!empty($menu['target']) && strpos($menu['target'], '/') === 0){
-                        $menu['route_path'] = $menu['target'];
-                    } else {
-                        $menu['route_path'] = '/m-'.str_replace('_','',$menu['workground']).'/'.$menu['en'].'/'.$menu['menu_id'];
+                        $menu['vue_route_path'] = $menu['target'];
+
+                        // Vue模式：计算 vue_menu_path 路径（admin_ → api_）
+                        if(strpos($menu['menu_path'], 'admin_') !== false) {
+                            $menu['vue_menu_path'] = str_replace('admin_', 'api_', $menu['menu_path']);
+                        } elseif(strpos($menu['menu_path'], 'api_') === false) {
+                            $menu['vue_menu_path'] = preg_replace_callback('/ctl=([^&]+)/', function($m) { return 'ctl=api_' . $m[1]; }, $menu['menu_path']);
+                        }
                     }
-                    
+
                     $aData['menu'][$k1][$k2][$k3] = $menu;
                 }
             }
@@ -378,6 +445,11 @@ class desktop_user{
      * @return mixed 返回验证结果
      */
     public function checkUpdatePwd($accountId, $write = false){
+        $needChangePwd = $this->getNeedChangePasswordFromJwt();
+        if ($needChangePwd !== null && $needChangePwd !== '') {
+            return true;
+        }
+
         $return = false;
         $cookieExpires = 30*1440*60;
         $cacheObj = function_exists('init_domain') ? kernel::single('taoexlib_params_cache') : base_kvstore::instance('sessions');
@@ -407,6 +479,10 @@ class desktop_user{
         }
         $cacheObj->store('password_change_remount', serialize($remount), $cookieExpires);
         return $return;
+    }
+
+    private function getNeedChangePasswordFromJwt() {
+        return desktop_auth_user::needChangePassword();
     }
 
     /**
@@ -575,6 +651,12 @@ class desktop_user{
                     break;
                 case 'month':
                     if (strtotime('-1 month') > intval($log[0]['operation_time'])) return true;
+                    break;
+                case 'quarter':
+                    if (strtotime('-3 months') > intval($log[0]['operation_time'])) return true;
+                    break;
+                case 'half_year':
+                    if (strtotime('-6 months') > intval($log[0]['operation_time'])) return true;
                     break;
             }
         }

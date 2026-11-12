@@ -350,7 +350,7 @@ class omeanalysts_mdl_ome_shop extends dbeav_model{
                     'width' => 130,
                     'editable' => false,
                     'orderby' => false,
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                     'in_list' => true,
                     'order'=>1,

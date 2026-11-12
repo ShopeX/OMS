@@ -40,6 +40,7 @@ $db['event_template'] = array(
             'editable'        => false,
             'in_list'         => true,
             'default_in_list' => true,
+            'width'           => 200,
             'order'           => 10,
         ),
         'template_name' => array(
@@ -120,7 +121,8 @@ $db['event_template'] = array(
             'default'         => 'CURRENT_TIMESTAMP',
             'in_list'         => true,
             'default_in_list' => true,
-            'order'           => 60,
+            'width'           => 180,
+            'order'           => 98,
         ),
         'up_time'       => array(
             'type'            => 'TIMESTAMP',
@@ -129,7 +131,8 @@ $db['event_template'] = array(
             'default'         => 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
             'in_list'         => true,
             'default_in_list' => true,
-            'order'           => 70,
+            'width'           => 180,
+            'order'           => 99,
         ),
     
     ),

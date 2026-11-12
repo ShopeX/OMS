@@ -36,7 +36,7 @@ $db['ome_goodsrma']=array (
       'label' => '商品货号',
       'width' => 120,
       'editable' => false,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
       'in_list' => true,
       'default_in_list' => true,
@@ -72,7 +72,7 @@ $db['ome_goodsrma']=array (
       'hidden' => true,
       'in_list' => true,
       'default_in_list' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
 	'sales_num' =>

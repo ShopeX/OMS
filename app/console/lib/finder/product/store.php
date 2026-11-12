@@ -17,6 +17,13 @@
 
 class console_finder_product_store
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = 'branch_id,bm_id';
 
     //线上在售冻结库存

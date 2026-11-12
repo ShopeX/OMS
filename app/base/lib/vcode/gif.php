@@ -140,7 +140,7 @@ class base_vcode_gif {
         }
     }
 
-    function display($width=60,$height=16) {
+    function render($width=60,$height=16) {
 
         $this->Width = $width;
         $this->Height = $height;
@@ -205,6 +205,13 @@ class base_vcode_gif {
             }
         }
         $out .= chr(128).chr(0).chr(129).chr(0).chr(59);
+
+        return $out;
+    }
+
+    function display($width=60,$height=16) {
+
+        $out = $this->render($width, $height);
    
         header("Expires: -9999");
         header("Pragma: no-cache");

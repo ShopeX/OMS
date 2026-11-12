@@ -16,6 +16,13 @@
  */
 
 class wms_finder_delivery{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $detail_basic = "发货单详情";
     var $detail_item = "基础物料详情";
     var $detail_delivery = "物流单列表";

@@ -78,7 +78,7 @@ $db['reship'] = array(
              'type'            => 'varchar(50)',
              'in_list'         => true,
             'default_in_list' => true,
-            'filtertype' => 'yes',
+            'filtertype' => 'normal',
             'filterdefault' => true,
             'searchtype' => 'nequal',
         ),

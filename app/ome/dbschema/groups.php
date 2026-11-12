@@ -36,7 +36,7 @@ $db['groups']=array (
       'in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'config' => 

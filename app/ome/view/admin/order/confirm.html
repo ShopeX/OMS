@@ -1301,7 +1301,7 @@
         checkHtml = checkItemHtmlData();
 
         new Request({
-            url:'index.php?app=ome&ctl=admin_order&act=getDefaultBranchForNormal',
+            url:'index.php?app=ome&ctl=admin_order&act=ajaxGetDefaultBranch',
             method:'post',
             async: false,
             data:'orders='+JSON.encode(orderIds),

@@ -16,6 +16,13 @@
  */
 
 class o2o_finder_store{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     function __construct(){
         if(in_array($_REQUEST['action'], ['exportcnf', 'to_export', 'export'])){

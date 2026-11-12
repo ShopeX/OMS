@@ -37,7 +37,7 @@ $db['order_settle'] = array(
 			'default'       => '',
 			'label'         => '金额类型',
 			'editable'      => false,
-			'filtertype'    => 'yes',
+			'filtertype' => 'normal',
 			'filterdefault' => true,
 		),
 		'material_bn'         => array(

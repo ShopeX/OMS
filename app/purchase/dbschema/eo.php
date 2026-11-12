@@ -36,7 +36,7 @@ $db['eo']=array (
       'default_in_list' => true,
       'filterdefault' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'po_id' =>
     array (
@@ -58,7 +58,7 @@ $db['eo']=array (
       'default_in_list' => false,
       'is_title' => true,
       'filterdefault' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'amount' =>
     array (
@@ -70,7 +70,7 @@ $db['eo']=array (
       'default_in_list' => true,
       'filterdefault' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'entry_time' =>
     array (
@@ -93,7 +93,7 @@ $db['eo']=array (
       'in_list' => true,
       'default_in_list' => true,
       'filterdefault' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'operator' =>
     array (
@@ -104,7 +104,7 @@ $db['eo']=array (
       'in_list' => true,
       'default_in_list' => true,
       'filterdefault' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'memo' =>
     array (
@@ -132,7 +132,7 @@ $db['eo']=array (
       'in_list' => true,
       'default_in_list' => true,
       'filterdefault' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
   ),
   'index' =>

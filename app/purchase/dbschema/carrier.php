@@ -33,7 +33,7 @@ $db['carrier']=array (
                     'default_in_list' => true,
                     'searchtype' => 'nequal',
                     'filterdefault' => true,
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'label' => '承运商编号',
                     'order' => 5,
             ),

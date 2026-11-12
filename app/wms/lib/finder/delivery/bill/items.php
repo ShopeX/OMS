@@ -17,6 +17,13 @@
 
 class wms_finder_delivery_bill_items
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = "bill_id";
 
     public $column_logi_no = "物流单号";

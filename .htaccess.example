@@ -19,6 +19,7 @@
     
     # 特殊路由规则
     RewriteRule ^m- /index.html [NC,L]
+    RewriteRule ^login$ /index.html [NC,L]
     RewriteRule ^home$ /index.html [NC,L]
     
     # 其他请求重定向到 index.php

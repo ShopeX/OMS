@@ -18,22 +18,38 @@
 
 class desktop_controller extends base_controller
 {
-
     protected $checkCSRF = true;
+    protected $loginExempt = [];
     public $defaultwg;
-    /**
-     * __construct
-     * @param mixed $app app
-     * @return mixed 返回值
-     */
+    protected $defaultWorkground;
+    protected $workground;
+    public $user;
+    protected $_finish_modifier = [];
+    protected $url;
+    /** @var desktop_auth_jwt_result|null */
+    protected ?desktop_auth_jwt_result $jwtAuthResult = null;
+    /** @var mixed app instance passed to kernel::single('desktop_csrf', $this->app) */
+    public $app;
+
+    protected function wantsJson(): bool
+    {
+        $request = kernel::single('base_component_request');
+        if ($request->is_ajax()) {
+            return true;
+        }
+        // Check for Vue SPA header indicating JSON response is expected
+        $requestedBy = $_SERVER['HTTP_X_REQUESTED_BY'] ?? '';
+        if ($requestedBy === 'shopex-oms-vue') {
+            return true;
+        }
+        $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
+        return stripos($accept, 'application/json') !== false;
+    }
+
     public function __construct($app)
     {
         if(!isset($this->workground)) {
             $this->workground = get_class($this);
-        }
-        if($this->checkCSRF && strpos($_SERVER['CONTENT_TYPE'], 'x-www-form-urlencoded') && $_SERVER['HTTP_X_REQUESTED_BY'] != 'shopex-ui') {
-            header('Content-Type:text/html; charset=utf-8');
-            die('非法请求');
         }
         header("Cache-Control:no-store, no-cache, must-revalidate"); // HTTP/1.1
         header("Expires: Mon, 26 Jul 1997 05:00:00 GMT"); // 强制查询etag
@@ -41,9 +57,13 @@ class desktop_controller extends base_controller
         $this->defaultwg = $this->defaultWorkground;
         parent::__construct($app);
         kernel::single('base_session')->start();
-        if ($_SESSION['account'][$_SESSION['type']] && kernel::single('desktop_user')->checkUpdatePwd($_SESSION['account'][$_SESSION['type']])) {
-            kernel::single('base_session')->destory();
-        }
+
+        $this->jwtAuthResult = desktop_auth_request::bootstrap();
+        desktop_auth_request::enforceWriteProtection(
+            $this->checkCSRF,
+            (array) $this->loginExempt,
+            $this->app
+        );
 
         //验证产品有效性，通行证等信息，不然提示相关信息
         $obj_services = kernel::servicelist('app_pre_auth_use');
@@ -59,8 +79,10 @@ class desktop_controller extends base_controller
             }
         }
 
-        #remove xss 防sql注入
+        #remove xss 防sql注入（Finder/财务等直接读 $_GET/$_POST，需同步过滤）
         if($_GET['ctl'] != "admin_print_otmpl") {
+            $_GET = utils::_filter_input($_GET);
+            $_POST = utils::_filter_input($_POST);
             $_REQUEST = utils::_filter_input($_REQUEST);
         }
 
@@ -69,7 +91,15 @@ class desktop_controller extends base_controller
         } //如果有自动登录，设置session过期时间，单位：分
         $auth    = pam_auth::instance(pam_account::get_account_type('desktop'));
         $account = $auth->account();
-        if (get_class($this) != 'desktop_ctl_passport' && !$account->is_valid()) {
+        $currentAction = $_GET['act'] ?? 'index';
+        $requiresLogin = !in_array($currentAction, (array) $this->loginExempt, true);
+        // JWT 为主要认证态，desktop_auth_context::isAuthenticated() 是唯一来源
+        if ($requiresLogin && get_class($this) != 'desktop_ctl_passport' && !desktop_auth_context::isAuthenticated()) {
+            // 不在此处 clearAuthToken：access 过期时 refresh 仍可能有效，由前端 refresh 恢复
+            if ($this->wantsJson()) {
+                desktop_auth_jwt_transport::respondUnauthorized('登录状态已过期', ['reason' => 'session_expired']);
+            }
+
             if (get_class($this) != 'desktop_ctl_default') {
                 $url = kernel::router()->gen_url($_GET, 1);
             } else {
@@ -84,24 +114,28 @@ class desktop_controller extends base_controller
                 }
             }
 
-            $params = urlencode(json_encode($arr_get));
-           // $_GOTO  = 'index.php?ctl=passport&url=' . $url . '&params=' . $params;
-           // echo "<script>location.replace ('$_GOTO');console.log(window.parent)</script>";exit;
-            $_GOTO = kernel::router()->gen_url(['ctl' => 'passport', 'params'=>$params], 1);
+
+            $loginUrl = kernel::base_url(1) . '/login?force=1&reason=session_expired';
             echo <<<JS
             <script>
-            if (window.parent && window.parent !== window) {
-                window.parent.postMessage({ location: '$_GOTO', data: '' }, '*');
-            } else {
-                location = '$_GOTO';
-            }
+            (function() {
+                var target = '$loginUrl';
+                var payload = { location: target, data: '', reason: 'session_expired' };
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage(payload, '*');
+                } else {
+                    window.location = target;
+                }
+            })();
             </script>
 JS;
             exit;
 
         }
         $this->user = kernel::single('desktop_user');
-        if ($_GET['ctl'] != "passport" && $_GET['ctl'] != "") {
+        $currentAction = $_GET['act'] ?? 'index';
+        $isLoginExempt = in_array($currentAction, (array) $this->loginExempt, true);
+        if (!$isLoginExempt && $_GET['ctl'] != "passport" && $_GET['ctl'] != "") {
             $this->status = $this->user->get_status();
             if (!$this->status && $this->status == 0) {
                 #echo "未启用";exit;
@@ -116,14 +150,18 @@ JS;
         ###如果不是超级管理员就查询操作权限
         if (!$this->user->is_super()) {
             if (!$this->user->chkground($this->workground)) {
-                header('Content-Type:text/html; charset=utf-8');
-                echo app::get('desktop')->_("您无权操作");exit;
+                // Vue 请求返回 JSON，legacy 返回 HTML
+                if ($_SERVER['HTTP_X_REQUESTED_BY'] === 'shopex-oms-vue') {
+                    header('Content-Type: application/json; charset=utf-8');
+                    // code=403：机器可读（前端据此出明确提示；`msg` 保留兼容既有消费方）
+                    echo json_encode(['rsp' => 'fail', 'msg' => '无访问权限', 'code' => 403], JSON_UNESCAPED_UNICODE);
+                } else {
+                    header('Content-Type:text/html; charset=utf-8');
+                    echo app::get('desktop')->_("您无权操作");
+                }
+                exit;
             }
         }
-        $obj_model = app::get('desktop')->model('menus');
-        //检查链接是否可用
-        $obj_model->permissionId($_GET);
-        //end
         $this->_finish_modifier = array();
         foreach (kernel::servicelist(sprintf('desktop_controller_content.%s.%s.%s', $_GET['app'], $_GET['ctl'], $_GET['act'])) as $class_name => $service) {
             if ($service instanceof desktop_interface_controller_content) {
@@ -416,8 +454,10 @@ JS;
         header("Cache-Control:no-store, no-cache, must-revalidate"); // HTTP/1.1
         header("Expires: Mon, 26 Jul 1997 05:00:00 GMT"); // 强制查询etag
         header('Progma: no-cache');
+        $messageText = $msg ? $msg : app::get('desktop')->_('操作成功');
+
         $default = array(
-            $status => $msg ? $msg : app::get('desktop')->_('操作成功'),
+            $status => $messageText,
             $method => $url,
         );
 
@@ -444,7 +484,11 @@ JS;
             $default[$method] = $parse['path'].'?'.$parse['query'];
         }
 
-        $arr  = array_merge($default, $params, array('splash' => true));
+        $arr  = array_merge($default, $params, array(
+            'splash' => true,
+            'rsp' => $status === 'success' ? 'succ' : 'fail',
+            'message' => $messageText,
+        ));
         $json = json_encode($arr, JSON_UNESCAPED_UNICODE);
         $_GET['bodyBytesSent'] = strlen($json);
         if ($_FILES) {

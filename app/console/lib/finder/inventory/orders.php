@@ -22,6 +22,13 @@
  */
 class console_finder_inventory_orders
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     private $_appName = 'console';
     
 //    public $addon_cols = 'id';
@@ -112,6 +119,7 @@ class console_finder_inventory_orders
         
         $render->pagedata['itemList'] = $itemList;
         
+        if ($this->vue_mode) { return []; }
         return $render->fetch('admin/vop/voporders_items.html');
     }
     

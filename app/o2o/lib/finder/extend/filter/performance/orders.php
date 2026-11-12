@@ -16,6 +16,13 @@
  */
 
 class o2o_finder_extend_filter_performance_orders{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
      function get_extend_colums(){
         $storeObj = app::get('o2o')->model('store');

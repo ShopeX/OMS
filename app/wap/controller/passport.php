@@ -80,19 +80,31 @@ class wap_ctl_passport extends wap_controller{
         {
             $auth_data['account_type']    = $params['type'];
             $auth->account()->update($params['module'], $module_uid, $auth_data);
-            
+
             //自动登录cookie
             if($_COOKIE['autologin'] > 0){
                 kernel::single('base_session')->set_cookie_expires($_COOKIE['autologin']);
                 //如果自动登录，设置cookie过期时间，单位：分
             }
-            
+
             //登录成功标识(执行task任务)
             $_SESSION['login_flag']    = 1;
-            
+
             //清除免登标识
             setcookie('relogin', '', time()-3600, '/');
-            
+
+            // Issue HttpOnly JWT cookie for WAP (JWT-first auth)
+            $accountModel = app::get('pam')->model('account');
+            $accountRow = $accountModel->getList('*', ['account_id' => $module_uid], 0, 1);
+            $accountRow = $accountRow[0] ?? [];
+            $loginName = $accountRow['login_name'] ?? '';
+            $userModel = app::get('desktop')->model('users');
+            $userRow = $userModel->getList('super', ['user_id' => $module_uid], 0, 1);
+            $isSuper = ($userRow[0]['super'] ?? 0) == 'true' || ($userRow[0]['super'] ?? 0) == 1;
+            $profile = ['is_super' => $isSuper];
+            $tokens = desktop_auth_jwt_flow::issueTokensForUser($module_uid, $loginName, $profile, true);
+            desktop_auth_jwt_transport::setWapAuthCookies($tokens);
+
             $result    = array('success'=>true, 'message'=>'验证成功！');
             $result['redirect']    = app::get('wap')->router()->gen_url(array('ctl'=>'store','act'=>'index'), true);
             echo json_encode($result);
@@ -117,6 +129,20 @@ class wap_ctl_passport extends wap_controller{
     function logout($backurl='index.php'){
         $url = app::get('wap')->router()->gen_url(array('ctl'=>'passport','act'=>'index'), true);
         $this->begin($url);
+
+        // Revoke WAP JWT: increment token version so the current cookie token becomes invalid.
+        $wapToken = desktop_auth_jwt::extractWapAccessToken();
+        if ($wapToken) {
+            try {
+                $payload = desktop_auth_jwt::decode($wapToken, false);
+                $userId = (int)($payload['sub'] ?? 0);
+                if ($userId > 0) {
+                    desktop_auth_jwt::incrementTokenVersion($userId);
+                }
+            } catch (desktop_auth_exception $e) {
+            }
+        }
+        desktop_auth_jwt_transport::clearWapAuthCookies();
 
         $this->user->login();
         $this->user->logout();

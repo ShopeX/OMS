@@ -20,6 +20,13 @@
  */
 
 class inventorydepth_finder_task_skus {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $addon_cols = 'shop_id';
 
     function __construct($app)

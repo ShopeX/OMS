@@ -16,6 +16,14 @@
  */
 
 class archive_finder_orders{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
+    public $col_prefix = '';
     var $detail_basic = '基本信息';
     var $detail_goods = '订单明细';
     var $detail_pmt = '优惠方案';
@@ -55,6 +63,7 @@ class archive_finder_orders{
     }
 
     function detail_basic($order_id){
+        if ($this->vue_mode) { return ''; }
 
         $render = app::get('archive')->render();
         $oOrders = app::get('archive')->model('orders');
@@ -179,6 +188,7 @@ class archive_finder_orders{
     }
 
     function detail_goods($order_id){
+        if ($this->vue_mode) { return ''; }
         $render = app::get('archive')->render();
         $archive_ordObj = kernel::single('archive_interface_orders');
         $item_list = $archive_ordObj->getItemList($order_id,true);
@@ -207,6 +217,7 @@ class archive_finder_orders{
     }
     
     function detail_pmt($order_id){
+        if ($this->vue_mode) { return ''; }
         $render = app::get('archive')->render();
         $oOrder_pmt = app::get('ome')->model('order_pmt');
         $ordersObj = app::get('archive')->model('orders');
@@ -238,6 +249,7 @@ class archive_finder_orders{
     }
     
     function detail_delivery($order_id){
+        if ($this->vue_mode) { return ''; }
         $render = app::get('archive')->render();
         $oDelivery =kernel::single('archive_interface_delivery');
         $delivery_detail = $oDelivery->get_delivery($order_id);
@@ -267,6 +279,7 @@ class archive_finder_orders{
     }
 
     function detail_abnormal($order_id){
+        if ($this->vue_mode) { return ''; }
         $render = app::get('archive')->render();
         $oAbnormal = app::get('ome')->model('abnormal');
         $abnormal = $oAbnormal->getList("*",array("order_id"=>$order_id),0,-1,'abnormal_id desc');
@@ -285,8 +298,9 @@ class archive_finder_orders{
     
     
  
-    function detail_bill()
+    function detail_bill($order_id)
     {
+        if ($this->vue_mode) { return ''; }
         $render = app::get('ome')->render();
         $oPayments = app::get('ome')->model('payments');
         $oRefunds = app::get('ome')->model('refunds');
@@ -314,6 +328,7 @@ class archive_finder_orders{
     }
 
     function detail_refund_apply($order_id){
+        if ($this->vue_mode) { return ''; }
         $render = app::get('ome')->render();
         $oRefund_apply = app::get('ome')->model('refund_apply');
 

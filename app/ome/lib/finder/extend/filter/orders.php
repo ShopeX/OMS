@@ -16,6 +16,13 @@
  */
 
 class ome_finder_extend_filter_orders{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function get_extend_colums(){
         $pay_type = ome_payment_type::pay_type();
         $cfgObj = app::get('ome')->model('payment_cfg');
@@ -74,7 +81,7 @@ class ome_finder_extend_filter_orders{
                     'in_list'       => true,
                     'label'         => '是否包含收货地区',
                     'width'         => 60,
-                    'filtertype'    => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                 ),
                 'ship_status' => array (
@@ -90,7 +97,7 @@ class ome_finder_extend_filter_orders{
                     'label' => '发货状态',
                     'width' => 75,
                     'editable' => false,
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                     'in_list' => true,
                     'default_in_list' => false,
@@ -101,7 +108,7 @@ class ome_finder_extend_filter_orders{
                         'label' => '配送方式',
                         'width' => 75,
                         'editable' => false,
-                        'filtertype' => 'yes',
+                        'filtertype' => 'normal',
                         'filterdefault' => true,
                         'in_list' => true,
                 ),
@@ -114,7 +121,7 @@ class ome_finder_extend_filter_orders{
                         'label' => '货到付款',
                         'in_list' => true,
                         'width' => 60,
-                        'filtertype' => 'yes',
+                        'filtertype' => 'normal',
                         'filterdefault' => true,
                 ),
                 'ship_tel_mobile' => array (
@@ -203,7 +210,7 @@ class ome_finder_extend_filter_orders{
                       ),
                     'label' => '是否录入发票号',
                     'width' => 100,
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                     'editable' => false,
                     'in_list' => true,
@@ -234,7 +241,7 @@ class ome_finder_extend_filter_orders{
                 'order_source' => array(
                   'type' => ome_mdl_orders::$order_source,
                   'label' => '来源渠道',
-                  'filtertype' => 'yes',
+                  'filtertype' => 'normal',
                   'filterdefault' => true,
                   'in_list' => true,
                   'default_in_list' => true,
@@ -276,7 +283,7 @@ class ome_finder_extend_filter_orders{
                     'in_list'       => true,
                     'label'         => '是否有商家备注',
                     'width'         => 60,
-                    'filtertype'    => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                 ),
                 'custom_mark' =>array (
@@ -296,7 +303,7 @@ class ome_finder_extend_filter_orders{
                     'in_list'       => true,
                     'label'         => '是否有客户备注',
                     'width'         => 60,
-                    'filtertype'    => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                 ),
                 'is_relate_order_bn' => array(
@@ -307,7 +314,7 @@ class ome_finder_extend_filter_orders{
                       ),
                     'label' => '是否录入关联订单号',
                     'width' => 100,
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                     'editable' => false,
                     'in_list' => true,
@@ -316,7 +323,7 @@ class ome_finder_extend_filter_orders{
                 'order_bool_type'=>array(
                     'type'  =>  $order_bool_list,
                     'label' => '交易类型',
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                     'editable' => false,
                 ),
@@ -377,7 +384,7 @@ class ome_finder_extend_filter_orders{
                     'width'           => 120,
                     'in_list'         => true,
                     'default_in_list' => false,
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                 ),
                 'latest_delivery_time' => array(

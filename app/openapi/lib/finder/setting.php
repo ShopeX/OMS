@@ -16,6 +16,13 @@
  */
 
 class openapi_finder_setting{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     static private $_statistics = null;
 
@@ -103,6 +110,41 @@ class openapi_finder_setting{
             }
         }else{
             $data = null;
+        }
+
+        // Vue 模式：返回结构化数据（与 legacy statistics.html 等价）——
+        // 总计（总/今日/昨日调用次数）+ 按服务/方法拆分的明细（接口方法/总/今日/昨日）。
+        if ($this->vue_mode) {
+            if (empty($data)) {
+                return array('available' => false);
+            }
+
+            $services = array();
+            foreach ((array) $data['details'] as $serviceKey => $service) {
+                $methods = array();
+                foreach ((array) $service['info'] as $methodKey => $method) {
+                    $methods[] = array(
+                        'key'       => $methodKey,
+                        'label'     => $method['label'],
+                        'total'     => (int) $method['total'],
+                        'today'     => (int) $method['today'],
+                        'yesterday' => (int) $method['yesterday'],
+                    );
+                }
+                $services[] = array(
+                    'key'     => $serviceKey,
+                    'label'   => $service['label'],
+                    'methods' => $methods,
+                );
+            }
+
+            return array(
+                'available' => true,
+                'total'     => (int) $data['total'],
+                'today'     => (int) $data['today'],
+                'yesterday' => (int) $data['yesterday'],
+                'services'  => $services,
+            );
         }
 
         $render->pagedata['data'] = $data;

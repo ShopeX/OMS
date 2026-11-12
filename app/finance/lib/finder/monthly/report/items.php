@@ -16,6 +16,13 @@
  */
 
 class finance_finder_monthly_report_items{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $addon_cols = "order_bn,monthly_id,sales_gap,refund_gap";
 
 	var $column_edit = "操作";

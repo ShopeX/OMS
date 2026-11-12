@@ -22,6 +22,13 @@
  */
 class dealer_finder_shop extends ome_finder_shop
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     static $_businessList = array();
     static $_supplyBranchs = array();
     static $_seriesList = array();

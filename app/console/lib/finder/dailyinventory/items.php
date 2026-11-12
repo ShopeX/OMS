@@ -17,6 +17,13 @@
 
 class console_finder_dailyinventory_items
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     
     public $column_material_name       = '物料名称';
     public $column_material_name_width = 200;

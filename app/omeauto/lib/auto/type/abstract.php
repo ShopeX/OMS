@@ -27,15 +27,30 @@ abstract class omeauto_auto_type_abstract{
      * @var Array
      */
     protected $content;
+
+    /**
+     * Vue 模式开关
+     * 
+     * @var bool
+     */
+    protected $vue_mode = false;
+
+    /**
+     * 设置 Vue 模式
+     */
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
     
     /**
      * 获取输入UI
      * 
      * @param mixed $val
-     * @return String
+     * @return String|Array  vue_mode=false返回HTML字符串，vue_mode=true返回表单schema数组
      */
     public function getUI($val) {
-  
+
         $tpl = kernel::single('base_render');
         $role = array_shift($val);
         $tpl->pagedata['role'] = $role;
@@ -43,9 +58,17 @@ abstract class omeauto_auto_type_abstract{
         if (method_exists($this, '_prepareUI')) {
             $this->_prepareUI($tpl, $val);
         }
+
+        if ($this->vue_mode) {
+            // Vue 模式：返回结构化数据（不 fetch 模板）
+            return $tpl->pagedata;
+        }
+
+        // Legacy HTML 模式
         return $tpl->fetch($this->getTemplateName(), 'omeauto');
     }
-    
+
+
     /**
      * 获取用于输出的模板名
      * 

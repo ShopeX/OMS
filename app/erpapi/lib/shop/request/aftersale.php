@@ -107,13 +107,33 @@ class erpapi_shop_request_aftersale extends erpapi_shop_request_abstract
         $obj_type = 'reship';
         $obj_bn = ($aftersale['return_bn'] ? $aftersale['return_bn'] : $aftersale['dispute_id']);
         $apiFailId = app::get('erpapi')->model('api_fail')->saveTriggerRequest($obj_bn, $obj_type, $api_method, $api_msg);
-        if($apiFailId && $callback) {
-            $callback['params']['api_fail_id'] = $apiFailId;
+        if ($callback) {
+            // api_fail_id
+            if ($apiFailId) {
+                $callback['params']['api_fail_id'] = $apiFailId;
+            }
             
-            //退换货单信息
+            // 退换货/退款拒绝回调参数（抖音拒绝需用 apply_id 收口本地单据）
             $callback['params']['obj_type'] = $obj_type;
             $callback['params']['return_bn'] = $obj_bn;
             $callback['params']['order_bn'] = $order['order_bn'];
+            
+            // 申请退款单ID
+            if (!empty($aftersale['apply_id'])) {
+                $callback['params']['apply_id'] = $aftersale['apply_id'];
+            }
+            
+            if (isset($aftersale['prev_status']) && $aftersale['prev_status'] !== '' && $aftersale['prev_status'] !== null) {
+                $callback['params']['prev_status'] = $aftersale['prev_status'];
+            }
+            
+            if (!empty($aftersale['order_id'])) {
+                $callback['params']['order_id'] = $aftersale['order_id'];
+            }
+            
+            if (!empty($aftersale['shop_id'])) {
+                $callback['params']['shop_id'] = $aftersale['shop_id'];
+            }
         }
         
         //request
@@ -240,5 +260,60 @@ class erpapi_shop_request_aftersale extends erpapi_shop_request_abstract
      */
     public function syncReturnRemark($params){
         $this->error('不支持同步售后单备注内容', 'e00100');
+    }
+    
+    /**
+     * [淘宝极速换货]换货拒绝发出新品
+     *
+     * @param $params
+     * @return array
+     */
+    public function consigngoodsRefuse($params)
+    {
+        $title = '换货拒绝发出新品';
+        $disputeId = isset($params['dispute_id']) ? trim((string)$params['dispute_id']) : '';
+        
+        // check
+        if ($disputeId === '') {
+            return $this->error('换货单号为空，不能请求接口。');
+        }
+        
+        // api接口
+        $api_name = $this->get_consigngoods_refuse_apiname();
+        if (empty($api_name)){
+            return $this->error('接口暂不支持换货拒绝发出新品!');
+        }
+        
+        // 请求参数
+        $params = $this->get_consigngoods_refuse_params($params);
+        if (empty($params)){
+            return $this->error('换货拒绝发出新品接口，没有请求参数!');
+        }
+        
+        // request
+        $result = $this->__caller->call($api_name, $params, null, $title, 5, $disputeId);
+        
+        return $result;
+    }
+    
+    /**
+     * 换货拒绝发出新品请求参数，回传平台接口名
+     *
+     * @return null
+     */
+    protected function get_consigngoods_refuse_apiname()
+    {
+        return null;
+    }
+    
+    /**
+     * 换货拒绝发出新品请求参数
+     *
+     * @param $params
+     * @return void
+     */
+    protected function get_consigngoods_refuse_params($params=[])
+    {
+        return [];
     }
 }

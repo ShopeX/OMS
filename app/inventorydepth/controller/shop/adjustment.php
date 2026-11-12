@@ -18,7 +18,6 @@
 /**
  * 店铺商品信息调整controller
  *
- *
  * @author chenping<chenping@shopex.cn>
  */
 
@@ -102,6 +101,7 @@ class inventorydepth_ctl_shop_adjustment extends desktop_controller {
         if($_GET['view'] == 2){
             $params['actions'][5] = array('label' => '批量转换生成物料', 'submit'=>'index.php?app=inventorydepth&ctl=shop_adjustment&act=batchGenMaterial','target'=>'dialog::{width:690,height:200,title:\'批量恢复\'}');
         }
+        
         if (kernel::single('desktop_user')->has_permission('shop_adjustment_delete')) {
             $params['actions'][6] = array(
                 'label' => app::get('ome')->_('批量删除'),
@@ -1487,12 +1487,18 @@ EOF;
             if (!isset($_POST['shop_id']) || empty($_POST['shop_id'])) {
                 die('缺少具体店铺查询条件!');
             }
+        } elseif (empty($_POST['id'])) {
+            die('请先勾选要删除的商品');
         }
-    
-        $filter = array(
-            'request' => 'false',
-        );
-        $_POST  = array_merge($filter, $_POST);
+
+        // 按勾选行删除。不能在这里强制 request=false：
+        // 已开启回写的商品会被滤成 0 条，进度框点「开始」只会提示「请选择操作数据项」。
+        $adjustmentModel = $this->app->model('shop_adjustment');
+        $adjustmentModel->filter_use_like = true;
+        if ($adjustmentModel->count($_POST) <= 0) {
+            die('没有找到可删除的商品');
+        }
+
         $this->pagedata['request_url'] = $this->url . '&act=ajaxBatchDelete';
         
         //调用desktop公用进度条(第4个参数是增量传offset,否则默认一直为0)

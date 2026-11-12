@@ -23,6 +23,13 @@
  * ============================
  */
 class ome_finder_gift_logs {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = 'order_bn,shop_id';
 
 

@@ -49,24 +49,24 @@
 
     <workground name="财务管理" id="finance_center"   order="400" icon="icon-caiwuguanli-01">
         <menugroup name="账单设置" en="bill-basic-set">
-            <menu controller='admin_shop_settlement_rules' action='index' permission='shop_settlement_rules' display='true' order='2000100'>收支分类设置</menu>
+            <menu controller='admin_shop_settlement_rules' action='index' permission='shop_settlement_rules' display='true' order='2000100' target='/m-financebase/shop-settlement-rules/index'>收支分类设置</menu>
             <menu controller='admin_shop_settlement_rules' action='setCategory' permission='shop_settlement_rules_add' display='false' order='2000101'>收支分类新增</menu>
             <menu controller='admin_shop_settlement_rules' action='setCategory' permission='shop_settlement_rules_edit' display='false' order='2000102'>收支分类编辑</menu>
             <menu controller='admin_shop_settlement_rules' action='disableRules' permission='shop_settlement_rules_delete' display='false' order='2000103'>收支分类置为无效</menu>
             <menu controller='admin_shop_settlement_rules' action='restoreRules' permission='shop_settlement_rules_restore' display='false' order='2000104'>收支分类恢复</menu>
-            <menu controller='admin_shop_settlement_fee_type' action='index' permission='shop_settlement_feetype' display='true' order='2000200'>费用项设置</menu>
-            <menu controller='admin_shop_settlement_account_chart' action='index' permission='shop_settlement_account_chart' display='true' order='2000250'>会计科目设置</menu>
+            <menu controller='admin_shop_settlement_fee_type' action='index' permission='shop_settlement_feetype' display='true' order='2000200' target='/m-financebase/shop-settlement-fee-type/index'>费用项设置</menu>
+            <menu controller='admin_shop_settlement_account_chart' action='index' permission='shop_settlement_account_chart' display='true' order='2000250' target='/m-financebase/shop-settlement-account-chart/index'>会计科目设置</menu>
             <menu controller='admin_shop_settlement_account_chart' action='setAccount' permission='shop_settlement_account_chart_add' display='false' order='2000251'>会计科目新增</menu>
             <menu controller='admin_shop_settlement_account_chart' action='setAccount' permission='shop_settlement_account_chart_edit' display='false' order='2000252'>会计科目编辑</menu>
             <menu controller='admin_shop_settlement_account_chart' action='disableAccount' permission='shop_settlement_account_chart_delete' display='false' order='2000253'>会计科目置为无效</menu>
             <menu controller='admin_shop_settlement_account_chart' action='restoreAccount' permission='shop_settlement_account_chart_restore' display='false' order='2000254'>会计科目恢复</menu>
-            <menu controller='admin_shop_settlement_gap' action='index' permission='shop_settlement_gap' display='true' order='2000260'>差异类型设置</menu>
+            <menu controller='admin_shop_settlement_gap' action='index' permission='shop_settlement_gap' display='true' order='2000260' target='/m-financebase/shop-settlement-gap/index'>差异类型设置</menu>
             <menu controller='admin_shop_settlement_gap' action='setGap' permission='shop_settlement_gap_add' display='false' order='2000261'>差异类型新增</menu>
             <menu controller='admin_shop_settlement_gap' action='setGap' permission='shop_settlement_gap_edit' display='false' order='2000262'>差异类型编辑</menu>
             <menu controller='admin_shop_settlement_gap' action='disableGap' permission='shop_settlement_gap_delete' display='false' order='2000263'>差异类型置为无效</menu>
             <menu controller='admin_shop_settlement_gap' action='restoreGap' permission='shop_settlement_gap_restore' display='false' order='2000264'>差异类型恢复</menu>
-            <menu controller='admin_shop_settlement_verification' action='error' permission='shop_settlement_verification' display='true' order='2000300'>核销规则设置</menu>
-            <menu controller='admin_shop_settlement_match_notify' action='index' permission='shop_settlement_match_notify' display='true' order='2000310'>匹配失败通知</menu>
+            <menu controller='admin_shop_settlement_verification' action='error' permission='shop_settlement_verification' display='true' order='2000300' target='/m-financebase/bill-verification-error/index'>核销规则设置</menu>
+            <menu controller='admin_shop_settlement_match_notify' action='index' permission='shop_settlement_match_notify' display='true' order='2000310' target='/m-financebase/shop-settlement-match-notify/index'>匹配失败通知</menu>
         </menugroup>
         <menugroup name="账单导入" en="bill">
             <menu controller='admin_shop_settlement_bill' action='base' permission='shop_settlement_base' display='true' order='2000105'>店铺收支明细</menu>
@@ -85,7 +85,7 @@
             <menu controller='admin_expenses_rule' action='index' permission='shop_settlement_expenses_rule' display='true' order='2001100'>费用拆分规则</menu>
             <menu controller='admin_expenses_splittotal' action='index' permission='shop_settlement_expenses_splittotal' display='true' order='2001150'>拆分结果汇总</menu>
             <menu controller='admin_expenses_splititem' action='index' permission='shop_settlement_expenses_splititem' display='true' order='2001200'>拆分结果明细</menu>
-            <menu controller='admin_expenses_export' action='index' permission='shop_settlement_expenses_export' display='true' order='2001250'>结果导出日志</menu>
+            <menu controller='admin_expenses_export' action='index' permission='shop_settlement_expenses_export' display='true' order='2001250' target='/m-financebase/expenses-export/index'>结果导出日志</menu>
         </menugroup>
     </workground>
 </desktop>

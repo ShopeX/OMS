@@ -133,7 +133,7 @@ class omevirtualwms_mdl_delivery extends dbeav_model{
                     'editable' => false,
                     'width' =>180,
                     'searchtype' => 'has',
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                     'is_title' => true,
                 ),
@@ -150,7 +150,7 @@ class omevirtualwms_mdl_delivery extends dbeav_model{
                     'comment' => '单据生成时间',
                     'width' =>160,
                     'editable' => false,
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                 ),
                'order_bn' => array (
@@ -160,7 +160,7 @@ class omevirtualwms_mdl_delivery extends dbeav_model{
                     'width' =>180,
                     'editable' => false,
                     'searchtype' => 'has',
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                 ),
          

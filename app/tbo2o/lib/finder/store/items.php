@@ -17,6 +17,14 @@
 
 class tbo2o_finder_store_items
 {
+
+    private $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols    = 'id,is_bind,bind_time';
     
     //操作

@@ -245,7 +245,6 @@
     <div class="form-layout-block"  >
         <div class="table-action text_left" style="text-align: center;">
             <{if $invoice_order.id && $act != 'doAddChangeTicket'}>
-                <{button label="保存并开票" type="button" id="btn_auto_submit" name="btn_auto_submit" }>&nbsp;&nbsp;
                 <{button label="保存发票信息" type="button" id="btn_submit" name="btn_submit" }>&nbsp;&nbsp;
             <{elseif $act == 'doAddChangeTicket'}>
                 <{button label="保存发票改票信息" type="button" id="btn_submit" name="btn_submit" }>

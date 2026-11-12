@@ -23,6 +23,13 @@
  * ============================
  */
 class dealer_finder_business {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     public $addon_cols = "bs_id";
     public $column_edit = "操作";

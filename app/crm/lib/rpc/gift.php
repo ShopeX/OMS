@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class crm_rpc_gift extends crm_rpc_request
 {
 
@@ -26,7 +25,6 @@ class crm_rpc_gift extends crm_rpc_request
     receiver_name  收货人姓名
     mobile         联系电话（手机）
      */
-
     public function getGiftRule($data)
     {
         $res = array('result' => 'fail', 'data' => array(), 'msg' => '获取失败');
@@ -76,11 +74,6 @@ class crm_rpc_gift extends crm_rpc_request
     }
 
     #发送CRM赠品日志
-    /**
-     * 获取GiftRuleLog
-     * @param mixed $data 数据
-     * @return mixed 返回结果
-     */
     public function getGiftRuleLog($data)
     {
         $res      = array('result' => 'fail', 'data' => array(), 'msg' => '发送失败');
@@ -298,7 +291,7 @@ class crm_rpc_gift extends crm_rpc_request
                     $log_arr[] = array(
                         'order_source'  => $sdf['shop_name'],
                         'order_bn'      => $sdf['order_bn'],
-                        'buyer_account' => $sdf['buyer_nick'],
+                        'buyer_account' => !empty($sdf['buyer_nick']) ? $sdf['buyer_nick'] : $sdf['buyer_open_uid'],
                         'shop_id'       => $sdf['shop_id'],
                         'paid_amount'   => floatval($sdf['payed']),
                         'gift_num'      => $v['gift_num'][$kk],
@@ -341,7 +334,8 @@ class crm_rpc_gift extends crm_rpc_request
     private function getGiftInfo($rules, $sdf, $gift_send_log, $rl_gift_id_num, &$last_exclude_flag)
     {
         $Oshop = app::get('ome')->model('shop');
-
+        $db = kernel::database();
+        
         //循环匹配规则
         $error_msg_giftset = "";
         foreach ($rules as $rule) {
@@ -438,21 +432,79 @@ class crm_rpc_gift extends crm_rpc_request
                 }
             }
 
-            //指定会员
-            if ($rule['filter_arr']['member_uname']) {
-                if (!$sdf['buyer_nick'] or !in_array(trim($sdf['buyer_nick']), $rule['filter_arr']['member_uname'])) {
+            //指定会员（兼容 pin/uname 与 xid/buyer_open_uid）
+            if (isset($rule['filter_arr']['member_uname']) && $rule['filter_arr']['member_uname']) {
+//                // 这是原来的逻辑
+//                if (!$sdf['buyer_nick'] or !in_array(trim($sdf['buyer_nick']), $rule['filter_arr']['member_uname'])) {
+//                    $reason = '不符合指定会员';
+//                    continue;
+//                }
+                
+                // 指定会员列表
+                $memberList = is_array($rule['filter_arr']['member_uname']) ? $rule['filter_arr']['member_uname'] : explode(',', $rule['filter_arr']['member_uname']);
+                $memberList = array_map('trim', $memberList);
+                $buyerAccounts = array();
+                
+                // 会员账号（用户名）
+                if (!empty($sdf['buyer_nick'])) {
+                    $buyerAccounts[] = trim($sdf['buyer_nick']);
+                }
+                
+                // buyer_open_uid（京东xid）
+                if (!empty($sdf['buyer_open_uid'])) {
+                    $buyerAccounts[] = trim($sdf['buyer_open_uid']);
+                }
+                
+                // check
+                $matched = false;
+                foreach ($buyerAccounts as $account) {
+                    if (in_array($account, $memberList)) {
+                        $matched = true;
+                        break;
+                    }
+                }
+                
+                if (!$matched) {
                     $reason = '不符合指定会员';
                     continue;
                 }
             }
 
-            //每ID第一次购买赠送
-            if ($rule['filter_arr']['buyer_nick'] == '1') {
-                #查询会员已经送出的订单数,针对当前规则
-                $sql = "select count(distinct order_bn) as total_orders from sdb_ome_gift_logs where gift_rule_id =" . $rule['id'] . " and buyer_account='" . $sdf['buyer_nick'] . "'";
-                $rs  = kernel::database()->selectRow($sql);
-                if ($rs['total_orders'] > 0) {
-                    continue;
+            //每ID第一次购买赠送（兼容 gift_logs.buyer_account 为 pin 或 xid）
+            if (isset($rule['filter_arr']['buyer_nick']) && $rule['filter_arr']['buyer_nick'] == '1') {
+//                // 原来的逻辑
+//                //查询会员已经送出的订单数,针对当前规则
+//                $sql = "select count(distinct order_bn) as total_orders from sdb_ome_gift_logs where gift_rule_id =" . $rule['id'] . " and buyer_account='" . $sdf['buyer_nick'] . "'";
+//                $rs  = kernel::database()->selectRow($sql);
+//                if ($rs['total_orders'] > 0) {
+//                    continue;
+//                }
+                
+                $buyerAccounts = array();
+                
+                // 会员账号（用户名）
+                if (!empty($sdf['buyer_nick'])) {
+                    $buyerAccounts[] = trim($sdf['buyer_nick']);
+                }
+                
+                if (!empty($sdf['buyer_open_uid'])) {
+                    $buyerAccounts[] = trim($sdf['buyer_open_uid']);
+                }
+                
+                $buyerAccounts = array_values(array_unique(array_filter($buyerAccounts)));
+                if ($buyerAccounts) {
+                    $quoted = array();
+                    foreach ($buyerAccounts as $account) {
+                        $quoted[] = $db->quote($account);
+                    }
+                    
+                    // 查询会员已经送出的订单数,针对当前规则
+                    $sql = "select count(distinct order_bn) as total_orders from sdb_ome_gift_logs ";
+                    $sql .= " WHERE gift_rule_id =". intval($rule['id']) . " AND buyer_account IN (" . implode(',', $quoted) . ")";
+                    $rs  = $db->selectRow($sql);
+                    if ($rs['total_orders'] > 0) {
+                        continue;
+                    }
                 }
             }
 
@@ -798,11 +850,6 @@ class crm_rpc_gift extends crm_rpc_request
     }
 
     //删除数组里的空元素
-    /**
-     * 清除_value
-     * @param mixed $arr arr
-     * @return mixed 返回值
-     */
     public function clear_value($arr)
     {
         foreach ($arr as $k => $v) {
@@ -823,11 +870,6 @@ class crm_rpc_gift extends crm_rpc_request
         return $arr;
     }
 
-    /**
-     * 保存GiftLog
-     * @param mixed $logs logs
-     * @return mixed 返回操作结果
-     */
     public function saveGiftLog($logs)
     {
         $m_gift_logs = app::get('ome')->model('gift_logs');

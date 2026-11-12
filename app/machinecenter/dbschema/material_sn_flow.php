@@ -414,6 +414,7 @@ $db['material_sn_flow'] = array (
     'index'   => array (
         'idx_order_bn'          => array ('columns' => array ('order_bn')),
         'idx_original_bn'       => array ('columns' => array ('original_bn')),
+        'idx_original_type_id'  => array ('columns' => array ('original_type', 'original_id')),
         'idx_platform_order_bn' => array ('columns' => array ('platform_order_bn')),
         'idx_bill_bn'           => array ('columns' => array ('bill_bn')),
         'idx_bm_id'             => array ('columns' => array ('bm_id')),

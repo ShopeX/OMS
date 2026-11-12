@@ -35,6 +35,11 @@ class ome_ctl_admin_order_retrial extends desktop_controller
         $op_id = kernel::single('desktop_user')->get_id();
         $this->title    = '商品变化订单';
         $base_filter['retrial_type']   = 'normal';
+
+        // 无 view 时默认「待复审」，与首 Tab 一致
+        if (empty($_GET['view'])) {
+            $base_filter['status'] = '0';
+        }
         
         //check shop permission
         $organization_permissions = kernel::single('desktop_user')->get_organization_permission();
@@ -67,6 +72,11 @@ class ome_ctl_admin_order_retrial extends desktop_controller
         $this->order_type   = 'audit';
         
         $base_filter['retrial_type']   = 'audit';
+
+        // 无 view 时默认「待复审」，与首 Tab 一致
+        if (empty($_GET['view'])) {
+            $base_filter['status'] = '0';
+        }
         
         //check shop permission
         $organization_permissions = kernel::single('desktop_user')->get_organization_permission();
@@ -98,9 +108,10 @@ class ome_ctl_admin_order_retrial extends desktop_controller
         $this->title        = '已复审订单';
         $this->order_type   = 'success';
         
+        // 无 view 时默认「复审未通过」，与首 Tab 一致
         if(empty($_GET['view']))
         {
-            $base_filter['status']   = array('1', '2', '3', '4');
+            $base_filter['status']   = array('2', '3');
         }
         
         //check shop permission
@@ -167,8 +178,8 @@ class ome_ctl_admin_order_retrial extends desktop_controller
     function _views_index()
     {
         $sub_menu = array(
-            0 => array('label'=>app::get('base')->_('全部'), 'filter'=>array('retrial_type'=>'normal'), 'optional'=>false),
-            1 => array('label'=>app::get('base')->_('待复审'), 'filter'=>array('status'=>'0', 'retrial_type'=>'normal'), 'optional'=>false),
+            0 => array('label'=>app::get('base')->_('待复审'), 'filter'=>array('status'=>'0', 'retrial_type'=>'normal'), 'optional'=>false),
+            1 => array('label'=>app::get('base')->_('全部'), 'filter'=>array('retrial_type'=>'normal'), 'optional'=>false),
             2 => array('label'=>app::get('base')->_('复审通过'), 'filter'=>array('status'=>'1', 'retrial_type'=>'normal'), 'optional'=>false),
             3 => array('label'=>app::get('base')->_('复审未通过'), 'filter'=>array('status'=>array('2', '3'), 'retrial_type'=>'normal'), 'optional'=>false),
         );
@@ -177,8 +188,8 @@ class ome_ctl_admin_order_retrial extends desktop_controller
     function _views_audit()
     {
         $sub_menu = array(
-            0 => array('label'=>app::get('base')->_('全部'), 'filter'=>array('retrial_type'=>'audit'), 'optional'=>false),
-            1 => array('label'=>app::get('base')->_('待复审'), 'filter'=>array('status'=>'0', 'retrial_type'=>'audit'), 'optional'=>false),
+            0 => array('label'=>app::get('base')->_('待复审'), 'filter'=>array('status'=>'0', 'retrial_type'=>'audit'), 'optional'=>false),
+            1 => array('label'=>app::get('base')->_('全部'), 'filter'=>array('retrial_type'=>'audit'), 'optional'=>false),
             2 => array('label'=>app::get('base')->_('复审通过'), 'filter'=>array('status'=>'1', 'retrial_type'=>'audit'), 'optional'=>false),
             3 => array('label'=>app::get('base')->_('复审未通过'), 'filter'=>array('status'=>'2', 'retrial_type'=>'audit'), 'optional'=>false),
         );
@@ -187,9 +198,9 @@ class ome_ctl_admin_order_retrial extends desktop_controller
     function _views_success()
     {
         $sub_menu = array(
-            0 => array('label'=>app::get('base')->_('全部'), 'filter'=>array('status'=>array('1', '2', '3', '4')), 'optional'=>false),
-            1 => array('label'=>app::get('base')->_('复审通过'), 'filter'=>array('status'=>'1'), 'optional'=>false),
-            2 => array('label'=>app::get('base')->_('复审未通过'), 'filter'=>array('status'=>array('2', '3')), 'optional'=>false),
+            0 => array('label'=>app::get('base')->_('复审未通过'), 'filter'=>array('status'=>array('2', '3')), 'optional'=>false),
+            1 => array('label'=>app::get('base')->_('全部'), 'filter'=>array('status'=>array('1', '2', '3', '4')), 'optional'=>false),
+            2 => array('label'=>app::get('base')->_('复审通过'), 'filter'=>array('status'=>'1'), 'optional'=>false),
             3 => array('label'=>app::get('base')->_('订单已取消'), 'filter'=>array('status'=>'4'), 'optional'=>false),
         );
         return $sub_menu;

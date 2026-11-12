@@ -16,11 +16,125 @@
  */
 
 class wmsmgr_finder_wms{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $addon_cols = "channel_id,channel_name,node_id,channel_type,node_type,config";
     var $column_edit = "操作";
     var $column_edit_width = "260";
     var $column_edit_order = "1";
     function column_edit($row){
+        // Vue Finder 契约：结构化行操作（不再下发 legacy <a> HTML 片段，SPA 不解析 legacy 链接）
+        if ($this->vue_mode) {
+            $channel_id = $row['_0_channel_id'] ?? $row['channel_id'] ?? 0;
+            $node_id    = $row['_2_node_id'] ?? $row['node_id'] ?? '';
+            $node_type  = $row['_4_node_type'] ?? $row['node_type'] ?? '';
+            $config_raw = $row['_5_config'] ?? $row['config'] ?? '';
+            $config     = is_array($config_raw) ? $config_raw : @unserialize((string) $config_raw);
+            if (!is_array($config)) {
+                $config = array();
+            }
+
+            $adapter = kernel::single('wmsmgr_func')->getAdapterByChannelId($channel_id);
+
+            $actions = array(
+                array(
+                    'key'    => 'edit',
+                    'label'  => '编辑',
+                    'action' => 'index.php?app=wmsmgr&ctl=admin_wms&act=edit&p[0]=' . $channel_id,
+                    'target' => array('type' => 'dialog', 'width' => 670, 'height' => 380, 'title' => '第三方仓储'),
+                ),
+            );
+
+            $logi_added = false;
+            if (in_array($adapter, array('matrixwms'))) {
+                $config_node_type = isset($config['node_type']) ? $config['node_type'] : '';
+                switch ($config_node_type) {
+                    case 'bim':
+                    case 'bms':
+                    case 'yph':
+                        $actions[] = $node_id
+                            ? array('key' => 'unbind', 'label' => '取消绑定', 'action' => 'index.php?app=wmsmgr&ctl=admin_wms&act=unbind_shop&p[0]=' . $channel_id)
+                            : array(
+                                'key'    => 'bind',
+                                'label'  => '申请绑定',
+                                'action' => 'index.php?app=wmsmgr&ctl=admin_wms&act=bind_page&p[0]=' . $channel_id,
+                                'target' => array('type' => 'dialog', 'width' => 650, 'height' => 300, 'title' => '绑定店铺'),
+                            );
+                        break;
+                    case 'yjdf':
+                        if ($node_id) {
+                            $actions[] = array(
+                                'key'    => 'unbind',
+                                'label'  => '取消绑定',
+                                'action' => 'index.php?app=wmsmgr&ctl=admin_wms&act=unbind_verify&p[0]=' . $channel_id,
+                                'target' => array('type' => 'dialog', 'width' => 500, 'height' => 300, 'title' => '取消绑定'),
+                            );
+
+                            $relationObj   = app::get('wmsmgr')->model('express_relation');
+                            $relationCount = $relationObj->count(array('wms_id' => $channel_id));
+                            if ($relationCount < 20) {
+                                $actions[]  = array(
+                                    'key'    => 'init_logi',
+                                    'label'  => '初始化物流公司',
+                                    'action' => 'index.php?app=wmsmgr&ctl=admin_wms&act=initializeLogi&p[0]=' . $channel_id,
+                                    'target' => array('type' => 'dialog', 'width' => 500, 'height' => 300, 'title' => '初始化京东物流公司映射关系'),
+                                );
+                                $logi_added = true;
+                            }
+                        } else {
+                            $actions[] = array(
+                                'key'    => 'bind',
+                                'label'  => '申请绑定',
+                                'action' => 'index.php?app=wmsmgr&ctl=admin_wms&act=bindNodeId&p[0]=' . $channel_id,
+                                'target' => array('type' => 'dialog', 'width' => 300, 'height' => 200, 'title' => '输入node_id'),
+                            );
+                        }
+                        break;
+                    case 'other':
+                    default:
+                        $actions[] = empty($node_id)
+                            ? array(
+                                'key'    => 'bind',
+                                'label'  => '申请绑定',
+                                'url'    => 'index.php?app=wmsmgr&ctl=api_wms&act=relationUrl&mode=apply&channel_id=' . $channel_id,
+                                'target' => '_blank',
+                            )
+                            : array('key' => 'bound', 'label' => '已绑定', 'disabled' => true);
+                        break;
+                }
+
+                // 京东一件代发：已绑定且物流映射少于 20 条时给「初始化物流公司」
+                if ($node_id && $node_type == 'yjdf' && !$logi_added) {
+                    $relationObj   = app::get('wmsmgr')->model('express_relation');
+                    $relationCount = $relationObj->count(array('wms_id' => $channel_id));
+                    if ($relationCount < 20) {
+                        $actions[] = array(
+                            'key'    => 'init_logi',
+                            'label'  => '初始化物流公司',
+                            'action' => 'index.php?app=wmsmgr&ctl=admin_wms&act=initializeLogi&p[0]=' . $channel_id,
+                            'target' => array('type' => 'dialog', 'width' => 500, 'height' => 300, 'title' => '初始化京东物流公司映射关系'),
+                        );
+                    }
+                }
+            }
+
+            if ($node_id && $node_type == 'jd_wms_cloud') {
+                $actions[] = array(
+                    'key'    => 'syncBase',
+                    'label'  => '初始化',
+                    'action' => 'index.php?app=wmsmgr&ctl=admin_wms&act=syncBase&p[0]=' . $channel_id,
+                    'target' => array('type' => 'dialog', 'width' => 650, 'height' => 300, 'title' => '同步基础数据'),
+                );
+            }
+
+            return $actions;
+        }
+
         $finder_id = $_GET['_finder']['finder_id'];
         $node_type = $row[$this->col_prefix.'node_type'];
         $channel_type  = $row[$this->col_prefix.'channel_type'];
@@ -105,16 +219,26 @@ class wmsmgr_finder_wms{
     function detail_company($wms_id){
         $render = app::get('wmsmgr')->render();
         $express_relation_mdl = app::get('wmsmgr')->model('express_relation');
-        if($_POST){
-            $express_relation_mdl->delete(['wms_id'=>$wms_id]);
-            $wms_express_bn = $_POST['wms_express_bn'];
-            foreach($wms_express_bn as $k=>$v){
-                if ($k && $v) {
-                    $sdata = array('wms_id'=>$wms_id,'logi_id'=>$k,'sys_express_bn'=>trim($_POST['sys_express_bn'][$k]),'wms_express_bn'=>trim($v));
-                    $rs = $express_relation_mdl->save($sdata);
-                }
-
+        if($this->vue_mode){
+            $dly_corp_mdl = app::get('ome')->model('dly_corp');
+            $sys_express_corp = $dly_corp_mdl->getlist('*');
+            $wms = $express_relation_mdl->getlist('*',array('wms_id'=>$wms_id));
+            $wmsBn = array();
+            foreach($wms as $v){
+                $wmsBn[$v['logi_id']] = $v['wms_express_bn'];
             }
+            return array('detail'=>array(
+                'wms_id' => $wms_id,
+                'sys_express_corp' => $sys_express_corp,
+                'wmsBn' => $wmsBn,
+            ));
+        }
+        if($_POST){
+            kernel::single('wmsmgr_capability_wms')->saveDetailCompany(array(
+                'wms_id'=>$wms_id,
+                'wms_express_bn'=>isset($_POST['wms_express_bn']) ? $_POST['wms_express_bn'] : array(),
+                'sys_express_bn'=>isset($_POST['sys_express_bn']) ? $_POST['sys_express_bn'] : array(),
+            ), false);
         }
         $dly_corp_mdl = app::get('ome')->model('dly_corp');
         $sys_express_corp = $dly_corp_mdl->getlist('*');
@@ -131,9 +255,24 @@ class wmsmgr_finder_wms{
     var $detail_shop = '店铺售达方编号';
     function detail_shop($wms_id){
         $render = app::get('wmsmgr')->render();
+        if($this->vue_mode){
+            $shop_config = app::get('finance')->getConf('shop_config_'.$wms_id);
+            $shopMdl = app::get('ome')->model('shop');
+            $shop_list = $shopMdl->getlist('*', array('s_type' => '1'));
+            foreach($shop_list as $k=>&$v){
+                $v['wms_code'] = isset($shop_config[$v['shop_bn']]) ? $shop_config[$v['shop_bn']] : $v['shop_bn'];
+            }
+            unset($v);
+            return array('detail'=>array(
+                'wms_id' => $wms_id,
+                'shop_list' => $shop_list,
+            ));
+        }
         if($_POST){
-            $shop_config = $_POST['shop_config'];
-            app::get('finance')->setConf('shop_config_'.$wms_id,$shop_config);
+            kernel::single('wmsmgr_capability_wms')->saveDetailShop(array(
+                'wms_id'=>$wms_id,
+                'shop_config'=>isset($_POST['shop_config']) ? $_POST['shop_config'] : array(),
+            ), false);
         }
         $shop_config = app::get('finance')->getConf('shop_config_'.$wms_id);
 
@@ -151,19 +290,26 @@ class wmsmgr_finder_wms{
         $render = app::get('wmsmgr')->render();
         $oBranch_relation = app::get('wmsmgr')->model('branch_relation');
         $oBranch = app::get('ome')->model('branch');
-        if($_POST){
-            $wms_branch_bn = $_POST['wms_branch_bn'];
-            $oBranch_relation->delete(['wms_id'=>$wms_id]);
-            foreach($wms_branch_bn as $k=>$v){
-                $sdata = array(
-                    'wms_id'=>$wms_id,
-                    'sys_branch_bn'=>$k,
-                    'wms_branch_bn'=>$v,
-                    'positive'=>$_POST['positive'][$k] ? '1' : '2',
-                    'negative'=>(int)$_POST['negative'][$k],
-                );
-                $rs = $oBranch_relation->insert($sdata);
+        if($this->vue_mode){
+            $branch_list = $oBranch->getlist('*',array('wms_id'=>$wms_id));
+            $branch_relation_list = $oBranch_relation->getlist('*',array('wms_id'=>$wms_id));
+            $wms_branch = array();
+            foreach ($branch_relation_list as $branch ) {
+                $wms_branch[$branch['sys_branch_bn']] = $branch;
             }
+            return array('detail'=>array(
+                'wms_id' => $wms_id,
+                'branch_list' => $branch_list,
+                'wms_branch' => $wms_branch,
+            ));
+        }
+        if($_POST){
+            kernel::single('wmsmgr_capability_wms')->saveDetailBranch(array(
+                'wms_id'=>$wms_id,
+                'wms_branch_bn'=>isset($_POST['wms_branch_bn']) ? $_POST['wms_branch_bn'] : array(),
+                'positive'=>isset($_POST['positive']) ? $_POST['positive'] : array(),
+                'negative'=>isset($_POST['negative']) ? $_POST['negative'] : array(),
+            ), false);
         }
 
         $branch_list = $oBranch->getlist('*',array('wms_id'=>$wms_id));
@@ -193,16 +339,27 @@ class wmsmgr_finder_wms{
     function detail_monthaccount ($wms_id)
     {
         $render = app::get('wmsmgr')->render();
+        if($this->vue_mode){
+            $monthaccount = app::get('wmsmgr')->getConf('monthaccount_'.$wms_id);
+            $department_no = app::get('wmsmgr')->getConf('department_no_'.$wms_id);
+            $isv_source = app::get('wmsmgr')->getConf('isv_source_'.$wms_id);
+            $owner_user_id = app::get('wmsmgr')->getConf('owner_user_id_'.$wms_id);
+            return array('detail'=>array(
+                'wms_id' => $wms_id,
+                'monthaccount' => $monthaccount,
+                'department_no' => $department_no,
+                'isv_source' => $isv_source,
+                'owner_user_id' => $owner_user_id,
+            ));
+        }
         if($_POST){
-            $monthaccount = $_POST['monthaccount'];
-            app::get('wmsmgr')->setConf('monthaccount_'.$wms_id,$monthaccount);
-            $department_no = trim($_POST['department_no']);
-            $isv_source = trim($_POST['isv_source']);
-            $owner_user_id = trim($_POST['owner_user_id']);
-            app::get('wmsmgr')->setConf('department_no_'.$wms_id,$department_no);
-            app::get('wmsmgr')->setConf('isv_source_'.$wms_id,$isv_source);
-            app::get('wmsmgr')->setConf('owner_user_id_'.$wms_id,$owner_user_id);
-
+            kernel::single('wmsmgr_capability_wms')->saveDetailMonthaccount(array(
+                'wms_id'=>$wms_id,
+                'monthaccount'=>isset($_POST['monthaccount']) ? $_POST['monthaccount'] : '',
+                'department_no'=>isset($_POST['department_no']) ? $_POST['department_no'] : '',
+                'isv_source'=>isset($_POST['isv_source']) ? $_POST['isv_source'] : '',
+                'owner_user_id'=>isset($_POST['owner_user_id']) ? $_POST['owner_user_id'] : '',
+            ), false);
         }
         $monthaccount = app::get('wmsmgr')->getConf('monthaccount_'.$wms_id);
         
@@ -229,6 +386,25 @@ class wmsmgr_finder_wms{
 
         $wmsMdl = app::get('wmsmgr')->model('wms');
         $dlyObj = app::get('ome')->model('dly_corp');
+
+        if($this->vue_mode){
+            $corpList = $dlyObj->getlist('corp_id,type,name', array());
+            $wms = $wmsMdl->dump($wms_id, 'channel_id,crop_config,node_type');
+            $wms['crop_config'] = is_array($wms['crop_config'] ?? null) ? $wms['crop_config'] : array();
+            // 配送拦截，默认为“是”
+            if (!isset($wms['crop_config']['saleorder_callback'])) {
+                $wms['crop_config']['saleorder_callback'] = '1';
+            }
+            $invoice = isset($wms['crop_config']['invoice']) ? $wms['crop_config']['invoice'] : null;
+            unset($wms['crop_config']['invoice']);
+            return array('detail'=>array(
+                'wms_id' => $wms_id,
+                'corpList' => $corpList,
+                'crop_config' => $wms['crop_config'],
+                'invoice' => $invoice,
+                'node_type' => isset($wms['node_type']) ? $wms['node_type'] : '',
+            ));
+        }
         
         //物流公司
         $corpList = $dlyObj->getlist('corp_id,type,name', array());
@@ -237,10 +413,8 @@ class wmsmgr_finder_wms{
         //WMS仓储信息
         $wms = $wmsMdl->dump($wms_id, 'channel_id,crop_config,node_type');
         if ($_POST && $wms_id) {
-            $wms['channel_id'] = $wms_id;
-            $wms['crop_config'] = array_merge((array)$wms['crop_config'],$_POST);
-
-            $wmsMdl->save($wms);
+            kernel::single('wmsmgr_capability_wms')->saveDetailBasic(array_merge(array('wms_id'=>$wms_id), $_POST), false);
+            $wms = $wmsMdl->dump($wms_id, 'channel_id,crop_config,node_type');
         }
 
         // 配送拦截，默认为“是”
@@ -265,11 +439,26 @@ class wmsmgr_finder_wms{
         $render = app::get('wmsmgr')->render();
         $supplierRelationModel = app::get('wmsmgr')->model('supplier_relation');
         $oSupplier = app::get('purchase')->model('supplier');
-        if($_POST['wms']){
-            foreach($_POST['wms'] as $k=>$v){
-                $sdata = array('wms_id'=>$wms_id,'supplier_id'=>$k,'wms_supplier_bn'=>trim($v['supplier_bn']));
-                $supplierRelationModel->db_save($sdata);
+        if($this->vue_mode){
+            $supplierList = array();
+            $rows = $oSupplier->getlist('supplier_id,name',array());
+            foreach ($rows as $key => $value) {
+                $supplierList[$value['supplier_id']] = $value;
             }
+            $rows = $supplierRelationModel->getlist('*',array('wms_id'=>$wms_id));
+            foreach ($rows as $key => $value) {
+                $supplierList[$value['supplier_id']]['wms'] = $value;
+            }
+            return array('detail'=>array(
+                'wms_id' => $wms_id,
+                'supplier_list' => $supplierList,
+            ));
+        }
+        if($_POST['wms']){
+            kernel::single('wmsmgr_capability_wms')->saveDetailSupplier(array(
+                'wms_id'=>$wms_id,
+                'wms'=>$_POST['wms'],
+            ), false);
         }
         $supplierList = array();
         $rows = $oSupplier->getlist('supplier_id,name',array());

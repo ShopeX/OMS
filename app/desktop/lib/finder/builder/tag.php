@@ -17,6 +17,13 @@
 
 
 class desktop_finder_builder_tag extends desktop_finder_builder_prototype{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     function main(){
         $render = app::get('desktop')->render();

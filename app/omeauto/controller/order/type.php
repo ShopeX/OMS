@@ -20,6 +20,8 @@
  * @author hzjsq
  * @version 0.1
  */
+use app\desktop\lib\annotation\RequirePermission;
+
 class omeauto_ctl_order_type extends omeauto_controller {
     var $workground = "setting_tools";
     var $base_filter = array('group_type'=>'order');
@@ -49,6 +51,7 @@ class omeauto_ctl_order_type extends omeauto_controller {
         return $sub_menu;
     }
 
+    #[RequirePermission('order_type')]
     function index() {
         //check shop permission
         $organization_permissions = kernel::single('desktop_user')->get_organization_permission();
@@ -77,6 +80,7 @@ class omeauto_ctl_order_type extends omeauto_controller {
         $this->finder('omeauto_mdl_order_type', $params);
     }
 
+    #[RequirePermission('delivery_group')]
     function delivery() {
         $params = array(
             'title' => '发货单分组规则',
@@ -96,6 +100,7 @@ class omeauto_ctl_order_type extends omeauto_controller {
         $this->finder('omeauto_mdl_order_type', $params);
     }
 
+    #[RequirePermission('delivery_group')]
     function toDelivery(){
         $this->begin('index.php?app=omeauto&ctl=order_type&act=delivery');
         if($_GET['status'] && $_GET['status']=='true'){
@@ -117,6 +122,7 @@ class omeauto_ctl_order_type extends omeauto_controller {
         $this->end(true, app::get('omeauto')->_('操作成功。'));
     }
 
+    #[RequirePermission('order_type')]
     function add() {
         $operationOrgObj = app::get('ome')->model('operation_organization');
         $orgs = $operationOrgObj->getList('*', $filter, 0, -1);
@@ -127,6 +133,7 @@ class omeauto_ctl_order_type extends omeauto_controller {
         $this->page('order/type/add.html');
     }
 
+    #[RequirePermission('order_type')]
     function edit($tid) {
         $operationOrgObj = app::get('ome')->model('operation_organization');
         $orgs = $operationOrgObj->getList('*', $filter, 0, -1);
@@ -150,6 +157,7 @@ class omeauto_ctl_order_type extends omeauto_controller {
         $this->page('order/type/add.html');
     }
 
+    #[RequirePermission('order_type')]
     function addrole() {
         if (!empty($_REQUEST['role'])) {
             $role = json_decode($_REQUEST['role'], true);
@@ -165,6 +173,7 @@ class omeauto_ctl_order_type extends omeauto_controller {
         $this->page('order/type/addrole.html');
     }
 
+    #[RequirePermission('order_type')]
     function setStatus($oid, $status) {
 
         if ($status == 'true') {
@@ -178,6 +187,7 @@ class omeauto_ctl_order_type extends omeauto_controller {
         exit;
     }
 
+    #[RequirePermission('order_type')]
     function ajax() {
         $params = $_POST['p'];
         $typeName = array_shift($params);
@@ -186,11 +196,13 @@ class omeauto_ctl_order_type extends omeauto_controller {
         echo kernel::single('omeauto_auto_type')->doMethod($typeName, $method, $params);
     }
 
+    #[RequirePermission('order_type')]
     function createRole() {
 
         echo kernel::single('omeauto_auto_type')->createRole();
     }
 
+    #[RequirePermission('order_type')]
     function save() {
 
         $sdf['name']= $_POST['name'];
@@ -209,11 +221,7 @@ class omeauto_ctl_order_type extends omeauto_controller {
     }
 
     //Ajax获取自动规则的收货地址的区域checkbox li列表
-    /**
-     * omeauto_regions_list
-     * @return mixed 返回值
-     */
-
+    #[RequirePermission('order_type')]
     public function omeauto_regions_list(){
         $params = $_POST;
         $regionListLib = kernel::single('omeauto_view_list');

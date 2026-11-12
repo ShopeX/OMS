@@ -105,17 +105,23 @@ class ome_ctl_admin_return_rchange extends desktop_controller
         //action
         $actions = [];
         
-        //view
+        // 默认落到「未审核」(view=0)，首屏带 is_check=0，避免扫「全部」
         $_GET['view'] = (empty($_GET['view']) ? '0' : $_GET['view']);
-        
-        if(empty($_GET['view']) || $_GET['view'] == '0'){
+
+        // 新建 / 导入 / 导出模板：未审核(0) 与 全部(1) 都显示
+        if (in_array((string) $_GET['view'], array('0', '1'), true)) {
             $use_buildin_import = true;
-            
+
             $actions[] = array(
                 'label'  => '新建退换货单',
                 'href'   => 'index.php?app=ome&ctl=admin_return_rchange&act=rchange',
             );
-            
+
+            $actions[] = $exportTemplate;
+        }
+        
+        if ($_GET['view'] == '1') {
+            // 全部
             $actions[] = $batch_approve;
 
             $actions[] = $modifyReshipBranch;
@@ -131,11 +137,7 @@ class ome_ctl_admin_return_rchange extends desktop_controller
                 'label' => '批量操作',
                 'group' => array($batchModifyReason, $batchGetAddress)
             );
-            
-            $actions[] = $exportTemplate;
-        }
-        
-        if (in_array($_GET['view'], array('2','3','11'))) {
+        } elseif (in_array($_GET['view'], array('2','3','11'))) {
             $actions[] = $batch_refuse;
             
             $actions[] = array(
@@ -147,7 +149,8 @@ class ome_ctl_admin_return_rchange extends desktop_controller
                 'label' => '批量操作',
                 'group' => array($batchModifyReason, $batchGetAddress)
             );
-        } elseif (in_array($_GET['view'], ['1', '18'])) {
+        } elseif (in_array($_GET['view'], ['0', '18'])) {
+            // 未审核 / 已录入物流号未审核
             $actions[] = $batch_approve;
             
             $actions[] = $batch_refuse;
@@ -272,10 +275,10 @@ class ome_ctl_admin_return_rchange extends desktop_controller
         if ($organization_permissions) {
             $base_filter['org_id'] = $organization_permissions;
         }
-
+        
         $sub_menu = array(
-            0  => array('label' => __('全部'), 'filter' => $base_filter, 'optional' => false),
-            1  => array('label' => __('未审核'), 'filter' => array('is_check'=>'0'), 'optional' => false),
+            0  => array('label' => __('未审核'), 'filter' => array('is_check'=>'0'), 'optional' => false),
+            1  => array('label' => __('全部'), 'filter' => $base_filter, 'optional' => false),
             2  => array('label' => __('审核成功'), 'filter' => array('is_check' => '1'), 'optional' => false),
             3  => array('label' => __('审核失败'), 'filter' => array('is_check' => '2'), 'optional' => false),
             //4 => array('label'=>__('收货成功'),'filter'=>array('is_check'=>'3'),'optional'=>false),
@@ -373,9 +376,11 @@ class ome_ctl_admin_return_rchange extends desktop_controller
         if (!empty($_GET['finder_vid'])) {
             $redirect .= '&finder_vid=' . urlencode($_GET['finder_vid']);
         }
+        
         if (isset($_GET['view']) && $_GET['view'] !== '') {
             $redirect .= '&view=' . urlencode($_GET['view']);
         }
+        
         $this->begin($redirect);
         
         //获取所有传递参数
@@ -460,23 +465,30 @@ class ome_ctl_admin_return_rchange extends desktop_controller
                     $this->end(false, $error_msg);
                 }
             }else{
-                //根据物流单号查询发货单信息
-                $deliveryInfo = $deliveryMdl->db_dump(array('logi_no' => $post['logi_no']), 'delivery_id,delivery_bn');
-                if (empty($deliveryInfo)) {
+                // 同一物流单号可对应多张发货单，按物流单号+订单号一起匹配
+                $deliveryList = $deliveryMdl->getList('delivery_id,delivery_bn', array(
+                    'logi_no' => $post['logi_no'],
+                    'status'  => array('succ', 'return_back'),
+                ));
+                if (empty($deliveryList)) {
                     $error_msg = '物流单号：'. $post['logi_no'] .'不是选择订单对应的发货物流单，请检查！';
                     $this->end(false, $error_msg);
                 }
 
-                //通过发货单ID+订单ID查询发货单信息
-                $sql = "SELECT dord.* FROM sdb_ome_delivery_order AS dord LEFT JOIN sdb_ome_delivery AS d ON(dord.delivery_id=d.delivery_id) ";
-                $sql .= " WHERE d.delivery_id=". (int) $deliveryInfo['delivery_id'] ." AND dord.order_id=". $rs_current_order['order_id'] ." AND d.status IN ('succ', 'return_back')";
-                $dlyOrderInfo = $deliveryMdl->db->selectrow($sql);
-                if (empty($dlyOrderInfo)) {
+                $dlyOrderList = app::get('ome')->model('delivery_order')->getList('delivery_id,order_id', array(
+                    'delivery_id' => array_column($deliveryList, 'delivery_id'),
+                    'order_id'    => $rs_current_order['order_id'],
+                ));
+                
+                if (empty($dlyOrderList)) {
                     $error_msg = '物流单号：'. $post['logi_no'] .'不属于选择的订单号，请检查！';
                     $this->end(false, $error_msg);
                 }
-                $post['delivery_id'] = $deliveryInfo['delivery_id'];
+                
+                // 多张都属于该订单时取 delivery_id 最大的一张，保证结果确定可重复
+                $post['delivery_id'] = max(array_column($dlyOrderList, 'delivery_id'));
             }
+            
             if (strtolower($post['logi_no']) == 'none') {
                 $post['delivery_id'] = $dlyOrderInfo['delivery_id'];
             }
@@ -657,14 +669,41 @@ class ome_ctl_admin_return_rchange extends desktop_controller
             $json_data['rsp']           = 'succ';
             $this->pagedata['order_id'] = $order['order_id'];;
             if($_POST['dly_logi_no'] && $_POST['dly_logi_no'] != 'undefined') {
-                $delivery = app::get('ome')->model('delivery')->getList('*', ['logi_no'=>$_POST['dly_logi_no']]);
-                $branch = kernel::database()->selectrow("SELECT * FROM sdb_ome_branch WHERE disabled='false' AND branch_id=" . intval($delivery[0]['branch_id']));
-                $delivery[0]['branch_name'] = $branch['name'];
+                // 同一物流单号可对应多张发货单，限定当前订单
+                $deliveryCandidates = app::get('ome')->model('delivery')->getList('*', array(
+                    'logi_no' => $_POST['dly_logi_no'],
+                    'status'  => array('succ', 'return_back'),
+                ));
+                
+                $delivery = array();
+                if ($deliveryCandidates) {
+                    $matchedDlyOrders = app::get('ome')->model('delivery_order')->getList('delivery_id', array(
+                        'delivery_id' => array_column($deliveryCandidates, 'delivery_id'),
+                        'order_id'    => $post['order_id'],
+                    ));
+                    if ($matchedDlyOrders) {
+                        $matchedId = max(array_column($matchedDlyOrders, 'delivery_id'));
+                        foreach ($deliveryCandidates as $dlyRow) {
+                            if ((int) $dlyRow['delivery_id'] === (int) $matchedId) {
+                                $delivery = array($dlyRow);
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                if ($delivery) {
+                    $branch = kernel::database()->selectrow("SELECT * FROM sdb_ome_branch WHERE disabled='false' AND branch_id=" . intval($delivery[0]['branch_id']));
+                    $delivery[0]['branch_name'] = $branch['name'];
+                }
             } else {
                 $delivery                   = $oDelivery->getDeliveryByOrder('*', $post['order_id']);
             }
-            unset($delivery[0]['shop_id']);
-            $order = array_merge($order, (array)$delivery[0]);
+            
+            if (!empty($delivery[0])) {
+                unset($delivery[0]['shop_id']);
+                $order = array_merge($order, (array)$delivery[0]);
+            }
 
             $returnBranchCtx = $this->buildReturnBranchContext(
                 $order,
@@ -720,12 +759,33 @@ class ome_ctl_admin_return_rchange extends desktop_controller
             $oOrders_item = $this->app->model('order_items');
             $order_object = $this->app->model('order_objects')->getList('*', array('order_id' => $order_id));
             if($_POST['dly_logi_no'] && $_POST['dly_logi_no'] != 'undefined') {
-                $dly = app::get('ome')->model('delivery')->db_dump(['logi_no'=>$_POST['dly_logi_no']], 'delivery_id');
-                $didetail = app::get('ome')->model('delivery_items_detail')->getList('order_item_id,number', ['delivery_id'=>$dly['delivery_id']]);
-                $items = $oOrders_item->getList('*', array('order_id' => $order_id, 'item_id'=>array_column($didetail, 'order_item_id')), 0, -1, 'obj_id desc');
-                $didNum = array_column($didetail, null, 'order_item_id');
-                foreach ($items as $k => $v) {
-                    $items[$k]['sendnum'] = $didNum[$v['item_id']]['number'];
+                // 同一物流单号可对应多张发货单，限定当前订单后再取明细
+                $deliveryCandidates = app::get('ome')->model('delivery')->getList('delivery_id', array(
+                    'logi_no' => $_POST['dly_logi_no'],
+                    'status'  => array('succ', 'return_back'),
+                ));
+                
+                $dly = null;
+                if ($deliveryCandidates) {
+                    $matchedDlyOrders = app::get('ome')->model('delivery_order')->getList('delivery_id', array(
+                        'delivery_id' => array_column($deliveryCandidates, 'delivery_id'),
+                        'order_id'    => $order_id,
+                    ));
+                    
+                    if ($matchedDlyOrders) {
+                        $dly = array('delivery_id' => max(array_column($matchedDlyOrders, 'delivery_id')));
+                    }
+                }
+                
+                if ($dly) {
+                    $didetail = app::get('ome')->model('delivery_items_detail')->getList('order_item_id,number', ['delivery_id'=>$dly['delivery_id']]);
+                    $items = $oOrders_item->getList('*', array('order_id' => $order_id, 'item_id'=>array_column($didetail, 'order_item_id')), 0, -1, 'obj_id desc');
+                    $didNum = array_column($didetail, null, 'order_item_id');
+                    foreach ($items as $k => $v) {
+                        $items[$k]['sendnum'] = $didNum[$v['item_id']]['number'];
+                    }
+                } else {
+                    $items = $oOrders_item->getList('*', array('order_id' => $order_id), 0, -1, 'obj_id desc');
                 }
             } else {
                 $items        = $oOrders_item->getList('*', array('order_id' => $order_id), 0, -1, 'obj_id desc');
@@ -1148,7 +1208,8 @@ class ome_ctl_admin_return_rchange extends desktop_controller
         $this->paydetail($reship_data['order_id']);
         
         //WMS仓储类型
-        $wms_type = $branchLib->getNodetypBybranchId($reship_data['branch_id']);
+        $shop_type = isset($reship_data['shop_type']) ? $reship_data['shop_type'] : '';
+        $wms_type = $branchLib->getNodetypBybranchId($reship_data['branch_id'], $shop_type);
         
         $filter = array();
         if($wms_type == 'yjdf'){
@@ -1481,7 +1542,8 @@ class ome_ctl_admin_return_rchange extends desktop_controller
         //[兼容]京东一件代发,用户未签收需要拦截包裹
         $show_cancel = false;
         $branchLib = kernel::single('ome_branch');
-        $wms_type = $branchLib->getNodetypBybranchId($reship_data['branch_id']);
+        $shop_type = isset($reship_data['shop_type']) ? $reship_data['shop_type'] : '';
+        $wms_type = $branchLib->getNodetypBybranchId($reship_data['branch_id'], $shop_type);
         if($wms_type=='yjdf' && in_array($reship_data['is_check'], array('0', '1'))){
             $deliveryObj = app::get('ome')->model('delivery');
             $deliveryLib = kernel::single('console_delivery');
@@ -1503,7 +1565,8 @@ class ome_ctl_admin_return_rchange extends desktop_controller
             $deliveryInfo = $deliveryObj->dump(array('delivery_id'=>$delivery_ids, 'status'=>'succ'), 'delivery_id,delivery_bn,wms_channel_id');
             if($deliveryInfo){
                 //wms_id
-                $channel_id = $branchLib->getWmsIdById($reship_data['branch_id']);
+                $shop_type = isset($reship_data['shop_type']) ? $reship_data['shop_type'] : '';
+                $channel_id = $branchLib->getWmsIdById($reship_data['branch_id'], $shop_type);
                 
                 //branch_bn
                 $branch_bn = $branchLib->getBranchBnById($reship_data['branch_id']);
@@ -1990,7 +2053,8 @@ class ome_ctl_admin_return_rchange extends desktop_controller
         
         //[京东一件代发]抖音平台退货
         $file_url = '';
-        $wms_type = $branchLib->getNodetypBybranchId($reship['branch_id']);
+        $shop_type = isset($reship['shop_type']) ? $reship['shop_type'] : '';
+        $wms_type = $branchLib->getNodetypBybranchId($reship['branch_id'], $shop_type);
         if($wms_type=='yjdf'){
             $is_flag = false;
             
@@ -2067,7 +2131,8 @@ class ome_ctl_admin_return_rchange extends desktop_controller
                 $result = $reshipLib->cancel_reship_package($reship, $error_msg);
                 
                 //拉取京东售后审核意见,并同步抖音售后单备注内容
-                $wms_id = $branchLib->getWmsIdById($reship['branch_id']);
+                $shop_type = isset($reship['shop_type']) ? $reship['shop_type'] : '';
+                $wms_id = $branchLib->getWmsIdById($reship['branch_id'], $shop_type);
                 $data = array(
                         'reship_id' => $reship['reship_id'],
                         'reship_bn' => $reship['reship_bn'],
@@ -2095,6 +2160,11 @@ class ome_ctl_admin_return_rchange extends desktop_controller
                     if(method_exists($object, 'cancel_reship_after')) {
                         $object->cancel_reship_after($reship_id);
                     }
+                }
+                
+                // 淘宝/天猫极速换货：取消换出订单并回告平台
+                if (in_array((string)$reship['shop_type'], array('taobao', 'tmall'), true)) {
+                    kernel::single('ome_order_platform_taobao_aftersale')->notifyConsigngoodsRefuseOnCancel($reship_id, $memo);
                 }
             }
             
@@ -2405,7 +2475,8 @@ class ome_ctl_admin_return_rchange extends desktop_controller
         
         //WMS仓储类型
         $service_bn_logi_no = '';
-        $wms_type = $branchLib->getNodetypBybranchId($reshipInfo['branch_id']);
+        $shop_type = isset($reshipInfo['shop_type']) ? $reshipInfo['shop_type'] : '';
+        $wms_type = $branchLib->getNodetypBybranchId($reshipInfo['branch_id'], $shop_type);
         if($wms_type == 'yjdf'){
             $return_logi_code = '';
             $return_logi_no = '';
@@ -2715,7 +2786,8 @@ class ome_ctl_admin_return_rchange extends desktop_controller
                 if ($reship_list)
                 {
                     $reship_data = kernel::single('ome_receipt_reship')->reship_create(array('reship_id' => $reship_id));
-                    $wms_id      = kernel::single('ome_branch')->getWmsIdById($reship_data['branch_id']);
+                    $shop_type = isset($reship_data['shop_type']) ? $reship_data['shop_type'] : '';
+                    $wms_id = kernel::single('ome_branch')->getWmsIdById($reship_data['branch_id'], $shop_type);
                     kernel::single('console_event_trigger_reship')->create($wms_id, $reship_data, false);
                 }
             }
@@ -2742,9 +2814,7 @@ class ome_ctl_admin_return_rchange extends desktop_controller
      */
     public function get_Orderdata($order_id, $source)
     {
-
         $newItems       = array();
-        $tmp_product    = array();
         $archive_ordObj = kernel::single('archive_interface_orders');
         if ($source == 'archive') {
             $order_object = $archive_ordObj->getOrder_object(array('order_id' => $order_id), '*');
@@ -2765,6 +2835,7 @@ class ome_ctl_admin_return_rchange extends desktop_controller
         $reshipObj = $this->app->model('reship');
         $tmpsale   = $reshipObj->getSalepriceByorderId($order_id);
         $color     = array('red', 'blue');
+        $objColor = array();
         foreach ($items as $k => $v) {
             $str_spec_value = '';
             $spec_info      = unserialize($v['addon']);
@@ -2881,7 +2952,8 @@ class ome_ctl_admin_return_rchange extends desktop_controller
     
             //取消第三方WMS退货单
             if ($reship_detail['is_check'] != '0'){
-                $wms_id = $branchLib->getWmsIdById($reship_detail['branch_id']);
+                $shop_type = isset($reship_detail['shop_type']) ? $reship_detail['shop_type'] : '';
+                $wms_id = $branchLib->getWmsIdById($reship_detail['branch_id'], $shop_type);
                 $branch = $branchLib->getBranchInfo($reship_detail['branch_id'], 'branch_bn,storage_code,owner_code');
                 
                 //request
@@ -2914,7 +2986,8 @@ class ome_ctl_admin_return_rchange extends desktop_controller
         }else{
             //取消第三方WMS退货单
             if ($reship_detail['is_check'] != '0'){
-                $wms_id = $branchLib->getWmsIdById($reship_detail['branch_id']);
+                $shop_type = isset($reship_detail['shop_type']) ? $reship_detail['shop_type'] : '';
+                $wms_id = $branchLib->getWmsIdById($reship_detail['branch_id'], $shop_type);
                 $branch = $branchLib->getBranchInfo($reship_detail['branch_id'], 'branch_bn,storage_code,owner_code');
                 
                 //request
@@ -2955,8 +3028,9 @@ class ome_ctl_admin_return_rchange extends desktop_controller
         kernel::single('console_reship')->releaseChangeFreeze($reship_id);
         
         //[京东一件代发]释放退货包裹数量
-        $wms_type = $branchLib->getNodetypBybranchId($reship_detail['branch_id']);
-        $wms_id = $branchLib->getWmsIdById($reship_detail['branch_id']);
+        $shop_type = isset($reship_detail['shop_type']) ? $reship_detail['shop_type'] : '';
+        $wms_type = $branchLib->getNodetypBybranchId($reship_detail['branch_id'], $shop_type);
+        $wms_id = $branchLib->getWmsIdById($reship_detail['branch_id'], $shop_type);
         if($wms_type == 'yjdf' && $wms_id){
             $result = $reshipLib->cancel_reship_package($reship_detail, $error_msg);
             
@@ -3162,9 +3236,10 @@ class ome_ctl_admin_return_rchange extends desktop_controller
 
         $_POST['wms_id'] = array_column($channel_list, null, 'channel_id');
 
-        $reship_list = $reshipMdl->getList('reship_id,branch_id,out_iso_bn,reship_bn', $_POST);
+        $reship_list = $reshipMdl->getList('reship_id,branch_id,out_iso_bn,reship_bn,shop_type', $_POST);
         foreach ($reship_list as $reship) {
-            $wms_id = kernel::single('ome_branch')->getWmsIdById($reship['branch_id']);
+            $shop_type = isset($reship['shop_type']) ? $reship['shop_type'] : '';
+            $wms_id = kernel::single('ome_branch')->getWmsIdById($reship['branch_id'], $shop_type);
             $data   = array(
                 'out_order_code' => $reship['out_iso_bn'],
                 'stockin_bn'     => $reship['reship_bn'],
@@ -3246,7 +3321,8 @@ class ome_ctl_admin_return_rchange extends desktop_controller
         $order_id = $reshipInfo['order_id'];
         
         //wms_id
-        $channel_id = $branchLib->getWmsIdById($reshipInfo['branch_id']);
+        $shop_type = isset($reshipInfo['shop_type']) ? $reshipInfo['shop_type'] : '';
+        $channel_id = $branchLib->getWmsIdById($reshipInfo['branch_id'], $shop_type);
         
         //branch_bn
         $branch_bn = $branchLib->getBranchBnById($reshipInfo['branch_id']);
@@ -3387,15 +3463,17 @@ class ome_ctl_admin_return_rchange extends desktop_controller
         
         //获取可操作数据
         $filter = array('reship_id'=>$ids, 'return_type'=>array('return', 'change'), 'is_check'=>'0', 'status'=>'ready');
-        $dataList = $reshipObj->getList('reship_id,shop_type', $filter, 0, 500);
+        $dataList = $reshipObj->getList('reship_id,shop_type,flag_type', $filter, 0, 500);
         if(empty($dataList)){
             die('没有可操作的数据');
         }
         
+        $topspeedLib = kernel::single('ome_order_platform_taobao_aftersale');
         $sdf = array();
         foreach ($dataList as $key => $val)
         {
-            if($val['shop_type'] == 'tmall'){
+            // 天猫需拒绝凭证；极速换货除外，拒绝时走取消换出订单并回告平台
+            if($val['shop_type'] == 'tmall' && !$topspeedLib->isTopspeedByFlagType($val['flag_type'])){
                 continue;
             }
     
@@ -3434,8 +3512,10 @@ class ome_ctl_admin_return_rchange extends desktop_controller
         }
         
         //dump
-        $reshipInfo = $reshipObj->dump(array('reship_id'=>$reship_id), 'reship_bn,return_id,return_type,shop_type,is_check');
-        if($reshipInfo['shop_type'] == 'tmall'){
+        $reshipInfo = $reshipObj->dump(array('reship_id'=>$reship_id), 'reship_bn,return_id,return_type,shop_type,is_check,flag_type');
+        $topspeedLib = kernel::single('ome_order_platform_taobao_aftersale');
+        $isTopspeed = $topspeedLib->isTopspeedByFlagType($reshipInfo['flag_type']);
+        if($reshipInfo['shop_type'] == 'tmall' && !$isTopspeed){
             $result['error_msg'] = '不支持批量拒绝天猫平台退换货单';
             echo(json_encode($result));
             exit;
@@ -3472,6 +3552,15 @@ class ome_ctl_admin_return_rchange extends desktop_controller
             $oOperation_log->write_log('return@ome', $reshipInfo['return_id'], $memo);
         }
         $oOperation_log->write_log('reship@ome', $reship_id, $memo);
+
+        if ($isTopspeed) {
+            $notifyRs = $topspeedLib->notifyConsigngoodsRefuseOnCancel($reship_id, $memo);
+            if (empty($notifyRs['rsp']) || $notifyRs['rsp'] !== 'succ') {
+                $result['error_msg'] = !empty($notifyRs['msg']) ? $notifyRs['msg'] : '取消极速换货订单失败';
+                echo(json_encode($result));
+                exit;
+            }
+        }
         
         //return
         $result = array('rsp'=>'succ', 'error_msg'=>'');
@@ -3503,7 +3592,8 @@ class ome_ctl_admin_return_rchange extends desktop_controller
             $this->splash('error', $url, '退换货单状态不允许取消');
         }
         
-        $wms_id = $branchLib->getWmsIdById($reshipInfo['branch_id']);
+        $shop_type = isset($reshipInfo['shop_type']) ? $reshipInfo['shop_type'] : '';
+        $wms_id = $branchLib->getWmsIdById($reshipInfo['branch_id'], $shop_type);
         $branchInfo = $branchLib->getBranchInfo($reshipInfo['branch_id'], 'branch_bn,owner_code');
         
         //request
@@ -3755,15 +3845,21 @@ class ome_ctl_admin_return_rchange extends desktop_controller
     
     public function getOrderIds() {
         $logino = trim($_GET['logi_no']);
-        $dlyId = app::get('ome')->model('delivery')->db_dump(['logi_no'=>$logino, 'process'=>'true'], 'delivery_id');
-        if(empty($dlyId)) {
+        
+        // 同一物流单号可对应多张发货单，返回全部关联订单
+        $deliveryList = app::get('ome')->model('delivery')->getList('delivery_id', array(
+            'logi_no' => $logino,
+            'process' => 'true',
+            'status'  => array('succ', 'return_back'),
+        ));
+        if(empty($deliveryList)) {
             echo json_encode(['rsp'=>'fail', 'msg'=>'没有对应的已发货发货单']);
             exit();
         }
-        $do = app::get('ome')->model('delivery_order')->getList('order_id', ['delivery_id'=>$dlyId['delivery_id']]);
+        $do = app::get('ome')->model('delivery_order')->getList('order_id', ['delivery_id'=>array_column($deliveryList, 'delivery_id')]);
         $order = app::get('ome')->model('orders')->getList('order_id,order_bn', ['order_id'=>array_column($do, 'order_id')]);
         if(empty($order)) {
-            json_encode(['rsp'=>'fail', 'msg'=>'没有对应的订单']);
+            echo json_encode(['rsp'=>'fail', 'msg'=>'没有对应的订单']);
             exit();
         }
         echo json_encode(['rsp'=>'succ', 'data'=>$order]);
@@ -3969,7 +4065,8 @@ class ome_ctl_admin_return_rchange extends desktop_controller
             }
             
             //branch
-            $wms_id = $branchLib->getWmsIdById($reshipInfo['branch_id']);
+            $shop_type = isset($reshipInfo['shop_type']) ? $reshipInfo['shop_type'] : '';
+            $wms_id = $branchLib->getWmsIdById($reshipInfo['branch_id'], $shop_type);
             $branch = $branchLib->getBranchInfo($reshipInfo['branch_id'], 'branch_bn,storage_code,owner_code');
             
             //request
@@ -4093,7 +4190,7 @@ class ome_ctl_admin_return_rchange extends desktop_controller
         );
         
         //data
-        $dataList = $reshipObj->getList('reship_id,reship_bn,is_check,status,return_type,sync_status', ['reship_id'=>$primaryIds]);
+        $dataList = $reshipObj->getList('reship_id,reship_bn,is_check,status,return_type,sync_status,branch_id,shop_type,order_id', ['reship_id'=>$primaryIds]);
         foreach ($dataList as $key => $reshipInfo)
         {
             $reship_id = $reshipInfo['reship_id'];
@@ -4119,7 +4216,8 @@ class ome_ctl_admin_return_rchange extends desktop_controller
             
             //请求WMS取消
             if(in_array($reshipInfo['is_check'], array('1','2')) || $reshipInfo['sync_status'] == '3'){
-                $wms_id = $branchLib->getWmsIdById($reshipInfo['branch_id']);
+                $shop_type = isset($reshipInfo['shop_type']) ? $reshipInfo['shop_type'] : '';
+                $wms_id = $branchLib->getWmsIdById($reshipInfo['branch_id'], $shop_type);
                 $branch = $branchLib->getBranchInfo($reshipInfo['branch_id'], 'branch_bn,storage_code,owner_code');
                 
                 //request
@@ -4221,8 +4319,8 @@ class ome_ctl_admin_return_rchange extends desktop_controller
             $formFieldKey = isset($fieldKeyMap[$colKey]) ? $fieldKeyMap[$colKey] : $colKey;
             
             if ($config['is_required'] && empty($post[$formFieldKey])) {
-                // 使用友好的字段名称
-                $fieldName = isset($fieldNameMap[$colKey]) ? $fieldNameMap[$colKey] : $colKey;
+                // elements 结构为 array(name/options/default)，取 name 作为展示名
+                $fieldName = isset($fieldNameMap[$colKey]['name']) ? $fieldNameMap[$colKey]['name'] : $colKey;
                 $this->end(false, "{$fieldName} 不能为空");
             }
         }

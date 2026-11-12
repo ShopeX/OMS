@@ -42,6 +42,7 @@ class erpapi_shop_response_exchange extends erpapi_shop_response_abstract {
         'EXCHANGE_CLOSE_TO_SALES_RETURN'=>'5',//  请退款
         'SELLER_REFUSE_BUYER' => '5', //卖家拒绝(抖音)
         'WAIT_BUYER_CONFIRM_GOODS'=>'3',
+        'SELLER_REFUSED_SEND_NEW_GOODS' => '18', //【极速换货】商家拒绝发新货（非极速时不应走到此态；映射由二维逻辑覆盖）
     );
     
     protected function _formatAddParams($params) {
@@ -84,6 +85,7 @@ class erpapi_shop_response_exchange extends erpapi_shop_response_abstract {
             'time_out'              =>  $params['time_out'],
             'operation_contraint'   =>  $params['operation_contraint'],
             'refund_version'        =>  $params['refund_version'],
+            'speed_exchange'        =>  kernel::single('ome_order_platform_taobao_aftersale')->extractSpeedExchange($params), // 极速换货(1：代表是)，兼容 extend_field
             'shop_id'               =>  $this->__channelObj->channel['shop_id'],
             'attributes'             =>  $params['attributes'] ? @json_decode($params['attributes'],true) : [],
             'org_id'                => $this->__channelObj->channel['org_id'],
@@ -91,8 +93,7 @@ class erpapi_shop_response_exchange extends erpapi_shop_response_abstract {
 
         return $sdf;
     }
-
-
+    
     protected function _returnProductAdditional($sdf) {
         return array();
     }
@@ -163,8 +164,7 @@ class erpapi_shop_response_exchange extends erpapi_shop_response_abstract {
             $this->__apilog['result']['msg'] = '退货明细不可为空!';
             return false;
         }
-
-
+        
         // 兼容换了又换
         list($is_change, $change_msg, $change_order, $change_bought) = $changeRs = $this->getChangeReturnProduct($sdf);
         if($is_change === true){
@@ -209,10 +209,7 @@ class erpapi_shop_response_exchange extends erpapi_shop_response_abstract {
 
             $sdf['return_items'] = $return_items;
         }
-
-        // $this->__apilog['result']['data']['changeRs'] = $changeRs;
-
-
+        
         if (is_array($sdf['change_items'])){
             $changeItemList = $this->_formatChangeItemlist($sdf['change_items']);
             if (empty($changeItemList)){
@@ -229,7 +226,6 @@ class erpapi_shop_response_exchange extends erpapi_shop_response_abstract {
             if($apilog['msg_code'] == '6666' && in_array($sdf['order']['ship_status'],array('3','4'))){//二次换货数量不足时处理
 
                 $change_flag = $this->_tranChange($sdf);
-              
                 if($change_flag){
                     $sdf['change_order_flag'] = true;
                     $sdf['change_order_id'] = $change_flag['change_order_id'];
@@ -247,10 +243,9 @@ class erpapi_shop_response_exchange extends erpapi_shop_response_abstract {
 
         return $rs;
     }
-
-
+    
     protected function _getOrderDelivery($sdf) {
-        #获取订单关联的所有已发货的发货单delivery_id
+        // 获取订单关联的所有已发货的发货单delivery_id
         $sql = "SELECT dord.delivery_id, d.branch_id FROM sdb_ome_delivery_order AS dord
                   LEFT JOIN sdb_ome_delivery AS d ON(dord.delivery_id=d.delivery_id)
                   WHERE dord.order_id='".$sdf['order']['order_id']."'
@@ -263,6 +258,7 @@ class erpapi_shop_response_exchange extends erpapi_shop_response_abstract {
             foreach ($result as $key => $val) {
                 $arrDelivery[$val['delivery_id']] = $val;
             }
+            
             $productId = '';
             foreach($sdf['return_items'] as $iVal) {
                 if($iVal['product_id']) {
@@ -270,30 +266,27 @@ class erpapi_shop_response_exchange extends erpapi_shop_response_abstract {
                     break;
                 }
             }
+            
             $deliItemModel = app::get('ome')->model('delivery_items');
             $itemData = $deliItemModel->getList('delivery_id', array('delivery_id'=>array_keys($arrDelivery), 'product_id'=>$productId), 0, 1);
         }
+        
         return $itemData ? $arrDelivery[$itemData[0]['delivery_id']] : $result[0];
     }
-
-
-
+    
     protected function _returnProductAddSdf($sdf)
     {
         $returnModel = app::get('ome')->model('return_product');
+        $topspeedLib = kernel::single('ome_order_platform_taobao_aftersale');
         
         //平台售后状态
         $platform_status = strtoupper($sdf['status']);
-        
-        //状态
-        $sdf['status'] = self::$return_status[strtoupper($sdf['status'])];
-        
-        //商家拒绝退款
-        if(in_array($sdf['shop_type'], array('taobao', 'tmall')) && $platform_status=='SELLER_REFUSE_BUYER'){
-            $sdf['status'] = '10';
+        $sdf['platform_status_raw'] = $platform_status;
+        if (empty($sdf['platform_status'])) {
+            $sdf['platform_status'] = $platform_status;
         }
         
-        //售后申请单信息
+        //售后申请单信息（先取库，便于漏传 speed_exchange 时仍按已落库极速标解释）
         $tgReturn = $returnModel->getList('*', array('shop_id'=>$sdf['shop_id'],'return_bn'=>$sdf['return_bn']));
         $version_change = false;
         if($tgReturn) {
@@ -329,6 +322,23 @@ class erpapi_shop_response_exchange extends erpapi_shop_response_abstract {
                 }
             }
         }
+
+        // 极速身份（报文或已落库）
+        $isTopspeed = $topspeedLib->resolveIsTopspeedExchange($sdf);
+        $sdf['is_topspeed_exchange'] = $isTopspeed ? true : false;
+
+        //状态（二维映射：极速 WAIT_SELLER_SEND_GOODS→6，SELLER_REFUSED_SEND_NEW_GOODS→18）
+        $mapped = $topspeedLib->resolvePlatformStatusMap($platform_status, $isTopspeed, self::$return_status);
+        if ($mapped === null || $mapped === '') {
+            $sdf['status'] = self::$return_status[strtoupper($platform_status)];
+        } else {
+            $sdf['status'] = $mapped;
+        }
+        
+        //商家拒绝退款
+        if(in_array($sdf['shop_type'], array('taobao', 'tmall')) && $platform_status=='SELLER_REFUSE_BUYER'){
+            $sdf['status'] = '10';
+        }
         
         //不存在状态为已完成和已拒绝不处理
         if($sdf['shop']['delivery_mode'] == 'jingxiao') {
@@ -349,42 +359,48 @@ class erpapi_shop_response_exchange extends erpapi_shop_response_abstract {
             return false;
         }
         if ($sdf['return_product']['status'] == '4'){
-            $appendMsg = '已完成售后单,';
-            
-            $isCancelOrder = false;
-            if($sdf['shop_type'] == 'luban' && $sdf['exchange_status']['after_sale_status'] == 12 && $sdf['exchange_status']['refund_status'] == 3){
-                //换货转仅退款,并且平台已经退款完成
-                $isCancelOrder = true;
-                $appendMsg .= '换货转仅退款';
-            }elseif($sdf['shop_type'] == 'luban' && $sdf['status'] == '5'){
-                //售后关闭(商家拒绝确认收货)
-                $isCancelOrder = true;
-                $appendMsg .= '商家拒绝确认收货';
-            }
-            
-            //取消生成的新订单
-            if($isCancelOrder){
-                $lubanLib = kernel::single('ome_reship_luban');
-                $result = $lubanLib->cancelExchangeOrder($sdf);
-                if($result['rsp'] == 'succ'){
-                    $this->__apilog['result']['msg'] = $appendMsg .',OMS自动取消生成的新订单成功;';
-                    return false;
-                }else{
-                    $this->__apilog['result']['msg'] = $appendMsg .',取消新订单失败:'. $result['error_msg'];
-                    return false;
+            // 极速换货：若曾误入完成态，允许 17/18 继续更新
+            $allowTopspeedContinue = $isTopspeed && in_array($platform_status, array(
+                'WAIT_SELLER_SEND_GOODS',
+                'SELLER_REFUSED_SEND_NEW_GOODS',
+            ), true);
+            if (!$allowTopspeedContinue) {
+                $appendMsg = '已完成售后单,';
+                
+                $isCancelOrder = false;
+                if($sdf['shop_type'] == 'luban' && $sdf['exchange_status']['after_sale_status'] == 12 && $sdf['exchange_status']['refund_status'] == 3){
+                    //换货转仅退款,并且平台已经退款完成
+                    $isCancelOrder = true;
+                    $appendMsg .= '换货转仅退款';
+                }elseif($sdf['shop_type'] == 'luban' && $sdf['status'] == '5'){
+                    //售后关闭(商家拒绝确认收货)
+                    $isCancelOrder = true;
+                    $appendMsg .= '商家拒绝确认收货';
                 }
-            }
-            
-            $this->__apilog['result']['msg'] = '已完成售后单不处理';
-
-            if($sdf['reship'] && $sdf['status'] == '5' && $sdf['reship']['change_order_id']){//加判断如果是close加暂停
-
                 
-                kernel::single('ome_return')->pauseChangeOrder($sdf['reship']['change_order_id']);    
+                //取消生成的新订单
+                if($isCancelOrder){
+                    $lubanLib = kernel::single('ome_reship_luban');
+                    $result = $lubanLib->cancelExchangeOrder($sdf);
+                    if($result['rsp'] == 'succ'){
+                        $this->__apilog['result']['msg'] = $appendMsg .',OMS自动取消生成的新订单成功;';
+                        return false;
+                    }else{
+                        $this->__apilog['result']['msg'] = $appendMsg .',取消新订单失败:'. $result['error_msg'];
+                        return false;
+                    }
+                }
                 
-                $this->__apilog['result']['msg'].='换出订单暂停';
+                $this->__apilog['result']['msg'] = '已完成售后单不处理';
+
+                if($sdf['reship'] && $sdf['status'] == '5' && $sdf['reship']['change_order_id']){//加判断如果是close加暂停
+
+                    kernel::single('ome_return')->pauseChangeOrder($sdf['reship']['change_order_id']);    
+                    
+                    $this->__apilog['result']['msg'].='换出订单暂停';
+                }
+                return false;
             }
-            return false;
         }
     
         //发货单
@@ -483,15 +499,16 @@ class erpapi_shop_response_exchange extends erpapi_shop_response_abstract {
             $rs['reship'] = $reship[0];
             $otherFilter = ' AND r.reship_id != ' . $rs['reship']['reship_id'];
         }
+        
         $sql = "SELECT i.bn, i.num FROM sdb_ome_reship as r left join sdb_ome_reship_items as i on r.reship_id=i.reship_id WHERE i.return_type='return' AND r.is_check!='5' AND r.order_id='" . $orderId . "' " . $otherFilter;
         $otherReship = $oReship->db->select($sql);
         if($otherReship) {
             $rs['other_reship_items'] = $otherReship;
         }
+        
         return $rs;
     }
-
-
+    
     protected function _formatChangeItemlist($change_items){
         $salesMLib = kernel::single('material_sales_material');
         foreach($change_items as &$items){
@@ -503,6 +520,7 @@ class erpapi_shop_response_exchange extends erpapi_shop_response_abstract {
                 return array();
             }
         }
+        
         return $change_items;
     }
     
@@ -576,10 +594,8 @@ class erpapi_shop_response_exchange extends erpapi_shop_response_abstract {
                 $item_list = array();
 
                 foreach($order_object as $oo){
-
                     foreach($oo['order_items'] as $ov){
                         if($ov['delete'] == 'false'){
-                            
                             $item_list[] = array(
                                 'product_id' => $ov['product_id'],
                                 'bn'         => $ov['bn'],
@@ -590,18 +606,14 @@ class erpapi_shop_response_exchange extends erpapi_shop_response_abstract {
                                 'op_id'     => '888888',
                                 'order_item_id' => $ov['item_id'],
                             );
-
                         }
-
                     }
                 }
                 
-
                 $sdf['return_items'] = $item_list;
 
             }
         }
-
     }
     
     /**
@@ -693,7 +705,6 @@ class erpapi_shop_response_exchange extends erpapi_shop_response_abstract {
     public function getChangeReturnProduct($sdf)
     {
         $orderObj   = app::get('ome')->model('orders');
-        $reshipMdl  = app::get('ome')->model('reship');
         
         $shop_id        = $sdf['shop_id'];
         $order_bn       = $sdf['tid'];
@@ -710,8 +721,7 @@ class erpapi_shop_response_exchange extends erpapi_shop_response_abstract {
             'return_bn'         => $return_bn,
             'shop_id'           => $shop_id,
         ], 'order_id');
-
-
+        
         $field = 'order_id,order_bn,status,process_status,ship_status,pay_status,payed,cost_payment,pay_bn,member_id,logi_id,logi_no,ship_name,ship_area,ship_addr,ship_zip,ship_tel,ship_email,ship_mobile,shipping,is_protect,is_cod,source,order_type,createtime,abnormal';
         if ($rp && $rp['order_id'] != $sdf['order']['order_id']){
             $order = $orderObj->db_dump(['order_id' => $rp['order_id']], $field);
@@ -802,5 +812,56 @@ class erpapi_shop_response_exchange extends erpapi_shop_response_abstract {
         }
         
         return [false, '匹配失败'];
+    }
+    
+    /**
+     * [淘宝极速换货]换货拒绝发出新品
+     *
+     * @param $sdf
+     * @return array
+     */
+    public function consigngoods_refuse($params)
+    {
+        //format
+        $sdf = $this->_formatConsigngoodsRefuseParams($params);
+        
+        // 平台只传 dispute_id，日志原单号用换货单号
+        $original_bn = !empty($sdf['return_bn']) ? $sdf['return_bn'] : '';
+        
+        // apilog
+        $this->__apilog['title'] = '店铺(' . $this->__channelObj->channel['name'] . ')换货拒绝发出新品[换货单号：' . $original_bn . ']';
+        $this->__apilog['original_bn'] = $original_bn;
+        $this->__apilog['result']['data'] = $sdf;
+        
+        // check
+        if(empty($sdf) || empty($original_bn)) {
+            $error_msg = '无效的换货拒绝参数';
+            
+            $this->__apilog['result']['msg'] = $error_msg;
+            
+            return false;
+        }
+        
+        return $sdf;
+    }
+    
+    /**
+     * [淘宝极速换货]格式化换货拒绝传参
+     *
+     * @param $sdf
+     * @return array
+     */
+    protected function _formatConsigngoodsRefuseParams($params)
+    {
+        self::trim($params);
+        
+        $sdf = array(
+            'return_bn' => $params['dispute_id'], // 换货单号
+            'seller_refuse_reason_id' =>  $params['seller_refuse_reason_id'], // 拒绝原因 ID
+            'leave_message' =>  $params['leave_message'], // 商家补充说明
+            'shop_id' => $this->__channelObj->channel['shop_id'],
+        );
+        
+        return $sdf;
     }
 }

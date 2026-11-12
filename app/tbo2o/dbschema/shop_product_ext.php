@@ -102,7 +102,7 @@ $db['shop_product_ext'] = array(
             ),
             'width' => 70,
             'editable' => false,
-            'filtertype' => 'yes',
+            'filtertype' => 'normal',
             'label' => app::get('tbo2o')->_('材质'),
         ),
         'brand_id' => array(

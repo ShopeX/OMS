@@ -369,6 +369,9 @@ class erpapi_shop_matrix_taobao_response_order extends erpapi_shop_response_orde
                 }
             }
         }
+
+        // 加价发顺丰平台集采（asdp_ads=218）：指定 SF，供创建/更新落库与打标
+        $this->_applyPaidSfPlatformJicai();
         
         //天猫优仓订单
         if ($this->_ordersdf['erpHold'] == '1') {
@@ -1055,6 +1058,10 @@ class erpapi_shop_matrix_taobao_response_order extends erpapi_shop_response_orde
         if($this->_ordersdf['cn_info']['asdp_biz_type'] == 'aox' || $this->_ordersdf['cn_info']['logistics_agreement']['asdp_biz_type'] == 'aox'){
             $plugins[] = 'orderextend';
         }
+
+        // 加价发顺丰平台集采：更新时挂 orderextend + orderlabels，并标记首次命中
+        $plugins = $this->_appendPaidSfJicaiUpdatePlugins($plugins);
+
         return $plugins;
     }
 

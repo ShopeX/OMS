@@ -16,6 +16,13 @@
  */
 
 class ome_finder_refund_apply{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     
     //平台售后状态
     static $_platformStatus = null;
@@ -44,7 +51,18 @@ class ome_finder_refund_apply{
             $orderinfo = $archive_ordObj->getOrders(array('order_id'=>$order_id),'*');
         }else{
             $orderinfo = $oOrder->order_detail($render->pagedata['refunddata']['order_id']);
+            
+           // check
+           if(empty($orderinfo)){
+               $order_id = $render->pagedata['refunddata']['order_id'];
+               
+               $archive_ordObj = kernel::single('archive_interface_orders');
+               $orderinfo = $archive_ordObj->getOrders(array('order_id'=>$order_id),'*');
+               
+               $orderinfo['order_id'] = $orderinfo['order_id'] ? $orderinfo['order_id'] : 0;
+           }
         }
+       
         $oLoger = app::get('ome')->model('operation_log');
         $render->pagedata['payed'] = $orderinfo['payinfo']['cost_payment'];
         $plugin_html = '';

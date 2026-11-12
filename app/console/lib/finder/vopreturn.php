@@ -17,6 +17,13 @@
 
 class console_finder_vopreturn
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function __construct()
     {
         if($_REQUEST['action'] == 'exportcnf' || $_REQUEST['action'] == 'to_export'){

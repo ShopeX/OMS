@@ -1,4 +1,19 @@
 <?php
+/**
+ * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 /**
  * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
@@ -230,7 +245,9 @@ class ome_mdl_orders extends dbeav_model{
                 $where .= '  AND order_id IN ("'.implode('","', $orderId).'")';
             }
 
-            unset($filter['product_bn']);
+            // Both may be posted together; product_bn branch wins — drop sales_material_bn so parent filter
+            // does not treat the searchOptions label as a schema column (PHP 8 TypeError).
+            unset($filter['product_bn'], $filter['sales_material_bn']);
         }elseif(isset($filter['sales_material_bn'])){
             $orderId = array();
             $orderId[] = 0;
@@ -2730,6 +2747,15 @@ class ome_mdl_orders extends dbeav_model{
         if(in_array($sdf['order_type'], array('brsh', 'bufa'))){
             return true;
         }
+
+        // SCRUM-7468：失败订单进入快照（定时邮件汇总用）
+        if (!empty($sdf['is_fail']) && $sdf['is_fail'] === 'true' && !empty($sdf['order_id'])) {
+            try {
+                kernel::single('monitor_event_orderfail')->recordEnter($sdf);
+            } catch (Throwable $e) {
+                // 快照失败不影响下单主流程
+            }
+        }
         
         $objRetrial = kernel::single('ome_order_retrial');
         list($rs, $msg) = $objRetrial->checkMonitorAbnormal($sdf);
@@ -4096,6 +4122,18 @@ class ome_mdl_orders extends dbeav_model{
      */
     function write_log_detail($log_id,$detail){
         $ooObj = $this->app->model('operations_order');
+        
+        // 去掉 emoji 等 4 字节 UTF-8，避免 order_detail 入库 Incorrect string value（表实际非 utf8mb4 时）
+        // 用 json 关联数组回解，保持 array 结构（ome_order_func::filterEmoji 对数组会解成 object）
+        $json = json_encode($detail);
+        if ($json !== false) {
+            $json = preg_replace('/(\\\u[ed][0-9a-f]{3})/i', '', $json);
+            $filtered = json_decode($json, true);
+            if (is_array($filtered)) {
+                $detail = $filtered;
+            }
+        }
+        
         $data = array(
            'log_id'=>$log_id,
            'order_id' => $detail['order_id'],
@@ -4434,7 +4472,7 @@ class ome_mdl_orders extends dbeav_model{
             }
             
             $where .= '  AND '.$table_name.'.order_id IN ('.implode(',', $orderId).')';
-            unset($filter['product_bn']);
+            unset($filter['product_bn'], $filter['sales_material_bn']);
         }elseif(isset($filter['sales_material_bn'])){
             $orderId = array();
             $orderId[] = 0;

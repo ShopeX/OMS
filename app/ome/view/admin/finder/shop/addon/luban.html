@@ -16,10 +16,6 @@
 
 <table>
     <tr>
-        <th>售后仅退款自动拒绝：</th>
-        <td><{input type="select" name="config[audo_refund_refuse]" options=["retry_refuse"=>"第一次自动拒绝,多次申请则手动审核(默认)","auto_refuse"=>"系统自动拒绝","confirm"=>"手动审核"] value=$shop.config.audo_refund_refuse|default:"retry_refuse"}></td>
-    </tr>
-    <tr>
         <th>售后状态同步给平台：</th>
         <td><{input type="select" name="config[return_sync_platform]" options=["auto_sync"=>"同步平台(默认)","forbid_sync"=>"禁止售后状态同步给平台"] value=$shop.config.return_sync_platform|default:"auto_sync"}></td>
     </tr>

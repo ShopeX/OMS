@@ -16,6 +16,13 @@
  */
 
 class console_finder_foreign_sku{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     function __construct(){
         if($_GET['wms_id'] != '0'){

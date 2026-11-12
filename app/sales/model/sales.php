@@ -51,41 +51,51 @@ class sales_mdl_sales extends dbeav_model{
      }
 
      function getList($cols='*', $filter=array(), $offset=0, $limit=-1, $orderby=null){
-
         return parent::getList($cols, $filter, $offset, $limit, $orderby);
-
      }
 
      function _filter($filter,$tableAlias=null,$baseWhere=null){
         @ini_set('memory_limit','512M');
         $where = '1';
-         //订单号查询
+        
+         //订单号查询（多行精确匹配；单行仍前缀匹配）
         if (isset($filter['order_bn'])){
             $orderObj = $this->app->model("orders");
-            $rows = $orderObj->getList('order_id',array('order_bn|head'=>$filter['order_bn']));
+            
+            // 订单支持批量搜索多个
+            $orderBn = $filter['order_bn'];
+            if (is_string($orderBn) && strpos($orderBn, "\n") !== false) {
+                $orderBns = array_unique(array_map('trim', array_filter(explode("\n", $orderBn))));
+                $rows = $orderBns ? $orderObj->getList('order_id', array('order_bn' => $orderBns)) : array();
+            } else {
+                $rows = $orderObj->getList('order_id', array('order_bn|head' => $orderBn));
+            }
+            
             $orderId[] = -1;
-            foreach($rows as $row){
+            foreach((array)$rows as $row){
                 $orderId[] = $row['order_id'];
             }
+            
             $where .= '  AND order_id IN ('.implode(',', $orderId).')';
+            
+            // unset
             unset($filter['order_bn']);
-
         }
-
-
+        
         //基础物料编码查询
         if(isset($filter['bn'])){
-
             $sql = 'SELECT sale_id FROM sdb_ome_sales_items WHERE bn like \''.$filter['bn'].'\'';
             $rows = $this->db->select($sql);
+            
             $saleId[] = 0;
             foreach($rows as $row){
                 $saleId[] = $row['sale_id'];
             }
 
             $where .= ' AND sale_id IN ('. implode(',', $saleId).')';
+            
+            // unset
             unset($filter['bn']);
-
         }
 
         //货品名称
@@ -114,6 +124,7 @@ class sales_mdl_sales extends dbeav_model{
             $where .= ' AND delivery_id IN ('. implode(',', $deliveryId).')';
             unset($filter['ship_area']);
         }
+        
         if (isset($filter['original_bn'])) {
             $sql = 'SELECT delivery_id FROM sdb_ome_delivery WHERE delivery_bn = "'.$filter['original_bn'].'"';
             $rows = $this->db->select($sql);
@@ -194,12 +205,7 @@ class sales_mdl_sales extends dbeav_model{
      }
      //csv导出
      function fgetlist_csv( &$data,$filter,$offset,$exportType = 1 ){
-       //print_r($data);//$filter是选中sales表中的记录id
-       //$data是sales数据表
-       //$offset 是偏移值
-       //
-
-         # [发货配置]是否启动拆单
+         // [发货配置]是否启动拆单
          $orderSplitLib    = kernel::single('ome_order_split');
          $split_seting     = $orderSplitLib->get_delivery_seting();
 
@@ -211,6 +217,7 @@ class sales_mdl_sales extends dbeav_model{
              }
              $data['title']['sales'] = '"'.implode('","',$title).'"';
          }
+         
          if( !$data['title']['sales_items'] ){
              $title = array();
               foreach( $this->io_title('sales_items') as $k => $v ){
@@ -229,10 +236,7 @@ class sales_mdl_sales extends dbeav_model{
              $data['title']['sales_items'] = '"'.implode('","',$title).'"';
          }
 
-         $limit = 100;
-         //if( $filter[''] )获取的sales的id
-         //$list=$this->getList('id',$filter,$offset*$limit,$limit);获取的sales的列表
-
+        $limit = 100;
         if(!$list = $this->getList('*',$filter,$offset*$limit,$limit)){
             return false;
         }
@@ -275,8 +279,7 @@ class sales_mdl_sales extends dbeav_model{
         foreach($rs as $v) {
             $members[$v['member_id']] = $v;
         }
-
-
+        
         // 所有的发货单信息
         $rs = $oDelivery->getList('delivery_id,delivery_bn,logi_name,logi_no,ship_name,ship_addr,ship_zip,ship_tel,ship_email,ship_mobile,ship_area',array('delivery_id'=>$delivery_ids));
         foreach($rs as $v) {
@@ -295,8 +298,7 @@ class sales_mdl_sales extends dbeav_model{
             $orders[$v['order_id']] = $v;
         }
         unset($rs);
-
-
+        
         $rs = $archive_ordobj->getOrder_list(array('order_id'=>$order_ids),'order_id,order_bn');
         foreach ( $rs as $v ) {
             $orders[$v['order_id']] = $v;
@@ -340,15 +342,14 @@ class sales_mdl_sales extends dbeav_model{
                 /*------------------------------------------------------ */
                 //-- [拆单]获取订单对应多个发货单
                 /*------------------------------------------------------ */
-                if($split_seting)
-                {
+                if($split_seting){
                     $dly_sql    = "SELECT dord.delivery_id, d.delivery_bn, d.logi_no FROM sdb_ome_delivery_order AS dord
                                 LEFT JOIN sdb_ome_delivery AS d ON(dord.delivery_id=d.delivery_id)
                                 WHERE dord.order_id='".$aOrder['order_id']."' AND (d.parent_id=0 OR d.is_bind='true') AND d.disabled='false'
                                 AND d.status NOT IN('failed','cancel','back','return_back')";
                     $delivery_list    = kernel::database()->select($dly_sql);
 
-                    #获取订单对应所有发货单
+                    //获取订单对应所有发货单
                     if($delivery_list && count($delivery_list) > 1)
                     {
                         $delivery_bn    = '';
@@ -541,6 +542,7 @@ class sales_mdl_sales extends dbeav_model{
         $type .= '_import';
         return $type;
     }
+    
     public function getexportdetail($fields,$filter,$offset=0,$limit=1,$has_title=false)
     {
         $salesList    = array();
@@ -572,8 +574,7 @@ class sales_mdl_sales extends dbeav_model{
         }
         $saleItemsObj = app::get('ome')->model('sales_items');
         $sale_items_arr = $saleItemsObj->getList('*',array('sale_id'=>$filter['sale_id']));
-
-
+        
         //格式化[防止促销销售物料没有显示关联的基础物料]
         if($sale_items_arr)
         {
@@ -629,7 +630,6 @@ class sales_mdl_sales extends dbeav_model{
                     $apportion_pmt    = 0;
                     $pmt_price        = 0;
                     $item_i           = 0;
-
                     foreach ($getList as $itemKey => $ordItem)
                     {
                         $temp_item_data    = array();
@@ -669,13 +669,11 @@ class sales_mdl_sales extends dbeav_model{
                                 $bm_rate    = $salesBasicMList[$ordItem['product_id']] / 100;
 
                                 $temp_item_data['apportion_pmt']    = round(($val['apportion_pmt'] * $bm_rate), 2);
-                                //$temp_item_data['pmt_price']        = round(($val['pmt_price'] * $bm_rate), 2);
 
                                 //PKG销售金额 = 销售金额 - 平摊优惠
                                 $temp_item_data['sales_amount']    = $temp_item_data['sales_amount'] - $temp_item_data['apportion_pmt'];
 
                                 $apportion_pmt  += $temp_item_data['apportion_pmt'];
-                                //$pmt_price      += $temp_item_data['pmt_price'];
                             }
                         }
 
@@ -707,7 +705,7 @@ class sales_mdl_sales extends dbeav_model{
                 }
             }
 
-            #销毁
+            // unset
             unset($dataList, $temp_item_data, $filter, $getItem, $getList, $material_sales_type);
         }
 
@@ -747,11 +745,9 @@ class sales_mdl_sales extends dbeav_model{
                 '*:订单号',
                 '*:基础物料编码',
                 '*:基础物料名称',
-
                 '*:销售物料类型',
                 '*:关联销售物料编码',
                 '*:关联销售物料名称',
-
                 '*:基础物料规格',
                 '*:吊牌价',
                 '*:基础物料优惠',
@@ -759,7 +755,6 @@ class sales_mdl_sales extends dbeav_model{
                 '*:销售总价',
                 '*:平摊优惠',
                 '*:销售金额',
-
                 '*:代销人用户名',
             );
 
@@ -855,7 +850,6 @@ class sales_mdl_sales extends dbeav_model{
      */
     function modifier_archive($row)
     {
-
         if($row == '1'){
            $row = sprintf("<div style='background-color:%s;float:left;'><span alt='%s' title='%s' style='color:#eeeeee;'>&nbsp;%s&nbsp;</span></div>", 'red', '归档', '归档', '归档');
         }else{
@@ -876,8 +870,7 @@ class sales_mdl_sales extends dbeav_model{
 
             $member_list[$value['member_id']] = array ();
         }
-
-
+        
         if ($mid = array_keys($member_list)) {
             $m1Mdl = app::get('ome')->model('members');
             foreach ($m1Mdl->getList('uname,member_id',array('member_id'=>$mid)) as $value) {
@@ -951,6 +944,7 @@ HTML;
         $sale_ids = array_column($salesListData['content'],'sale_id');
         $main_columns = array_values($salesListData['title']);
         $saleList = $salesListData['content'];
+        
         //所有的子销售数据
         $sales_items = $this->getexportdetail('',array('sale_id'=>$sale_ids));
         foreach( $saleList as $saleRow ){
@@ -983,7 +977,6 @@ HTML;
         $title           = array_merge($main_title, $saleItems_title);
         return mb_convert_encoding(implode(',', $title), 'GBK', 'UTF-8');
     }
-    
     
     public function salesItemsExportTitle()
     {
@@ -1066,5 +1059,4 @@ HTML;
 
         return $orgList[$org_id];
     }
-
 }

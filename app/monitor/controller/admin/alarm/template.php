@@ -106,6 +106,10 @@ class monitor_ctl_admin_alarm_template extends desktop_controller
             $data['template_id'] = intval($data['template_id']);
         }
         
+        if (isset($data['event_type']) && $data['event_type'] === 'order_fail_notify') {
+            $data['send_type'] = 'email';
+        }
+
         if (!$data['template_id']) {
             $row = $eventTemplateMdl->db_dump(array(
                 'event_type' => $data['event_type'],
@@ -128,6 +132,41 @@ class monitor_ctl_admin_alarm_template extends desktop_controller
         if ($data['pmt_name']) {
             app::get('monitor')->setConf('monitor.check.pmt.name',trim($data['pmt_name']));
         }
+
+        $configResult = $eventTemplateLib->normalizeTemplateConfig(
+            $data['event_type'],
+            isset($data['template_config']) ? $data['template_config'] : array()
+        );
+        if (is_string($configResult)) {
+            $this->end(false, $configResult);
+        }
+        if (isset($data['event_type']) && $data['event_type'] === 'order_fail_notify') {
+            $oldConfig = array();
+            $oldDisabled = 'true';
+            if (!empty($data['template_id'])) {
+                $oldRow = $eventTemplateMdl->db_dump(array('template_id' => intval($data['template_id'])), 'template_config,disabled');
+                if ($oldRow) {
+                    $oldDisabled = isset($oldRow['disabled']) ? $oldRow['disabled'] : 'true';
+                    $oldConfig = $oldRow['template_config'];
+                    if (is_string($oldConfig)) {
+                        $un = @unserialize($oldConfig);
+                        $oldConfig = is_array($un) ? $un : array();
+                    }
+                    if (!is_array($oldConfig)) {
+                        $oldConfig = array();
+                    }
+                }
+            }
+            $disabled = isset($data['disabled']) ? $data['disabled'] : 'false';
+            $configResult = $eventTemplateLib->mergeOrderFailNotifyRuntimeConfig(
+                $configResult,
+                $oldConfig,
+                $disabled,
+                $oldDisabled
+            );
+        }
+        $data['template_config'] = $configResult;
+
         $result = $eventTemplateMdl->save($data);
         if (!$result) {
             $this->end(false, '保存失败');

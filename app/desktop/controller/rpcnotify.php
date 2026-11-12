@@ -15,9 +15,11 @@
  * limitations under the License.
  */
 
+use app\desktop\lib\annotation\RequirePermission;
 
-class desktop_ctl_rpcnotify extends desktop_controller{
-    
+class desktop_ctl_rpcnotify extends desktop_controller
+{
+
     var $workground = 'desktop_ctl_system';
     var $limit = 20;
 
@@ -34,6 +36,7 @@ class desktop_ctl_rpcnotify extends desktop_controller{
         parent::__construct($app);
     }//End Function
 
+    #[RequirePermission('message_notify')]
     function index(){
         // 清除三个月前的通知，直接用SQL执行
         $threeMonthsAgo = strtotime('-3 months');
@@ -55,18 +58,14 @@ class desktop_ctl_rpcnotify extends desktop_controller{
             ));
     }
     
+    #[RequirePermission('message_notify')]
     function get() {
         $filter = array();
         $arr = app::get('base')->model('rpcnotify')->getList( '*',$filter, 0, $this->limit );
         echo json_encode($arr);
     }
-    
-    
-    
-    /**
-     * read
-     * @return mixed 返回值
-     */
+
+    #[RequirePermission('message_notify')]
     public function read() {
         if (!$_POST['from']) {
             $this->begin( kernel::router()->gen_url( array('app'=>'desktop','ctl'=>'rpcnotify','act'=>'index') ) );
@@ -99,7 +98,8 @@ class desktop_ctl_rpcnotify extends desktop_controller{
         }
         $this->end( $flag, ($flag ? app::get('desktop')->_('操作成功') : app::get('desktop')->_('操作失败')) );
     }
-    
+
+    #[RequirePermission('message_notify')]
     public function unread() {
         if (!$_POST['from']) {
             $this->begin( kernel::router()->gen_url( array('app'=>'desktop','ctl'=>'rpcnotify','act'=>'index') ) );

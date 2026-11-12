@@ -32,9 +32,9 @@
     <workground name="系统设置" id="setting_tools"  order="1100" icon="icon-xitongshezhi-01">
         
         <menugroup name="归档设置" en="archive-set">
-            <menu controller='order' action='index' permission='archive_set' display='true' order='10000100'>数据归档设置</menu>
+            <menu controller='order' action='index' permission='archive_set' display='true' order='10000100' target="/m-archive/order/index">数据归档设置</menu>
 			<!--<menu controller='order' action='search' permission='archive_search' display='true' order='10000101'>数据归档查询</menu>-->
-			<menu controller='log' action='index' permission='archive_log' display='true' order='10000102'>数据归档日志</menu>
+			<menu controller='log' action='index' permission='archive_log' display='true' order='10000102' target="/m-archive/log/index">数据归档日志</menu>
         </menugroup> 
         
        

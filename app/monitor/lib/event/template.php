@@ -65,7 +65,9 @@ class monitor_event_template
             'order_refund_apply_force_refund' => '退款单强制退款',
             'order_delivery_timeliness' => '订单发货时效提醒',
             'order_delivery_platform_sync_error' => '订单发货回写平台失败',
+            'order_modify_sku_error' => '订单修改SKU失败',
             'inventory_calc_error'     => '库存计算异常报警',
+            
             // 新增事件类型
             'delivery_cancel_success'  => '发货单取消成功通知',
             'reship_cancel_success'    => '退货单取消成功通知',
@@ -78,6 +80,7 @@ class monitor_event_template
             'order_lack_notify'         => '订单缺货通知',
             'financebase_bill_match_fail' => '店铺收支明细匹配失败日报',
             'lanjie_reship_logi_unaudited' => '拦截入库已录入物流号未审核',
+            'order_fail_notify'            => '失败订单提醒',
         );
         foreach(kernel::servicelist('monitor.service.event.template.get.after') as $object) {
             if(method_exists($object, 'getEventType')){
@@ -91,13 +94,198 @@ class monitor_event_template
     }
 
     /**
+     * 授权到期预警：适用平台
+     *
+     * @return array
+     */
+    public function getAuthExpirePlatforms()
+    {
+        return array(
+            'taobao'     => 'taobao (淘宝)',
+            '360buy'   => '360buy (京东)',
+            'pinduoduo'  => 'pinduoduo (拼多多)',
+            'luban'      => 'luban (鲁班)',
+            'kuaishou'   => 'kuaishou (快手)',
+            'vop'        => 'vop (唯品会)',
+        );
+    }
+
+    /**
+     * 店铺 token 失效：适用平台
+     *
+     * @return array
+     */
+    public function getTokenInvalidPlatforms()
+    {
+        return array(
+            'taobao'     => 'taobao (淘宝)',
+            '360buy'   => '360buy (京东)',
+            'pinduoduo'  => 'pinduoduo (拼多多)',
+            'luban'      => 'luban (鲁班)',
+            'kuaishou'   => 'kuaishou (快手)',
+            'vop'        => 'vop (唯品会)',
+            'xhs'        => 'xhs',
+            'dewu'       => 'dewu',
+            'wxshipin'   => 'wxshipin',
+        );
+    }
+
+    /**
+     * 店铺 token 恢复：适用平台（仅拼多多）
+     *
+     * @return array
+     */
+    public function getTokenRecoverPlatforms()
+    {
+        return array(
+            'pinduoduo' => 'pinduoduo (拼多多)',
+        );
+    }
+
+    /**
+     * 规范化三类店铺相关模板的 config
+     *
+     * @param string $eventType
+     * @param array  $rawConfig POST 中的 config
+     * @return array|string 成功返回 config 数组；失败返回错误文案
+     */
+    public function normalizeTemplateConfig($eventType, $rawConfig)
+    {
+        $rawConfig = is_array($rawConfig) ? $rawConfig : array();
+
+        if ($eventType === 'system_auth_expire') {
+            $remindDays = isset($rawConfig['remind_days']) ? intval($rawConfig['remind_days']) : 0;
+            if ($remindDays < 1 || $remindDays > 365) {
+                return '到期前提醒天数须为 1 ~ 365，请检查!';
+            }
+            $allowed = array_keys($this->getAuthExpirePlatforms());
+            $shopTypes = $this->filterShopTypes($rawConfig, $allowed);
+            if (!$shopTypes) {
+                return '请至少选择一个适用平台!';
+            }
+            return array(
+                'remind_days' => $remindDays,
+                'shop_types'  => $shopTypes,
+            );
+        }
+
+        if ($eventType === 'system_shop_token_invalid') {
+            $allowed = array_keys($this->getTokenInvalidPlatforms());
+            $shopTypes = $this->filterShopTypes($rawConfig, $allowed);
+            if (!$shopTypes) {
+                return '请至少选择一个适用平台!';
+            }
+            return array(
+                'shop_types' => $shopTypes,
+            );
+        }
+
+        if ($eventType === 'system_shop_token_recover') {
+            $allowed = array_keys($this->getTokenRecoverPlatforms());
+            $shopTypes = $this->filterShopTypes($rawConfig, $allowed);
+            if (!$shopTypes) {
+                return '请至少选择一个适用平台!';
+            }
+            return array(
+                'shop_types' => $shopTypes,
+            );
+        }
+
+        if ($eventType === 'order_fail_notify') {
+            return $this->normalizeOrderFailNotifyConfig($rawConfig);
+        }
+
+        return array();
+    }
+
+    /**
+     * 失败订单批量通知：频次 + 整点时刻校验
+     *
+     * @param array $rawConfig
+     * @return array|string
+     */
+    protected function normalizeOrderFailNotifyConfig($rawConfig)
+    {
+        $freq = isset($rawConfig['digest_frequency']) ? intval($rawConfig['digest_frequency']) : 0;
+        if (!in_array($freq, array(1, 2, 3), true)) {
+            return '发送频次须为每天一次/一天两次/一天三次，请检查!';
+        }
+
+        $times = isset($rawConfig['digest_times']) ? (array) $rawConfig['digest_times'] : array();
+        $times = array_values(array_filter(array_map('strval', $times)));
+        if (count($times) !== $freq) {
+            return '发送时刻个数与频次不符，请检查!';
+        }
+        if (count(array_unique($times)) !== count($times)) {
+            return '发送时刻不能重复，请检查!';
+        }
+        foreach ($times as $t) {
+            if (!preg_match('/^(?:[01]\d|2[0-3]):00$/', $t)) {
+                return '发送时刻仅支持整点（HH:00），请检查!';
+            }
+        }
+
+        $config = array(
+            'digest_frequency' => $freq,
+            'digest_times'     => $times,
+        );
+        // 水位 / 启用时间由保存入口合并，避免被前端空值覆盖
+        if (isset($rawConfig['last_check_time']) && $rawConfig['last_check_time'] !== '') {
+            $config['last_check_time'] = (string) $rawConfig['last_check_time'];
+        }
+        if (isset($rawConfig['enabled_at']) && $rawConfig['enabled_at'] !== '') {
+            $config['enabled_at'] = (string) $rawConfig['enabled_at'];
+        }
+        return $config;
+    }
+
+    /**
+     * 合并失败订单模板水位字段，并在启用时写入 enabled_at
+     *
+     * @param array $newConfig normalize 后的配置
+     * @param array $oldConfig 库中原配置
+     * @param string $disabled 'true'|'false'
+     * @param string $oldDisabled 原禁用状态
+     * @return array
+     */
+    public function mergeOrderFailNotifyRuntimeConfig(array $newConfig, array $oldConfig, $disabled, $oldDisabled = 'true')
+    {
+        if (!empty($oldConfig['last_check_time']) && empty($newConfig['last_check_time'])) {
+            $newConfig['last_check_time'] = $oldConfig['last_check_time'];
+        }
+        if (!empty($oldConfig['enabled_at']) && empty($newConfig['enabled_at'])) {
+            $newConfig['enabled_at'] = $oldConfig['enabled_at'];
+        }
+
+        // 启用：首次或由停用→启用时写入启用时间；水位为空时后续定时任务以此为窗口起点
+        if ($disabled === 'false') {
+            if (empty($newConfig['enabled_at']) || $oldDisabled === 'true') {
+                $newConfig['enabled_at'] = date('Y-m-d H:i:s');
+            }
+        }
+        return $newConfig;
+    }
+
+    /**
+     * @param array $rawConfig
+     * @param array $allowed
+     * @return array
+     */
+    protected function filterShopTypes($rawConfig, $allowed)
+    {
+        $shopTypes = isset($rawConfig['shop_types']) ? (array) $rawConfig['shop_types'] : array();
+        $shopTypes = array_values(array_intersect($shopTypes, $allowed));
+        return array_values(array_unique($shopTypes));
+    }
+
+    /**
      * 获取各事件类型的默认模板内容
      * 内容格式参考 initial/monitor.event_template.sql
      * @return array<string,string>
      */
     public function getEventDefaultContent()
     {
-        return array(
+        $content = array(
             'rpc_warning' => <<<TPL
 RPC调用失败报警
     >业务：<font color="warning">{title}</font>
@@ -197,6 +385,15 @@ TPL
     >错误信息：<font color="warning">{errmsg}</font>
 TPL
 ,
+            'order_modify_sku_error' => <<<TPL
+订单修改SKU失败
+    >订单号：<font color="warning">{order_bn}</font>
+    >店铺：<font color="warning">{shop_name}</font>
+    >原SKU：<font color="warning">{old_sku_bn}</font>
+    >新SKU：<font color="warning">{new_sku_bn}</font>
+    >错误信息：<font color="warning">{errmsg}</font>
+TPL
+,
             'order_ship_refund_finish' => <<<TPL
 订单[{order_bn}]已发货，退款流程校验已执行。
     >店铺：<font color="warning">{shop_type}</font> {shop_name}
@@ -278,6 +475,13 @@ TPL
     >订单号：<font color="warning">{order_bns}</font>
     >说明：<font color="warning">{errmsg}</font>
     {detail_list}
+TPL
+,
+            'order_fail_notify' => <<<TPL
+失败订单汇总
+    >统计区间：<font color="warning">{start_time}</font> ~ <font color="warning">{end_time}</font>
+    >新增失败订单：<font color="warning">{order_count}</font> 单
+    >明细见附件：<font color="warning">{csv_file}</font>
 TPL
 ,
         );

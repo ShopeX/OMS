@@ -14,8 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class console_finder_po{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $detail_basic = "采购单详情";
     var $detail_item = "采购单明细";
     var $detail_eo = "入库记录";
@@ -273,6 +279,16 @@ EOF;
         $render->pagedata['po'] = $po;
         //物流费用计算
         $render->pagedata['delivery_cost'] = count($eos)*$po['delivery_cost'];
+        if ($this->vue_mode) {
+            return array(
+                'po' => $po,
+                'eo' => count($eos),
+                'emslist' => $eos,
+                'count' => count($eos),
+                'show_purchase_price' => $showPurchasePrice,
+                'delivery_cost' => count($eos) * $po['delivery_cost'],
+            );
+        }
         return $render->fetch("admin/purchase/purchase_detail.html");
     }
 
@@ -287,6 +303,12 @@ EOF;
         }
         $render->pagedata['show_purchase_price'] = $showPurchasePrice;
         $render->pagedata['po_items'] = $po['po_items'];
+        if ($this->vue_mode) {
+            return array(
+                'po_items' => $po['po_items'],
+                'show_purchase_price' => $showPurchasePrice,
+            );
+        }
         return $render->fetch("admin/purchase/purchase_item.html");
     }
 
@@ -325,6 +347,12 @@ EOF;
         }
         $render->pagedata['cancel_detail'] = $cancel_detail;
 
+        if ($this->vue_mode) {
+            return array(
+                'detail' => $detail,
+                'cancel_detail' => $cancel_detail,
+            );
+        }
         return $render->fetch("admin/po/detail_eo.html");
     }
 
@@ -363,6 +391,11 @@ EOF;
             $logdata[$k]['operate_time'] = date('Y-m-d H:i:s',$v['operate_time']);
         }
         $render->pagedata['log'] = $logdata;
+        if ($this->vue_mode) {
+            return array(
+                'log' => $logdata,
+            );
+        }
         return $render->fetch('admin/oplog.html');
     }
     

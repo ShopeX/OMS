@@ -86,7 +86,7 @@
             <menu controller='admin_material_channel' action='index' permission='material_channel' display='true' order='1000202'>渠道商品列表</menu>
         </menugroup>
         <menugroup name="基础物料配置" en="basic-material-config">
-            <menu controller='admin_material_cat' action='index' permission='material_cat' display='true' order='1000100'>基础物料分类</menu>
+            <menu controller='admin_material_cat' action='index' permission='material_cat' display='true' order='1000100' target='/m-material/material-cat/index'>基础物料分类</menu>
         </menugroup>
         <menugroup name="销售物料配置" en="sales-material-config">
             <menu controller='admin_customer_classify' action='index' permission='material_customer_classify' display='true' order='3000100'>客户分类</menu>

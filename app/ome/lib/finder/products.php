@@ -16,6 +16,13 @@
  */
 
 class ome_finder_products{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 //    var $detail_stock = "库存详情";
 //    
 //    function __construct(){

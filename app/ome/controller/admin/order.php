@@ -673,9 +673,12 @@ class ome_ctl_admin_order extends desktop_controller{
     }
 
     function exportTemplateV2(){
-        $fileName = "订单导入模板.xlsx";
+        $fileName = "订单导入模板-" . date('Ymd') . ".xlsx";
         $title = app::get('ome')->model('orders')->exportTemplateV2('ome_order_importV2');
-        kernel::single('omecsv_phpoffice')->export($fileName, [0 => $title]);
+        
+        // 获取下载模板事例
+        $demoRows = kernel::single('ome_order_importV2')->getTemplateDemoRows($title);
+        kernel::single('omecsv_phpoffice')->export($fileName, array_merge([$title], $demoRows));
     }
 
     function dispatch(){
@@ -1515,11 +1518,23 @@ class ome_ctl_admin_order extends desktop_controller{
             {
                 //取消订单作废相应的发票记录
                 if(app::get('invoice')->is_installed()){
-
                     kernel::single('invoice_process')->cancel(array('order_id'=>$order_id));
                 }
-
-                echo "<script>alert('订单取消成功');</script>";
+                
+                // 极速换货订单，回传平台换纲拒绝发新品
+                if ($orderdata['order_type'] === 'exchange' || $orderdata['order_source'] === 'platformexchange') {
+                    if ($orderdata['shop_type'] === 'taobao'){
+                        $notifyRs = kernel::single('ome_order_platform_taobao_aftersale')->notifyConsigngoodsRefuseOnOrderCancel($order_id, $memo);
+                        if (empty($notifyRs['rsp']) || $notifyRs['rsp'] !== 'succ') {
+                            $notifyMsg = !empty($notifyRs['msg']) ? $notifyRs['msg'] : '请求平台拒绝发出新品失败';
+                            echo "<script>alert('订单已取消，极速换货回告失败:".$notifyMsg."');</script>";
+                        } else {
+                            echo "<script>alert('订单取消成功');</script>";
+                        }
+                    }
+                } else {
+                    echo "<script>alert('订单取消成功');</script>";
+                }
             }else{
                 echo "<script>alert('订单取消失败,原因是:".$sync_rs['msg']."');</script>";
             }
@@ -4937,7 +4952,8 @@ class ome_ctl_admin_order extends desktop_controller{
     }
 
     function doAddNormalOrder(){
-        $this->begin("index.php?app=ome&ctl=admin_order&act=addNormalOrder");
+        $this->begin("index.php?app=ome&ctl=admin_order&act=addNormalOrder" . $this->_buildOrderSourceQuery($_POST));
+        
         define('FRST_TRIGGER_OBJECT_TYPE','订单：手工新建订单');
         define('FRST_TRIGGER_ACTION_TYPE','ome_ctl_admin_order：doAddNormalOrder');
 
@@ -5307,14 +5323,77 @@ class ome_ctl_admin_order extends desktop_controller{
             }
         }
 
-        $this->end(true, '创建成功','index.php?app=ome&ctl=admin_order&act=createOrderResult&order_bn='.$iorder['order_bn']);
+        $this->end(true, '创建成功','index.php?app=ome&ctl=admin_order&act=createOrderResult&order_bn='.$iorder['order_bn'] . $this->_buildOrderSourceQuery($_POST));
     }
 
     public function createOrderResult()
     {
         $this->pagedata['order_bn'] = $_GET['order_bn'];
+        
+        $sourceUrls = $this->_buildOrderSourceUrls($_GET);
+        $this->pagedata['return_list_url'] = $sourceUrls['return_list_url'];
+        $this->pagedata['continue_create_url'] = $sourceUrls['continue_create_url'];
+        
         $this->display('admin/order/create_order_result.html');
     }
+    
+    /**
+     * 获取订单来源网址参数
+     *
+     * @param $params
+     * @return string
+     */
+    private function _buildOrderSourceQuery($params)
+    {
+        $sourceApp = trim(isset($params['source_app']) ? $params['source_app'] : '');
+        $sourceCtl = trim(isset($params['source_ctl']) ? $params['source_ctl'] : '');
+        $sourceAct = trim(isset($params['source_act']) ? $params['source_act'] : '');
+        if (!$sourceApp || !$sourceCtl || !$sourceAct) {
+            return '';
+        }
+        $query = '&source_app=' . urlencode($sourceApp)
+            . '&source_ctl=' . urlencode($sourceCtl)
+            . '&source_act=' . urlencode($sourceAct);
+        $orderCenterView = trim(isset($params['order_center_view']) ? $params['order_center_view'] : '');
+        if ($orderCenterView !== '') {
+            $query .= '&order_center_view=' . urlencode($orderCenterView);
+        }
+        return $query;
+    }
+    
+    /**
+     * 获取订单来源网址
+     *
+     * @param $params
+     * @return array|string[]
+     */
+    private function _buildOrderSourceUrls($params)
+    {
+        $sourceApp = trim(isset($params['source_app']) ? $params['source_app'] : '');
+        $sourceCtl = trim(isset($params['source_ctl']) ? $params['source_ctl'] : '');
+        $sourceAct = trim(isset($params['source_act']) ? $params['source_act'] : '');
+        if ($sourceApp && $sourceCtl && $sourceAct) {
+            $returnListUrl = sprintf(
+                'index.php?app=%s&ctl=%s&act=%s',
+                urlencode($sourceApp),
+                urlencode($sourceCtl),
+                urlencode($sourceAct)
+            );
+            $orderCenterView = trim(isset($params['order_center_view']) ? $params['order_center_view'] : '');
+            if ($orderCenterView !== '') {
+                $returnListUrl .= '&order_center_view=' . urlencode($orderCenterView);
+            }
+            return array(
+                'return_list_url' => $returnListUrl,
+                'continue_create_url' => 'index.php?app=ome&ctl=admin_order&act=addNormalOrder' . $this->_buildOrderSourceQuery($params),
+            );
+        }
+        return array(
+            'return_list_url' => 'index.php?app=ome&ctl=admin_order&act=active',
+            'continue_create_url' => 'index.php?app=ome&ctl=admin_order&act=addNormalOrder',
+        );
+    }
+    
     function getMemberAddress($mem_id=0){
         if (!$mem_id){
             $mem_id = $_REQUEST['member_id'];

@@ -308,6 +308,9 @@ class erpapi_shop_response_plugins_order_orderextend extends erpapi_shop_respons
     
     // 合并买家拒用快递黑名单到 black_delivery_cps
     $extendinfo = $this->_prepareBuyerBlackDeliveryCpsExtend($order_id, $extendinfo);
+
+    // 加价发顺丰等：逗号字段与旧值合并去重；未推送白名单/建议配时禁止清空
+    $extendinfo = $this->_mergeExtendCsvAndKeepWhitelist($order_id, $extendinfo);
     
     // contents
     if ($extendinfo['contents']) {      
@@ -330,6 +333,82 @@ class erpapi_shop_response_plugins_order_orderextend extends erpapi_shop_respons
       $orderExtendObj->save($extendinfo);
     }  
   }
+
+    /**
+     * 合并 cpup_service / promise_service；本次无白名单、建议配字段时不覆盖旧值
+     *
+     * @param int   $order_id
+     * @param array $extendinfo
+     * @return array
+     */
+    protected function _mergeExtendCsvAndKeepWhitelist($order_id, $extendinfo)
+    {
+        if (!$extendinfo || !is_array($extendinfo)) {
+            return $extendinfo;
+        }
+
+        $needMerge = isset($extendinfo['cpup_service']) || isset($extendinfo['promise_service'])
+            || array_key_exists('white_delivery_cps', $extendinfo)
+            || array_key_exists('biz_delivery_code', $extendinfo);
+        if (!$needMerge) {
+            return $extendinfo;
+        }
+
+        $oldExtend = app::get('ome')->model('order_extend')->db_dump(
+            array('order_id' => $order_id),
+            'cpup_service,promise_service,white_delivery_cps,biz_delivery_code'
+        );
+
+        if (isset($extendinfo['cpup_service'])) {
+            $extendinfo['cpup_service'] = $this->_mergeCsvUnique(
+                isset($oldExtend['cpup_service']) ? $oldExtend['cpup_service'] : '',
+                $extendinfo['cpup_service']
+            );
+        }
+        if (isset($extendinfo['promise_service'])) {
+            $extendinfo['promise_service'] = $this->_mergeCsvUnique(
+                isset($oldExtend['promise_service']) ? $oldExtend['promise_service'] : '',
+                $extendinfo['promise_service']
+            );
+        }
+
+        // 本次未带有效白名单/建议配时保留旧值，禁止被空串清空
+        if (array_key_exists('white_delivery_cps', $extendinfo)
+            && ($extendinfo['white_delivery_cps'] === '' || $extendinfo['white_delivery_cps'] === null)) {
+            unset($extendinfo['white_delivery_cps']);
+        }
+        if (array_key_exists('biz_delivery_code', $extendinfo)
+            && ($extendinfo['biz_delivery_code'] === '' || $extendinfo['biz_delivery_code'] === null)) {
+            unset($extendinfo['biz_delivery_code']);
+        }
+
+        return $extendinfo;
+    }
+
+    /**
+     * 逗号分隔字段合并去重（保序：旧值在前）
+     *
+     * @param string $old
+     * @param string $new
+     * @return string
+     */
+    protected function _mergeCsvUnique($old, $new)
+    {
+        $parts = array();
+        foreach (array($old, $new) as $csv) {
+            if ($csv === '' || $csv === null) {
+                continue;
+            }
+            foreach (explode(',', (string) $csv) as $item) {
+                $item = trim($item);
+                if ($item === '' || in_array($item, $parts, true)) {
+                    continue;
+                }
+                $parts[] = $item;
+            }
+        }
+        return implode(',', $parts);
+    }
 
     /**
      * 合并买家拒用快递黑名单到 black_delivery_cps

@@ -298,7 +298,7 @@ $db['vopreturn'] = array(
             'default_in_list' => true,
             'editable'        => false,
             'order'           => 220,
-            'filtertype' => 'yes',
+            'filtertype' => 'normal',
             'filterdefault' => true,
         ),
         'logi_name' =>array(
@@ -357,7 +357,7 @@ $db['vopreturn'] = array(
             'in_list'         => true,
             'default_in_list' => true,
             'editable' => false,
-            'filtertype' => 'yes',
+            'filtertype' => 'normal',
             'filterdefault' => true,
         ),
 

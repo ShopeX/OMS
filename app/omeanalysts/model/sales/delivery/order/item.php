@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class omeanalysts_mdl_sales_delivery_order_item extends sales_mdl_delivery_order_item
 {
 
@@ -26,30 +25,20 @@ class omeanalysts_mdl_sales_delivery_order_item extends sales_mdl_delivery_order
 
     /**
      * 须加密字段
-     * 
+     *
      * @var string
-     * */
+     **/
     private $__encrypt_cols = array(
         'ship_name'   => 'simple',
         'ship_tel'    => 'phone',
         'ship_mobile' => 'phone',
     );
 
-        /**
-     * __construct
-     * @param mixed $app app
-     * @return mixed 返回值
-     */
     public function __construct($app)
     {
         return parent::__construct(app::get('ome'));
     }
 
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
     public function table_name($real = false)
     {
         if ($real) {
@@ -61,13 +50,6 @@ class omeanalysts_mdl_sales_delivery_order_item extends sales_mdl_delivery_order
         return $table_name;
     }
 
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter, $tableAlias = null, $baseWhere = null)
     {
 
@@ -145,11 +127,6 @@ class omeanalysts_mdl_sales_delivery_order_item extends sales_mdl_delivery_order
         return $out_filter;
     }
 
-    /**
-     * 获取_sales
-     * @param mixed $filter filter
-     * @return mixed 返回结果
-     */
     public function get_sales($filter = null)
     {
         $cols = 'count(distinct order_id) as order_counts,sum(nums) as product_nums,sum(sales_amount) as sale_amounts';
@@ -160,11 +137,6 @@ class omeanalysts_mdl_sales_delivery_order_item extends sales_mdl_delivery_order
         return $rows;
     }
 
-    /**
-     * count
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function count($filter = null)
     {
         $sql = "SELECT count(id) as _count FROM sdb_sales_delivery_order_item WHERE " . $this->_filter($filter);
@@ -274,13 +246,6 @@ class omeanalysts_mdl_sales_delivery_order_item extends sales_mdl_delivery_order
     }
 
 
-    /**
-     * money_filter
-     * @param mixed $key key
-     * @param mixed $filter filter
-     * @param mixed $target target
-     * @return mixed 返回值
-     */
     public function money_filter($key, $filter, $target)
     {
         switch ($filter['_' . $key . '_search']) {
@@ -319,24 +284,11 @@ class omeanalysts_mdl_sales_delivery_order_item extends sales_mdl_delivery_order
         return $_where;
     }
 
-    /**
-     * exportName
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function exportName(&$data)
     {
         $data['name'] = $_POST['time_from'] . '到' . $_POST['time_to'] . '发货销售统计';
     }
 
-    /**
-     * fgetlist_csv
-     * @param mixed $data 数据
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $exportType exportType
-     * @return mixed 返回值
-     */
     public function fgetlist_csv(&$data, $filter, $offset, $exportType = 1)
     {
 
@@ -419,12 +371,6 @@ class omeanalysts_mdl_sales_delivery_order_item extends sales_mdl_delivery_order
 
     }
 
-    /**
-     * export_csv
-     * @param mixed $data 数据
-     * @param mixed $exportType exportType
-     * @return mixed 返回值
-     */
     public function export_csv($data, $exportType = 1)
     {
 
@@ -435,12 +381,6 @@ class omeanalysts_mdl_sales_delivery_order_item extends sales_mdl_delivery_order
         echo implode("\n", $output);
     }
 
-    /**
-     * io_title
-     * @param mixed $filter filter
-     * @param mixed $ioType ioType
-     * @return mixed 返回值
-     */
     public function io_title($filter = null, $ioType = 'csv')
     {
         switch ($ioType) {
@@ -487,10 +427,6 @@ class omeanalysts_mdl_sales_delivery_order_item extends sales_mdl_delivery_order
         return $this->ioTitle[$ioType][$filter];
     }
 
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema()
     {
         $schema = array(
@@ -891,7 +827,7 @@ class omeanalysts_mdl_sales_delivery_order_item extends sales_mdl_delivery_order
                     'comment'         => '发货单号',
                     'width'           => 140,
                     'searchtype'      => 'nequal',
-                    'filtertype'      => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault'   => true,
                     'width'           => '110',
                     // 'in_list'         => true,
@@ -1055,13 +991,6 @@ class omeanalysts_mdl_sales_delivery_order_item extends sales_mdl_delivery_order
         return $data;
     }
 
-    /**
-     * modifier_shop_id
-     * @param mixed $shop_id ID
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_shop_id($shop_id, $list, $row)
     {
         static $shopList;

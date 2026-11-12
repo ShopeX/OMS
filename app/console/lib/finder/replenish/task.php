@@ -22,6 +22,13 @@
  */
 class console_finder_replenish_task
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $addon_cols = 'task_id,store_ids,bm_ids';
     
     var $column_edit = '操作';
@@ -122,6 +129,7 @@ class console_finder_replenish_task
         
         $render->pagedata['reTaskInfo'] = $reTaskInfo;
         
+        if ($this->vue_mode) { return []; }
         return $render->fetch('admin/replenish/suggest_item.html');
     }
     

@@ -16,6 +16,13 @@
  */
  
 class omeanalysts_finder_ome_goods{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 	var $detail_basic = '基础物料详情';
 
 	public function detail_basic($goods_id) {

@@ -37,7 +37,7 @@ $db['returned_purchase']=array (
       'default_in_list' => false,
       'is_title' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
 
@@ -50,7 +50,7 @@ $db['returned_purchase']=array (
       'in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'supplier_id' =>
@@ -62,7 +62,7 @@ $db['returned_purchase']=array (
       'in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'operator' =>
@@ -74,7 +74,7 @@ $db['returned_purchase']=array (
       'in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'returned_time' =>
@@ -86,7 +86,7 @@ $db['returned_purchase']=array (
       'in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'purchase_time' =>
@@ -97,7 +97,7 @@ $db['returned_purchase']=array (
       'editable' => false,
       'in_list' => false,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => false,
     ),
     'branch_id' =>
@@ -157,7 +157,7 @@ $db['returned_purchase']=array (
       'editable' => false,
       'in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'memo' =>
     array (
@@ -178,7 +178,7 @@ $db['returned_purchase']=array (
       'in_list' => false,
       'default_in_list' => false,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => false,
     ),
     'rp_type' =>
@@ -264,7 +264,7 @@ $db['returned_purchase']=array (
       'type' => 'last_modify',
       'label' => '最后更新时间',
       'editable' => false,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => false,
       'in_list' => true,
       'default_in_list' => true,
@@ -286,7 +286,7 @@ $db['returned_purchase']=array (
         'width'           => 75,
         'required'        => true,
         'label'           => 'WMS同步状态',
-        'filtertype'      => 'yes',
+        'filtertype' => 'normal',
         'filterdefault'   => true,
         'in_list'         => true,
         'default_in_list' => false,

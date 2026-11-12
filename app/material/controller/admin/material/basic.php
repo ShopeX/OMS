@@ -994,7 +994,7 @@ EOF;
             
             // =============== 处理物料图片上传 ===============
             // 获取当前提交的图片ID（可能为空，表示用户删除了图片）
-            $submittedImageId = !empty($_POST['current_image_id']) ? $_POST['current_image_id'] : null;
+            $submittedImageId = !empty($_POST['current_image_id']) ? $_POST['current_image_id'] : $_FILES['material_image']['name'];
             
             // 获取数据库里原有的图片ID
             $originalImageId = null;
@@ -1005,7 +1005,7 @@ EOF;
                     $originalImageId = $attachedImages[0]['image_id'];
                 }
             }
-            
+
             // 比较图片ID是否发生变化
             if ($submittedImageId !== $originalImageId) {
                 // 图片ID发生变化，需要处理
@@ -1014,7 +1014,6 @@ EOF;
                 if ($originalImageId) {
                     $imageModel->detach($originalImageId, 'material', $filter['bm_id'], true);
                 }
-                
                 // 如果有新图片上传，则上传新图片
                 if (isset($_FILES['material_image']) && !empty($_FILES['material_image']['name']) && 
                     !empty($_FILES['material_image']['tmp_name']) && 

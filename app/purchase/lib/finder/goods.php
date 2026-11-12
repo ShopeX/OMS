@@ -16,6 +16,13 @@
  */
 
 class purchase_finder_goods{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $detail_goods_price = "供应商价格";
     
     function detail_goods_price($goods_id){

@@ -16,6 +16,13 @@
  */
 
 class logisticsmanager_finder_extend_filter_warehouse{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function get_extend_colums(){
         $db['warehouse']=array (
             'columns' => array (

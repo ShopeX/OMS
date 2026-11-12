@@ -16,6 +16,13 @@
  */
 
 class ome_finder_payment_cfg{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $detail_basic = "支付方式详情";
     
     function detail_basic($id){

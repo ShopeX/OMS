@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Copyright 2012-2026 ShopeX (https://www.shopex.cn)
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<desktop>
+    <permissions>
+        <permission id="mcpapi.client.list" display="true">MCP客户端查看</permission>
+        <permission id="mcpapi.client.add" display="true">MCP客户端新增</permission>
+        <permission id="mcpapi.client.rotate" display="true">MCP客户端密钥轮换</permission>
+        <permission id="mcpapi.client.expiration" display="true">MCP客户端过期时间管理</permission>
+        <permission id="mcpapi.client.revoke" display="true">MCP客户端撤销</permission>
+        <permission id="mcpapi.client.approve" display="true">MCP客户端审批</permission>
+        <permission id="mcpapi.agentlog.list" display="true">MCP调用日志查看</permission>
+    </permissions>
+
+    <!-- MCP凭证 / MCP调用日志挂入 desktop「控制面板」workground（跨 app 同 id 聚合） -->
+    <workground name="控制面板" id="adminpanel" order="1800" icon="icon-kongzhimianban-01">
+        <menugroup name="MCP管理" en="mcp-management">
+            <menu controller='admin_client' action='index' permission='mcpapi.client.list' display='true' order='6000400'>MCP凭证</menu>
+            <menu controller='admin_agentlog' action='index' permission='mcpapi.agentlog.list' display='true' order='6000500'>MCP调用日志</menu>
+        </menugroup>
+    </workground>
+</desktop>

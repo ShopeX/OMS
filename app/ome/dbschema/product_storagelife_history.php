@@ -103,7 +103,7 @@ $db['product_storagelife_history']=array (
       'editable' => false,
       'in_list' => true,
       'default_in_list' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'expire_bn' => 

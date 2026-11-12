@@ -16,6 +16,13 @@
  */
 
 class console_finder_vopsetting{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     
     var $addon_cols    ='is_merge,is_auto_combine,dly_mode,carrier_code,branch_id';
     

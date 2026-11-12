@@ -473,8 +473,11 @@ class ome_mdl_branch extends dbeav_model {
             $assignExpressCode = $assignExpressInfo['assign_express_code'];
         }
 
-        // SOMS_PICKUP + 指定快递：只返回匹配的物流公司
-        if ($assignExpressCode && kernel::single('ome_bill_label')->getBillLabelInfo($order_id, 'order', 'SOMS_PICKUP')) {
+        // SOMS_PICKUP / 京配 + 指定快递：只返回匹配的物流公司
+        if ($assignExpressCode && (
+            kernel::single('ome_bill_label')->getBillLabelInfo($order_id, 'order', 'SOMS_PICKUP')
+            || kernel::single('ome_bill_label')->getBillLabelInfo($order_id, 'order', 'SOMS_JD_DISPATCH')
+        )) {
             $corpData = $cropObj->dump(array('type' => $assignExpressCode, 'disabled' => 'false'), '*');
             if ($corpData) {
                 $corpData['flag_select'] = 1;

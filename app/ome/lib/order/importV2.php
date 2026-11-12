@@ -14,11 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class ome_order_importV2  implements omecsv_data_split_interface
 {
     // public $column_num = 45;
     public $current_order_bn = null;
+    
+    /** @var string 导入单据类型，来自 queue type（order / platform） */
+    public $order_type = '';
+    
+    const BUFA_ORDER_SOURCES = ['补发订单', '零元订单补发', '零元订单补发单'];
+    const BUFA_ORDER_CUSTOM_SOURCES = ['零元订单补发', '零元订单补发单', '拦截入库补发', '拦截入库补发单', '退货入库补发', '退货入库补发单'];
 
     const IMPORT_TITLE = [
         ['label' => '*:订单号', 'col' => 'order_bn'],
@@ -88,6 +93,162 @@ class ome_order_importV2  implements omecsv_data_split_interface
     ];
 
     /**
+     * 导入模板示例行（按 exportTemplateV2 表头顺序展开）
+     * 含 3 个示例订单：全量单明细、全量多明细、仅必填
+     *
+     * @param array $titleLabels 表头 label 列表
+     * @return array 二维行数据（不含表头）
+     */
+    public function getTemplateDemoRows(array $titleLabels)
+    {
+        $shopBn   = '示例店铺编号';
+        $shopName = '示例店铺名称';
+        $smBn1    = '示例销售物料编码A';
+        $smBn2    = '示例销售物料编码B';
+        $smName1  = '示例销售物料名称A';
+        $smName2  = '示例销售物料名称B';
+        $createtime = '2026-01-01 10:00:00';
+
+        // 订单1：单明细，必填+常用选填
+        // cost_item=100, freight=10, discount/pmt=0 → total=110
+        $order1 = [
+            '*:订单号'           => 'DEMO-ORDER-001',
+            '*:下单时间'         => $createtime,
+            '来源渠道'           => 'direct',
+            '配送方式'           => '快递',
+            '*:来源店铺编号'     => $shopBn,
+            '*:配送费用'         => '10',
+            '来源店铺'           => $shopName,
+            '商家备注'           => '示例商家备注',
+            '客户备注'           => '示例客户备注',
+            '*:收货人姓名'       => '张三',
+            '*:收货地址省份'     => '上海市',
+            '*:收货地址城市'     => '上海市',
+            '*:收货地址区/县'    => '浦东新区',
+            '*:收货详细地址'     => '示例路100号',
+            '收货人固定电话'     => '021-12345678',
+            '电子邮箱'           => 'demo@example.com',
+            '*:收货人移动电话'   => '13800138000',
+            '邮编'               => '200000',
+            '货到付款'           => '否',
+            '是否开发票'         => '是',
+            '发票抬头'           => '示例发票抬头',
+            '发票金额'           => '110',
+            '优惠方案'           => '',
+            '*:订单优惠金额'     => '0',
+            '*:商品优惠金额'     => '0',
+            '*:折扣'             => '0',
+            '返点积分'           => '0',
+            '*:商品总额'         => '100',
+            '*:订单总额'         => '110',
+            '买家会员名'         => 'demo_buyer',
+            '商品重量'           => '1',
+            '发票号'             => 'DEMO-TAX-001',
+            '*:销售物料编码(明细)' => $smBn1,
+            '销售物料名称(明细)'   => $smName1,
+            '*:原价(明细)'         => '100',
+            '*:销售价(明细)'       => '100',
+            '*:购买量(明细)'       => '1',
+        ];
+
+        // 订单2：两行明细（第二行订单号留空，展示主表继承）
+        // 行1: 50×1, 行2: 50×1 → cost_item=100, freight=10 → total=110
+        $order2Header = [
+            '*:订单号'           => 'DEMO-ORDER-002',
+            '*:下单时间'         => $createtime,
+            '来源渠道'           => 'direct',
+            '配送方式'           => '快递',
+            '*:来源店铺编号'     => $shopBn,
+            '*:配送费用'         => '10',
+            '来源店铺'           => $shopName,
+            '商家备注'           => '多明细示例',
+            '客户备注'           => '',
+            '*:收货人姓名'       => '李四',
+            '*:收货地址省份'     => '浙江省',
+            '*:收货地址城市'     => '杭州市',
+            '*:收货地址区/县'    => '西湖区',
+            '*:收货详细地址'     => '示例大道200号',
+            '收货人固定电话'     => '',
+            '电子邮箱'           => '',
+            '*:收货人移动电话'   => '13900139000',
+            '邮编'               => '310000',
+            '货到付款'           => '否',
+            '是否开发票'         => '否',
+            '发票抬头'           => '',
+            '发票金额'           => '0',
+            '优惠方案'           => '',
+            '*:订单优惠金额'     => '0',
+            '*:商品优惠金额'     => '0',
+            '*:折扣'             => '0',
+            '返点积分'           => '0',
+            '*:商品总额'         => '100',
+            '*:订单总额'         => '110',
+            '买家会员名'         => 'demo_buyer2',
+            '商品重量'           => '2',
+            '发票号'             => '',
+            '*:销售物料编码(明细)' => $smBn1,
+            '销售物料名称(明细)'   => $smName1,
+            '*:原价(明细)'         => '50',
+            '*:销售价(明细)'       => '50',
+            '*:购买量(明细)'       => '1',
+        ];
+        $order2Item2 = [
+            '*:销售物料编码(明细)' => $smBn2,
+            '销售物料名称(明细)'   => $smName2,
+            '*:原价(明细)'         => '50',
+            '*:销售价(明细)'       => '50',
+            '*:购买量(明细)'       => '1',
+        ];
+
+        // 订单3：仅必填列
+        // cost_item=100, freight=10 → total=110
+        $order3 = [
+            '*:订单号'           => 'DEMO-ORDER-003',
+            '*:下单时间'         => $createtime,
+            '*:来源店铺编号'     => $shopBn,
+            '*:配送费用'         => '10',
+            '*:收货人姓名'       => '王五',
+            '*:收货地址省份'     => '广东省',
+            '*:收货地址城市'     => '广州市',
+            '*:收货地址区/县'    => '天河区',
+            '*:收货详细地址'     => '示例街300号',
+            '*:收货人移动电话'   => '13700137000',
+            '*:订单优惠金额'     => '0',
+            '*:商品优惠金额'     => '0',
+            '*:折扣'             => '0',
+            '*:商品总额'         => '100',
+            '*:订单总额'         => '110',
+            '*:销售物料编码(明细)' => $smBn1,
+            '*:原价(明细)'         => '100',
+            '*:销售价(明细)'       => '100',
+            '*:购买量(明细)'       => '1',
+        ];
+
+        return [
+            $this->mapDemoRowByLabels($titleLabels, $order1),
+            $this->mapDemoRowByLabels($titleLabels, $order2Header),
+            $this->mapDemoRowByLabels($titleLabels, $order2Item2),
+            $this->mapDemoRowByLabels($titleLabels, $order3),
+        ];
+    }
+
+    /**
+     * 按表头 label 顺序将关联数组展开为一行
+     *
+     * @param array $titleLabels
+     * @param array $valuesByLabel label => value
+     * @return array
+     */
+    private function mapDemoRowByLabels(array $titleLabels, array $valuesByLabel)
+    {
+        $row = [];
+        foreach ($titleLabels as $label) {
+            $row[] = array_key_exists($label, $valuesByLabel) ? (string)$valuesByLabel[$label] : '';
+        }
+        return $row;
+    }
+
+    /**
      * 检查文件是否有效
      * @param $file_name 文件名
      * @param $file_type 文件类型
@@ -100,7 +261,7 @@ class ome_order_importV2  implements omecsv_data_split_interface
         $orderMdl   = app::get('ome')->model('orders');
         $shopMdl    = app::get('ome')->model('shop');
         $arOMdl     = app::get('archive')->model('orders');
-        $memberMdl  = app::get('ome')->model('members');
+        $salesMLib = kernel::single('material_sales_material');
 
         $ioType = kernel::single('omecsv_io_split_' . $file_type);
         $rows   = $ioType->getData($file_name, 0, -1);
@@ -124,6 +285,9 @@ class ome_order_importV2  implements omecsv_data_split_interface
         $previousRow = []; // 前一条数据
         $importTitle = [];  // 导入的标题
         $orderPrice  = []; // 订单价格相关数据
+        $errors      = []; // 入队前全量预检错误汇总
+        $checkedExistOrderBn = []; // 同单多明细只查一次订单号是否已存在
+        $orderPriceInvalid = []; // 有行级错误的订单，跳过金额勾稽
         foreach ($rows as $key => $row) {
             if ($key == 0) {  
                 $importTitle = $row;
@@ -168,112 +332,266 @@ class ome_order_importV2  implements omecsv_data_split_interface
                     }
                 }
 
-                // 如果当前行的数据长于标题，截取标题长度的数据
-                if (count($row) > count($titleKey)) {
-                    $row = array_splice($row, 0, count($titleKey));
+                // Excel/CSV 常会丢弃行尾空单元格，导致列数与标题不一致；对齐后再 combine
+                $titleKeyCount = count($titleKey);
+                $rowCount = count($row);
+                if ($rowCount > $titleKeyCount) {
+                    $row = array_slice($row, 0, $titleKeyCount);
+                } elseif ($rowCount < $titleKeyCount) {
+                    $row = array_pad($row, $titleKeyCount, '');
                 }
                 
                 $buffer = array_combine($titleKey, $row);
+                $buffer['order_bn'] = $this->normalizeImportOrderBn($buffer['order_bn'] ?? '');
+                $orderBnLabel = $buffer['order_bn'];
+                $orderBnPrefix = $orderBnLabel !== '' ? sprintf('订单[%s]', $orderBnLabel) : '';
+                $rowPrefix = sprintf('第%d行%s', $key + 1, $orderBnPrefix);
+                $rowErrors = [];
 
-                // 数据验证
+                // 数据验证（同行多错尽量全部收集）
+                $isBufaOrder = in_array(trim($buffer['order_source']), self::BUFA_ORDER_SOURCES);
                 foreach ($buffer as $k => $v) {
-                    if ($buffer['order_source'] == '补发订单'){
-                        if ('*:' == substr($oSchema[$k], 0, 2) && $v === '' && !in_array($k, ['ship_name','ship_province','ship_city','ship_district','ship_addr','ship_mobile','ship_tel'])) {
-                            return [false, sprintf('%s必填', $oSchema[$k])];
+                    if ($isBufaOrder){
+                        if ('*:' == substr($oSchema[$k], 0, 2) && $v === '' && !in_array($k, ['ship_name','ship_province','ship_city','ship_district','ship_addr','ship_mobile','ship_tel', 'createtime'])) {
+                            $rowErrors[] = sprintf('%s%s此项必填', $rowPrefix, $oSchema[$k]);
                         }
+                        
                         // 补发原因必填
                         if ($k == 'bufa_reason' && $v === '') {
-                            return [false, sprintf('%s必填', $oSchema[$k])];
+                            $rowErrors[] = sprintf('%s%s此项必填', $rowPrefix, $oSchema[$k]);
                         }
                     } else {
                         if ('*:' == substr($oSchema[$k], 0, 2) && $v === '') {
-                            return [false, sprintf('%s必填', $oSchema[$k])];
+                            if(!in_array($k, ['createtime'])){
+                                $rowErrors[] = sprintf('%s%s必填', $rowPrefix, $oSchema[$k]);
+                            }
                         }
                     }
-        
-                    if ('时间' == substr($oSchema[$k], -1, 2) && $v && !strtotime($v)) {
-                        return [false, sprintf('%s需转文本格式', $oSchema[$k])];
+                    
+                    if ('时间' == substr($oSchema[$k], -1, 2) && $v) {
+                        $check_time = kernel::single('ome_func')->parseDateTimeCell($v);
+                        if(!$check_time){
+                            $rowErrors[] = sprintf('%s%s需转文本格式', $rowPrefix, $oSchema[$k]);
+                        }
                     }
+                }
+
+                // 金额/数量/手机号格式
+                $formatMsgs = $this->validateImportRowFormat($buffer, $oSchema, $rowPrefix);
+                if ($formatMsgs) {
+                    $rowErrors = array_merge($rowErrors, $formatMsgs);
                 }
 
                 // 判断店铺是否存在
-                $shop = $shopList[$buffer['shop_bn']];
-                if (!$shop) {
-                    return [false, sprintf('[%s]来源店铺编号不存在', $buffer['shop_bn']), $buffer];
+                $shop = null;
+                if (isset($buffer['shop_bn'])) {
+                    $buffer['shop_bn'] = trim((string)$buffer['shop_bn']);
                 }
-
-                if ($orderMdl->dump(['order_bn' => $buffer['order_bn']], 'order_id')) {
-                    return [false, sprintf('[%s]订单号已经存在', $buffer['order_bn']), $buffer];
-                }
-
-                if ($arOMdl->dump(['order_bn' => $buffer['order_bn']], 'order_id')) {
-                    return [false, sprintf('[%s]订单号已经存在归档', $buffer['order_bn']), $buffer];
-                }
-
-                if ($buffer['member_uname']) {
-                    $member = $memberMdl->dump([
-                        'uname' => $buffer['member_uname'],
-                    ], 'member_id');
-
-                    if ($member) {
-                        $member_id = $member['member_id'];
-                    } else {
-                        // 会员
-                        $member_id = kernel::single('ome_member_func')->save([
-                            'name'  => $buffer['member_uname'],
-                            'uname' => $buffer['member_uname'],
-                        ], $shop['shop_id']);
-                        if (!$member_id) {
-                            return [false, '保存会员失败：' . kernel::database()->errorinfo(), $buffer];
-                        }
+                if ($buffer['shop_bn'] !== '' && $buffer['shop_bn'] !== null) {
+                    $shop = $shopList[$buffer['shop_bn']] ?? null;
+                    if (!$shop) {
+                        $rowErrors[] = sprintf('%s来源店铺编号[%s]不存在', $rowPrefix, $buffer['shop_bn']);
                     }
                 }
 
-                $orderPrice[$buffer['order_bn']]['cost_freight']    =   $buffer['cost_freight'];
-                $orderPrice[$buffer['order_bn']]['discount']        =   $buffer['discount'];
-                $orderPrice[$buffer['order_bn']]['pmt_order']       =   $buffer['pmt_order'];
-                $orderPrice[$buffer['order_bn']]['cost_item']       =   $buffer['cost_item'];
-                $orderPrice[$buffer['order_bn']]['total_amount']    =   $buffer['total_amount'];
-                $orderPrice[$buffer['order_bn']]['items'][] = [
-                    'e_price'       =>  $buffer['e_price'],
-                    'e_sale_price'  =>  $buffer['e_sale_price'],
-                    'e_nums'        =>  $buffer['e_nums'],
-                ];
+                // 订单号查重：与 create_order 一致（同店同单号）；归档按 order_bn
+                if ($buffer['order_bn'] !== '' && !isset($checkedExistOrderBn[$buffer['order_bn']])) {
+                    $checkedExistOrderBn[$buffer['order_bn']] = true;
+                    if ($shop && $orderMdl->dump(['order_bn' => $buffer['order_bn'], 'shop_id' => $shop['shop_id']], 'order_id')) {
+                        $rowErrors[] = sprintf('%s订单号已经存在', $rowPrefix);
+                    }
+
+                    if ($arOMdl->dump(['order_bn' => $buffer['order_bn']], 'order_id')) {
+                        $rowErrors[] = sprintf('%s订单号已经存在归档', $rowPrefix);
+                    }
+                }
+                
+                // 获取关联订单号的信息
+                $relateOrderInfo = [];
+                if($buffer['relate_order_bn']){
+                    $relateOrderInfo = $orderMdl->dump(array('order_bn'=>$buffer['relate_order_bn']), 'order_id');
+                    if(empty($relateOrderInfo)){
+                        $rowErrors[] = sprintf('%s关联订单号[%s]不存在', $rowPrefix, $buffer['relate_order_bn']);
+                    }
+                }
+                
+                // 定制补发：无关联单时强制校验收货人
+                $is_verify_consignee = in_array(trim($buffer['order_source']), self::BUFA_ORDER_CUSTOM_SOURCES);
+                
+                // 验证收货人信息
+                if($is_verify_consignee && empty($relateOrderInfo)){
+                    if(empty($buffer['ship_name'])){
+                        $rowErrors[] = sprintf('%s收货人姓名不能为空', $rowPrefix);
+                    }
+                    
+                    if(empty($buffer['ship_mobile']) && empty($buffer['ship_tel'])){
+                        $rowErrors[] = sprintf('%s收货人移动电话、固定电话，至少填写一项', $rowPrefix);
+                    }
+                    
+                    if(empty($buffer['ship_province']) || empty($buffer['ship_city']) || empty($buffer['ship_district'])){
+                        $rowErrors[] = sprintf('%s收货人省、市、区，必须填写', $rowPrefix);
+                    }
+                    
+                    if(empty($buffer['ship_addr'])){
+                        $rowErrors[] = sprintf('%s收货人地址不能为空', $rowPrefix);
+                    }
+                }
+                
+                // 销售物料：一律预检（普通/平台/补发）；店铺无效时跳过以免连锁脏报错
+                if ($shop && $buffer['e_sm_bn']) {
+                    $salesMInfo = $salesMLib->getSalesMByBn($buffer['shop_bn'], $buffer['e_sm_bn']);
+                    if (empty($salesMInfo)) {
+                        $rowErrors[] = sprintf('%s销售物料[%s]在店铺[%s]下不存在', $rowPrefix, $buffer['e_sm_bn'], $buffer['shop_bn']);
+                    }
+                }
+
+                if ($rowErrors) {
+                    $errors = array_merge($errors, $rowErrors);
+                    if ($buffer['order_bn'] !== '') {
+                        $orderPriceInvalid[$buffer['order_bn']] = true;
+                    }
+                } else {
+                    // 订单头金额仅取该单首行成功记录，避免后续明细行覆盖；明细逐行追加
+                    if (!isset($orderPrice[$buffer['order_bn']])) {
+                        $orderPrice[$buffer['order_bn']] = [
+                            'cost_freight' => $buffer['cost_freight'],
+                            'discount'     => $buffer['discount'],
+                            'pmt_order'    => $buffer['pmt_order'],
+                            'cost_item'    => $buffer['cost_item'],
+                            'total_amount' => $buffer['total_amount'],
+                            'order_source' => trim($buffer['order_source']),
+                            'items'        => [],
+                        ];
+                    }
+                    $orderPrice[$buffer['order_bn']]['items'][] = [
+                        'e_price'       =>  $buffer['e_price'],
+                        'e_sale_price'  =>  $buffer['e_sale_price'],
+                        'e_nums'        =>  $buffer['e_nums'],
+                    ];
+                }
 
                 $previousRow = array_combine($_importTitle, $row); // 在最后，保存前一条数据,给下个循环使用,因为同一张订单主表信息只有第一条有
             }
         }
 
-        // 检查金额
+        // 有行级错误的订单不参与金额勾稽，避免误报「总额与明细不一致」
+        foreach ($orderPriceInvalid as $bn => $_) {
+            unset($orderPrice[$bn]);
+        }
+
+        // 检查金额（汇总全部订单错误）
         foreach ($orderPrice as $_order_bn => $_order) {
             $item_amount = $item_pmt_price = 0;
             foreach ($_order['items'] as $_iv) {
+                $e_price = $this->replace_import_price($_iv['e_price']);
+                $e_sale_price = $this->replace_import_price($_iv['e_sale_price']);
+                $e_nums = $this->replace_import_price($_iv['e_nums']);
                 //行原价小计
-                $item_amount_tmp = $_iv['e_price'] * $_iv['e_nums'];
+                $item_amount_tmp = (float)$e_price * (float)$e_nums;
                 $item_amount += $item_amount_tmp;
                 //行商品优惠
-                $item_pmt_price_tmp = $item_amount_tmp - ((float)$_iv['e_sale_price'] * (float)$_iv['e_nums']);
+                $item_pmt_price_tmp = $item_amount_tmp - ((float)$e_sale_price * (float)$e_nums);
                 $item_pmt_price += $item_pmt_price_tmp;
             }
 
             // 检查金额
             $cost_item = $item_amount;
-            $cost_freight = $_order['cost_freight'];
+            $cost_freight = $this->replace_import_price($_order['cost_freight']);
             $cost_tax = 0;
-            $discount = $_order['discount'];
-            $pmt_order = $_order['pmt_order'];
+            $discount = $this->replace_import_price($_order['discount']);
+            $pmt_order = $this->replace_import_price($_order['pmt_order']);
             $pmt_goods = $item_pmt_price;
             $total_amount = (float)$cost_item + (float)$cost_freight + (float)$cost_tax - (float)$discount - (float)$pmt_order - (float)$pmt_goods;
-            if (bccomp((float)$_order['cost_item'], round($cost_item,2), 2) !== 0) {
-                return [false, sprintf('[%s]订单商品总额[%s]明细与订单行商品行[%s]不一致', $_order_bn, $_order['cost_item'],  $cost_item), $buffer];
+            if (bccomp((float)$this->replace_import_price($_order['cost_item']), round($cost_item,2), 2) !== 0) {
+                $errors[] = sprintf('订单[%s]订单商品总额[%s]明细与订单行商品行[%s]不一致', $_order_bn, $_order['cost_item'],  $cost_item);
             }
-            if (bccomp((float)$_order['total_amount'], round($total_amount,2), 2) !== 0) {
-                return [false, sprintf('[%s]订单总额[%s](商品总额[%s]+配送费用[%s]+税金[%s]-折扣[%s]-订单优惠[%s]-商品优惠[%s])不对',$_order_bn,$_order['total_amount'],$cost_item,$cost_freight,$cost_tax,$discount,$pmt_order,$pmt_goods), $_order];
+            
+            // 零元订单补发单
+            if(trim($_order['order_source']) == '零元订单补发'){
+                $_order['order_source'] = '零元订单补发单';
             }
+            
+            if ($_order['order_source'] == '零元订单补发单' && bccomp((float)$total_amount, 0, 2) !== 0) {
+                $errors[] = sprintf('订单[%s]来源渠道为[零元订单补发单]时，订单总额最终必须为0元，当前计算结果为[%s]', $_order_bn, round($total_amount, 2));
+            }
+            if (bccomp((float)$this->replace_import_price($_order['total_amount']), round($total_amount,2), 2) !== 0) {
+                $errors[] = sprintf('订单[%s]订单总额[%s](商品总额[%s]+配送费用[%s]+税金[%s]-折扣[%s]-订单优惠[%s]-商品优惠[%s])不对',$_order_bn,$_order['total_amount'],$cost_item,$cost_freight,$cost_tax,$discount,$pmt_order,$pmt_goods);
+            }
+        }
+
+        if ($errors) {
+            return [false, implode('；', $errors), $rows[0] ?? []];
         }
 
         //导入文件内容验证
         return array(true, '文件模板匹配', $rows[0]);
+    }
+
+    /**
+     * 导入行格式校验：金额/数量/手机号（返回全部格式错误文案）
+     *
+     * @param array $buffer col => value
+     * @param array $oSchema col => label
+     * @param string $rowPrefix 如 第3行订单[xxx]
+     * @return string[]
+     */
+    private function validateImportRowFormat(array $buffer, array $oSchema, string $rowPrefix)
+    {
+        $msgs = [];
+        $amountCols = ['cost_freight', 'pmt_order', 'pmt_goods', 'discount', 'cost_item', 'total_amount', 'e_price', 'e_sale_price'];
+        foreach ($amountCols as $col) {
+            if (!array_key_exists($col, $buffer) || $buffer[$col] === '' || $buffer[$col] === null) {
+                continue;
+            }
+            $num = $this->replace_import_price($buffer[$col]);
+            if (!is_numeric($num) || (float)$num < 0) {
+                $label = $oSchema[$col] ?? $col;
+                $msgs[] = sprintf('%s%s格式不正确', $rowPrefix, $label);
+            }
+        }
+
+        if (array_key_exists('e_nums', $buffer) && $buffer['e_nums'] !== '' && $buffer['e_nums'] !== null) {
+            $nums = $this->replace_import_price($buffer['e_nums']);
+            if (!is_numeric($nums) || (float)$nums <= 0) {
+                $label = $oSchema['e_nums'] ?? '*:购买量(明细)';
+                $msgs[] = sprintf('%s%s格式不正确', $rowPrefix, $label);
+            }
+        }
+
+        $mobile = isset($buffer['ship_mobile']) ? preg_replace('/\s+/', '', (string)$buffer['ship_mobile']) : '';
+        if ($mobile !== '' && !preg_match('/^1\d{10}$/', $mobile)) {
+            $label = $oSchema['ship_mobile'] ?? '*:收货人移动电话';
+            $msgs[] = sprintf('%s%s格式不正确', $rowPrefix, $label);
+        }
+
+        return $msgs;
+    }
+
+    /**
+     * 规范化导入订单号：去空白，避免 Excel 浮点/科学计数与库中单号对不上
+     *
+     * @param mixed $bn
+     * @return string
+     */
+    private function normalizeImportOrderBn($bn)
+    {
+        $bn = trim((string)$bn);
+        $bn = preg_replace('/^[\x{00A0}\x{200B}\s]+|[\x{00A0}\x{200B}\s]+$/u', '', $bn);
+        if ($bn === '') {
+            return '';
+        }
+        // Excel 常把长数字读成 12345.0
+        if (preg_match('/^\d+\.0+$/', $bn)) {
+            return (string)intval($bn);
+        }
+        // 科学计数法（如 1.23456789012345E+14）
+        if (preg_match('/^\d+(\.\d+)?[eE][+\-]?\d+$/', $bn)) {
+            $asFloat = (float)$bn;
+            if (is_finite($asFloat) && $asFloat == floor($asFloat) && $asFloat < 1e15) {
+                return sprintf('%.0f', $asFloat);
+            }
+        }
+        return $bn;
     }
 
     /**
@@ -357,8 +675,18 @@ class ome_order_importV2  implements omecsv_data_split_interface
         $queueMdl     = app::get('omecsv')->model('queue');
     
         $oFunc->writelog('处理任务-开始', 'settlement', $params);
+        
         //业务逻辑处理
         $data = $params['data'];
+        
+        // order_type
+        $this->order_type = isset($params['type']) ? $params['type'] : ($params['queue_data']['type'] ?? '');
+        
+        // whitelist type=order 对应普通/补发导入，落库 order_type 由业务字段决定
+        if ($this->order_type === 'order') {
+            $this->order_type = '';
+        }
+        
         $sdf = [];
         $offset      = intval($data['offset']) + 1;//文件行数 行数默认从1开始
         $splitCount  = 0;//执行行数
@@ -440,12 +768,18 @@ class ome_order_importV2  implements omecsv_data_split_interface
                     $_num++;
                 }
             }
+        }
 
-            // 如果当前行的数据长于标题，截取标题长度的数据
-            if (count($row) > count($titleKey)) {
-                $row = array_splice($row, 0, count($titleKey));
-            }
+        // Excel/CSV 常会丢弃行尾空单元格，导致列数与标题不一致；对齐后再 combine
+        $titleKeyCount = count($titleKey);
+        $rowCount = count($row);
+        if ($rowCount > $titleKeyCount) {
+            $row = array_slice($row, 0, $titleKeyCount);
+        } elseif ($rowCount < $titleKeyCount) {
+            $row = array_pad($row, $titleKeyCount, '');
+        }
 
+        if ($row[0] != '*:订单号') {
             $res['data'] = array_combine($titleKey, $row);
         }
         
@@ -459,7 +793,7 @@ class ome_order_importV2  implements omecsv_data_split_interface
             $data[$k] = str_replace(array("\r\n", "\r", "\n", "\t"), "", $str);
         }
      }
-
+     
     function implodeOrders($contents)
     {
         $orderMdl = app::get('ome')->model('orders');
@@ -482,12 +816,17 @@ class ome_order_importV2  implements omecsv_data_split_interface
                 }
             }
             
-            //[SAP创建]调用service进行SAP创建
+            // OMS创建订单之后，调用service处理相关业务
             foreach(kernel::servicelist('ome.service.order.create.after') as $object)
             {
                 if(method_exists($object, 'after_create')){
                     $object->after_create($order);
                 }
+            }
+            
+            // 平台自发订单：创建成功后自动发货
+            if ($order['order_type'] == 'platform' && !empty($order['order_id'])) {
+                kernel::single('ome_order_platform')->deliveryConsign($order['order_id']);
             }
         }
         
@@ -517,53 +856,131 @@ class ome_order_importV2  implements omecsv_data_split_interface
                 }
             }
             $orderSdf  = kernel::single('desktop_io_type_csv')->csv2sdf( array_values($row), $orderTitle, $orderSchema);
+            $orderSdf['order_bn'] = $this->normalizeImportOrderBn($orderSdf['order_bn'] ?? '');
 
             //临时变量province city county
             $orderSdf_province = $this->import_area_char_filter($orderSdf['ship_province']);
             $orderSdf_city = $this->import_area_char_filter($orderSdf['ship_city']);
             $orderSdf_county = $this->import_area_char_filter($orderSdf['ship_district']);
 
+            // 收货人信息
+            $orderSdf['consignee']['area']['province']  = $orderSdf_province;
+            $orderSdf['consignee']['area']['city']      = $orderSdf_city;
+            $orderSdf['consignee']['area']['county']    = $orderSdf_county;
+            
+            $orderSdf['consignee']['mobile']    =   $orderSdf['ship_mobile'];
+            $orderSdf['consignee']['telephone'] =   $orderSdf['ship_tel'];
+            $orderSdf['consignee']['email']     =   $orderSdf['ship_email'];
+            $orderSdf['consignee']['zip']       =   $orderSdf['ship_zip'];
+            $orderSdf['consignee']['addr']      =   $orderSdf['ship_addr'];
+            $orderSdf['consignee']['name']      =   $orderSdf['ship_name'];
+            
             //补发订单
-            if($orderSdf['order_source'] == '补发订单'){
+            $is_custom_bufa = false;
+            if(in_array(trim($orderSdf['order_source']), self::BUFA_ORDER_SOURCES)){
                 $orderSdf['order_type'] = 'bufa';
                 
-                //获取原订单信息
-                $relateOrderInfo = array();
-                if($orderSdf['relate_order_bn']){
-                    $relateOrderInfo = app::get('ome')->model('orders')->dump(array('order_bn'=>$orderSdf['relate_order_bn']), '*');
-                    
-                    //原订单的省、市、区、镇
-                    list(, $areaTemp, ) = explode(':', $relateOrderInfo['consignee']['area']);
-                    $areaTemp = explode('/', $areaTemp);
-                    
-                    //复制收货人信息
-                    $orderSdf['consignee']['area']['province'] = $areaTemp[0];
-                    $orderSdf['consignee']['area']['city'] = $areaTemp[1];
-                    $orderSdf['consignee']['area']['county'] = $areaTemp[2];
-                    $orderSdf['consignee']['area']['town'] = $areaTemp[3];
-                    
-                    $orderSdf['consignee']['mobile'] = $relateOrderInfo['consignee']['mobile'];
-                    $orderSdf['consignee']['telephone'] = $relateOrderInfo['consignee']['telephone'];
-                    $orderSdf['consignee']['email'] = $relateOrderInfo['consignee']['email'];
-                    $orderSdf['consignee']['zip'] = $relateOrderInfo['consignee']['zip'];
-                    $orderSdf['consignee']['addr'] = $relateOrderInfo['consignee']['addr'];
-                    $orderSdf['consignee']['name'] = $relateOrderInfo['consignee']['name'];
+                // 是否项目定制的补发单类型
+                if(in_array(trim($orderSdf['order_source']), self::BUFA_ORDER_CUSTOM_SOURCES)){
+                    $is_custom_bufa = true;
                 }
                 
+                // 补发原因
+                if(trim($orderSdf['order_source']) == '零元订单补发单' || trim($orderSdf['order_source']) == '零元订单补发'){
+                    if($orderSdf['bufa_reason']){
+                        $orderSdf['bufa_reason'] = '零元订单补发：'. $orderSdf['bufa_reason'];
+                    }else{
+                        $orderSdf['bufa_reason'] = '零元订单补发';
+                    }
+                }
+                
+                // 获取关联订单号的信息
+                $relateOrderInfo = [];
+                if($orderSdf['relate_order_bn']){
+                    $relateOrderInfo = app::get('ome')->model('orders')->dump(array('order_bn'=>$orderSdf['relate_order_bn']), '*');
+                }
+                
+                // 定制补发类型的补发单
+                //@todo：以导入文件中手工填写的收货人信息为准，如果没有填写，才使用关联订单号的收货人信息；
+                if($is_custom_bufa){
+                    if($relateOrderInfo){
+                        if(empty($orderSdf_province) || empty($orderSdf_city)){
+                            // 关联订单的省、市、区、镇
+                            list(, $areaTemp, ) = explode(':', $relateOrderInfo['consignee']['area']);
+                            $areaTemp = explode('/', $areaTemp);
+                            
+                            if($areaTemp[0]){
+                                $orderSdf_province = $areaTemp[0];
+                            }
+                            
+                            if($areaTemp[1]){
+                                $orderSdf_city = $areaTemp[1];
+                            }
+                            
+                            if($areaTemp[2]){
+                                $orderSdf_county = $areaTemp[2];
+                            }
+                        }
+                        
+                        // 订单收货人地址为空
+                        if(empty($orderSdf['consignee']['addr'])){
+                            $orderSdf['consignee']['addr'] = $relateOrderInfo['consignee']['addr'];
+                        }
+                        
+                        // 订单收货人姓名为空
+                        if(empty($orderSdf['consignee']['name'])){
+                            $orderSdf['consignee']['name'] = $relateOrderInfo['consignee']['name'];
+                        }
+                        
+                        // 订单收货人手机号为空
+                        if(empty($orderSdf['consignee']['mobile'])){
+                            $orderSdf['consignee']['mobile'] = $relateOrderInfo['consignee']['mobile'];
+                        }
+                        
+                        if(empty($orderSdf['ship_mobile'])){
+                            $orderSdf['ship_mobile'] = $relateOrderInfo['consignee']['mobile'];
+                        }
+                        
+                        if(empty($orderSdf['consignee']['telephone']) && empty($orderSdf['ship_mobile'])){
+                            $orderSdf['consignee']['telephone'] = $relateOrderInfo['consignee']['telephone'];
+                        }
+                        
+                        // email
+                        if(empty($orderSdf['consignee']['email'])){
+                            $orderSdf['consignee']['email'] = $relateOrderInfo['consignee']['email'];
+                        }
+                        
+                        // zip
+                        if(empty($orderSdf['consignee']['zip'])){
+                            $orderSdf['consignee']['zip'] = $relateOrderInfo['consignee']['zip'];
+                        }
+                    }
+                }else{
+                    //获取原订单信息
+                    if($relateOrderInfo){
+                        //原订单的省、市、区、镇
+                        list(, $areaTemp, ) = explode(':', $relateOrderInfo['consignee']['area']);
+                        $areaTemp = explode('/', $areaTemp);
+                        
+                        //复制收货人信息
+                        $orderSdf['consignee']['area']['province'] = $areaTemp[0];
+                        $orderSdf['consignee']['area']['city'] = $areaTemp[1];
+                        $orderSdf['consignee']['area']['county'] = $areaTemp[2];
+                        $orderSdf['consignee']['area']['town'] = $areaTemp[3];
+                        
+                        $orderSdf['consignee']['mobile'] = $relateOrderInfo['consignee']['mobile'];
+                        $orderSdf['consignee']['telephone'] = $relateOrderInfo['consignee']['telephone'];
+                        $orderSdf['consignee']['email'] = $relateOrderInfo['consignee']['email'];
+                        $orderSdf['consignee']['zip'] = $relateOrderInfo['consignee']['zip'];
+                        $orderSdf['consignee']['addr'] = $relateOrderInfo['consignee']['addr'];
+                        $orderSdf['consignee']['name'] = $relateOrderInfo['consignee']['name'];
+                    }
+                }
+                
+                // unset
                 unset($orderSdf['order_source']);
-            } else {
-                $orderSdf['consignee']['area']['province']  = $orderSdf_province;
-                $orderSdf['consignee']['area']['city']      = $orderSdf_city;
-                $orderSdf['consignee']['area']['county']    = $orderSdf_county;
-
-                $orderSdf['consignee']['mobile']    =   $orderSdf['ship_mobile'];
-                $orderSdf['consignee']['telephone'] =   $orderSdf['ship_tel'];
-                $orderSdf['consignee']['email']     =   $orderSdf['ship_email'];
-                $orderSdf['consignee']['zip']       =   $orderSdf['ship_zip'];
-                $orderSdf['consignee']['addr']      =   $orderSdf['ship_addr'];
-                $orderSdf['consignee']['name']      =   $orderSdf['ship_name'];
             }
-
+            
             //处理店铺信息
             $shop = app::get('ome')->model('shop')->db_dump(array('shop_bn'=>$orderSdf['shop_bn']));
             if(!$shop) {
@@ -650,6 +1067,13 @@ class ome_order_importV2  implements omecsv_data_split_interface
                         'pmt_price'     => $pmt_price,
                         'order_items'   => $return_arr_info["order_items"],
                     );
+                    
+                    // 平台自发：明细标记商家发货
+                    if ($this->order_type === 'platform') {
+                        $order_objects['is_sh_ship'] = true;
+                    }
+                    
+                    // unset
                     unset($order_items);
                     $toStrItem = [
                         'name' => $salesMInfo['sales_material_name'],
@@ -679,7 +1103,16 @@ class ome_order_importV2  implements omecsv_data_split_interface
             $orderSdf['shop_type']          = $shop['shop_type'];
             
             //防止excel导入的时间格式不正确,年份大于1年后的时间
-            $createtime = ($orderSdf['createtime'] ? strtotime($orderSdf['createtime']) : time());
+            $createtime = time();
+            
+            // 格式化日期时间，支持：2015-01-01 00:00:00 和 2015/1/1 00:00:00
+            if($orderSdf['createtime']){
+                $createtime = kernel::single('ome_func')->parseDateTimeCell($orderSdf['createtime']);
+            }
+            
+            if(!$createtime){
+                $createtime = time();
+            }
             if($createtime > (time() + 31536000)){
                 $createtime = time();
             }
@@ -718,7 +1151,18 @@ class ome_order_importV2  implements omecsv_data_split_interface
             $orderSdf['mark_text']                      = kernel::single('ome_func')->append_memo($orderSdf['mark_text']);
             $orderSdf['createway']                      = 'import';
             $orderSdf['source']                         = 'local';
-            $orderSdf['order_type']                     = $orderSdf['order_type'] ? $orderSdf['order_type'] : 'normal';
+            
+            // 平台自发导入：强制 order_type=platform，并标记已支付（与列表 pay_status 一致）
+            if ($this->order_type === 'platform') {
+                $orderSdf['order_type'] = 'platform';
+                $orderSdf['payed']      = $orderSdf['total_amount'];
+                $orderSdf['pay_status'] = '1';
+                $orderSdf['paytime']    = $orderSdf['createtime'] ?: time();
+            } else {
+                $orderSdf['order_type'] = $orderSdf['order_type'] ? $orderSdf['order_type'] : 'normal';
+            }
+            
+            // 添加补发原因
             $orderSdf['bufa_reason']                    = $orderSdf['bufa_reason'] ? $orderSdf['bufa_reason'] : '';
             
             //增加会员判断逻辑
@@ -746,7 +1190,6 @@ class ome_order_importV2  implements omecsv_data_split_interface
             }
             $orderSdf['title'] = json_encode($tostr, JSON_UNESCAPED_UNICODE);
             
-            
             if(!$orderList[$orderSdf['order_bn']]){
                 unset($orderSdf['bn'],$orderSdf['name'],$orderSdf['unit'],$orderSdf['spec_info'],$orderSdf['nums'],$orderSdf['price'],$orderSdf['retail_price'],$orderSdf['pmt_price'],$orderSdf['goods_type'],$orderSdf['brand_name']);
                 $orderList[$orderSdf['order_bn']] = $orderSdf;
@@ -767,29 +1210,4 @@ class ome_order_importV2  implements omecsv_data_split_interface
     {
         return trim(str_replace(array(",", " "), array("", ""), $str));
     }
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    
-
-    
-    
-
-
 }

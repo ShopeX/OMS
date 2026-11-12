@@ -16,6 +16,13 @@
  */
 
 class purchase_finder_extend_filter_returned_purchase{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function get_extend_colums(){
         $db['returned_purchase']=array (
             'columns' => array (

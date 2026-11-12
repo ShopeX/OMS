@@ -87,7 +87,7 @@ class omevirtualwms_mdl_storeprocess extends dbeav_model{
                     'editable' => false,
                     'width' =>180,
                     'searchtype' => 'has',
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                     'is_title' => true,
                 ),

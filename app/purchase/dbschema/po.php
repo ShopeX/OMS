@@ -35,7 +35,7 @@ $db['po'] = array(
                     'in_list'         => false,
                     'default_in_list' => false,
                     'searchtype'      => 'has',
-                    'filtertype'      => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault'   => true,
                 ),
             'po_bn'       =>
@@ -49,7 +49,7 @@ $db['po'] = array(
                     'default_in_list' => false,
                     'is_title'        => true,
                     'searchtype'      => 'has',
-                    'filtertype'      => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault'   => true,
                 ),
             'supplier_id' =>
@@ -62,7 +62,7 @@ $db['po'] = array(
                     'in_list'         => true,
                     'default_in_list' => true,
                     //'searchtype' => 'has',
-                    'filtertype'      => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault'   => true,
                 ),
 
@@ -75,7 +75,7 @@ $db['po'] = array(
                     'in_list'         => true,
                     'default_in_list' => true,
                     'searchtype'      => 'has',
-                    'filtertype'      => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault'   => false,
                 ),
             'amount'        =>
@@ -96,7 +96,7 @@ $db['po'] = array(
                     'in_list'         => true,
                     'default_in_list' => true,
                     'searchtype'      => 'has',
-                    'filtertype'      => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault'   => true,
                 ),
             'po_type'       =>
@@ -112,7 +112,7 @@ $db['po'] = array(
                     'in_list'         => true,
                     'default_in_list' => true,
                     'searchtype'      => 'has',
-                    'filtertype'      => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault'   => false,
                 ),
 
@@ -125,7 +125,7 @@ $db['po'] = array(
                     'in_list'         => true,
                     'default_in_list' => false,
                     'searchtype'      => 'has',
-                    'filtertype'      => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault'   => false,
                 ),
             'arrive_time'     =>
@@ -136,7 +136,7 @@ $db['po'] = array(
                     'editable'      => false,
                     'in_list'       => true,
                     'searchtype'    => 'has',
-                    'filtertype'    => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => false,
                 ),
             'deposit'         =>
@@ -196,7 +196,7 @@ $db['po'] = array(
                     'editable'        => false,
                     'in_list'         => true,
                     'default_in_list' => true,
-                    'filtertype'      => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault'   => false,
                 ),
             'check_status'     =>
@@ -234,7 +234,7 @@ $db['po'] = array(
                     'in_list'         => true,
                     'default_in_list' => true,
                     'searchtype'      => 'has',
-                    'filtertype'      => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault'   => true,
                 ),
             'op_name'          =>
@@ -247,7 +247,7 @@ $db['po'] = array(
                     'in_list'         => true,
                     'default_in_list' => true,
                     'searchtype'      => 'has',
-                    'filtertype'      => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault'   => true,
                 ),
             'check_time'       =>
@@ -259,7 +259,7 @@ $db['po'] = array(
                     'in_list'         => true,
                     'default_in_list' => true,
                     'searchtype'      => 'has',
-                    'filtertype'      => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault'   => false,
                 ),
             'statement'        =>
@@ -323,7 +323,7 @@ $db['po'] = array(
                 ],
                 'default' => 1,
                 'label' => '采购单种类',
-                'filtertype'      => 'yes',
+                'filtertype' => 'normal',
                 'filterdefault'   => false,
             ],
             'receive_status'   =>
@@ -338,7 +338,7 @@ $db['po'] = array(
                     'type'            => 'last_modify',
                     'label'           => '最后更新时间',
                     'editable'        => false,
-                    'filtertype'      => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault'   => false,
                     'in_list'         => true,
                     'default_in_list' => true,
@@ -353,7 +353,7 @@ $db['po'] = array(
                 'width'           => 75,
                 'required'        => true,
                 'label'           => 'WMS同步状态',
-                'filtertype'      => 'yes',
+                'filtertype' => 'normal',
                 'filterdefault'   => true,
                 'in_list'         => true,
                 'default_in_list' => false,

@@ -16,6 +16,13 @@
  */
 
 class purchase_finder_purchase_payments{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $detail_basic = "基本信息";
     var $detail_statement = "结算信息";
     var $detail_poitem = "采购单明细";

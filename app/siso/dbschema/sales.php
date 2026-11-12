@@ -177,7 +177,7 @@ $db['sales']=array (
       'in_list' => true,
       'label' => '是否开发票',
       'width' => 80,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'shop_id' =>

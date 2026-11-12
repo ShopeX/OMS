@@ -16,6 +16,13 @@
  */
 
 class omeauto_finder_branch {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     //var $addon_cols = "oid,config,memo,disabled,defaulted";
     var $column_confirm = '操作';
     var $column_confirm_width = "100";

@@ -16,8 +16,6 @@
  */
 
 class console_event_trigger_reship{
-
-    
     /**
      * 
      * 退货单通知创建发起方法
@@ -26,14 +24,11 @@ class console_event_trigger_reship{
      * @param string $sync 是否同步请求，true为同步，false异步，默认异步
      */
     public function create($wms_id, &$data, $sync = false){
-        
-        // $result = kernel::single('middleware_wms_request', $wms_id)->reship_create($data, $sync);
         $result = kernel::single('erpapi_router_request')->set('wms',$wms_id)->reship_create($data);
-
         if ($result['rsp'] == 'success' && $result['data']['wms_order_code']) {
             $this->update_out_bn($data['reship_bn'],$result['data']['wms_order_code']);
-            
         }
+        
         if ($result['rsp'] == 'fail') {
             $this->_sendReshipCreateFailNotify($wms_id, $data, $result);
         }
@@ -86,6 +81,7 @@ class console_event_trigger_reship{
                     $detail_list .= "\r\n<br/>序号：<font color=\"warning\">{$seq}</font>，物料号：<font color=\"warning\">{$bn}</font>，名称：<font color=\"warning\">{$pname}</font>，数量：<font color=\"warning\">{$num}</font>";
                 }
             }
+            
             if ($detail_list === '') {
                 $detail_list = "\r\n<br/>（无明细）";
             }
@@ -124,6 +120,7 @@ class console_event_trigger_reship{
                 'fail_msg' => $fail_msg,
                 'detail_list' => $detail_list,
             );
+            
             if (!empty($receiver)) {
                 $notifyParams['receiver'] = $receiver;
             }
@@ -151,10 +148,7 @@ class console_event_trigger_reship{
      * @param string $sync 是否同步请求，true为同步，false异步，默认异步
      */
     public function cancel($wms_id, &$data, $sync = false){
-        
-        // $result = kernel::single('middleware_wms_request', $wms_id)->reship_cancel($data, $sync);
         $store_id = kernel::single('ome_branch')->isStoreBranch($data['branch_id']);
-     
         if($store_id){
             $channel_type = 'store';
             $channel_id = $store_id;
@@ -189,12 +183,9 @@ class console_event_trigger_reship{
      */
     function search($wms_id,&$data, $sync = false)
     {
-
-        //$result =  kernel::single('middleware_wms_request', $wms_id)->reship_search($data, $sync);
         $result = kernel::single('erpapi_router_request')->set('wms',$wms_id)->reship_search($data);
     }
-
-     
+    
     /**
      * 更新退货单外部编号
      * @param

@@ -37,7 +37,7 @@ $db['pick_stockout_bills']=array (
                     'default_in_list' => true,
                     'searchtype' => 'nequal',
                     'filterdefault' => true,
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'order' => 2,
             ),
         'branch_id' =>

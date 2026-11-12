@@ -16,6 +16,13 @@
  */
 
 class ome_finder_reship_refuse{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $detail_basic = "退货单详情";
     var $addon_cols = 'need_sv,order_id';
 

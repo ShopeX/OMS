@@ -80,7 +80,7 @@ $db['batch_log'] = array (
       'default' => 'ordertaking',
       'label' => '日志类型',
       'editable' => false,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'log_text'=> array(

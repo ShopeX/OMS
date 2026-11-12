@@ -325,12 +325,16 @@ class erpapi_dealer_response_process_aftersale
             $this->_checkAbnormal($sdf['order']['order_id']);
         }
         
-        //订单信息
-        $orderInfo = $sdf['order'];
+        //订单信息：按库内最新状态判定（SDF 为退款前快照，本笔退款才变全额退款时旧 pay_status 会导致漏触发余单撤销）
+        $order_id = $sdf['order']['order_id'];
+        $orderInfo = app::get('ome')->model('orders')->dump(array('order_id' => $order_id), 'order_id,pay_status,ship_status,process_status');
+        if (empty($orderInfo)) {
+            $orderInfo = $sdf['order'];
+        }
         
         //部分发货、全额退款的订单，自动执行余单撤消操作
         if($orderInfo['pay_status'] == '5' && $orderInfo['ship_status'] == '2'){
-            kernel::single('ome_order_order')->fullRefund_order_revoke($sdf['order']['order_id']);
+            kernel::single('ome_order_order')->fullRefund_order_revoke($order_id);
         }
         
         return array('rsp'=>'succ', 'msg'=>$msg);
@@ -1337,29 +1341,14 @@ class erpapi_dealer_response_process_aftersale
             }
         }
         
-        //订单已发货&&售后仅退款
+        // 订单已发货 && 售后仅退款
         if($delivery_list && $sdf['response_bill_type'] == 'refund_apply' && $sdf['shop_id']){
             $shopObj = app::get('ome')->model('shop');
             $shopInfo = $shopObj->dump(array('shop_id'=>$sdf['shop_id']), 'shop_id,shop_bn,shop_type,config');
             
-            //是否手动审核仅退款的单据
-            $shopConfig = unserialize($shopInfo['config']);
-            if($shopConfig['audo_refund_refuse'] == 'confirm'){
+            // [抖音]售后仅退款，不自动请求AG退款
+            if(in_array($shopInfo['shop_type'], array('luban'))){
                 $autoAgRefund = false;
-            }elseif(empty($shopConfig['audo_refund_refuse']) || $shopConfig['audo_refund_refuse'] == 'retry_refuse'){
-                //@todo场景：售后仅退款OMS拒绝后,顾客又重新申请;
-                if(in_array($shopInfo['shop_type'], array('luban'))){
-                    $lubanLib = kernel::single('ome_reship_luban');
-                    $oldApplyInfo = ($sdf['refund_apply'] ? $sdf['refund_apply'] : array());
-                    $autoAgRefund = $lubanLib->getAutoRefuse($sdf['refund_apply_bn'], $oldApplyInfo);
-                }
-            }
-        }
-        
-        if ($sdf['refund_type'] == 'return' && in_array($sdf['order']['ship_status'],array('1'))){
-            //手动审核售后仅退款
-            if(!$autoAgRefund){
-                return true;
             }
         }
         

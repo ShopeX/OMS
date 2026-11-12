@@ -124,7 +124,12 @@ class taskmgr_whitelist
                 'threadNum' => 5,
                 'timeout' => 180,
             ),
-           
+            'modifysku' => array(
+                'method' => 'ome_autotask_task_modifysku', // 天猫修改SKU
+                'threadNum' => 1,
+                'retry'     => true,
+                'timeout' =>  180,
+            ),
         );
         return array_merge($_tasks, $task);
     }
@@ -190,6 +195,7 @@ class taskmgr_whitelist
             'sync_shop_skus'=>array('method'=>'inventorydepth_autotask_timer_shopskus', 'threadNum' => 1, 'timeout' => 180),// 下载缓存商品
             'check_order_is_delivery' => array('method'=>'monitor_autotask_timer_checkorderisdelivery', 'threadNum' => 1), 
             'o2oundelivery'    => array('method'=>'monitor_autotask_timer_o2oundelivery', 'threadNum'=>1),
+            'orderfailnotify'  => array('method'=>'monitor_autotask_timer_orderfailnotify', 'threadNum'=>1), // 失败订单批量邮件通知 SCRUM-7468
             'retry_delivery_cancel_to_wms'=>array('method'=>'ome_autotask_timer_retrydeliverycancel', 'threadNum' => 1),// 重试推送wms发货单取消
             'ediws_fixaccountorders'=>array('method'=>'ediws_autotask_timer_fixaccountorders', 'threadNum' => 1),// EDI实销实结明细补拉任务
             'invoice_queryinvoicelist'       => array('method' => 'invoice_autotask_timer_queryinvoicelist', 'threadNum' => 1),
@@ -408,6 +414,10 @@ class taskmgr_whitelist
             'o2oundeliverydomainqueue'=>array(
                 'threadNum' => 1,
                 'rule' => '0 0 * * * *',
+            ),
+            'orderfailnotifydomainqueue'=>array(
+                'threadNum' => 1,
+                'rule' => '0 0 * * * *', // 每小时整点：对齐 digest_times HH:00
             ),
             'retry_delivery_cancel_to_wms'=>array(
                 'threadNum' => 1,

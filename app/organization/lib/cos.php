@@ -339,13 +339,13 @@ class organization_cos
             return false;
         }
 
-        if (!$params['dealer_shop_conf']['cosIds']) {
-            return false;
-        }
-
         $cosOpsMdl = app::get('organization')->model('cos_ops');
         //删除原权限
         $cosOpsMdl->delete(array('op_id' => $params['user_id']));
+
+        if (!$params['dealer_shop_conf']['cosIds']) {
+            return true;
+        }
 
         // 整理cos_id
         $cosIdArr = explode(',', $params['dealer_shop_conf']['cosIds'][0]);

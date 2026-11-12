@@ -16,6 +16,13 @@
  */
 
 class dealer_finder_shop_stocksync {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = 'config,shop_type,name,shop_bn,business_type';
  
     public $column_request = '自动回写库存';

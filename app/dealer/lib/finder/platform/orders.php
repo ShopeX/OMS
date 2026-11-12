@@ -22,6 +22,13 @@
  */
 class dealer_finder_platform_orders
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     //model
     private $_appName = 'dealer';
     private $_modelName = 'platform_orders';

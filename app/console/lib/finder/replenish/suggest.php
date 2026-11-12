@@ -22,6 +22,13 @@
  */
 class console_finder_replenish_suggest
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = 'sug_status,branch_id';
     var $column_edit = '操作';
     var $column_edit_width = 180;

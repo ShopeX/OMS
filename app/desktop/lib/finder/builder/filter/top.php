@@ -18,6 +18,13 @@
 
 class desktop_finder_builder_filter_top
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function __contruct($finder_aliasname){
         $this->finder_aliasname = $finder_aliasname;
     }

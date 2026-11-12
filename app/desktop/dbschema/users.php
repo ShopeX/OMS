@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-
 $db['users'] = array(
     'columns' => array(
         'user_id'     => array(
@@ -39,6 +38,26 @@ $db['users'] = array(
             'editable'        => true,
             'in_list'         => true,
             'default_in_list' => true,
+        ),
+        'mcp_enabled' => array(
+            'type'            => 'intbool',
+            'default'         => '1',
+            'label'           => app::get('desktop')->_('允许MCP接入'),
+            'width'           => 120,
+            'required'        => true,
+            'editable'        => true,
+            'in_list'         => false,
+            'default_in_list' => false,
+        ),
+        'account_type' => array(
+            'type'            => 'varchar(16)',
+            'default'         => 'human',
+            'label'           => app::get('desktop')->_('账号类型'),
+            'width'           => 110,
+            'required'        => true,
+            'editable'        => true,
+            'in_list'         => true,
+            'default_in_list' => false,
         ),
         'name'        => array(
             'type'            => 'varchar(30)',
@@ -167,6 +186,16 @@ $db['users'] = array(
             'label' => 'session_id',
             'in_list' => false,
             'order' => 99,
+        ),
+        'token_version' => array(
+            'type'     => 'number',
+            'default'  => 1,
+            'required' => true,
+            'label'    => app::get('desktop')->_('Token Version'),
+            'comment'  => 'JWT token version, incremented on login/password change for invalidating old tokens',
+            'editable' => false,
+            'in_list'  => false,
+            'order'    => 99,
         ),
     ),
     'comment' => app::get('desktop')->_('商店后台管理员表'),

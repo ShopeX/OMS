@@ -58,7 +58,7 @@ class monitor_event_trigger_notify_workwx extends monitor_event_trigger_notify_c
         if (!$webhook) {
             return ['rsp' => 'fail', 'msg' => '缺少webhook地址'];
         }
-
+        
         try {
             $response = $this->curl($webhook, json_encode($data, JSON_UNESCAPED_UNICODE), $headers);
             $response = json_decode($response, true);

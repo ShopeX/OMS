@@ -22,13 +22,37 @@
  */
 class monitor_finder_event_receiver
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $column_edit = '操作';
     var $column_edit_width = "75";
     var $column_edit_order = "10";
     function column_edit($row)
     {
-        $btn = '<a href="index.php?app=monitor&ctl=admin_alarm_receiver&act=edit&p[0]=' . $row['id'] . '&finder_id=' . $_GET['_finder']['finder_id'] . '" target="dialog::{width:800,height:630,title:\'编辑收件人\'}" >编辑</a>&nbsp;&nbsp;';
-        
-        return $btn;
+        $finder_id = $_GET['_finder']['finder_id'] ?? '';
+        $actions = [
+            [
+                'key'    => 'edit',
+                'label'  => '编辑',
+                'action' => 'edit',
+                'href'   => "index.php?app=monitor&ctl=admin_alarm_receiver&act=edit&p[0]={$row['id']}&finder_id={$finder_id}",
+            ],
+        ];
+
+        if ($this->vue_mode) {
+            return $actions;
+        }
+
+        // Legacy: convert array to HTML
+        $html = '';
+        foreach ($actions as $action) {
+            $html .= '<a href="' . $action['href'] . '" target="dialog::{width:800,height:630,title:\'编辑收件人\'}">' . $action['label'] . '</a>&nbsp;&nbsp;';
+        }
+        return $html;
     }
 }

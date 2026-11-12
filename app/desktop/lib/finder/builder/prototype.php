@@ -20,6 +20,13 @@ define('COLUMN_IN_HEAD', 'HEAD');
 define('COLUMN_IN_TAIL', 'TAIL');
 class desktop_finder_builder_prototype
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     public $plimit_in_sel = array(500, 200, 100, 50, 20, 10);
     public $has_tag       = 1;

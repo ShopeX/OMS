@@ -56,14 +56,24 @@ class ome_branch{
 
     /**
      *
-     * 根据仓库ID获取仓库编码BN
+     * 根据仓库ID获取WMS渠道ID；若传入店铺平台，优先取仓库按平台配置的第三方仓储
      * @param string $branch_id 仓库ID
+     * @param string $shop_type 店铺类型/平台，默认空
      * @return string $wms_id 仓库类型ID
      */
-    public function getWmsIdById($branch_id){
+    public function getWmsIdById($branch_id, $shop_type = ''){
         if(empty($branch_id)) {
             return '';
         }
+        
+        // 获取仓库按平台配置的第三方仓储
+        if ($shop_type !== '' && $shop_type !== null) {
+            $map = app::get('ome')->model('branch_wms_channel')->db_dump(array('branch_id' => $branch_id, 'shop_type' => $shop_type), '*');
+            if (!empty($map['channel_id'])) {
+                return $map['channel_id'];
+            }
+        }
+        
         $branchMdl = app::get('ome')->model('branch');
         $branch = $branchMdl->db->selectrow("select wms_id from sdb_ome_branch WHERE branch_id='" . $branch_id . "'");
         return isset($branch) ? $branch['wms_id'] : '';
@@ -77,10 +87,9 @@ class ome_branch{
      * @access  public
      * @author sunjing@shopex.cn
      */
-    function getNodetypBybranchId($branch_id)
+    function getNodetypBybranchId($branch_id, $shop_type = '')
     {
-
-        $wms_id = $this->getWmsIdById($branch_id);
+        $wms_id = $this->getWmsIdById($branch_id, $shop_type);
 
         $channel_adapter = app::get('channel')->model('channel');
         $detail = $channel_adapter->dump(array('channel_id'=>$wms_id),'node_type');

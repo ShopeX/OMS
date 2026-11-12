@@ -19,6 +19,13 @@
  * @describe 特殊订单条件列表
  */
 class brush_finder_farm{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $column_edit = '操作';
     var $column_edit_width = 120;
     var $column_edit_order = 1;

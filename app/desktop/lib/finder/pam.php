@@ -17,6 +17,13 @@
 
 
 class desktop_finder_pam{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $column_control = '配置';
      function __construct($app){
         $this->app= $app;

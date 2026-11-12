@@ -218,6 +218,11 @@ class erpapi_shop_response_process_order
         //shop_id
         $this->_shop_id = $tgorder['shop_id'];
 
+        // 淘宝/天猫加价发顺丰：首次命中尝试打回发货单（打标已由 orderlabels 完成，与打回成败解耦）
+        if (!empty($ordersdf['__paid_sf_jicai_first'])) {
+            $this->_handlePaidSfJicaiReback($tgorder, $orderModel);
+        }
+
         //检测source_status变化，如果从WAIT_SELLER_SEND_GOODS变为其他状态，触发重新审单
         // 注意：在luban/response/order.php的_operationSel()中，source_status已经被更新到数据库
         // 所以这里需要从$ordersdf中获取更新前的old_source_status和更新后的new_source_status进行比较
@@ -337,6 +342,35 @@ class erpapi_shop_response_process_order
         if($ordersdf['is_fail'] && $ordersdf['luckybag_error']){
             $opObj->write_log('order_modify@ome', $tgorder['order_id'], $ordersdf['luckybag_error']);
         }
+
+        // 修改SKU 落地失败：打失败标签并发监控提醒
+        if (($ordersdf['order_bool_type'] & ome_order_bool_type::__UPDATEITEM_CODE) && $ordersdf['is_fail'] == 'true') {
+            // 修改SKU失败，标记失败标签
+            $err = '';
+            kernel::single('ome_bill_label')->markBillLabel($tgorder['order_id'], '', 'SOMS_MODIFY_SKU_ERROR', 'order', $err);
+            
+            // 店铺信息
+            $shop_info = app::get('ome')->model('shop')->getShopInfo($tgorder['shop_id']);
+            
+            // check
+            $errmsg = '';
+            if (!empty($ordersdf['abnormal_msg'])) {
+                $errmsg = $ordersdf['abnormal_msg'];
+            } elseif (!empty($ordersdf['luckybag_error'])) {
+                $errmsg = $ordersdf['luckybag_error'];
+            } else {
+                $errmsg = '修改SKU失败';
+            }
+            
+            // 发送监控事件
+            kernel::single('monitor_event_notify')->addNotify('order_modify_sku_error', [
+                'order_bn'   => $tgorder['order_bn'],
+                'shop_name'  => $shop_info['name'] ?? '',
+                'old_sku_bn' => $ordersdf['old_sku'] ?? '',
+                'new_sku_bn' => $ordersdf['change_sku'] ?? '',
+                'errmsg'     => $errmsg,
+            ]);
+        }
         
         // 如果到付已经发货更新销售单上的时候
         if ($ordersdf['paytime'] && ($tgorder['is_cod'] == 'true' || $ordersdf['use_before_payed']) && $tgorder['ship_status'] == '1') {
@@ -393,7 +427,18 @@ class erpapi_shop_response_process_order
 
             if ($reback_delivery) {
                 $this->_reback_serial($tgorder['order_id']);
-                $orderModel->rebackDeliveryByOrderId($tgorder['order_id']);
+                
+                // 打回订单关联的发货单
+                $isRebackResult = $orderModel->rebackDeliveryByOrderId($tgorder['order_id']);
+                
+                // 撤消发货单失败
+                if ($isRebackResult === false) {
+                    // 改 SKU 场景：撤消发货单失败打标
+                    if ($ordersdf['order_bool_type'] & ome_order_bool_type::__UPDATEITEM_CODE) {
+                        $err = '';
+                        kernel::single('ome_bill_label')->markBillLabel($tgorder['order_id'], '', 'SOMS_CANCEL_DELIVERY_FAIL', 'order', $err);
+                    }
+                }
                 
                 //订单恢复暂停状态
                 $orderModel->renewOrder($tgorder['order_id'], '平台更新订单,撤消发货单成功');
@@ -438,7 +483,7 @@ class erpapi_shop_response_process_order
             }
         }
         
-        // [大家电]收货人信息或SKU商品变更,重新进行预约
+        // 收货人信息或SKU商品变更,重新进行预约
         if($is_change_address){
             kernel::single('ome_order_reservation')->againReservation($tgorder['order_id'], 'address_change');
         }elseif($is_change_goods){
@@ -446,6 +491,83 @@ class erpapi_shop_response_process_order
         }
         
         return true;
+    }
+
+    /**
+     * 加价发顺丰平台集采：首次命中后尝试打回未发货发货单
+     * 已发货 / 已取号（菜鸟淘宝电子面单成功）跳过打回；打回失败只记日志
+     *
+     * @param array              $tgorder
+     * @param ome_mdl_orders     $orderModel
+     * @return void
+     */
+    private function _handlePaidSfJicaiReback($tgorder, $orderModel)
+    {
+        $opObj = app::get('ome')->model('operation_log');
+        $opObj->write_log('order_modify@ome', $tgorder['order_id'], '订单被更新为加价发顺丰平台集采（asdp_ads=218）');
+
+        if ($tgorder['status'] != 'active' || (string) $tgorder['ship_status'] !== '0') {
+            $opObj->write_log('order_modify@ome', $tgorder['order_id'], '加价发顺丰：订单已发货或非活动态，仅打标/指定顺丰，不打回发货单');
+            return;
+        }
+
+        if ($this->_hasTaobaoWaybillSuccess($tgorder['order_id'])) {
+            $opObj->write_log('order_modify@ome', $tgorder['order_id'], '加价发顺丰：已存在菜鸟/淘宝电子面单取号成功记录，跳过打回发货单');
+            return;
+        }
+
+        $isRebackResult = $orderModel->rebackDeliveryByOrderId(
+            $tgorder['order_id'],
+            false,
+            '加价发顺丰平台集采，打回发货单'
+        );
+
+        if ($isRebackResult === false) {
+            $opObj->write_log('order_modify@ome', $tgorder['order_id'], '加价发顺丰：打回发货单失败，已保留加价快递标签与指定顺丰');
+            return;
+        }
+
+        $orderModel->renewOrder($tgorder['order_id'], '加价发顺丰平台集采，撤消发货单');
+        $opObj->write_log('order_modify@ome', $tgorder['order_id'], '加价发顺丰：打回发货单完成（无可打回单时亦记成功）');
+    }
+
+    /**
+     * 订单关联未取消发货单是否存在淘宝渠道取号成功日志
+     *
+     * @param int $order_id
+     * @return bool
+     */
+    private function _hasTaobaoWaybillSuccess($order_id)
+    {
+        $dlyOrderObj = app::get('ome')->model('delivery_order');
+        $dlyObj = app::get('ome')->model('delivery');
+        $rows = $dlyOrderObj->getList('delivery_id', array('order_id' => $order_id), 0, -1);
+        if (!$rows) {
+            return false;
+        }
+
+        $deliveryIds = array();
+        foreach ($rows as $row) {
+            $dly = $dlyObj->dump($row['delivery_id'], 'process,status');
+            if (!$dly) {
+                continue;
+            }
+            if ($dly['process'] == 'true' || in_array($dly['status'], array('failed', 'cancel', 'back', 'succ', 'return_back'))) {
+                continue;
+            }
+            $deliveryIds[] = $row['delivery_id'];
+        }
+        if (!$deliveryIds) {
+            return false;
+        }
+
+        $log = app::get('logisticsmanager')->model('logistics_log')->db_dump(array(
+            'delivery_id' => $deliveryIds,
+            'channel_type' => 'taobao',
+            'status' => 'success',
+        ), 'log_id');
+
+        return !empty($log);
     }
 
     private function _reback_serial($order_id)

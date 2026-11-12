@@ -16,6 +16,13 @@
  */
 
 class purchase_finder_po{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 //    var $detail_basic = "采购单详情";
 //    var $detail_item = "采购单明细";
 //    var $detail_eo = "入库记录";

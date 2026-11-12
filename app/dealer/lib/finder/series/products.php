@@ -17,6 +17,13 @@
 
 class dealer_finder_series_products
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = "";
     public $endorseList = [];
 

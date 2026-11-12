@@ -200,14 +200,55 @@ class erpapi_shop_request_order extends erpapi_shop_request_abstract
      * @return mixed 返回值
      */
     public function updateOrderPayStatus($order){}
-
+    
     /**
-     * 更新OrderMemo
-     * @param mixed $order order
-     * @param mixed $memo memo
-     * @return mixed 返回值
+     * 修改订单备注+旗标，回传平台
+     *
+     * @param $orderInfo
+     * @param $memo
+     * @return array
      */
-    public function updateOrderMemo($order,$memo){}
+    public function updateOrderMemo($orderInfo, $memo)
+    {
+        $title = '更新订单备注';
+        $order_bn = $orderInfo['order_bn'];
+        $error_msg_code = 'updateOrderMemo';
+        
+        // check
+        if(empty($order_bn)){
+            return $this->error('订单号为空，不能请求接口。', $error_msg_code);
+        }
+        
+        if(empty($memo)){
+            return $this->error('订单备注为空，不能请求接口。', $error_msg_code);
+        }
+        
+        // 店铺信息
+        $channelInfo = $this->__channelObj->channel;
+        if(!isset($orderInfo['shop_type']) || empty($orderInfo['shop_type'])){
+            $orderInfo['shop_type'] = ($channelInfo['node_type'] ? $channelInfo['node_type'] : $channelInfo['shop_type']);
+        }
+        
+        // merge
+        $orderInfo['kefu_memo'] = $memo;
+        
+        // api接口
+        $api_name = $this->get_order_memo_apiname($orderInfo);
+        if (empty($api_name)){
+            return $this->error('接口暂不支持更新订单备注!', $error_msg_code);
+        }
+        
+        // 请求参数
+        $params = $this->get_order_memo_params($orderInfo);
+        if (empty($params)){
+            return $this->error('更新订单备注接口，没有请求参数!', $error_msg_code);
+        }
+        
+        // request
+        $result = $this->__caller->call($api_name, $params, null, $title, 5, $order_bn);
+        
+        return $result;
+    }
 
     /**
      * 添加OrderMemo
@@ -441,4 +482,50 @@ class erpapi_shop_request_order extends erpapi_shop_request_abstract
      */
     public function querySecretMobiles($params)
     {}
+    
+    /**
+     * 修改订单备注+旗标，回传平台接口
+     *
+     * @return null
+     */
+    protected function get_order_memo_apiname($sdf=[])
+    {
+        // 目录只支持这几个平台
+        //@todo: shopex自有体系，会单独调用；
+        if(!in_array($sdf['shop_type'], ['luban', 'xhs', 'taobao', '360buy', 'pinduoduo', 'kuaishou'])){
+            return null;
+        }
+        
+        return SHOP_UPDATE_TRADE_MEMO_RPC;
+    }
+    
+    /**
+     * 修改订单备注+旗标，回传平台请求参数
+     *
+     * @param $sdf
+     * @return void
+     */
+    protected function get_order_memo_params($sdf=[])
+    {
+        // 目录只支持这几个平台
+        //@todo: shopex自有体系，会单独调用；
+        if(!in_array($sdf['shop_type'], ['luban', 'xhs', 'taobao', '360buy', 'pinduoduo', 'kuaishou'])){
+            return [];
+        }
+        
+        // mark_type
+        $seller_flag = $sdf['kefu_memo']['mark_type']; // 旗标（b0 ~ b10）
+        
+        // params
+        $params = [
+            'tid' => $sdf['order_bn'],
+            //'flag' => $seller_flag,
+            'seller_flag' => $seller_flag,
+            'memo' => $sdf['kefu_memo']['op_content'],
+            'sender' => $sdf['kefu_memo']['op_name'],
+            'add_time' => $sdf['kefu_memo']['op_time'],
+        ];
+        
+        return $params;
+    }
 }

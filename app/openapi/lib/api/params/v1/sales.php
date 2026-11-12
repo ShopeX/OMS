@@ -73,9 +73,11 @@ class openapi_api_params_v1_sales extends openapi_api_params_abstract implements
     public function description($method)
     {
         $desccription = array(
-            'getList'        => array('name' => '查询销售单信息(根据销售单创建时间)', 'description' => '批量获取一个时间段内的销售单信息数据'),
-            'getSalesAmount' => array('name' => '查询销售单信息(根据销售单创建时间)', 'description' => '获取一段时间段内的销售单总额数据'),
+            'getList'         => array('name' => '查询销售单信息(根据销售单创建时间)', 'description' => '批量获取一个时间段内的销售单信息数据'),
+            'getSalesAmount'  => array('name' => '查询销售金额', 'description' => '获取一段时间段内的销售单总额数据'),
+            'getDeliveryList' => array('name' => '销售发货明细', 'description' => '按发货时间或明细更新时间查询发货销售明细'),
+            'getGxList'       => array('name' => '供销销售单', 'description' => '按修改时间查询供销销售单'),
         );
-        return $desccription[$method];
+        return isset($desccription[$method]) ? $desccription[$method] : null;
     }
 }

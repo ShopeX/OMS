@@ -17,6 +17,13 @@
 
 
 class desktop_finder_apps{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     var $addon_cols='local_ver,remote_ver,status,app_id';
     var $column_tools='操作';

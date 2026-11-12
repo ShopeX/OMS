@@ -17,8 +17,16 @@
 
 class dealer_finder_material_sales
 {
+    protected $vue_mode = false;
 
-    public $addon_cols = "cos_id,shop_id,sales_material_bn,sales_material_name,sales_material_type";
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
+
+    // sm_id 供 vue 模式下 column_edit 读取行操作所需主键（框架按 addon_cols 下发 _0_sm_id 原始值别名）
+    public $addon_cols = "sm_id,cos_id,shop_id,sales_material_bn,sales_material_name,sales_material_type";
 
     public $column_edit       = '操作';
     public $column_edit_width = 45;
@@ -30,6 +38,25 @@ class dealer_finder_material_sales
      */
     public function column_edit($row)
     {
+        // vue 模式下 $_GET['ctl'] 为 api_material_sales ⇒ legacy 的
+        // `$_GET['ctl'] == 'admin_material_sales'` 判断恒假，必须走 vue_mode 分支。
+        if ($this->vue_mode) {
+            // Vue Finder 契约：结构化行操作（legacy HTML 片段不下发，SPA 不解析 legacy 链接）
+            // 与 legacy 语义逐字对齐：仅 sales_material_edit 权限为真时可编辑；
+            // 编辑入口仍走 legacy iframe（写链路本轮不迁，act=edit 弹窗打开）。
+            $sm_id = $row['_0_sm_id'] ?? $row[$this->col_prefix . 'sm_id'] ?? $row['sm_id'] ?? 0;
+            if (kernel::single('desktop_user')->has_permission('sales_material_edit')) {
+                return array(
+                    array(
+                        'key'    => 'edit',
+                        'label'  => '编辑',
+                        'action' => 'index.php?app=dealer&ctl=admin_material_sales&act=edit&p[0]=' . $sm_id,
+                    ),
+                );
+            }
+            return array();
+        }
+
         if ($_GET['ctl'] == 'admin_material_sales' && $_GET['act'] == 'index') {
             $use_buildin_edit = kernel::single('desktop_user')->has_permission('sales_material_edit');
             $btn              = '-';
@@ -60,12 +87,18 @@ class dealer_finder_material_sales
      */
     public function column_betc_name($row, $list)
     {
-
-        $cosIdArr = array_column($list, $this->col_prefix . 'cos_id');
+        // vue 模式下 col_prefix 未设置（仅 legacy builder 注入），优先读 _0_cos_id 原始值别名
+        if ($this->vue_mode) {
+            $cosId    = $row['_0_cos_id'] ?? $row['cos_id'] ?? 0;
+            $cosIdArr = array_column($list, 'cos_id');
+        } else {
+            $cosId    = $row[$this->col_prefix . 'cos_id'];
+            $cosIdArr = array_column($list, $this->col_prefix . 'cos_id');
+        }
 
         static $cosVsParent;
         static $betcList;
-        if (!isset($cosVsParent[$row[$this->col_prefix . 'cos_id']])) {
+        if (!isset($cosVsParent[$cosId])) {
 
             $cosMdl      = app::get('organization')->model('cos');
             $shopCosList = $cosMdl->getList('*', ['cos_id|in' => $cosIdArr]);
@@ -81,11 +114,17 @@ class dealer_finder_material_sales
         }
 
         $result = '';
-        if (isset($cosVsParent[$row[$this->col_prefix . 'cos_id']])) {
-            $parentId = $cosVsParent[$row[$this->col_prefix . 'cos_id']];
+        if (isset($cosVsParent[$cosId])) {
+            $parentId = $cosVsParent[$cosId];
             $result   = $betcList[$parentId];
             $result   = implode('<br>', array_column($result, 'cos_name'));
         }
+
+        // 前后端分离：返回纯文本（去掉 legacy span 包裹；多个贸易公司名 <br> → \n）
+        if ($this->vue_mode) {
+            return str_replace('<br>', "\n", $result);
+        }
+
         return '<span style="overflow: auto;word-break: break-word;white-space: normal;width: 100%;flex-wrap: wrap;display: flex;">'.$result.'</span>';
     }
 
@@ -127,7 +166,14 @@ class dealer_finder_material_sales
             $associated[] = $v['bm_info']['material_name'] . '(' . $v['bm_info']['material_bn'] . ') x' . $v['number'];
         }
 
-        return '<span style="overflow: auto;word-break: break-word;white-space: normal;width: 100%;flex-wrap: wrap;display: flex;">'.implode("<br>", $associated).'</span>';
+        $result = implode("<br>", $associated);
+
+        // 前后端分离：返回纯文本（去掉 legacy span 包裹；多行 <br> → \n）
+        if ($this->vue_mode) {
+            return str_replace('<br>', "\n", $result);
+        }
+
+        return '<span style="overflow: auto;word-break: break-word;white-space: normal;width: 100%;flex-wrap: wrap;display: flex;">'.$result.'</span>';
     }
     
     public $column_actual_stock = '可售库存数';
@@ -190,11 +236,41 @@ class dealer_finder_material_sales
         $bmExtList = $bmExtMdl->getList('*', ['bm_id|in' => $bmIdList]);
         $bmExtList = array_column($bmExtList, null, 'bm_id');
 
-        $render->pagedata['smInfo']    = $smMdl->db_dump(['sm_id' => $sm_id]);
+        $smInfo                        = $smMdl->db_dump(['sm_id' => $sm_id]);
+        $render->pagedata['smInfo']    = $smInfo;
         $render->pagedata['bmSmList']  = $bmSmList;
         $render->pagedata['bmList']    = $bmList;
         $render->pagedata['bmExtList'] = $bmExtList;
         $render->pagedata['title']     = '基础商品列表';
+
+        // 前后端分离：结构化下发（不再 fetch legacy admin/series/products.html 模板）
+        // 字段对齐模板取数：material_bn / material_name / cost / number / rate（+ specifications）
+        if ($this->vue_mode) {
+            $items = array();
+            foreach ($bmSmList as $sm) {
+                $bmId = $sm['bm_id'];
+                $item = array(
+                    'material_name'  => $bmList[$bmId]['material_name'] ?? '',
+                    'material_bn'    => $bmList[$bmId]['material_bn'] ?? '',
+                    'cost'           => $bmExtList[$bmId]['cost'] ?? '',
+                    'specifications' => $bmExtList[$bmId]['specifications'] ?? '',
+                );
+                if ($smInfo['sales_material_type'] == '1') {
+                    $item['number'] = 1;
+                    $item['rate']   = '100.00';
+                } elseif ($smInfo['sales_material_type'] == '2') {
+                    $item['number'] = $sm['number'];
+                    $item['rate']   = $sm['rate'];
+                } else {
+                    $item['number'] = $sm['number'];
+                    $item['rate']   = '';
+                }
+                $items[] = $item;
+            }
+
+            return array('title' => '基础商品列表', 'items' => $items);
+        }
+
         return $render->fetch('admin/series/products.html');
     }
 
@@ -214,6 +290,24 @@ class dealer_finder_material_sales
         $omeLogMdl = app::get('ome')->model('operation_log');
         $logList   = $omeLogMdl->read_log(array('obj_id' => $sm_id, 'obj_type' => 'sales_material@dealer'), 0, -1);
         $finder_id = $_GET['_finder']['finder_id'];
+
+        // 前后端分离：结构化日志（不再拼 legacy「查看快照」HTML 链接）
+        // snapshot_log_id 非空时供 FE 跳 legacy act=show_history
+        if ($this->vue_mode) {
+            $logs = array();
+            foreach ($logList as $v) {
+                $logs[] = array(
+                    'operate_time'    => date('Y-m-d H:i:s', $v['operate_time']),
+                    // 与 legacy 日志模板（admin/bbb_show_log.html）四列对齐：操作时间 / 操作人 / 行为 / 操作内容
+                    'op_name'         => $v['op_name'],
+                    'operation'       => $v['operation'],
+                    'memo'            => $v['memo'],
+                    'snapshot_log_id' => $v['operation'] == '销售物料编辑' ? $v['log_id'] : '',
+                );
+            }
+            return $logs;
+        }
+
         foreach ($logList as $k => $v) {
             $logList[$k]['operate_time'] = date('Y-m-d H:i:s', $v['operate_time']);
 

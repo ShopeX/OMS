@@ -23,6 +23,13 @@
  * ============================
  */
 class financebase_finder_expenses_split {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = 'bm_id,order_bn,shop_id';
 
     public $column_skucode = "基础物料编码";

@@ -23,6 +23,13 @@
  */
 class console_finder_replenish_diff
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     
 }
 ?>

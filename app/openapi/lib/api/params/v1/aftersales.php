@@ -17,13 +17,6 @@
 
 class openapi_api_params_v1_aftersales extends openapi_api_params_abstract implements openapi_api_params_interface{
 
-    /**
-     * 检查Params
-     * @param mixed $method method
-     * @param mixed $params 参数
-     * @param mixed $sub_msg sub_msg
-     * @return mixed 返回验证结果
-     */
     public function checkParams($method,$params,&$sub_msg){
         if(parent::checkParams($method,$params,$sub_msg)){
             return true;
@@ -32,11 +25,6 @@ class openapi_api_params_v1_aftersales extends openapi_api_params_abstract imple
         }
     }
 
-    /**
-     * 获取AppParams
-     * @param mixed $method method
-     * @return mixed 返回结果
-     */
     public function getAppParams($method){
         $params = array(
             'getList'=>array(
@@ -58,13 +46,11 @@ class openapi_api_params_v1_aftersales extends openapi_api_params_abstract imple
         return $params[$method];
     }
 
-    /**
-     * description
-     * @param mixed $method method
-     * @return mixed 返回值
-     */
     public function description($method){
-        $desccription = array('getList'=>array('name'=>'查询售后单信息(根据售后单创建时间)','description'=>'批量获取一个时间段内的售后单信息数据'));
-        return $desccription[$method];
+        $desccription = array(
+            'getList'   => array('name' => '查询售后单信息(根据售后单创建时间)', 'description' => '批量获取一个时间段内的售后单信息数据'),
+            'getGxList' => array('name' => '供销售后单', 'description' => '按修改时间查询供销售后单'),
+        );
+        return isset($desccription[$method]) ? $desccription[$method] : null;
     }
 }

@@ -23,6 +23,13 @@
  * ============================
  */
 class console_finder_vopbill {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     public $addon_cols = 'status,sync_status,discount_sync_status,bill_number,sku_count';
     
@@ -89,6 +96,7 @@ class console_finder_vopbill {
 
 
         $render->pagedata['items'] = $items;
+        if ($this->vue_mode) { return []; }
         return $render->fetch('admin/vop/bill_amount.html');
     }
 
@@ -125,6 +133,7 @@ class console_finder_vopbill {
             $logdata[$k]['operate_time'] = date('Y-m-d H:i:s',$v['operate_time']);
         }
         $render->pagedata['logs'] = $logdata;
+        if ($this->vue_mode) { return []; }
         return $render->fetch('admin/vop/logs.html');
     }
 }

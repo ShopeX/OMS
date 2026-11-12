@@ -16,6 +16,13 @@
  */
 
 class ome_finder_extend_supply_product {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     
     function get_extend_colums(){
         
@@ -37,7 +44,7 @@ class ome_finder_extend_supply_product {
               'type' => $supplier_list,
               'default' => 0,
               'label' => '供应商',
-              'filtertype' => 'yes',
+              'filtertype' => 'normal',
               'filterdefault' => true,
             ),
             
@@ -51,7 +58,7 @@ class ome_finder_extend_supply_product {
               ),
               'default' => 0,
               'label' => '筛选条件',
-              'filtertype' => 'yes',
+              'filtertype' => 'normal',
               'filterdefault' => true,
             ),
             
@@ -60,7 +67,7 @@ class ome_finder_extend_supply_product {
               'type' => 'int(32)',
               'default' => 0,
               'label' => '指定数量',
-              'filtertype' => 'yes',
+              'filtertype' => 'normal',
               'filterdefault' => true,
             ),
             

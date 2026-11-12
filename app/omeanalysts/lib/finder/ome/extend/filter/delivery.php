@@ -16,6 +16,13 @@
  */
 
 class omeanalysts_finder_ome_extend_filter_delivery{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function get_extend_colums(){
         $db['ome_delivery']=array (
             'columns' => array (

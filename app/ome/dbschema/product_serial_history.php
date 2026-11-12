@@ -110,7 +110,7 @@ $db['product_serial_history']=array (
       'editable' => false,
       'in_list' => true,
       'default_in_list' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'serial_number' => 
@@ -150,7 +150,7 @@ $db['product_serial_history']=array (
         'editable'      => false,
         'in_list' => true,
         'default_in_list' => true,
-        'filtertype'    => 'yes',
+        'filtertype' => 'normal',
         'filterdefault' => true,
     ),
   ),

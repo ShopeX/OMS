@@ -319,36 +319,18 @@ EOF;
      */
     public function delRuleBase(){
         $this->begin('index.php?app=crm&ctl=admin_gift_rulebase&act=index');
-        $obj_rule = app::get('crm')->model('gift_rule');
-        $obj_ruleBase = app::get('crm')->model('gift_rule_base');
-        $isSelectedAll = $_POST['isSelectedAll'];
-        $ids = $_POST['id'];
+        #校验与写链路抽到 crm_capability_gift_rulebase::deleteRuleBases()，与 Vue 侧 api_gift_rulebase 共用同一实现
+        #legacy 已由 begin() 开启事务 ⇒ capability 自动识别后交给外层托管
+        try{
+            kernel::single('crm_capability_gift_rulebase')->deleteRuleBases(
+                (array) (isset($_POST['id']) ? $_POST['id'] : array()),
+                (isset($_POST['isSelectedAll']) && $_POST['isSelectedAll'] === '_ALL_') ? '_ALL_' : '',
+            );
+        }catch(Exception $e){
+            $this->end(false,$e->getMessage());
+            return;
+        }
 
-        if($isSelectedAll != '_ALL_' && $ids){
-            $basefilter = array('id'=>$ids);
-        }else{
-            $basefilter = array();
-        }
-        $ids = $obj_ruleBase->getList('id',$basefilter);
-        $rule_ids = array_map('current',$ids);
-        $filter = array(
-            'status' => '1',
-            'disable' => 'false',
-            'filter_sql' => '(' . time() .' BETWEEN start_time AND end_time)'
-        );
-        $ruleRows = $obj_rule->getList('*', $filter);
-        foreach($ruleRows as $rule) {
-            #赠品判断条件
-            $rule['filter_arr'] = json_decode($rule['filter_arr'], true);
-            if($rule['filter_arr']['add_or_divide']) {
-                foreach ($rule['filter_arr']['id'] as $val) {
-                    if(in_array($val, $rule_ids)) {
-                        $this->end(false, '规则在活动中，不能删除');
-                    }
-                }
-            }
-        }
-        $obj_ruleBase->update(array('disabled'=>'true'),array('id|in'=>$rule_ids));
         $this->end(true, $this->app->_('删除成功'));
     }
 

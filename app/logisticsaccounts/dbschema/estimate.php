@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 $db['estimate']=array (
   'columns' =>
   array (
@@ -47,7 +46,7 @@ $db['estimate']=array (
         'label' => '状态',
       'width' => 75,
       'editable' => false,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
       'in_list' => true,
       'default_in_list' => true,
@@ -61,7 +60,7 @@ $db['estimate']=array (
 
       'width' => 75,
       'editable' => false,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
       'in_list' => true,
       'default_in_list' => true,

@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class omeanalysts_mdl_ome_goodsale extends dbeav_model{
 
     var $has_export_cnf = true;
@@ -338,7 +337,7 @@ class omeanalysts_mdl_ome_goodsale extends dbeav_model{
                 $where[] = $p;
         }
 
-        return " AND ".implode($where,' AND ');
+        return " AND ".implode(' AND ', $where);
     }
 
     public function exportName(&$data){
@@ -481,7 +480,7 @@ class omeanalysts_mdl_ome_goodsale extends dbeav_model{
                     'order' =>'4',
                     'editable' => false,
                     'searchtype' => 'has',
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                     'width' =>75,
                 ),

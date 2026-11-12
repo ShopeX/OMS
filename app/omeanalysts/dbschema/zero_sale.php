@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 $db['zero_sale']=array (
   'columns' => 
   array (
@@ -31,7 +30,7 @@ $db['zero_sale']=array (
       'required' => false,
       'editable' => false,
 	  'label' => '线上仓库',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
       'in_list' => true,
       'default_in_list' => true,
@@ -52,7 +51,7 @@ $db['zero_sale']=array (
 	  'label' => '货号',
       'in_list' => true,
       'default_in_list' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
       'order' => 2,
       'width' => 100,
@@ -64,7 +63,7 @@ $db['zero_sale']=array (
 	  'label' => '商品名称(规格)',
       'in_list' => true,
       'default_in_list' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
 	  'default' => 0,
       'order' => 4,

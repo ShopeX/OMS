@@ -75,69 +75,17 @@ class dealer_ctl_admin_bbu extends desktop_controller
      */
     public function save()
     {
-        $bbuId   = $_POST['bbu_id'];
-        $bbuCode = trim($_POST['bbu_code']);
-        $bbuName = trim($_POST['bbu_name']);
-
         $this->begin('index.php?app=dealer&ctl=admin_bbu&act=index');
-        if (!$bbuName) {
-            $this->end(false, '销售团队名称必填');
-        }
-        if (!$bbuCode) {
-            $this->end(false, '销售团队编码必填');
-        }
-
-        $opInfo = kernel::single('ome_func')->getDesktopUser();
-        $bbuMdl = app::get('dealer')->model('bbu');
-        $data   = [
-            'bbu_name' => $bbuName,
-            'bbu_code' => $bbuCode,
-            'status'   => 'active',
-            'op_name'  => $opInfo['op_name'],
-            // 'cos_id'   => '',
-        ];
-        $filter = [
-            'bbu_code' => $bbuCode,
-            // 'bbu_id|noequal' => $bbuId,
-        ];
-        $bbuList = $bbuMdl->getList('*', $filter);
-        if (count($bbuList) > 1 || $bbuList[0]['bbu_id'] != $bbuId) {
-            $this->end(false, '销售团队编码已被使用');
-        }
-
-        $snapshoot = [];
-        if ($bbuId) {
-            unset($data['bbu_code']);
-            $bbuMdl->update($data, ['bbu_id' => $bbuId]);
-            $data['bbu_id']   = $bbuId;
-            $data['bbu_code'] = $bbuList[0]['bbu_code'];
-            $logInfo          = '更新销售团队。';
-            $operation        = 'dealer_bbu_edit@dealer';
-            $snapshoot        = $bbuList[0];
-        } else {
-            $bbuMdl->insert($data);
-            $logInfo   = '添加销售团队。';
-            $operation = 'dealer_bbu_add@dealer';
-        }
-        // 创建/更新 企业组织表,得到返回再去更新销售团队表
-        $cosData = [
-            'cos_type'  => 'bbu',
-            'cos_code'  => $data['bbu_code'],
-            'cos_name'  => $data['bbu_name'],
-            'op_name'   => $data['op_name'],
-            'parent_id' => 1,
-            'is_leaf'   => '1',
-        ];
-        $cosId = kernel::single('organization_cos')->saveCos($cosData);
-        $cosId && $bbuMdl->update(['cos_id' => $cosId], ['bbu_id' => $data['bbu_id']]);
-
-        $omeLogMdl = app::get('ome')->model('operation_log');
-        $log_id    = $omeLogMdl->write_log($operation, $data['bbu_id'], $logInfo);
-        if ($log_id && $snapshoot) {
-            $shootMdl  = app::get('ome')->model('operation_log_snapshoot');
-            $snapshoot = json_encode($snapshoot, JSON_UNESCAPED_UNICODE);
-            $tmp       = ['log_id' => $log_id, 'snapshoot' => $snapshoot];
-            $shootMdl->insert($tmp);
+        try {
+            // 写实现统一收敛到 capability（与 Vue JSON 入口 act=save 同一份代码）；
+            // legacy 事务由 begin()/end() 托管，故 ownTransaction = false
+            (new dealer_capability_bbu())->saveBbu($_POST, false);
+        } catch (InvalidArgumentException $exception) {
+            $this->end(false, $exception->getMessage());
+            return;
+        } catch (Throwable $exception) {
+            $this->end(false, '保存失败，请重试');
+            return;
         }
         $this->end(true, '操作成功');
     }

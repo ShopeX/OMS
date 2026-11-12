@@ -54,7 +54,7 @@ $db['member_address']=array (
       'label' => '收货地区',
       'width' => 170,
       'editable' => false,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
       'in_list' => true,
     ),

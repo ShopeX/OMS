@@ -60,13 +60,17 @@ class omeauto_auto_type_sku extends omeauto_auto_type_abstract implements omeaut
     public function roleToString($params) {
 
         if (!empty($params['s_start'])) {
-            $sStart = strtotime(sprintf('%s %s:%s:00', $params['s_start'], $params['_DTIME_']['H']['s_start'], $params['_DTIME_']['M']['s_start']));
+            $h = $params['_DTIME_']['H']['s_start'] ?? '';
+            $m = $params['_DTIME_']['M']['s_start'] ?? '';
+            $sStart = strtotime(sprintf('%s %s:%s:00', $params['s_start'], $h ?: '00', $m ?: '00'));
         } else {
             $sStart = '';
         }
 
         if (!empty($params['s_end'])) {
-            $sEnd = strtotime(sprintf('%s %s:%s:00', $params['s_end'], $params['_DTIME_']['H']['s_end'], $params['_DTIME_']['M']['s_end']));
+            $h = $params['_DTIME_']['H']['s_end'] ?? '';
+            $m = $params['_DTIME_']['M']['s_end'] ?? '';
+            $sEnd = strtotime(sprintf('%s %s:%s:00', $params['s_end'], $h ?: '00', $m ?: '00'));
         } else {
             $sEnd = '';
         }
@@ -171,13 +175,14 @@ class omeauto_auto_type_sku extends omeauto_auto_type_abstract implements omeaut
      * 获取输入UI
      *
      * @param mixed $val
-     * @return String
+     * @return String|Array
      */
     public function getUI($val) {
+
         $tpl = kernel::single('base_render');
         $role = array_shift($val);
-        $salesMaterialObj = app::get('material')->model('sales_material');#销售物料
-        $skus=explode(",",$_REQUEST['sku_str']);
+        $salesMaterialObj = app::get('material')->model('sales_material');
+        $skus=explode(",",$_REQUEST['sku_str'] ?? '');
         $result=    $salesMaterialObj->getList('sm_id,sales_material_name,sales_material_bn,shop_id', array('sales_material_bn'=>$skus, 'is_bind'=>1));
         $sm_id='';
         foreach ($result as $key=>$value){
@@ -189,8 +194,15 @@ class omeauto_auto_type_sku extends omeauto_auto_type_abstract implements omeaut
         if (method_exists($this, '_prepareUI')) {
             $this->_prepareUI($tpl, $val);
         }
+
+        if ($this->vue_mode) {
+            return $tpl->pagedata;
+        }
+
         return $tpl->fetch($this->getTemplateName(), 'omeauto');
     }
+
+    
 
     public function checkSku($order,$content){
 

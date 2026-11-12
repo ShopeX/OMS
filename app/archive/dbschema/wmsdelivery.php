@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 $db['wmsdelivery']=array (
   'columns' =>
   array (
@@ -78,7 +77,7 @@ $db['wmsdelivery']=array (
       'editable' => false,
       'width' =>140,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
       'in_list' => true,
       'default_in_list' => true,

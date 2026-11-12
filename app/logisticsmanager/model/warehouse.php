@@ -36,7 +36,7 @@ class logisticsmanager_mdl_warehouse extends dbeav_model {
             'comment' => '覆盖范围',
             'editable' => false,
             'width' =>75,
-            'filtertype' => 'yes',
+            'filtertype' => 'normal',
             'filterdefault' => true,
             'in_list' => true,
             

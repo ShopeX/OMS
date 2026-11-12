@@ -17,6 +17,13 @@
 
 class crm_finder_extend_filter_gift_rule_base
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function get_extend_colums()
     {
         $db['gift_rule_base'] = array (

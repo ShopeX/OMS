@@ -17,6 +17,13 @@
 
 class o2o_finder_refuse_reason
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $addon_cols = 'reason_id';
     var $column_edit = '操作';
     var $column_edit_width = '100';

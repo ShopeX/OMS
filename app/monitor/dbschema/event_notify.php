@@ -156,6 +156,8 @@ $db['event_notify'] = array(
             'default'         => 'CURRENT_TIMESTAMP',
             'in_list'         => true,
             'default_in_list' => true,
+            'filtertype'      => 'time',
+            'filterdefault'   => true,
             'order'           => 60,
         ),
         'up_time'          => array(

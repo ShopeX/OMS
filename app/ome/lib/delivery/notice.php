@@ -60,7 +60,9 @@ class ome_delivery_notice{
             $channel_type = 'store';
             $channel_id = $store_id;
         }else{
-            $wms_id = kernel::single('ome_branch')->getWmsIdById($original_data['branch_id']);
+            $shop_type = isset($original_data['shop_type']) ? $original_data['shop_type'] : '';
+            $wms_id = kernel::single('ome_branch')->getWmsIdById($original_data['branch_id'], $shop_type);
+            
             list($rs, $rsData) = self::_get_electron_logi_no($wms_id,$original_data);
             if(!$rs) {
                 $consoleDlyLib->update_sync_status($delivery_id, 'send_fail', $rsData['msg']);
@@ -110,7 +112,7 @@ class ome_delivery_notice{
             }
             
             // WMS通知
-            kernel::single('ome_wms')->notify($original_data['outer_delivery_bn']);
+            kernel::single('ome_wms')->notify($delivery_id);
             
             $wmsProcessTime = microtime(true) - $wmsProcessStartTime;
             
@@ -324,19 +326,17 @@ class ome_delivery_notice{
             $dlyExtInfo = $dlyExtObj->dump(array('delivery_bn'=>$params['delivery_bn']),'original_delivery_bn');
 
             $data['original_delivery_bn'] = $dlyExtInfo['original_delivery_bn'];
-
-
-            $deliveryInfo = $dlyObj->dump(array('delivery_id'=>$dly_id), 'delivery_id,sync_status,wms_channel_id');
+            
+            $deliveryInfo = $dlyObj->dump(array('delivery_id'=>$dly_id), '*');
             $data['sync_status']    = $deliveryInfo['sync_status'];
             $data['wms_channel_id'] = $deliveryInfo['wms_channel_id'];
-
-
-
+            
             if(isset($params['wms_id'])){
                 $wms_id = $params['wms_id'];
             }else{
                 $branchLib = kernel::single('ome_branch');
-                $wms_id = $branchLib->getWmsIdById($params['branch_id']);
+                $shop_type = isset($params['shop_type']) ? $params['shop_type'] : (isset($deliveryInfo['shop_type']) ? $deliveryInfo['shop_type'] : '');
+                $wms_id = $branchLib->getWmsIdById($params['branch_id'], $shop_type);
             }
 
             $channel_type = 'wms';
@@ -428,7 +428,10 @@ class ome_delivery_notice{
         $dlyExtInfo = $dlyExtObj->dump(array('delivery_bn' => $dly['delivery_bn']), 'original_delivery_bn');
         $data['original_delivery_bn'] = $dlyExtInfo['original_delivery_bn'];
         $branchLib = kernel::single('ome_branch');
-        $wms_id = $branchLib->getWmsIdById($dly['branch_id']);
+        
+        $shop_type = isset($dly['shop_type']) ? $dly['shop_type'] : '';
+        $wms_id = $branchLib->getWmsIdById($dly['branch_id'], $shop_type);
+        
         $channel_type = 'wms';
         $channel_id = $wms_id;
 
@@ -498,7 +501,14 @@ class ome_delivery_notice{
                 $wms_id = $params['wms_id'];
             }else{
                 $branchLib = kernel::single('ome_branch');
-                $wms_id = $branchLib->getWmsIdById($params['branch_id']);
+                
+                $shop_type = isset($params['shop_type']) ? $params['shop_type'] : '';
+                if ($shop_type === '' && !empty($params['delivery_id'])) {
+                    $dlyShop = app::get('ome')->model('delivery')->db_dump(array('delivery_id' => $params['delivery_id']), '*');
+                    $shop_type = isset($dlyShop['shop_type']) ? $dlyShop['shop_type'] : '';
+                }
+                
+                $wms_id = $branchLib->getWmsIdById($params['branch_id'], $shop_type);
             }
 
             $channel_type = 'wms';
@@ -526,7 +536,14 @@ class ome_delivery_notice{
                 $wms_id = $params['wms_id'];
             }else{
                 $branchLib = kernel::single('ome_branch');
-                $wms_id = $branchLib->getWmsIdById($params['branch_id']);
+                
+                $shop_type = isset($params['shop_type']) ? $params['shop_type'] : '';
+                if ($shop_type === '' && !empty($params['delivery_id'])) {
+                    $dlyShop = app::get('ome')->model('delivery')->db_dump(array('delivery_id' => $params['delivery_id']), '*');
+                    $shop_type = isset($dlyShop['shop_type']) ? $dlyShop['shop_type'] : '';
+                }
+                
+                $wms_id = $branchLib->getWmsIdById($params['branch_id'], $shop_type);
             }
 
             $channel_type = 'wms';
@@ -562,13 +579,6 @@ class ome_delivery_notice{
             'obj_id'    =>  $params['obj_id'],
         );
         $branchLib = kernel::single('ome_branch');
-        if(isset($params['wms_id'])){
-            $wms_id = $params['wms_id'];
-        }else{
-            
-            $wms_id = $branchLib->getWmsIdById($params['branch_id']);
-        }
-
         //订单号  店铺
         $deliveryOrderObj = app::get('ome')->model('delivery_order');
         $dly_order = $deliveryOrderObj->dump(array('delivery_id'=>$dly_id),'order_id');
@@ -576,6 +586,13 @@ class ome_delivery_notice{
        
         $orderObj = app::get('ome')->model('orders');
         $order_detail = $orderObj->dump($order_id, 'order_bn,shop_type,shop_id');
+
+        if(isset($params['wms_id'])){
+            $wms_id = $params['wms_id'];
+        }else{
+            $shop_type = isset($params['shop_type']) ? $params['shop_type'] : (isset($order_detail['shop_type']) ? $order_detail['shop_type'] : '');
+            $wms_id = $branchLib->getWmsIdById($params['branch_id'], $shop_type);
+        }
       
         $shopObj = app::get('ome')->model('shop');
 
@@ -712,7 +729,7 @@ class ome_delivery_notice{
         $branchLib = kernel::single('ome_branch');
         
         //发货单信息
-        $deliveryInfo = $deliveryObj->dump(array('delivery_id'=>$delivery_id), 'delivery_id,delivery_bn,branch_id,wms_channel_id');
+        $deliveryInfo = $deliveryObj->dump(array('delivery_id'=>$delivery_id), '*');
         if(empty($deliveryInfo)){
             $error_msg = '没有发货单信息';
             return false;
@@ -727,7 +744,8 @@ class ome_delivery_notice{
         $branch_bn = $branchLib->getBranchBnById($deliveryInfo['branch_id']);
         
         //channel_id
-        $channel_id = $branchLib->getWmsIdById($deliveryInfo['branch_id']);
+        $shop_type = isset($deliveryInfo['shop_type']) ? $deliveryInfo['shop_type'] : '';
+        $channel_id = $branchLib->getWmsIdById($deliveryInfo['branch_id'], $shop_type);
         
         //params
         $params = array(
@@ -818,14 +836,12 @@ class ome_delivery_notice{
 
     /**
      * 需要判断如果是合单都付尾款才可以通知
-     * 
      */
-
     static public function notify_presale($order_id, &$error_msg=null){
         $branchLib = kernel::single('ome_branch');
         
         $orderObj = app::get('ome')->model('orders');
-        $orders = $orderObj->dump(array('order_id'=>$order_id,'pay_status'=>'1','process_status'=>'splited','order_type'=>'presale'), 'order_id,order_bn,payed,total_amount,paytime');
+        $orders = $orderObj->dump(array('order_id'=>$order_id,'pay_status'=>'1','process_status'=>'splited','order_type'=>'presale'), 'order_id,order_bn,payed,total_amount,paytime,shop_type');
         $logMdl = app::get('ome')->model('operation_log');
         if (!$orders) return false;
         $delivery_list = self::getDeliveryByorderId($order_id);
@@ -844,16 +860,16 @@ class ome_delivery_notice{
         {
             $branch_id = $delivery['branch_id'];
             
-            $wms_id = $branchLib->getWmsIdById($branch_id);
-            //wms_id
-           
+            $shop_type = isset($delivery['shop_type']) ? $delivery['shop_type'] : (isset($orders['shop_type']) ? $orders['shop_type'] : '');
+            $wms_id = $branchLib->getWmsIdById($branch_id, $shop_type);
             if(empty($wms_id)){
                 continue;
             }
+            
             $delivery_id = $delivery['delivery_id'];
+            
             //没有提前推送的不打
             $isPrepackage = kernel::single('ome_bill_label_delivery')->isPrepackage($delivery_id);
-
             if(!$isPrepackage){
                 continue;
             }

@@ -17,6 +17,13 @@
 
 class purchase_finder_supplier_goods
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $addon_cols = 'supplier_id,bm_id';
     
     var $column_supplier_bn = '供应商编码';

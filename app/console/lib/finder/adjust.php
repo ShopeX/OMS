@@ -16,6 +16,13 @@
  * limitations under the License.
  */
 class console_finder_adjust {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function __construct(){
         if(in_array($_REQUEST['action'], ['exportcnf', 'to_export', 'export'])){
             unset($this->column_edit);
@@ -28,6 +35,14 @@ class console_finder_adjust {
     public $column_edit_width = "80";
     public $column_edit_order = "-1";
     public function column_edit($row) {
+        if ($this->vue_mode) {
+            $actions = [];
+            if (in_array($row[$this->col_prefix.'bill_status'], ['1','2'])) {
+                $actions[] = ['key' => 'confirm', 'label' => '确认', 'action' => 'confirm'];
+                $actions[] = ['key' => 'cancel', 'label' => '取消', 'action' => 'cancel'];
+            }
+            return $actions;
+        }
         $confirmBtn = '<a class="lnk" target="dialog::{width:550,height:250,title:\'单据确认\'}" 
                 href="index.php?app=console&ctl=admin_adjust&act=singleConfirm&p[0]='.$row['id'].'&finder_id='.$_GET['_finder']['finder_id'].'">
                 确认</a>';
@@ -49,6 +64,9 @@ class console_finder_adjust {
             $items[$k]['sn_text'] = implode(',', $sns);
         }
         $render->pagedata['items'] = $items;
+        if ($this->vue_mode) {
+            return ['items' => $items];
+        }
         return $render->fetch('admin/adjust/items.html');
     }
 
@@ -74,6 +92,7 @@ class console_finder_adjust {
             $logdata[$k]['operate_time'] = date('Y-m-d H:i:s',$v['operate_time']);
         }
         $render->pagedata['log'] = $logdata;
+        if ($this->vue_mode) { return ['logs' => $logdata]; }
         return $render->fetch('admin/oplog.html');
     }
 
@@ -93,6 +112,7 @@ class console_finder_adjust {
 
         $render->pagedata['batchs'] = $rows;
 
+        if ($this->vue_mode) { return ['batchs' => $rows]; }
         return $render->fetch("admin/useful/item.html");
 
     }

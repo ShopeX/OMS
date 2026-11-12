@@ -1,20 +1,8 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
+ * Copyright 2012-2026 ShopeX
+ * Licensed under the Apache License, Version 2.0
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/**
  * Created by PhpStorm.
  * User: yaokangming
  * Date: 2019/3/19
@@ -22,29 +10,92 @@
  */
 class crm_gift_buyernick
 {
+    public function process($ruleBase, $sdf) {
+        $db = kernel::database();
+        
+        // 收集买家标识：uname(pin) 与 buyer_open_uid(xid)
+        $buyerAccounts = $this->getBuyerAccounts($sdf);
+        
+        // 会员是否已经购买过了
+        if(isset($ruleBase['filter_arr']['buyer_nick']) && $ruleBase['filter_arr']['buyer_nick'] == '1' ){
+            // 有 buyer_open_uid 时只按 uid 判重，避免脱敏昵称（如会员名是：w**）撞名误拦
+            $identityAccounts = array();
+            if (!empty($sdf['buyer_open_uid'])) {
+                // 优先使用buyer_open_uid
+                $identityAccounts[] = trim((string) $sdf['buyer_open_uid']);
+            } elseif (!empty($sdf['buyer_nick'])) {
+                // 会员昵称（加密后的，会有重复的会员名）
+                $identityAccounts[] = trim((string) $sdf['buyer_nick']);
+            }
+            
+            if ($identityAccounts) {
+                $quoted = array();
+                foreach ($identityAccounts as $account) {
+                    $quoted[] = $db->quote($account);
+                }
+                
+                // 查询会员已经送出的订单数
+                $sql = "select count(distinct order_bn) as total_orders from sdb_ome_gift_logs ";
+                $sql .= " WHERE gift_rule_id =" . intval($ruleBase['rule_id']) . " AND buyer_account in (" . implode(',', $quoted) . ")";
+                $_rs = $db->selectRow($sql);
+                if($_rs['total_orders'] > 0) {
+                    return array(false, '每个ID只有第一次购买赠送!');
+                }
+            }
+            
+            // 再按 member_id 检查是否已赠送
+            $memberId = isset($sdf['member_id']) ? intval($sdf['member_id']) : 0;
+            if ($memberId > 0) {
+                $sql = "select count(distinct order_bn) as total_orders from sdb_ome_gift_logs ";
+                $sql .= " WHERE gift_rule_id =" . intval($ruleBase['rule_id']) . " AND member_id =" . $memberId;
+                $_rs = $db->selectRow($sql);
+                if ($_rs['total_orders'] > 0) {
+                    return array(false, '会员ID只允许第一次购买赠送!');
+                }
+            }
+        }
+        
+        // 指定会员才能购买
+        if (isset($ruleBase['filter_arr']['member_uname']) && !empty($ruleBase['filter_arr']['member_uname'])) {
+            $memberList = is_array($ruleBase['filter_arr']['member_uname']) ? $ruleBase['filter_arr']['member_uname'] : explode(',', $ruleBase['filter_arr']['member_uname']);
+            $memberList = array_map('trim', $memberList);
+            
+            // check
+            $matched = false;
+            foreach ($buyerAccounts as $account) {
+                if (in_array($account, $memberList)) {
+                    $matched = true;
+                    break;
+                }
+            }
+            
+            if (!$matched) {
+                return array(false, '不符合指定会员!');
+            }
+        }
+        
+        return array(true);
+    }
 
     /**
-     * 处理
-     * @param mixed $ruleBase ruleBase
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
+     * 收集买家标识：uname(pin) 与 buyer_open_uid(xid)
+     * @param array $sdf
+     * @return array
      */
-
-    public function process($ruleBase, $sdf) {
-        #会员是否已经购买过了
-        if($ruleBase['filter_arr']['buyer_nick'] == '1' ){
-            #查询会员已经送出的订单数,针对当前规则
-            $sql = "select count(distinct order_bn) as total_orders from sdb_ome_gift_logs where gift_rule_id =".$ruleBase['rule_id']." and buyer_account='".$sdf['buyer_nick']."'";
-            $_rs = kernel::database()->selectRow($sql);
-            if($_rs['total_orders'] > 0) {
-                return array(false, '每ID只第一次购买赠送');
-            }
+    private function getBuyerAccounts($sdf)
+    {
+        $accounts = array();
+        
+        // 会员账号（用户名）
+        if (!empty($sdf['buyer_nick'])) {
+            $accounts[] = trim((string) $sdf['buyer_nick']);
         }
-        if ($ruleBase['filter_arr']['member_uname']) {
-            if (!$sdf['buyer_nick'] or !in_array(trim($sdf['buyer_nick']), explode(',', $ruleBase['filter_arr']['member_uname']))) {
-                return array(false, '不符合指定会员');
-            }
+        
+        // buyer_open_uid
+        if (!empty($sdf['buyer_open_uid'])) {
+            $accounts[] = trim((string) $sdf['buyer_open_uid']);
         }
-        return array(true);
+        
+        return array_values(array_unique(array_filter($accounts)));
     }
 }

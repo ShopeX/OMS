@@ -20,25 +20,13 @@ class ome_ctl_admin_return extends desktop_controller
     public $name       = "售后服务";
     public $workground = "aftersale_center";
 
-    /**
-     * index
-     * @param mixed $is_jingxiao is_jingxiao
-     * @return mixed 返回值
-     */
     public function index($is_jingxiao = false)
     {
-
         $action = array(array(
             'label'  => '新建售后服务',
             'href'   => 'index.php?app=ome&ctl=admin_return&act=add_return',
         ));
-        /*
-         * 没维护 故弃用
-         $action[] = array(
-            'label'  => '单拉天猫换货单',
-            'href'   => 'index.php?app=ome&ctl=admin_return&act=sync_aftersale',
-            'target' => "dialog::{width:500,height:200,title:'同步换货单'}",
-        );*/
+        
         switch (intval($_GET['view'])) {
             case '0':
             case '1':
@@ -104,20 +92,12 @@ class ome_ctl_admin_return extends desktop_controller
         $this->finder('ome_mdl_return_product', $params);
     }
 
-    /**
-     * jingxiao
-     * @return mixed 返回值
-     */
     public function jingxiao()
     {
         $is_jingxiao = true;
         return $this->index($is_jingxiao);
     }
 
-    /**
-     * _views
-     * @return mixed 返回值
-     */
     public function _views()
     {
         if ($_GET['act'] == 'return_io') {
@@ -167,11 +147,6 @@ class ome_ctl_admin_return extends desktop_controller
     }
 
     //编辑弹窗触发
-    /**
-     * edit
-     * @param mixed $return_id ID
-     * @return mixed 返回值
-     */
     public function edit($return_id)
     {
         if (!intval($return_id)) {
@@ -186,7 +161,6 @@ class ome_ctl_admin_return extends desktop_controller
      * 对当前售后申请各状态进行保存
      * @param Int $status 申请售后状态
      */
-
     public function save($status)
     {
         $oProduct           = $this->app->model('return_product');
@@ -311,7 +285,17 @@ class ome_ctl_admin_return extends desktop_controller
             $oProduct->save($data);
             $memo = $oProduct->schema['columns']['status']['type'][$_POST['status']];
             $this->app->model('operation_log')->write_log('return@ome', $return_id, '售后服务:' . $memo);
+
+            // 售后申请拒绝：淘宝/天猫极速换货需取消换出订单并回告平台
+            $refuseShopType = (string)$oPro_detail['shop_type'];
+            if (((string)$status === '5' || (string)$_POST['status'] === '5') && in_array($refuseShopType, array('taobao', 'tmall'), true)) {
+                kernel::single('ome_order_platform_taobao_aftersale')->notifyConsigngoodsRefuseOnReturnRefuse(
+                    $return_id,
+                    '售后服务:' . $memo
+                );
+            }
         }
+        
         //平台对保存前的扩展
         if ($source == 'matrix') {
             $pre_result = kernel::single('ome_aftersale_service')->pre_save_return($_POST);
@@ -323,10 +307,6 @@ class ome_ctl_admin_return extends desktop_controller
     }
 
     //新建售后服务弹出页
-    /**
-     * 添加_return
-     * @return mixed 返回值
-     */
     public function add_return()
     {
         $source                          = trim($_GET['source']);
@@ -336,13 +316,6 @@ class ome_ctl_admin_return extends desktop_controller
     }
 
     //新增或者编辑售后服务申请 弹窗展示
-    /**
-     * apply
-     * @param mixed $order_id ID
-     * @param mixed $return_id ID
-     * @param mixed $act act
-     * @return mixed 返回值
-     */
     public function apply($order_id, $return_id = '', $act = 'add')
     {
         $orderItemMdl = app::get('ome')->model('order_items');
@@ -561,10 +534,6 @@ class ome_ctl_admin_return extends desktop_controller
     }
 
     //售后申请执行新增、编辑操作
-    /**
-     * apply_add
-     * @return mixed 返回值
-     */
     public function apply_add()
     {
         $this->begin('index.php?app=ome&ctl=admin_return&act=index');
@@ -752,10 +721,6 @@ class ome_ctl_admin_return extends desktop_controller
     }
 
     //ajax 根据仓库ID，货号订单号获取发货单号以及对应收货相关信息
-    /**
-     * 检查
-     * @return mixed 返回验证结果
-     */
     public function check()
     {
         $branch_id = $_GET['branch_id'];
@@ -776,11 +741,6 @@ class ome_ctl_admin_return extends desktop_controller
     }
 
     //文件下载
-    /**
-     * file_download2
-     * @param mixed $return_id ID
-     * @return mixed 返回值
-     */
     public function file_download2($return_id)
     {
         $oProduct = $this->app->model('return_product');
@@ -798,7 +758,7 @@ class ome_ctl_admin_return extends desktop_controller
     /**
      * 展开明细 接受申请 选择操作类型
      * 1.退货单，2.换货单，3.退款申请单
-     * */
+     **/
     public function choose_type($return_id, $status)
     {
         if (!$return_id) {
@@ -866,11 +826,6 @@ class ome_ctl_admin_return extends desktop_controller
         $this->display('admin/return_product/choose_type.html');
     }
 
-        /**
-     * 获取Refundinfo
-     * @param mixed $orderid ID
-     * @return mixed 返回结果
-     */
     public function getRefundinfo($orderid)
     {
         //判断是否为失败订单
@@ -939,10 +894,6 @@ class ome_ctl_admin_return extends desktop_controller
     }
 
     //构造一个已发货订单列表供选择（新建售后申请和新建退换货，两处获取订单列表）
-    /**
-     * 获取Orders
-     * @return mixed 返回结果
-     */
     public function getOrders()
     {
         $op_id       = kernel::single('desktop_user')->get_id();
@@ -1012,7 +963,7 @@ class ome_ctl_admin_return extends desktop_controller
      * 跳转至单据编辑页
      * @param INT $return_id 售后服务ID
      * @param String $type 单据类型(return:退货单，change:换货单)
-     * */
+     **/
     public function gotoreceipt($return_id, $type)
     {
         if (!in_array($type, array('return', 'change'))) {
@@ -1051,22 +1002,12 @@ class ome_ctl_admin_return extends desktop_controller
     }
 
     //新建售后页面弹窗（售后->售后  这里选择新建类型）
-        /**
-     * 创建_return
-     * @return mixed 返回值
-     */
     public function create_return()
     {
         $this->page('admin/return_product/create_return.html');
     }
 
     //退款留言
-    /**
-     * refund_message
-     * @param mixed $apply_id ID
-     * @param mixed $type type
-     * @return mixed 返回值
-     */
     public function refund_message($apply_id, $type = 'return')
     {
         $this->pagedata['apply_id']  = $apply_id;
@@ -1077,18 +1018,13 @@ class ome_ctl_admin_return extends desktop_controller
     }
 
     //ajax下载信息
-    /**
-     * download_message
-     * @param mixed $apply_id ID
-     * @param mixed $type type
-     * @return mixed 返回值
-     */
     public function download_message($apply_id, $type)
     {
         set_time_limit(0);
-        $message_list = kernel::single('ome_service_aftersale')->refund_message($apply_id, $type);
+        
+        $error_msg = '';
+        $message_list = kernel::single('ome_service_aftersale')->refund_message($apply_id, $type, $error_msg);
         $shop_type    = $_POST['shop_type'];
-        $online_memo  = array();
         $rsp          = array('rsp' => 'succ', 'msg' => '获取成功');
         if ($message_list) {
             $online_memo = serialize($message_list);
@@ -1097,7 +1033,7 @@ class ome_ctl_admin_return extends desktop_controller
             $oShop       = $this->app->model('shop');
             $shop        = $oShop->dump(array('shop_id' => $refund['shop_id']));
             if ($type == 'refund') {
-#退款
+                // 退款
                 if ($shop_type == 'tmall') {
                     $oRefund_apply_model = $this->app->model('refund_apply_tmall');
                 } else {
@@ -1105,7 +1041,7 @@ class ome_ctl_admin_return extends desktop_controller
                 }
                 $result = $oRefund_apply_model->update(array('online_memo' => $online_memo), array('apply_id' => $apply_id));
             } else {
-#退货
+                //退货
                 if ($shop_type == 'tmall') {
                     $oRefund_apply_model = $this->app->model('return_product_tmall');
                 } elseif ($shop_type == '360buy') {
@@ -1115,22 +1051,19 @@ class ome_ctl_admin_return extends desktop_controller
                 }
                 $result = $oRefund_apply_model->update(array('online_memo' => $online_memo), array('return_id' => $apply_id));
             }
+            
             if (!$result) {
-                $rsp = array('rsp' => 'fail', 'msg' => '获取失败,请稍后再试');
+                $rsp = array('rsp' => 'fail', 'msg' => '更新失败,请稍后再试');
             }
         } else {
-            $rsp = array('rsp' => 'fail', 'msg' => '暂无凭证');
+            $rsp_msg = '暂无凭证' . ($error_msg ? ':' . $error_msg : '');
+            $rsp = array('rsp' => 'fail', 'msg' => $rsp_msg);
         }
+        
         echo json_encode($rsp);
     }
 
     //拒绝留言.
-    /**
-     * refuse_message
-     * @param mixed $return_id ID
-     * @param mixed $shop_type shop_type
-     * @return mixed 返回值
-     */
     public function refuse_message($return_id=null, $shop_type=null)
     {
         set_time_limit(0);
@@ -1140,6 +1073,9 @@ class ome_ctl_admin_return extends desktop_controller
             $refuse_message = $_POST['refuse_message'];
             $return_id      = $_POST['return_id'];
             $shop_type      = $_POST['shop_type'];
+            $error_msg = '';
+            
+            // check
             if (in_array($shop_type,array('taobao','tmall','luban'))) {
                 if ($_FILES['refuse_proof']['size'] <= 0) {
                     $this->end(false,'请上传凭证图片!',null,array('status'=>'-1'));
@@ -1232,6 +1168,14 @@ class ome_ctl_admin_return extends desktop_controller
                     'status'    => '5',
                 );
                 $oProduct->tosave($adata, true, $error_msg);
+                
+                // 极速换货单取消换出订单并告知平台
+                if (in_array($shop_type, array('taobao','tmall'))) {
+                    kernel::single('ome_order_platform_taobao_aftersale')->notifyConsigngoodsRefuseOnReturnRefuse(
+                        $return_id,
+                        $refuse_message ? ('拒绝留言:' . $refuse_message) : '售后申请拒绝'
+                    );
+                }
             }
             $this->end(true, '成功');
         }
@@ -1264,10 +1208,6 @@ class ome_ctl_admin_return extends desktop_controller
     }
 
     //批量同步更新状态（“批量拒绝退货”已被注释）
-    /**
-     * batch_syncUpdate
-     * @return mixed 返回值
-     */
     public function batch_syncUpdate()
     {
         $oReturn         = app::get('ome')->model('return_product');
@@ -1366,10 +1306,6 @@ class ome_ctl_admin_return extends desktop_controller
     }
 
     //请求执行可操作
-    /**
-     * ajax_batch
-     * @return mixed 返回值
-     */
     public function ajax_batch()
     {
         set_time_limit(0);
@@ -1398,23 +1334,12 @@ class ome_ctl_admin_return extends desktop_controller
     }
 
     //点击事件显示图片
-    /**
-     * showImage
-     * @param mixed $filepath filepath
-     * @return mixed 返回值
-     */
     public function showImage($filepath)
     {
         echo "<img src='$filepath'>";
     }
 
     //更新退款单状态
-    /**
-     * do_updateReturn
-     * @param mixed $return_id ID
-     * @param mixed $status status
-     * @return mixed 返回值
-     */
     public function do_updateReturn($return_id, $status)
     {
         $oReturn = app::get('ome')->model('return_product');
@@ -1431,11 +1356,6 @@ class ome_ctl_admin_return extends desktop_controller
     }
 
     #设置运费承担方
-    /**
-     * 设置_post_fee_bear_role
-     * @param mixed $return_id ID
-     * @return mixed 返回操作结果
-     */
     public function set_post_fee_bear_role($return_id)
     {
         $this->pagedata['finder_id'] = $_GET['finder_iid'];
@@ -1443,10 +1363,6 @@ class ome_ctl_admin_return extends desktop_controller
 
         $this->display('admin/return_product/post_fee_bear_role.html');
     }
-    /**
-     * 保存_post_fee_bear_role
-     * @return mixed 返回操作结果
-     */
     public function save_post_fee_bear_role()
     {
         $this->begin();
@@ -1457,10 +1373,6 @@ class ome_ctl_admin_return extends desktop_controller
         $this->end(true, app::get('base')->_('操作成功'));
     }
 
-    /**
-     * sync_aftersale
-     * @return mixed 返回值
-     */
     public function sync_aftersale()
     {
 
@@ -1479,10 +1391,6 @@ class ome_ctl_admin_return extends desktop_controller
         $this->display('admin/return_product/sync_aftersale.html');
     }
 
-    /**
-     * do_sync_aftersale
-     * @return mixed 返回值
-     */
     public function do_sync_aftersale()
     {
         $shop_id      = $_POST['shop_id'];

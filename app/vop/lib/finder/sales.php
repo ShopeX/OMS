@@ -17,6 +17,13 @@
 
 class vop_finder_sales 
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $detail_items = '明细信息';
     
     function detail_items($sale_id){

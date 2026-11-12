@@ -714,10 +714,7 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
             // OMS换货生成的新订单信息
             $sdf['order'] = $change_order;
         }
-
-        // $this->__apilog['result']['data']['changeRs'] = $changeRs;
-
-
+        
         $type = $this->_getAddType($sdf);
         if(empty($type)) {
             if(!$this->__apilog['result']['msg']) {
@@ -763,7 +760,9 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
                 }
             }
         }
+        
         $this->_refundOidIsDeleted = false;
+        
         //获取订单上退货基础物料列表
         if(is_array($sdf['refund_item_list'])) {
             if(!$sdf['change_order_id']){
@@ -781,8 +780,8 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
                 }
                 $sdf['refund_item_list'] = $this->_calculateAddPriceFromRefundFee($rfItems, $sdf);
             }
-
         }
+        
         //未签收的售后仅退款转为售后退货,若订单商品被删除，则重新生成退款单
         if($sdf['refund_to_returnProduct'] && $this->_refundOidIsDeleted) {
             $type = 'refund';
@@ -1057,8 +1056,6 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
             if ($match === true){
                 return [true, '匹配成功', $orderList[$order_id],$this->item_convert_field];
             }
-
-
         }
         
         return [false, '匹配失败'];
@@ -1189,7 +1186,6 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
     
                     $refundItems[$itemKey]['porth_field'] = $itemVal['price'] * $itemVal['num'];
                 }
-                
             }
     
             if (!in_array($orderInfo['shop_type'], ['website'])) {
@@ -1213,6 +1209,7 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
         $is_calculate = false;
         foreach ($orderInfo['order_objects'] as $objKey => $objVal)
         {
+            $obj_oid = $objVal['oid'];
             $goods_bn = $objVal['bn'];
             $obj_quantity = $objVal['quantity'];
             
@@ -1221,9 +1218,23 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
                 continue;
             }
             
-            //check
-            if($objVal['delete'] == 'true'){
-                continue;
+            // 已删除的子单：仅当命中本次退款项时仍展开基础物料；未命中则跳过
+            $objIsDeleted = ((string) $objVal['delete'] === 'true');
+            if ($objIsDeleted) {
+                // 退款的销售物料不存在
+                if(!isset($refundItems[$goods_bn])){
+                    continue;
+                }
+                
+                // 退款的oid不存在
+                if(!isset($refundItems[$goods_bn]['oid'])){
+                    continue;
+                }
+                
+                // 退款的oid 与 订单明细上的oid不一致
+                if($refundItems[$goods_bn]['oid'] != $obj_oid){
+                    continue;
+                }
             }
             
             //退货销售物料不存在,直接跳过
@@ -1252,22 +1263,31 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
             //    $is_calculate = true;
             //}
             
+            // 可展开的基础物料行：整包删除的 PKG 需包含 delete=true 的 items
+            $processItems = array();
+            foreach ($objVal['order_items'] as $itemKey => $itemVal) {
+                if ((string) $itemVal['delete'] === 'true' && !$objIsDeleted) {
+                    continue;
+                }
+                
+                $processItems[] = $itemVal;
+            }
+            
+            if (empty($processItems)) {
+                continue;
+            }
+
             //退货数量与购买数量一致&&退货金额与订单实付金额一致
             $temp_refund_fee = $oid_refund_fee;
             $item_line_i = 0;
-            $item_count = count($objVal['order_items']);
+            $item_count = count($processItems);
             $can_unset_refund_item = true; // 控制是否可以删除refundItems的标记
-            foreach($objVal['order_items'] as $itemKey => $itemVal)
+            foreach ($processItems as $itemVal)
             {
                 $item_id = $itemVal['item_id'];
                 $product_bn = $itemVal['bn'];
                 
                 $item_line_i++;
-                
-                //check
-                if($itemVal['delete'] == 'true'){
-                    continue;
-                }
                 
                 //订单实付金额占比
                 if($rateRs) {
@@ -1350,7 +1370,7 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
             }
         }
         
-        //申请退货商品未找到订单item明细
+        // 申请退货商品未找到订单item明细（真正无订单对象可匹配时）
         if($refundItems && is_array($refundItems)) {
             //product_bn
             $productBns = array_column($refundItems, 'bn');
@@ -1371,6 +1391,19 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
                         $refundItems[$itemKey]['name'] = $materialList[$material_bn]['material_name'];
                     }
                 }
+            }
+            
+            // 未匹配到订单明细时，按退款金额重算单价，避免保留平台原价
+            foreach ($refundItems as $itemKey => $itemVal) {
+                // 申请退款金额
+                $fee = isset($itemVal['oid_refund_fee']) ? $itemVal['oid_refund_fee'] : $refund_fee;
+                
+                // 退货数量
+                $num = (isset($itemVal['num']) && $itemVal['num'] > 0) ? $itemVal['num'] : 1;
+                
+                $refundItems[$itemKey]['num'] = $num;
+                $refundItems[$itemKey]['amount'] = $fee;
+                $refundItems[$itemKey]['price'] = bcdiv((string) $fee, (string) $num, 2);
             }
             
             //merge
@@ -1422,6 +1455,155 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
     }
     
     protected function _formatRefundFee($sdf) {
+        return $sdf;
+    }
+    
+    /**
+     * 解决售后退货金额大于订单销售物料实付金额，导致退货单审核失败
+     * 场景：平台售后商品申请退货金额大于订单商品购买实付金额，则重置使用OMS订单上销售物料实付金额；
+     *
+     * @param array $sdf
+     * @return array
+     */
+    public function _resetRefundFee($sdf)
+    {
+        // 换货单明细已重写，跳过
+        if (!empty($sdf['change_order_flag'])) {
+            return $sdf;
+        }
+        
+        $returnItems = isset($sdf['refund_item_list']['return_item']) ? $sdf['refund_item_list']['return_item'] : null;
+        if (empty($returnItems) || !is_array($returnItems)) {
+            return $sdf;
+        }
+        
+        $order_id = 0;
+        if (!empty($sdf['order']['order_id'])) {
+            $order_id = intval($sdf['order']['order_id']);
+        } elseif (!empty($sdf['shop_id']) && !empty($sdf['order_bn'])) {
+            $tgOrder = $this->getOrder('order_id', $sdf['shop_id'], $sdf['order_bn']);
+            if (!empty($tgOrder['order_id'])) {
+                $order_id = intval($tgOrder['order_id']);
+            }
+        }
+        
+        if ($order_id <= 0) {
+            return $sdf;
+        }
+        
+        // 原申请的退款金额
+        $original_refund_fee = $sdf['refund_fee'];
+        
+        $objMdl = app::get('ome')->model('order_objects');
+        
+        $isReset = false;
+        foreach ($returnItems as $idx => $item)
+        {
+            $oid = isset($item['oid']) ? trim((string) $item['oid']) : '';
+            $item_id = isset($item['item_id']) ? trim((string) $item['item_id']) : '';
+            
+            $orderObjInfo = null;
+            if ($oid !== '' && $oid !== '0') {
+                $rows = $objMdl->getList('*', array('order_id'=>$order_id, 'oid'=>$oid, 'delete'=>'false'), 0, 1);
+                $orderObjInfo = $rows ? $rows[0] : null;
+            } elseif ($item_id !== '') {
+                $rows = $objMdl->getList('*',array('order_id'=>$order_id, 'shop_goods_id'=>$item_id, 'delete'=>'false'), 0, 1);
+                $orderObjInfo = $rows ? $rows[0] : null;
+            }
+            
+            if (empty($orderObjInfo)) {
+                continue;
+            }
+            
+            // 实付：优先 divide_order_fee，否则 sale_price
+            $paid = '0';
+            $divide = isset($orderObjInfo['divide_order_fee']) ? (string) $orderObjInfo['divide_order_fee'] : '0';
+            if (bccomp($divide, '0', 3) > 0) {
+                $paid = $divide;
+            } else {
+                $salePrice = isset($orderObjInfo['sale_price']) ? (string) $orderObjInfo['sale_price'] : '0';
+                if (bccomp($salePrice, '0', 3) > 0) {
+                    $paid = $salePrice;
+                }
+            }
+            
+            if (bccomp($paid, '0', 3) <= 0) {
+                continue;
+            }
+            
+            // 顾客申请的退货金额
+            // @todo：拼多多平台退货多件时，price是多件的总退货金额；
+            $applyFee = isset($item['price']) ? (string) $item['price'] : '0';
+            
+            // 原单个商品申请的退款金额
+            $original_refund_price = $applyFee;
+            
+            // 申请金额 <= 订单实付：不重置
+            if (bccomp($applyFee, $paid, 2) <= 0) {
+                // 平台推送的退货商品oid为空：oid 为空时仍回填，便于下游按 oid 计算
+                if (($oid === '' || $oid === '0') && !empty($orderObjInfo['oid'])) {
+                    $returnItems[$idx]['oid'] = $orderObjInfo['oid'];
+                }
+                
+                continue;
+            }
+            
+            // 购买的数量
+            $orderQty = isset($orderObjInfo['quantity']) ? intval($orderObjInfo['quantity']) : 0;
+            if ($orderQty <= 0) {
+                $orderQty = 1;
+            }
+            
+            // 申请的退货数量
+            $applyNum = isset($item['num']) ? floatval($item['num']) : 0;
+            if ($applyNum <= 0) {
+                $applyNum = $orderQty;
+                
+                // 平台推送的退货数量为空
+                $returnItems[$idx]['num'] = $applyNum;
+            }
+            
+            if ($applyNum >= $orderQty) {
+                $resetFee = sprintf('%.2f', $paid);
+            } else {
+                $resetFee = bcmul(bcdiv($paid, (string) $orderQty, 4), (string) $applyNum, 2);
+            }
+            
+            // 重置申请退货的金额
+            $returnItems[$idx]['price'] = $resetFee;
+            $returnItems[$idx]['original_refund_price'] = $original_refund_price;
+            
+            // 平台推送的退货商品oid为空
+            if (($oid === '' || $oid === '0') && !empty($orderObjInfo['oid'])) {
+                $returnItems[$idx]['oid'] = $orderObjInfo['oid'];
+            }
+            
+            $isReset = true;
+        }
+        
+        if (!$isReset) {
+            // 可能仅回填了 oid
+            $sdf['refund_item_list']['return_item'] = $returnItems;
+            
+            return $sdf;
+        }
+        
+        $sumFee = '0.00';
+        foreach ($returnItems as $item)
+        {
+            $sumFee = bcadd($sumFee, isset($item['price']) ? (string) $item['price'] : '0', 2);
+        }
+        
+        // 重置申请的退货明细
+        $sdf['refund_item_list']['return_item'] = $returnItems;
+        
+        // 重置申请退货总金额
+        $sdf['refund_fee'] = $sumFee;
+        $sdf['original_refund_fee'] = $original_refund_fee;
+        
+        // 标记已重置
+        $sdf['is_reset_refund_fee'] = true;
+        
         return $sdf;
     }
 }

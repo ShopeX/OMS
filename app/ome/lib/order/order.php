@@ -5,11 +5,11 @@
  * @copyright www.shopex.cn 2010.12.16
  * @author ome
  */
-class ome_order_order{
-
+class ome_order_order
+{
     /**
      * 余单撤消
-     * @access public
+     *
      * @param string $order_id 订单号
      * @param int $reback_price 实际退款金额
      * @param int $revock_price 余单撤消的商品总金额
@@ -38,11 +38,7 @@ class ome_order_order{
         $cancel_item_price = $this->get_cancel_item_price($order_detail);
         
         //余单撤消的商品金额
-        // if($order_detail['pmt_order']){
-            $revock_price = $this->get_cancel_diff_money($order_detail); //有订单优惠,计算商品实付金额
-        // }else{
-        //     $revock_price = kernel::single('ome_order_func')->order_items_diff_money($order_id);
-        // }
+        $revock_price = $this->get_cancel_diff_money($order_detail); //有订单优惠,计算商品实付金额
         
         //余单撤消的"商品优惠金额"
         $cancel_pmt_price = $this->get_cancel_pmt_price($order_detail);
@@ -50,23 +46,14 @@ class ome_order_order{
         //余单撤消的"订单优惠分摊"
         $pmt_order_money = $this->get_cancel_pmt_order_price($order_detail);
         
-        //订单是否有组合商品部分发货
-        /* if (!$this->getPgkDeliveryStatus($order_detail)) {
-            return ['result'=>false,'msg'=>'该订单存在组合商品部分发货无法撤销余单'];
-        } */
-        
         //商品总额 = 原商品总额 - 余单撤消的商品价格
         $order_update['cost_item'] = $order_detail['cost_item'] - $cancel_item_price;
-        
-        //折扣 = 原折扣 + (撤消的实付金额 - 退款金额)
-        //$order_update['discount'] = $order_detail['discount'] + ($revock_price - $reback_price);
         
         //商品促销优惠 = 商品促销优惠 - 余单撤消的商品优惠金额
         $order_update['pmt_goods'] = $order_detail['pmt_goods'] - $cancel_pmt_price;
         
         //需平摊删除商品对应订单优惠(订单促销优惠 = 订单促销优惠 - 余单撤消的商品优惠分摊)
         $order_update['pmt_order'] = $order_detail['pmt_order']  - $pmt_order_money;
-        
         
         //配送费用 + 保价费用 + 税金 + 支付费用
         $other_amount = $order_detail['shipping']['cost_shipping'] + $order_detail['shipping']['cost_protect'] + $order_detail['cost_tax'];
@@ -76,7 +63,6 @@ class ome_order_order{
         
         //重新计算订单总额
         $order_update['total_amount'] = $order_update['cost_item'] + $order_update['discount'] + $other_amount - $order_update['pmt_order'] - $order_update['pmt_goods'];
-        
         
         //订单归档
         $order_update['archive'] = 1;
@@ -91,14 +77,14 @@ class ome_order_order{
         //打回订单未发货的发货单
         $flag   = $oOrder->rebackDeliveryByOrderId($order_id, true, '');
         
-        #打回发货单失败
-        if($flag == false)
-        {
+        // 打回发货单失败
+        if($flag == false){
             $msg    = '余单撤销失败';
             $oOperation_log->write_log('order_modify@ome', $order_id, $msg);//操作日志
             
             return false;
         }
+        
         //更新订单
         $oOrder->update($order_update, $filter);
         
@@ -133,17 +119,13 @@ class ome_order_order{
 
                 $cancelitems[] = '货号:'.$c_items['bn'].'(购买数:'.$c_items['nums'].',已发货:'.$c_items['sendnum'].',本次撤销:'.$c_items['cancel_num'].'个)';
             }
+            
             // 减少冻结库存
             $basicMStockFreezeLib->unfreezeBatch($branchBatchList, __CLASS__.'::'.__FUNCTION__, $err);
         }
         $cancelitems = implode(';',$cancelitems);
         $msg = '余单撤销(撤销商品总金额为:'.$revock_price.';明细为:'.$cancelitems;
         
-        //余单撤消后,清除订单级预占店铺冻结流水
-        // unfreezeBatch已经清除
-        // $basicMStockFreezeLib->delOrderFreeze($order_id);
-        
-        /*    */
         //更新订单明细
         $order = app::get('ome')->model('orders')->dump($order_id,"order_id",array("order_objects"=>array("*",array("order_items"=>array("*")))));
         if ($order['order_objects']){
@@ -172,7 +154,6 @@ class ome_order_order{
         //[拆单]余单撤消_保存订单快照
         $oOrder->write_log_detail($log_id, $order_detail);
         
-        
         $c2c_shop_list = ome_shop_type::shop_list();
         if (!in_array($node_type, $c2c_shop_list)){
             //订单编辑同步
@@ -184,6 +165,7 @@ class ome_order_order{
                 }
             }
         }
+        
         //发货单同步
         if (in_array($node_type, $c2c_shop_list)){
             //C2C前端店铺回写发货单
@@ -197,30 +179,25 @@ class ome_order_order{
             }
         }
         
-        /*------------------------------------------------------ */
-        //-- [拆单]余单撤消后_生成销售单
-        /*------------------------------------------------------ */
-        
-        #判断是否存在销售单
+        // [拆单]余单撤消后_生成销售单
         $sql        = "SELECT COUNT(*) AS num FROM sdb_ome_sales WHERE order_id='".$order_id."'";
         $sales_row  = kernel::database()->selectrow($sql);
-        if(empty($sales_row['num']))
-        {
-            #获取"最后成功发货"的普通发货单ID
+        if(empty($sales_row['num'])){
+            // 获取"最后成功发货"的普通发货单ID
             $sql    = "SELECT dord.delivery_id FROM sdb_ome_delivery_order AS dord LEFT JOIN sdb_ome_delivery AS d 
                         ON(dord.delivery_id=d.delivery_id) WHERE dord.order_id='".$order_id."' AND (d.parent_id=0 OR d.is_bind='true') 
                         AND d.disabled='false' AND d.status='succ' AND d.type='normal' ORDER BY delivery_time DESC";
             $delivery_row   = kernel::database()->selectrow($sql);
             
             $delivery_id    = $delivery_row['delivery_id'];
-            if($delivery_id)
-            {
-                #生成销售单
+            if($delivery_id){
+                // 生成销售单
                 $iostock_data       = kernel::single('siso_receipt_iostock_sold')->get_io_data(array('delivery_id'=>$delivery_id,'process_status'=>'remain_cancel'));
 
                 kernel::single('siso_receipt_sales_sold')->create(array('delivery_id'=>$delivery_id,'iostock'=>$iostock_data), $msg);
             }
         }
+        
         //余单撤销后，需要发起多包裹状态回写，因为物流信息作为补充回写，一般是发货完成才会触发
         if (in_array($order_detail['shop_type'], ome_shop_type::many_split_type())) {
             kernel::single('ome_event_trigger_shop_delivery')->delivery_confirm_retry([$order_id]);
@@ -258,7 +235,7 @@ class ome_order_order{
     }
     /**
      * 订单数据字段格式化过滤
-     * @access public
+     *
      * @param $order_sdf 订单标准sdf结构数据
      * @return 订单标准sdf结构数据
      */
@@ -337,13 +314,12 @@ class ome_order_order{
       **/
      function order_pay_confirm($shop_id,$order_id,$total_amount)
      {
-
         $ome_payment_confirm = app::get('ome')->getConf('ome.payment.confirm');
 
         $orderObj = app::get('ome')->model('orders');
-
-        if($ome_payment_confirm == 'false'){//不需要经过财审,直接生成支付单
-
+        
+        //不需要经过财审,直接生成支付单
+        if($ome_payment_confirm == 'false'){
             $op_info = kernel::single('ome_func')->getDesktopUser();
 
             $pay_time = time();
@@ -386,15 +362,8 @@ class ome_order_order{
          $amount = 0;
          if ($order['order_objects']){
              foreach ($order['order_objects'] as $obj){
-                 /* if($obj['obj_type'] == 'pkg'){
-                     $tmp_amount = kernel::single('ome_order_remain_pkg')->get_order_total_price($obj);
-                     $amount += $tmp_amount;
-                 }elseif($obj['obj_type'] == 'gift'){
-                     continue; //赠品为0元,跳过
-                 }else{ */
-                     $tmp_amount = kernel::single('ome_order_remain_goods')->get_order_total_price($obj);
-                     $amount += $tmp_amount;
-                 //}
+                 $tmp_amount = kernel::single('ome_order_remain_goods')->get_order_total_price($obj);
+                 $amount += $tmp_amount;
              }
          }
          
@@ -408,15 +377,8 @@ class ome_order_order{
          $amount = 0;
          if ($order['order_objects']){
              foreach ($order['order_objects'] as $obj){
-                //  if($obj['obj_type'] == 'pkg'){
-                //      $tmp_amount = kernel::single('ome_order_remain_pkg')->get_order_diff_money($obj);
-                //      $amount += $tmp_amount;
-                //  }elseif($obj['obj_type'] == 'gift'){
-                //      continue; //赠品为0元,跳过
-                //  }else{
-                     $tmp_amount = kernel::single('ome_order_remain_goods')->get_order_diff_money($obj);
-                     $amount += $tmp_amount;
-                //  }
+                 $tmp_amount = kernel::single('ome_order_remain_goods')->get_order_diff_money($obj);
+                 $amount += $tmp_amount;
              }
          }
          
@@ -430,18 +392,11 @@ class ome_order_order{
          $amount = 0;
          if ($order['order_objects']){
              foreach ($order['order_objects'] as $obj){
-                //  if($obj['obj_type'] == 'pkg'){
-                //      $tmp_amount = kernel::single('ome_order_remain_pkg')->get_order_pmt_price($obj);
-                //      $amount += $tmp_amount;
-                //  }elseif($obj['obj_type'] == 'gift'){
-                //      continue; //赠品为0元,跳过
-                //  }else{
-                     $tmp_amount = kernel::single('ome_order_remain_goods')->get_order_pmt_price($obj);
-                     $amount += $tmp_amount;
-                //  }
+                 $tmp_amount = kernel::single('ome_order_remain_goods')->get_order_pmt_price($obj);
+                 $amount += $tmp_amount;
              }
          }
-          
+         
          return $amount;
      }
      
@@ -452,15 +407,8 @@ class ome_order_order{
          $amount = 0;
          if ($order['order_objects']){
              foreach ($order['order_objects'] as $obj){
-                //  if($obj['obj_type'] == 'pkg'){
-                //      $tmp_amount = kernel::single('ome_order_remain_pkg')->get_order_pmt_order_price($obj);
-                //      $amount += $tmp_amount;
-                //  }elseif($obj['obj_type'] == 'gift'){
-                //      continue; //赠品为0元,跳过
-                //  }else{
-                     $tmp_amount = kernel::single('ome_order_remain_goods')->get_order_pmt_order_price($obj);
-                     $amount += $tmp_amount;
-                //  }
+                 $tmp_amount = kernel::single('ome_order_remain_goods')->get_order_pmt_order_price($obj);
+                 $amount += $tmp_amount;
              }
          }
          
@@ -509,13 +457,10 @@ class ome_order_order{
          
          //计算未发货商品的金额
          $orderInfo['pmt_order'] = floatval($orderInfo['pmt_order']);
-        //  if($orderInfo['pmt_order']){
-             //订单优惠时
-             $reback_price = kernel::single('ome_order_order')->get_cancel_diff_money($orderInfo);
-        //  }else{
-        //      $reback_price = kernel::single('ome_order_func')->order_items_diff_money($order_id);
-        //  }
          
+         //订单优惠时
+         $reback_price = kernel::single('ome_order_order')->get_cancel_diff_money($orderInfo);
+        
          $revock_price = 0; //撤销商品总额(默认0元后面会重新计算)
          $result = $this->order_revoke($order_id, $reback_price, $revock_price);
          

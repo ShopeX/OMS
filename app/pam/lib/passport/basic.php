@@ -97,29 +97,35 @@ class pam_passport_basic implements pam_interface_passport{
 
     public function login($auth,&$usrdata)
     {
-        $key =  date('Y-m-d',time())."eDu189";
-        $decrypted = openssl_decrypt($_POST['login_cipher'], 'aes-128-cbc', $key, OPENSSL_ZERO_PADDING , OPENSSL_CPIHER_IV);
-        if(empty($decrypted) || false == $decrypted){
-            $usrdata['log_data'] = app::get('pam')->_('登录信息异常');
-            $_SESSION['error'] = app::get('pam')->_('登录信息异常');
-            return false;
+        // Vue 直接传明码时绕过 cipher 解密
+        if (isset($_POST['login_name']) && isset($_POST['login_password'])) {
+            $_POST['uname'] = $_POST['login_name'];
+            $_POST['password'] = $_POST['login_password'];
+        } else {
+            $key =  date('Y-m-d',time())."eDu189";
+            $decrypted = openssl_decrypt($_POST['login_cipher'], 'aes-128-cbc', $key, OPENSSL_ZERO_PADDING , OPENSSL_CPIHER_IV);
+            if(empty($decrypted) || false == $decrypted){
+                $usrdata['log_data'] = app::get('pam')->_('登录信息异常');
+                $_SESSION['error'] = app::get('pam')->_('登录信息异常');
+                return false;
+            }
+            $decrypted = $this->filterNonPrintableChar($decrypted);
+            $decrypted = json_decode($decrypted,true);
+            if(!is_array($decrypted)){
+                $usrdata['log_data'] = app::get('pam')->_('登录信息异常');
+                $_SESSION['error'] = app::get('pam')->_('登录信息异常');
+                return false;
+            }
+            $_POST = array_merge($_POST,$decrypted);
+            utils::_filter_input($_POST);
         }
-        $decrypted = $this->filterNonPrintableChar($decrypted);
-        $decrypted = json_decode($decrypted,true);
-        if(!is_array($decrypted)){
-            $usrdata['log_data'] = app::get('pam')->_('登录信息异常');
-            $_SESSION['error'] = app::get('pam')->_('登录信息异常');
-            return false;
-        }
-        $_POST = array_merge($_POST,$decrypted);
-        utils::_filter_input($_POST);
         if($auth->is_enable_vcode())
         {
                $key = $auth->appid;  
             if(!base_vcode::verify($key,intval($_POST['verifycode'])))
             {
-                $usrdata['log_data'] = app::get('pam')->_('验证码不正确！');
-                $_SESSION['error'] = app::get('pam')->_('验证码不正确！');
+                $usrdata['log_data'] = app::get('pam')->_('图形验证码不正确，请重新输入');
+                $_SESSION['error'] = app::get('pam')->_('图形验证码不正确，请重新输入');
                 return false;
             }
         }
@@ -127,7 +133,7 @@ class pam_passport_basic implements pam_interface_passport{
         {
             $usrdata['log_data'] = app::get('pam')->_('验证失败！');
             $_SESSION['error'] = app::get('pam')->_('用户名或密码错误');
-            $_SESSION['error_count'][$auth->appid] = $_SESSION['error_count'][$auth->appid]+1;
+            kernel::single('pam_login_error_counter')->increment($auth->appid);
             return false;
         }
         // 先查询账户信息，获取 is_hash256 字段值
@@ -177,15 +183,16 @@ class pam_passport_basic implements pam_interface_passport{
         }   
         if(kernel::single('pam_account')->isFreezeAccount($_POST['uname'], $rows[0])) {
             $usrdata['log_data'] = app::get('pam')->_('用户').$_POST['uname'].app::get('pam')->_('账户被冻结，10分钟后再登录!');
-            $_SESSION['error'] = app::get('pam')->_('账户被冻结，10分钟后再登录');
-            $_SESSION['error_count'][$auth->appid] = $_SESSION['error_count'][$auth->appid]+1;
+            $_SESSION['error'] = app::get('pam')->_('用户名或密码错误');
+            kernel::single('pam_login_error_counter')->increment($auth->appid);
             return false;
         }
         if($rows[0])
         {
             if($rows[0]['is_lock'] == '1') {
                 $usrdata['log_data'] = app::get('pam')->_('用户').$_POST['uname'].app::get('pam')->_('账户被锁定!');
-                $_SESSION['error'] = app::get('pam')->_('账户被锁定!');
+                $_SESSION['error'] = app::get('pam')->_('用户名或密码错误');
+                kernel::single('pam_login_error_counter')->increment($auth->appid);
                 return false;
             }
             if($_POST['needmobileverifycode']) {
@@ -219,7 +226,7 @@ class pam_passport_basic implements pam_interface_passport{
                 $ip = implode(' | ', $ip);
                 $usrdata['log_data'] = app::get('pam')->_('用户').$_POST['uname'].app::get('pam')->_('登录IP受限！ - '.$ip);
                 $_SESSION['error'] = app::get('pam')->_('登录IP受限 - ' . $ip);
-                $_SESSION['error_count'][$auth->appid] = $_SESSION['error_count'][$auth->appid]+1;
+                kernel::single('pam_login_error_counter')->increment($auth->appid);
                 return false;
             }
             if ($_POST['remember'] === "true") {
@@ -228,14 +235,14 @@ class pam_passport_basic implements pam_interface_passport{
                 setcookie('pam_passport_basic_uname', '', 0, '/', kernel::domain_url());
             }
             $usrdata['log_data'] = app::get('pam')->_('用户') . $_POST['uname'] . app::get('pam')->_('验证成功！');
-            unset($_SESSION['error_count'][$auth->appid]);
+            // Note: error_counter reset is done by caller after risk validation passes
             return $rows[0]['account_id'];
         }
         else
         {
             $usrdata['log_data'] = app::get('pam')->_('用户').$_POST['uname'].app::get('pam')->_('验证失败！');
             $_SESSION['error'] = app::get('pam')->_('用户名或密码错误');
-            $_SESSION['error_count'][$auth->appid] = $_SESSION['error_count'][$auth->appid]+1;
+            kernel::single('pam_login_error_counter')->increment($auth->appid);
             return false;
         }
     }

@@ -30,11 +30,10 @@ class ome_return_rchange
 
     /**
      * 计算差价
-     * 
+     *
      * @return []
      * @author
-     * */
-
+     **/
     public function calDiffAmount($post)
     {
         $mathLib = kernel::single('eccommon_math');
@@ -148,7 +147,7 @@ class ome_return_rchange
      * @param string $msg
      * @param array $serviceData [京东一件代发]京东服务单信息
      * @return bool
-     * */
+     **/
     public function accept_returned($reship_id, $status, &$msg, $serviceData=null)
     {
         $oOperation_log = $this->app->model('operation_log');
@@ -706,12 +705,6 @@ class ome_return_rchange
     }
     
     //更新补差价
-    /**
-     * 更新_diff_amount
-     * @param mixed $arr_cal_diff_amount arr_cal_diff_amount
-     * @param mixed $reship_bn reship_bn
-     * @return mixed 返回值
-     */
     public function update_diff_amount($arr_cal_diff_amount,$reship_bn){
         $Oreship = $this->app->model('reship');
         $money = kernel::single('ome_return_rchange')->calDiffAmount($arr_cal_diff_amount);
@@ -729,11 +722,6 @@ class ome_return_rchange
         $Oreship->update($update_arr,array('reship_bn'=>$reship_bn));
     }
     
-    /**
-     * dealExchangeEncrypt
-     * @param mixed $return_id ID
-     * @return mixed 返回值
-     */
     public function dealExchangeEncrypt($return_id) {
         if(empty($return_id)) {
             return ['rs'=>false];
@@ -746,12 +734,43 @@ class ome_return_rchange
             return ['rs'=>false];
         }
         $subfix = '';
+        $encrypt_source_data_raw = $exchange['encrypt_source_data'] ? $exchange['encrypt_source_data'] : '';
 
         $returnMdl = app::get('ome')->model('return_product');
-        $return = $returnMdl->db_dump(array('return_id'=>$return_id),'shop_type');
-        if($exchange['encrypt_source_data']) {
-            $encrypt_source_data = json_decode($exchange['encrypt_source_data'], 1);
+        $return = $returnMdl->db_dump(array('return_id'=>$return_id),'shop_type,order_id');
 
+        $encrypt_source_data = array();
+        if ($encrypt_source_data_raw) {
+            $encrypt_source_data = json_decode($encrypt_source_data_raw, 1);
+            if (!is_array($encrypt_source_data)) {
+                $encrypt_source_data = array();
+            }
+        }
+
+        if ($return['shop_type'] == 'wxshipin') {
+            // 换货未带密文时继承原销售单（与补寄读 order_receiver 一致），避免 md5 兜底导致推 WMS 手机号超长
+            if (empty($encrypt_source_data['ewaybill_order_code'])
+                && empty($encrypt_source_data['oaid'])
+                && empty($encrypt_source_data['receiver_mobile_index_origin'])
+                && empty($encrypt_source_data['receiver_name_index_origin'])
+                && empty($encrypt_source_data['receiver_address_index_origin'])
+                && $return['order_id']
+            ) {
+                $original = app::get('ome')->model('order_receiver')->db_dump(array('order_id' => $return['order_id']), 'encrypt_source_data');
+                if ($original['encrypt_source_data']) {
+                    $encrypt_source_data_raw = $original['encrypt_source_data'];
+                    $encrypt_source_data = json_decode($encrypt_source_data_raw, 1);
+                }
+            }
+            $oaid = $encrypt_source_data['ewaybill_order_code'] ? $encrypt_source_data['ewaybill_order_code'] : $encrypt_source_data['oaid'];
+            if ($oaid) {
+                if ($encrypt_source_data['ewaybill_order_code'] && empty($encrypt_source_data['oaid'])) {
+                    $encrypt_source_data['oaid'] = $encrypt_source_data['ewaybill_order_code'];
+                    $encrypt_source_data_raw = json_encode($encrypt_source_data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                }
+                $subfix = '>>'.$oaid.kernel::single('ome_security_hash')->get_code();
+            }
+        } elseif ($encrypt_source_data_raw) {
             if($encrypt_source_data['oaid']) {
                 $subfix = '>>'.$encrypt_source_data['oaid'].kernel::single('ome_security_hash')->get_code();
             } else {
@@ -773,11 +792,8 @@ class ome_return_rchange
                     }
 
                 }else{
-                    $subfix = '>>'.md5($exchange['encrypt_source_data']).kernel::single('ome_security_hash')->get_code();
+                    $subfix = '>>'.md5($encrypt_source_data_raw).kernel::single('ome_security_hash')->get_code();
                 }
-                
-
-                
             }
         }
         $ship_area = $exchange['buyer_province'].'/'.$exchange['buyer_city'].'/'.$exchange['buyer_district'].'/'.$exchange['buyer_town'];
@@ -795,6 +811,6 @@ class ome_return_rchange
             $consignee['name'] = $exchange['buyer_name'];
         }
 
-        return ['rs'=>true, 'data'=>['consignee'=>$consignee, 'encrypt_source_data'=>$exchange['encrypt_source_data']]];
+        return ['rs'=>true, 'data'=>['consignee'=>$consignee, 'encrypt_source_data'=>$encrypt_source_data_raw]];
     }
 }

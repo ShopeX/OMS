@@ -315,28 +315,25 @@ class console_ctl_admin_vopstockout extends desktop_controller{
         $arrival_time    = date('Y-m-d H:i', $arrival_time);
         
         //检查申请出库数量
-        if(empty($_POST['item_num']))
-        {
+        if(empty($_POST['item_num'])){
             $this->end(false, '出库单明细无效,请检查!');
         }
         
         $error_msg    = '';
         $item_list    = $stockLib->check_edit_items($_POST, $error_msg);
-        if(!$item_list)
-        {
+        if(!$item_list){
             $this->end(false, $error_msg);
         }
         
         //更新出库单明细
-        $result    = $stockLib->update_edit_items($item_list, $error_msg);
-        if(!$result)
-        {
+        $result = $stockLib->update_edit_items($item_list, $error_msg);
+        if(!$result){
             $this->end(false, $error_msg);
         }
         
         //统计拣货数量
-        $sql    = "SELECT sum(num) AS pick_num FROM sdb_purchase_pick_stockout_bill_items WHERE stockout_id=". $stockout_id ." AND is_del='false'";
-        $pick_num    = $stockoutObj->db->selectrow($sql);
+        $sql = "SELECT sum(num) AS pick_num FROM sdb_purchase_pick_stockout_bill_items WHERE stockout_id=". $stockout_id ." AND is_del='false'";
+        $pick_num = $stockoutObj->db->selectrow($sql);
         
         //更新出库单
         $data    = array(
@@ -377,8 +374,7 @@ class console_ctl_admin_vopstockout extends desktop_controller{
         //出库单
         $stockoutObj    = app::get('purchase')->model('pick_stockout_bills');
         $row            = $stockoutObj->dump(array('stockout_id'=>$stockout_id, 'status'=>1, 'confirm_status'=>1, 'o_status'=>1), '*');
-        if(empty($row))
-        {
+        if(empty($row)){
             $error_msg = '没有相关记录,请检查!';
             header("content-type:text/html; charset=utf-8");
             echo "<script>alert('". $error_msg ."');window.close();</script>";
@@ -435,14 +431,12 @@ class console_ctl_admin_vopstockout extends desktop_controller{
         $this->pagedata['dataiList'] = $dataList;
         
         //配送方式
-        if($row['dly_mode'])
-        {
+        if($row['dly_mode']){
             $row['dly_mode']    = $stockLib->getDlyMode($row['dly_mode']);
         }
         
         //承运商
-        if($row['carrier_code'])
-        {
+        if($row['carrier_code']){
             $row['carrier_code']    = $stockLib->getCarrierCode('', $row['carrier_code']);
         }
         
@@ -464,25 +458,23 @@ class console_ctl_admin_vopstockout extends desktop_controller{
         
         //出库单
         $row            = $stockoutObj->dump(array('stockout_id'=>$stockout_id, 'status'=>1, 'o_status'=>1, 'confirm_status'=>1), '*');
-        if(empty($row))
-        {
+        if(empty($row)){
             $this->end(false, "出库单不存在");
         }
         
-        if(empty($row['dly_mode']))
-        {
+        if(empty($row['dly_mode'])){
             $this->end(false, "配送方式未填写");
         }
-        if(empty($row['carrier_code']))
-        {
+        
+        if(empty($row['carrier_code'])){
             $this->end(false, "承运商未填写");
         }
-        if(empty($row['delivery_time']))
-        {
+        
+        if(empty($row['delivery_time'])){
             $this->end(false, "送货批次未填写");
         }
-        if(empty($row['arrival_time']))
-        {
+        
+        if(empty($row['arrival_time'])){
             $this->end(false, "要求到货时间未填写");
         }
         
@@ -574,8 +566,7 @@ class console_ctl_admin_vopstockout extends desktop_controller{
                 $requestCount++;
             } while ($requestCount<3);
             
-            if($rsp['rsp'] == 'fail')
-            {
+            if($rsp['rsp'] == 'fail'){
                 $rsp['err_msg']    = json_decode($rsp['err_msg'], true);
                 $error_msg         = $rsp['err_msg']['returnMessage'];
                 $error_msg         = ($error_msg ? $error_msg : '创建出仓单失败');
@@ -612,15 +603,13 @@ class console_ctl_admin_vopstockout extends desktop_controller{
 
         // 更新拣货单并释放拣货单冻结
         $result    = $stockLib->update_stockout($data);
-        if(!$result)
-        {
+        if(!$result){
             $this->end(false, "更新出库单失败");
         }
         
         //库存冻结
         $result      = $stockLib->freeze($stockout_id, $row['branch_id'], $error_msg);
-        if(!$result)
-        {
+        if(!$result){
             $this->end(false, $error_msg);
         }
         
@@ -709,6 +698,8 @@ class console_ctl_admin_vopstockout extends desktop_controller{
                                 'effective_num'=>$temp_bn_num[$bn],
             );
         }
+        
+        // items
         $iostockData['items']    = $iso_item;
         
         //开启事务
@@ -716,8 +707,7 @@ class console_ctl_admin_vopstockout extends desktop_controller{
         
         //生成出入库明细
         $stockLib    = kernel::single('siso_receipt_iostock_vopstockout');
-        if($iostockData['items'])
-        {
+        if($iostockData['items']){
             $data    = $iostockData;
             $data['io_status']    = $io_status;
             
@@ -737,8 +727,7 @@ class console_ctl_admin_vopstockout extends desktop_controller{
         }
         
         $stockObj = kernel::single('console_receipt_vopstock');
-        if($stockObj->checkExist($row['stockout_no']))
-        {
+        if($stockObj->checkExist($row['stockout_no'])){
             //更新出库单
             $save_flag    = $stockObj->update_stockout($io_status, $msg);
             if(!$save_flag)
@@ -768,29 +757,25 @@ class console_ctl_admin_vopstockout extends desktop_controller{
         $error_msg  = '';
         
         $result    = $syncLib->_initStockoutIfo($stockout_id, $error_msg);//初始化信息
-        if(!$result)
-        {
+        if(!$result){
             $this->splash('error', $url, '确认出库成功,初始化唯品会接口数据出错：'. $error_msg);
         }
         
         //editDelivery
         $result    = $syncLib->editDelivery($error_msg);
-        if(!$result)
-        {
+        if(!$result){
             $this->splash('error', $url, '确认出库成功,同步唯品会接口出错：'. $error_msg);
         }
         
         //importDeliveryDetail
         $result    = $syncLib->importDeliveryDetail($error_msg);
-        if(!$result)
-        {
+        if(!$result){
             $this->splash('error', $url, '确认出库成功,同步唯品会接口出错：'. $error_msg);
         }
         
         //confirmDelivery
         $result    = $syncLib->confirmDelivery($error_msg);
-        if(!$result)
-        {
+        if(!$result){
             $this->splash('error', $url, '确认出库成功,同步唯品会接口出错：'. $error_msg);
         }
         
@@ -827,44 +812,36 @@ class console_ctl_admin_vopstockout extends desktop_controller{
                 $stockout_info    = $stockoutObj->dump(array('stockout_id'=>$stockout_id), 'stockout_no, rsp_code');
                 $rsp_code         = $stockout_info['rsp_code'];
                 
-                if(empty($stockout_info) || $rsp_code == 0)
-                {
+                if(empty($stockout_info) || $rsp_code == 0){
                     continue;
                 }
                 
                 //初始化信息
                 $result        = $syncLib->_initStockoutIfo($stockout_id, $error_msg);
-                if(!$result)
-                {
+                if(!$result){
                     $this->end(false, '出库单号：'. $stockout_info['stockout_no'] .','. $error_msg);
                 }
                 
                 //editDelivery
-                if($rsp_code <= 1)
-                {
+                if($rsp_code <= 1){
                     $result    = $syncLib->editDelivery($error_msg);
-                    if(!$result)
-                    {
+                    if(!$result){
                         $this->end(false, '出库单号：'. $stockout_info['stockout_no'] .','. $error_msg);
                     }
                 }
                 
                 //importDeliveryDetail
-                if($rsp_code <= 3)
-                {
+                if($rsp_code <= 3){
                     $result    = $syncLib->importDeliveryDetail($error_msg);
-                    if(!$result)
-                    {
+                    if(!$result){
                         $this->end(false, '出库单号：'. $stockout_info['stockout_no'] .','. $error_msg);
                     }
                 }
                 
                 //confirmDelivery
-                if($rsp_code <= 7)
-                {
+                if($rsp_code <= 7){
                     $result    = $syncLib->confirmDelivery($error_msg);
-                    if(!$result)
-                    {
+                    if(!$result){
                         $this->end(false, '出库单号：'. $stockout_info['stockout_no'] .','. $error_msg);
                     }
                 }
@@ -885,20 +862,18 @@ class console_ctl_admin_vopstockout extends desktop_controller{
      */
     function batch_stockout()
     {
-        // $this->begin('');
-        
         $ids    = $_POST['stockout_id'];
         
         $stockoutObj    = app::get('purchase')->model('pick_stockout_bills');
         $dataList       = $stockoutObj->getList('stockout_id', array('confirm_status'=>2, 'status'=>1, 'o_status'=>1));
         
         //已审核单据
-        if (!empty($dataList))
-        {
+        if (!empty($dataList)){
             foreach($dataList as $key => $val)
             {
                 //推送出库信息给仓库
                 kernel::single('console_event_trigger_vopstockout')->create(array('iso_id'=>$val['stockout_id']), false);
+                
                 // 推送信息给唯品会时效订单结果反馈
                 kernel::single('console_event_trigger_vopstockout')->occupied_order_feedback(['stockout_id'=>$val['stockout_id']], false);
             }
@@ -958,8 +933,7 @@ class console_ctl_admin_vopstockout extends desktop_controller{
         
         $dly_mode    = $_POST['dly_mode'];
         
-        if(empty($delivery_date) || empty($delivery_hour) || empty($dly_mode))
-        {
+        if(empty($delivery_date) || empty($delivery_hour) || empty($dly_mode)){
             echo json_encode(array('res'=>'error'));
             exit;
         }
@@ -1053,8 +1027,7 @@ class console_ctl_admin_vopstockout extends desktop_controller{
         $pickObj    = app::get('purchase')->model('pick_bills');
         $stockItemObj = app::get('purchase')->model('pick_stockout_bill_items');
         
-        if(empty($stockout_id))
-        {
+        if(empty($stockout_id)){
             return '';
         }
         
@@ -1062,8 +1035,7 @@ class console_ctl_admin_vopstockout extends desktop_controller{
         $sql       = "SELECT a.*, b.bn, b.barcode, b.product_name FROM sdb_purchase_pick_stockout_bill_item_boxs AS a
                       LEFT JOIN sdb_purchase_pick_stockout_bill_items AS b ON a.stockout_item_id=b.stockout_item_id WHERE a.stockout_id=". $stockout_id;
         $dataList  = $stockItemObj->db->select($sql);
-        if(empty($dataList))
-        {
+        if(empty($dataList)){
             return '';
         }
         

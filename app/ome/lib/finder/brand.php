@@ -18,11 +18,13 @@
 class ome_finder_brand{
 
     var $column_edit = '品牌操作';
-    /**
-     * column_edit
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public function column_edit($row){
 
         $finder_id = $_GET['_finder']['finder_id'];
@@ -50,6 +52,14 @@ class ome_finder_brand{
         $render->pagedata['type'] = $objBrand->getDefinedType();//所有的商品类型
         $objGtype = &$render->app->model('goods_type');
         $render->pagedata['gtype']['status'] = $objGtype->checkDefined();
+
+        if ($this->vue_mode) {
+            return [
+                'items' => $render->pagedata['brandInfo'],
+                'type' => $aType,
+                'defined_type' => $render->pagedata['type'],
+            ];
+        }
 
         return $render->fetch('admin/goods/brand/detail.html');
     }

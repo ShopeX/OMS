@@ -9,6 +9,13 @@ define('COLUMN_IN_HEAD', 'HEAD');
 define('COLUMN_IN_TAIL', 'TAIL');
 class desktop_finder_export
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     /**
      * 导出取数据入口方法

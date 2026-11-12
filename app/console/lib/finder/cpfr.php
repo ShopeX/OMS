@@ -17,6 +17,13 @@
 
 class console_finder_cpfr
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = 'bill_status,adjust_type,cpfr_bn,cpfr_id';
     
     public $column_edit = "操作";

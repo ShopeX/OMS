@@ -1,18 +1,3 @@
-<!--
-  Copyright 2012-2026 ShopeX (https://www.shopex.cn)
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
--->
 <desktop>
     <adminpanel group="desktop_apilog" permission="api_order_log" controller='admin_api_fail' action='retry' display='true' order='1000'>失败重试</adminpanel>
     <permissions>
@@ -20,7 +5,7 @@
     </permissions>
     <workground name="日志管理" id="monitor_center"  order="1820" icon="icon-caozuorizhi-01">
         <menugroup name="接口日志" en="api-log">
-            <menu controller='admin_api_fail' action='retry' permission='setting_api_log' display='true'  order='600003'>失败重试</menu>
+            <menu controller='admin_api_fail' action='retry' permission='setting_api_log' display='true' order='600003' target='/m-erpapi/api-fail/index'>失败重试</menu>
         </menugroup>
     </workground>
 </desktop>

@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 $db['inventory']=array (
   'columns' =>
   array (
@@ -34,7 +33,7 @@ $db['inventory']=array (
       'in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'out_id' =>

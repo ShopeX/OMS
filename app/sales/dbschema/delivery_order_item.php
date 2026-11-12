@@ -81,7 +81,7 @@ $db['delivery_order_item'] = array(
             'in_list'         => true,
             'default_in_list' => true,
             'searchtype'      => 'nequal',
-            'filtertype'      => 'yes',
+            'filtertype'      => 'normal',
             'filterdefault'   => true,
         ),
         'order_obj_id'      => array(

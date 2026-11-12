@@ -17,6 +17,13 @@
 
 class console_finder_dailyinventory_storedinv
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = "outer_stock,channel_id";
 
     public $column_opt       = '操作';

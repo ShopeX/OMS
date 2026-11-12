@@ -16,6 +16,13 @@
  */
 
 class sales_finder_extend_filter_aftersale{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function get_extend_colums(){
         $oProblem = app::get('ome')->model('return_product_problem');
         $problem_lists = $oProblem->getList('problem_id,problem_name',array('disabled'=>'false'));
@@ -31,7 +38,7 @@ class sales_finder_extend_filter_aftersale{
                     'type' => 'varchar(30)',
                     'label' => '订单号',
                     'width' => 130,
-                    'filtertype' => 'normal',
+                    'filtertype' => 'textarea',
                     'filterdefault' => true,
                     'editable' => false,
                     'in_list' => true,

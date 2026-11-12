@@ -1,0 +1,27 @@
+<style>
+.mcp-log-detail { font-size: 13px; }
+.mcp-log-detail table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+.mcp-log-detail th, .mcp-log-detail td { border: 1px solid #ebeef5; padding: 6px 10px; text-align: left; }
+.mcp-log-detail th { background: #f5f7fa; color: #5e6d82; width: 110px; }
+.mcp-log-detail pre { background: #f5f7fa; padding: 10px; border-radius: 6px; max-height: 260px; overflow: auto; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
+.mcp-log-detail .sec { font-weight: 600; color: #5e6d82; margin: 10px 0 6px; }
+</style>
+<div class="mcp-log-detail">
+    <table>
+        <tr><th>请求ID</th><td><{$log.request_id}></td></tr>
+        <tr><th>Trace ID</th><td><{$log.trace_id|default:'—'}></td></tr>
+        <tr><th>应用</th><td><{$log.client_id}></td></tr>
+        <tr><th>通道</th><td><{$log.client_mode}></td></tr>
+        <tr><th>Agent</th><td><{$log.agent_name}> <{$log.agent_version}></td></tr>
+        <tr><th>模型</th><td><{$log.model|default:'—'}></td></tr>
+        <tr><th>操作员ID</th><td><{$log.user_id}></td></tr>
+        <tr><th>工具</th><td><{$log.tool_name}></td></tr>
+        <tr><th>调用时间</th><td><{$log.created_at_fmt}></td></tr>
+        <tr><th>HTTP状态</th><td><{$log.http_status}></td></tr>
+        <tr><th>来源IP</th><td><{$log.ip}></td></tr>
+    </table>
+    <p class="sec">请求参数（已脱敏）</p>
+    <pre><{$params_pretty}></pre>
+    <p class="sec">响应摘要</p>
+    <pre><{$response_pretty}></pre>
+</div>

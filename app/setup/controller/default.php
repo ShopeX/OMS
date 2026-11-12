@@ -44,11 +44,28 @@ class setup_ctl_default extends setup_controller{
      * @return mixed 返回值
      */
     public function console(){
+        // CNVD-2026-42948: installed systems must not expose web shell (even with lock cookie).
+        if(kernel::single('base_setup_lock')->lockfile_exists()){
+            $this->lock();
+        }
+
+        $cmd = isset($_POST['cmd']) ? trim((string) $_POST['cmd']) : '';
+        // Install-time only: whitelist install commands; reject php_call (trailing ;) and code payloads.
+        if($cmd === ''
+            || !preg_match('/^(install|install_demodata)(\s|$)/', $cmd)
+            || strpos($cmd, ';') !== false
+            || strpos($cmd, '<?') !== false
+            || preg_match('/[\r\n]/', $cmd)
+        ){
+            header('Content-type: text/plain', true, 403);
+            echo 'forbidden';
+            return;
+        }
 
         $shell = new base_shell_webproxy;
         $shell->input = $_POST['options'];
         echo "\n";
-        $shell->exec_command($_POST['cmd']);
+        $shell->exec_command($cmd);
     }
     
     private function lock(){

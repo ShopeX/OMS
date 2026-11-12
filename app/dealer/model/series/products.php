@@ -93,7 +93,7 @@ class dealer_mdl_series_products extends dbeav_model
                     ),
                     'default'         => 'active',
                     'label'           => '状态',
-                    'filtertype'      => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault'   => true,
                     'in_list'         => false,
                     'default_in_list' => false,

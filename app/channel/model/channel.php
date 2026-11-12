@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class channel_mdl_channel extends dbeav_model{
     
 /* 	public function table_name($real = false){
@@ -66,9 +65,15 @@ class channel_mdl_channel extends dbeav_model{
 	#根据order_id,获取该条订单的相关信息
 	function getOrderInfo($order_id = null){
        $order_info = app::get('ome')->model('orders')->db_dump($order_id);
-       $member = app::get('ome')->model('members')->db_dump($order_info['member_id'], 'uname');
-	    $order_info['uname'] = $member['uname'];
-	    return $order_info;
+       $member = app::get('ome')->model('members')->db_dump($order_info['member_id'], '*');
+       
+       // uname
+       $order_info['uname'] = $member['uname'];
+       
+       // buyer_open_uid
+       $order_info['buyer_open_uid'] = isset($member['buyer_open_uid']) ? $member['buyer_open_uid'] : '';
+       
+       return $order_info;
 	}
 	#获得店铺信息
     public function getShopInfo($shop_id) {

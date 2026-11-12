@@ -16,6 +16,13 @@
  */
 
 class ome_finder_extend_filter_payment_cfg{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function get_extend_colums(){
         $pay_type = ome_payment_type::pay_type();
         $shopObj = app::get('ome')->model('shop');

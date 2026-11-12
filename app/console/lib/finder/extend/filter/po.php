@@ -16,6 +16,13 @@
  */
 
 class console_finder_extend_filter_po{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function get_extend_colums(){
         $db['po']=array (
             'columns' => array (

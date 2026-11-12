@@ -16,6 +16,13 @@
  */
 
 class ome_finder_extend_filter_product_serial_history{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function get_extend_colums(){
         $db['product_serial_history']=array (
             'columns' => array (
@@ -31,7 +38,7 @@ class ome_finder_extend_filter_product_serial_history{
                     'editable' => false,
                     'in_list' => true,
                     'default_in_list' => true,
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                 ),
                 'bill_type' =>
@@ -46,7 +53,7 @@ class ome_finder_extend_filter_product_serial_history{
                     'editable' => false,
                     'in_list' => true,
                     'default_in_list' => true,
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'filterdefault' => true,
                 ),
             )

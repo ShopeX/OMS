@@ -34,7 +34,7 @@ $db['aftersales']=[
             'in_list' => true,
             'default_in_list' => true,
             'filterdefault' => true,
-            'filtertype' => 'yes',
+            'filtertype' => 'normal',
             'order'     => 2,
         ],
         'order_bn' => [
@@ -45,7 +45,7 @@ $db['aftersales']=[
             'in_list' => true,
             'default_in_list' => true,
             'filterdefault' => true,
-            'filtertype' => 'yes',
+            'filtertype' => 'normal',
             'order'     => 3,
         ],
         'bill_bn' => [
@@ -57,7 +57,7 @@ $db['aftersales']=[
             'in_list' => true,
             'default_in_list' => true,
             'filterdefault' => true,
-            'filtertype' => 'yes',
+            'filtertype' => 'normal',
             'order' => 3,
         ],
         'bill_type' => [
@@ -163,7 +163,7 @@ $db['aftersales']=[
                     // 'default_in_list' => true,
                     'searchtype' => 'nequal',
                     'filterdefault' => true,
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'order' => 6,
             ),
         'at_time'           => [

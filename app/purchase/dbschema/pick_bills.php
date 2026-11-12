@@ -37,7 +37,7 @@ $db['pick_bills']=array(
                     'default_in_list' => true,
                     'searchtype' => 'nequal',
                     'filterdefault' => true,
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'order' => 2,
             ),
         'pull_status' => array(
@@ -76,7 +76,7 @@ $db['pick_bills']=array(
                     'default_in_list' => true,
                     'searchtype' => 'nequal',
                     'filterdefault' => true,
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'order' => 6,
             ),
         'to_branch_bn' =>

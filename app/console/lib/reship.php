@@ -18,7 +18,7 @@ class console_reship{
     function reship_data($reship_id){
         $oReship = app::get('ome')->model('reship');
         $oOrders = app::get('ome')->model('orders');
-        $reship_data = $oReship->dump(array('reship_id'=>$reship_id),'reship_bn,logi_no,logi_id,order_id,t_begin,return_type,shop_id,flag_type');
+        $reship_data = $oReship->dump(array('reship_id'=>$reship_id),'*');
         $Oreship_items = app::get('ome')->model('reship_items');
         $oProcess_items = app::get('ome')->model('return_process_items');
         $Odly_corp = app::get('ome')->model('dly_corp');
@@ -26,8 +26,7 @@ class console_reship{
         $Oreship_items = app::get('ome')->model('reship_items');
         $orders = $oOrders->dump($reship_data['order_id'],'order_bn');
         $reship_list = $Oreship_items->getlist('order_id,reship_id,bn,product_name,product_id,num,branch_id',array('reship_id'=>$reship_id),0,-1);
-
-
+        
         $shop = app::get('ome')->model('shop')->db_dump($reship_data['shop_id'],'shop_bn,shop_id,name');
 
         $data = array();
@@ -55,6 +54,7 @@ class console_reship{
                 $data[$branch_id]['logi_name'] = $reship_data['logi_name'];
                 $data[$branch_id]['logi_code'] = $dly_corp['type'];
                 $data[$branch_id]['order_bn'] = $orders['order_bn'];
+                $data[$branch_id]['shop_type'] = $reship_data['shop_type'];
                 $data[$branch_id]['receiver_name'] = $reship_data['ship_name'];
                 $data[$branch_id]['receiver_zip'] = $reship_data['ship_zip'];
                 $data[$branch_id]['receiver_state'] = $reship_data['ship_area'];
@@ -76,25 +76,25 @@ class console_reship{
     */
     function notify_reship($type,$reship_id){
         $reship_data = kernel::single('console_reship')->reship_data($reship_id);
-        if ($type == 'create'){//创建
-
+        
+        //创建 or 取消
+        if ($type == 'create'){
             foreach ($reship_data as $rk=>$rv) {
-                $wms_id = kernel::single('ome_branch')->getWmsIdById($rk);
+                $shop_type = isset($rv['shop_type']) ? $rv['shop_type'] : '';
+                $wms_id = kernel::single('ome_branch')->getWmsIdById($rk, $shop_type);
                 $tmp = $rv;
                 kernel::single('console_event_trigger_reship')->create($wms_id, $tmp, false);
             }
-        }else if($type == 'cancel'){//取消
-
+        }else if($type == 'cancel'){
             foreach ($reship_data as $rk=>$rv) {
-                $wms_id = kernel::single('ome_branch')->getWmsIdById($rk);
+                $shop_type = isset($rv['shop_type']) ? $rv['shop_type'] : '';
+                $wms_id = kernel::single('ome_branch')->getWmsIdById($rk, $shop_type);
                 $tmp = $rv;
                 kernel::single('console_event_trigger_reship')->cancel($wms_id, $tmp, true);
             }
-
         }else{
             return true;
         }
-
     }
 
     /**
@@ -108,6 +108,7 @@ class console_reship{
     {
         $oReship_item = app::get('ome')->model('reship_items');
         $reship_item = $oReship_item->getList('bn,product_name,num,product_id,changebranch_id,obj_id',array('reship_id'=>$reship_id,'return_type'=>'change'),0,-1);
+        
         return $reship_item;
     }
 
@@ -226,9 +227,7 @@ class console_reship{
         if(!$reship_id || !$status){
             return false;
         }
-
-
-
+        
         $updateArr = array(
             'sync_status'=>$status
         );
@@ -260,16 +259,17 @@ class console_reship{
             $updata['change_status']    ='2';
             $memo.=',换货订单状态更新为:不生成';
         }
+        
         kernel::single('console_reship')->releaseChangeFreeze($reship['reship_id']);
+        
         if (in_array($reship['is_check'],array('11'))){
-
             unset($updata['is_check']);
         }
 
         if($updata){
-
             $reshipObj->update($updata,array('reship_id'=>$reship['reship_id']));
         }
+        
         if($updata['is_check']) {
             // 退货单取消后的service扩展点
             foreach(kernel::servicelist('console.service.reship.cancel.after') as $object) {
@@ -281,7 +281,6 @@ class console_reship{
 
         // 退货单取消成功通知
         kernel::single('ome_reship')->sendReshipCancelSuccessNotify($reship, $log_memo);
-  
         
         $logObj->write_log('reship@ome',$reship['reship_id'],$memo);
     }
@@ -290,7 +289,8 @@ class console_reship{
         $res = array('rsp'=>'succ');
         if ($reship['is_check'] == '1'){
             $branch_id = $reship['branch_id'];
-            $wms_id = kernel::single('ome_branch')->getWmsIdById($branch_id);
+            $shop_type = isset($reship['shop_type']) ? $reship['shop_type'] : '';
+            $wms_id = kernel::single('ome_branch')->getWmsIdById($branch_id, $shop_type);
             $branch = kernel::single('ome_branch')->getBranchInfo($branch_id,'branch_bn,storage_code,owner_code');
             $data = array(
                 'branch_id'=>$branch_id,
@@ -302,16 +302,14 @@ class console_reship{
             );
 
             $res = kernel::single('console_event_trigger_reship')->cancel($wms_id, $data, true);
+            
              // 退货单取消成功报警通知
             if ($res['rsp'] == 'succ'){
                 kernel::single('ome_reship')->sendReshipCancelSuccessNotify($reship, '平台取消');
             }
-            
         }
-
-
+        
         return $res;
-
     }
 
     /**
@@ -326,22 +324,25 @@ class console_reship{
         $storeManageLib = kernel::single('ome_store_manage');
         $reship_item = [];
         $stockFre = app::get('material')->model('basic_material_stock_freeze');
+        
         // 换货单审核换出商品库存不足会冻结到商品上（不冻仓）, 所以obj_type也有可能是1
         $filter = array(
-            // 'obj_type'=>material_basic_material_stock_freeze::__BRANCH, 
             'obj_id'=>$reship_id, 
             'bill_type'=>material_basic_material_stock_freeze::__RESHIP
         );
+        
         if($bm_id) {
             $filter['bm_id'] = $bm_id;
         }
+        
         $freeze = $stockFre->getList('*', $filter);
         if(empty($freeze)) {
             return [true, ['msg'=>'没用预占明细']];
         }
+        
         foreach($freeze as $v) {
             $bn = app::get('material')->model('basic_material')->db_dump(['bm_id'=>$v['bm_id']], 'material_bn')['material_bn'];
-            #bn,product_name,num,product_id,changebranch_id
+            
             $reship_item[] = [
                 'changebranch_id'     =>  $v['branch_id'],
                 'product_id'    =>  $v['bm_id'],
@@ -747,7 +748,8 @@ class console_reship{
                 'had_refund' => $had_refund
             ];
             $modelReship->update($upData, ['reship_id' => $reshipId]);
-            # 操作日志
+            
+            // 操作日志
             $memo = '退款订单发货新建退货拦截单';
             $oOperation_log->write_log('reship@ome', $reshipId, $memo);
             foreach(kernel::servicelist('ome.service.reship.create.after') as $object) {
@@ -757,6 +759,7 @@ class console_reship{
             }
             $insertData = array_merge($insertData, $upData);
             $this->reshipToReturn($insertData);
+            
             //退换货自动审批(系统-->退换货自动审核设置-->是否启用退换货自动审批)
             $is_auto_approve = app::get('ome')->getConf('return.auto_approve');
             if($is_auto_approve == 'on'){
@@ -965,23 +968,22 @@ class console_reship{
         foreach($reshipItems as $k => $v) {
             $reshipItems[$k]['price'] = sprintf("%.2f", $v['amount'] / $v['num']);
         }
+        
         $modelItem = app::get('ome')->model('reship_items');
         $sql       = ome_func::get_insert_sql($modelItem, $reshipItems);
         $modelItem->db->exec($sql);
+        
         $memo           = $iso['iso_bn'].':退货差异入库完成，生成退货单';
         app::get('ome')->model('operation_log')->write_log('reship@ome', $insertData['reship_id'], $memo);
+        
         return [true];
     }
-
-
+    
     public function releaseShopChangeFreeze($reship_bn, $shop_id) {
         $reship = app::get('ome')->model('reship')->db_dump(['reship_bn'=>$reship_bn, 'shop_id'=>$shop_id], 'reship_id');
         if($reship) {
             $this->releaseChangeFreeze($reship['reship_id']);
         }
     }
-
-
-
 }
 ?>

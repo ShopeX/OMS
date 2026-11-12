@@ -14,14 +14,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class omevirtualwms_finder_stockin{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     
     var $column_control = '操作';
 	var $column_control_width = 100;
+
+    /** vue_mode 下发 _0_<col> 原始值别名（结构化行操作取主键用） */
+    public $addon_cols = "bn,type_id";
     function column_control($row){
     	$flag = "stockin";
+        if ($this->vue_mode) {
+            // Vue Finder 结构化行操作（legacy HTML 片段不下发）：label 与 legacy HTML 逐字一致，入口仍走 legacy 表单页 act=getinfo
+            $bn     = $row['_0_bn'] ?? $row['bn'] ?? '';
+            $typeId = $row['_0_type_id'] ?? $row['type_id'] ?? '';
+            return array(
+                array(
+                    'key'    => 'start_mock',
+                    'label'  => '开始模拟',
+                    'action' => 'index.php?app=omevirtualwms&ctl=admin_wms&act=getinfo&p[0]=' . $bn . '&p[1]=' . $flag . '&p[2]=' . $typeId,
+                ),
+            );
+        }
         return '<a   href="index.php?app=omevirtualwms&ctl=admin_wms&act=getinfo&p[0]='.$row['bn'].'&p[1]='.$flag.'&p[2]='.$row['type_id'].'">开始模拟</a>';
     }
 

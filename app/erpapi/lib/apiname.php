@@ -576,6 +576,7 @@ define("SHOP_INVENTORY_CACHE_QUERY", 'store.inventory.cache.query');//商品缓�
 
 //淘宝更换sku
 define("STORE_MODIFYSKU_OPEN",'store.modifysku.open'); //[淘宝]更新sku
+define('SHOP_EXCHANGE_CONSIGNGOODS_REFUSE', 'store.exchange.consigngoods.refuse'); // 卖家拒绝发新品：tmall.exchange.consigngoods.refuse
 
 # IDAAS
 define('IDAAS_ORGANIZATION_CREATE', 'aliyun.idaas.organization.create');

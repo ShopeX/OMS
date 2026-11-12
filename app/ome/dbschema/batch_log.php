@@ -90,6 +90,7 @@ $db['batch_log']=array (
           'confirm_reship' => '退换货单',
           'confirm_inventory' => '盘点确认',
           'pre_select_branch' => '提前选仓',
+          'modifysku' => '修改SKU',
       ),
       'default' => 'consign',
       'label' => '日志类型',

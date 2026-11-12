@@ -1,23 +1,8 @@
-<!--
-  Copyright 2012-2026 ShopeX (https://www.shopex.cn)
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
--->
 
 <desktop>
 
     <permissions>
-        <!-- <permission id="crm_basic">基本设置</permission> -->
+        <permission id="crm_basic">基本设置</permission>
         <permission id="crm_index">赠品管理</permission>
         <permission id="crm_gift_rule">ERP赠品规则应用</permission>
         <permission id="crm_gift_rule_base">赠品规则</permission>
@@ -25,18 +10,19 @@
         <permission id="add_gift_rulebase">添加赠品规则</permission>
         <permission id="edit_gift_rulebase">编辑赠品规则</permission>
     </permissions>
-           
-    <!-- <workground name="系统集成" id="channel_center" order="1400" icon="icon-xitongjicheng-01">
+
+    <workground name="系统集成" id="channel_center" order="1400" icon="icon-xitongjicheng-01">
          <menugroup name="CRM" en="crm">
              <menu controller='admin_setting' action='basic' permission='crm_basic' display='true' order="1002">基本配置</menu>
+             <!--<menu controller='admin_gift' action='index' permission='crm_index' display='true' order="1003">赠品管理</menu>-->
         </menugroup>
-    </workground> -->
+    </workground>
 
     <workground name="系统设置" id="setting_tools" order="1100" icon="icon-xitongshezhi-01">
         <menugroup name="赠品管理" en="gift-management">
-            <menu controller='admin_gift' action='index' permission='crm_index' display='true' order="1003">赠品管理</menu>
+            <menu controller='admin_gift' action='index' target='/m-crm/gift/index' permission='crm_index' display='true' order="1003">赠品管理</menu>
             <menu controller='admin_gift_rule' action='index' permission='crm_gift_rule'  display='true' order='7000200'>赠品规则应用</menu>
-            <menu controller='admin_gift_rulebase' action='index' permission='crm_gift_rule_base'  display='true' order='7000150'>赠品规则</menu>
+            <menu controller='admin_gift_rulebase' action='index' target='/m-crm/gift-rulebase/index' permission='crm_gift_rule_base'  display='true' order='7000150'>赠品规则</menu>
             <menu controller='admin_gift_rule_logs' action='index' permission='crm_gift_rule_logs' display='true' order='7000900'>赠品规则记录</menu>
             <menu controller='admin_gift_rulebase' action='addRuleBase' permission='add_gift_rulebase' display='false' order='7000901'>添加赠品规则</menu>
             <menu controller='admin_gift_rulebase' action='editRuleBase' permission='edit_gift_rulebase' display='false' order='7000902'>编辑赠品规则</menu>

@@ -37,7 +37,7 @@ $db['purchase_payments']=array (
       'default_in_list' => false,
       'is_title' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'po_id' => 
@@ -68,7 +68,7 @@ $db['purchase_payments']=array (
       'editable' => false,
       'in_list' => true,
       'default_in_list' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'po_type' => 
@@ -83,7 +83,7 @@ $db['purchase_payments']=array (
       'editable' => false,
       'in_list' => true,
       'default_in_list' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'operator' => 
@@ -93,7 +93,7 @@ $db['purchase_payments']=array (
       'width' => 75,
       'editable' => false,
       'in_list' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'payable' => 
@@ -195,7 +195,7 @@ $db['purchase_payments']=array (
       'editable' => false,
       'default_in_list' => false,
       'in_list' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'tax_no' => 
@@ -206,7 +206,7 @@ $db['purchase_payments']=array (
       'editable' => false,
       'in_list' => true,
       'default_in_list' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'bank_no' => 
     array (
@@ -216,7 +216,7 @@ $db['purchase_payments']=array (
       'editable' => false,
       'in_list' => true,
       'default_in_list' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'logi_no' => 
     array (
@@ -226,7 +226,7 @@ $db['purchase_payments']=array (
       'editable' => false,
       'in_list' => true,
       'default_in_list' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'disabled' => 
     array (

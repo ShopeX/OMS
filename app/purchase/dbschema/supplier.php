@@ -36,7 +36,7 @@ $db['supplier']=array (
       'in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'name' => 
@@ -48,7 +48,7 @@ $db['supplier']=array (
       'in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
       'is_title' => true,
     ),
@@ -60,7 +60,7 @@ $db['supplier']=array (
       'editable' => false,
       'in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'arrive_days' => 
@@ -71,7 +71,7 @@ $db['supplier']=array (
       'editable' => false,
       'in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'brief' => 
@@ -82,7 +82,7 @@ $db['supplier']=array (
       'editable' => false,
       'in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     
@@ -94,7 +94,7 @@ $db['supplier']=array (
       'in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'addr' => 
@@ -113,7 +113,7 @@ $db['supplier']=array (
       'editable' => false,
       'in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'telphone' => 
     array (
@@ -124,7 +124,7 @@ $db['supplier']=array (
       'in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'fax' => 
     array (
@@ -136,7 +136,7 @@ $db['supplier']=array (
       'default_in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'contacter' => 
     array (
@@ -184,7 +184,7 @@ $db['supplier']=array (
       'in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
   ),

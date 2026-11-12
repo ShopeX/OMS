@@ -35,6 +35,10 @@ class base_hchsafe
 
     public function login_log($params)
     {
+        if (defined('DEV_ENV')) {
+            return;
+        }
+
         kernel::single('erpapi_router_request')->set('hchsafe','taobao')->hchsafe_login($params);
         
         kernel::single('erpapi_router_request')->set('hchsafe','360buy')->hchsafe_login($params);
@@ -47,7 +51,7 @@ class base_hchsafe
      * @return void
      * @author 
      **/
-    public function compute_risk($params,&$msg)
+    public function compute_risk($params,&$msg,&$extra = null)
     {
         if (defined('DEV_ENV')) {
             return true;
@@ -68,6 +72,9 @@ class base_hchsafe
         }
 
         if ($rs['rsp'] == 'fail') $msg = $rs['msg'];
+        if ($rs['rsp'] == 'fail' && isset($rs['data']) && is_array($rs['data'])) {
+            $extra = $rs['data'];
+        }
 
         return $rs['rsp'] == 'succ' ? true : false;
     }

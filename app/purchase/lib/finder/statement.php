@@ -16,6 +16,13 @@
  */
 
 class purchase_finder_statement{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     
     var $detail_basic = "结算明细";
     

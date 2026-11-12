@@ -93,6 +93,10 @@ $db['menus']=array (
         'type'=>'varchar(100)',
         'comment'=>'英文名称',
     ),
+    'menu_key'=>array(
+        'type'=>'varchar(40)',
+        'comment'=>'菜单身份键(sha1,cmd update 差异同步用)',
+    ),
   ),
   'index' => 
   array (
@@ -116,6 +120,14 @@ $db['menus']=array (
       array (
         0 => 'menu_order',
       ),
+    ),
+    'ind_menu_key' => 
+    array (
+      'columns' => 
+      array (
+        0 => 'menu_key',
+      ),
+      'prefix' => 'unique',
     ),
   ),
   'comment' => '后台菜单表',

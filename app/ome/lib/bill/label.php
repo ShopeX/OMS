@@ -46,6 +46,7 @@ class ome_bill_label
         'gift_package'      => ['label_name' => '礼盒包装发货', 'label_color' => 'IndianRed'],
         'system_bufa'       => ['label_name' => '延迟补发赠品', 'label_color' => 'DeepPink'],
         'SOMS_JDECARD'      => ['label_name' => '京东E卡', 'label_color' => 'LightSeaGreen'],
+        'SOMS_JD_DISPATCH'  => ['label_name' => '京配', 'label_color' => 'LightSeaGreen'], // 订单指定使用京东配送
         'SOMS_BUFA_REFUND'  => ['label_name' => '补发转退款', 'label_color' => 'OrangeRed'],
         'SOMS_BUFA_PKG'     => ['label_name' => '补寄', 'label_color' => '#B3D9FF',  'label_desc'=>'平台补寄订单'],
         'SOMS_WFP'          => ['label_name' => '晚发赔', 'label_color' => 'Green'],
@@ -73,6 +74,8 @@ class ome_bill_label
         'SOMS_QN_DISTR'      => ['label_name' => '清仓', 'label_color' => '#ff6f61'],
         'SOMS_CHANGE_CANCEL'      => ['label_name' => '换货取消', 'label_color' => '#cca4e3'],
         'SOMS_UPDATE_ITEM'  => ['label_name' => '改SKU', 'label_color' => 'PaleVioletRed'],//#DB7093
+        'SOMS_MODIFY_SKU_ERROR' => ['label_name' => '修改SKU失败', 'label_color' => 'red'],
+        'SOMS_CANCEL_DELIVERY_FAIL' => ['label_name' => '撤消发货单失败', 'label_color' => 'red'],
         'SOMS_MATERIAL_REPLACE' => ['label_name' => '物料替换', 'label_color' => 'MediumSlateBlue', 'label_thumb' => '替换'],
         'SOMS_COMBINE_ORDER'  => ['label_name' => '合单', 'label_color' => 'Salmon', 'label_to_delivery' => true],//#FA8072
         'SOMS_GXD'          => ['label_name' => '工小达', 'label_color' => 'MediumTurquoise','label_to_delivery' => true],
@@ -94,6 +97,7 @@ class ome_bill_label
         'SOMS_MIAOZHU' => ['label_name' => '喵住', 'label_color' => '#00BFFF', 'label_thumb'=>'天猫喵住'],
         'SOMS_TMYP' => ['label_name' => '天猫优品国补', 'label_color' => 'Coral', 'label_thumb'=>'天猫优品国补'],
         'SOMS_SANGOU' => ['label_name' => '淘宝闪购', 'label_color' => '#FFC125', 'label_thumb'=>'淘宝闪购'],
+        'SOMS_TOPSPEED_EXCHANGE' => ['label_name' => '极速换货', 'label_color' => '#FFDEAD', 'label_thumb'=>'极速换货'],
         
         'SOMS_LARGE_APPLIANCE' => ['label_name'=>'大家电', 'label_color'=>'#c25975', 'label_to_delivery'=>true],
         'SOMS_COLOR_ORDER' => ['label_name'=>'调色订单', 'label_color'=>'#FF83FA', 'label_to_delivery'=>true],
@@ -107,6 +111,7 @@ class ome_bill_label
         'SOMS_PRICEABNORMAL' => ['label_name' => '退款价格异常', 'label_color'=> '#FF6B6B', 'label_thumb'=> '退款价格异常'],
         'SOMS_ONLY_REFUND_NORMAL' => ['label_name' => '仅退款正常', 'label_color' => 'LimeGreen', 'label_thumb' => '仅退正常'],
         'SOMS_ONLY_REFUND_ABNORMAL' => ['label_name' => '仅退款异常', 'label_color' => '#FF6B6B', 'label_thumb' => '仅退异常', 'label_desc' => '需人工处理'],
+        'SOMS_ORDER_GROUPON' => ['label_name'=>'拼团订单', 'label_color'=>'#FF6A6A'], // 小红书超级合拍订单
     ];
 
     /**
@@ -231,8 +236,9 @@ class ome_bill_label
             0x0001 => ['label_name' => '官方'],
         ],
         'SOMS_PAID_EXPRESS' => [
-            0x0001 => ['label_name' => '加价选顺丰标准'],
+            0x0001 => ['label_name' => '加价选顺丰标准'], // 抖音平台会使用
             0x0002 => ['label_name' => '加价选顺丰特快'],
+            0x0004 => ['label_name' => '加价发顺丰'], // 淘宝平台会使用
         ],
     ];
 

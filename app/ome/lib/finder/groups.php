@@ -16,6 +16,13 @@
  */
 
 class ome_finder_groups{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $detail_basic = "管理员组详情";
     
     function detail_basic($group_id){

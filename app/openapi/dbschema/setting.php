@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 $db['setting']= array(
   'columns' =>
   array (
@@ -37,7 +36,7 @@ $db['setting']= array(
       'is_title' => true,
       'searchtype' => 'head',
       'editable' => false,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
       'in_list' => true,
       'default_in_list' => true,

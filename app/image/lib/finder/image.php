@@ -17,6 +17,13 @@
 
 
 class image_finder_image{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     var $detail_basic = '图片详细信息';
     var $column_img = '图片';

@@ -122,7 +122,7 @@ class ome_service_aftersale{
      * @access  public
      * @author cyyr24@sina.cn
      */
-    function refund_message($apply_id,$type){
+    function refund_message($apply_id,$type, &$error_msg=null){
         $data = array();
         if (in_array($type,array('return','change'))) {
             $oReturn = $this->app->model('return_product');
@@ -151,7 +151,7 @@ class ome_service_aftersale{
             $data['refund_bn'] = $refund_bn;
         }
         $rs = kernel::single('erpapi_router_request')->set('shop', $shop_id)->finance_getRefundMessage($data);
-         if($rs){
+        if($rs){
             if($rs['rsp'] == 'succ'){
                 $tmp = $rs['data'];
                 $tmp = $tmp['refund_messages']['refund_message'];
@@ -163,6 +163,13 @@ class ome_service_aftersale{
                 }
                 return $tmp;
             }else{
+                // error_msg
+                if(isset($rs['err_msg']) && $rs['err_msg']){
+                    $error_msg = $rs['err_msg'];
+                }elseif(isset($rs['msg']) && $rs['msg']){
+                    $error_msg = $rs['msg'];
+                }
+                
                 return false;
             }
         }else{

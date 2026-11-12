@@ -16,6 +16,13 @@
  */
 
 class financebase_finder_bill_import_order {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
 
 

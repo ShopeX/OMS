@@ -838,11 +838,13 @@ class material_sales_material_import
             }else{
                 $itemRateSum = array_sum(array_column($items, 'rate'));
                 if($itemRateSum == 0){
+                    //组合价格贡献占比未填写:组合贡献价优先作分摊基数(与福袋_formatLuckyBagData场景三同语义)
+                    $ratePriceSum = array_sum(array_column($items, 'rate_price'));
                     $itemSum = array_sum(array_column($items, 'amount'));
                     $options = array (
                         'part_total'  => 100,
                         'part_field'  => 'rate',
-                        'porth_field' => $itemSum > 0 ? 'amount' : 'quantity',
+                        'porth_field' => $ratePriceSum > 0 ? 'rate_price' : ($itemSum > 0 ? 'amount' : 'quantity'),
                     );
                     $items = kernel::single('ome_order')->calculate_part_porth($items, $options);
                 }

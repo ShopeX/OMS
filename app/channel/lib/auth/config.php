@@ -165,6 +165,26 @@ class channel_auth_config
         if(!isset($this->__config[$channel_type]) || !isset($this->__config[$channel_type][$adapter]) || !isset($this->__config[$channel_type][$adapter]['platform'][$platform])){
             return $params;
         }
-        return $this->__config[$channel_type][$adapter]['platform'][$platform]['params'] ?: [];
+        $params = $this->__config[$channel_type][$adapter]['platform'][$platform]['params'] ?: [];
+
+        // legacy 模板硬编码段按 适配器+平台 白名单复刻：kuaidi/matrix、kuaidi|ticket/openapi
+        // 的 platformconfig.html 有 <{if $platform}> 私钥*/api地址 固定段;cloudprint/openapi
+        // 的 platformconfig.html 恒渲染 app_key*+secret_key;sms 模板无该段,不得补。
+        $hardcodedPair = in_array($channel_type.'|'.$adapter, ['kuaidi|matrix', 'kuaidi|openapi', 'ticket|openapi', 'cloudprint|openapi'], true);
+        if ($hardcodedPair) {
+            if (!isset($params['private_key']) && in_array($channel_type, ['kuaidi', 'ticket'], true)) {
+                $params = array_merge(['private_key' => '私钥'], $params);
+            }
+            if (!isset($params['api_url']) && in_array($channel_type, ['kuaidi', 'ticket'], true)) {
+                $params['api_url'] = 'api地址';
+            }
+            // cloudprint legacy platformconfig.html 恒渲染 app_key*(必填)+secret_key(选填)
+            if ($channel_type === 'cloudprint') {
+                if (!isset($params['app_key'])) $params = array_merge(['app_key' => 'app_key'], $params);
+                if (!isset($params['secret_key'])) $params['secret_key'] = 'secret_key';
+            }
+        }
+
+        return $params;
     }
 }

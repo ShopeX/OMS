@@ -26,32 +26,24 @@ class inventorydepth_ctl_sync_set extends desktop_controller {
         //配置信息保存
         if($_POST['set']){
             $this->begin($this->url);
-            $settins    = $_POST['set'];
-            
-            //保存配置
-            foreach($settins as $set => $value)
-            {
-                $curSet = app::get('inventorydepth')->getConf($set);
-                
-                if($curSet != $settins[$set])
-                {
-                    $curSet = $settins[$set];
-                    app::get('inventorydepth')->setConf($set, $settins[$set]);
-                }
+
+            try {
+                // 与 Vue api 共用同一 capability（校验/归一化/持久化集中一处，避免两处漂移）
+                kernel::single('inventorydepth_capability_sync_set')->saveSettings((array) $_POST['set']);
+            } catch (InvalidArgumentException $exception) {
+                $this->end(false, $exception->getMessage());
+                return;
             }
-            
+
             $this->end(true,'保存成功');
         }
-        
+
         //读取配置
-        $setData                                = array();
-        $setData['stock_sync_set']         = app::get('inventorydepth')->getConf('stock.sync.set');
-        $setData['stock_sync_mode']        = app::get('inventorydepth')->getConf('stock.sync.mode');
-        $setData['stock_sync_trigger_basis'] = kernel::single('inventorydepth_sync_set')->getStockTriggerBasis();
-        
-        $this->pagedata['setData'] = $setData;
-        $this->pagedata['support_name'] = kernel::single('inventorydepth_sync_set')->getSupportName();
-        $this->pagedata['mode_support_name'] = kernel::single('inventorydepth_sync_set')->getModeSupportName();
+        $data = kernel::single('inventorydepth_capability_sync_set')->loadSettings();
+
+        $this->pagedata['setData']           = $data['setData'];
+        $this->pagedata['support_name']      = $data['support_name'];
+        $this->pagedata['mode_support_name'] = $data['mode_support_name'];
         $this->page("sync/setting.html");
     }
 }

@@ -23,6 +23,13 @@
  +----------------------------------------------------------
  */
 class invoice_finder_content{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $column_edit  = '操作';
     var $column_edit_order = 5;
     var $column_edit_width = '50';

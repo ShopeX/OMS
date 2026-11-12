@@ -17,6 +17,13 @@
 
 class console_finder_dailyinventory_items_wmsdinv
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = "outer_stock";
 
     public $column_outer_stock       = 'WMS库存';

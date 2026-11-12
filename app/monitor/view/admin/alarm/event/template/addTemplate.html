@@ -1,25 +1,112 @@
-<!--
-  Copyright 2012-2026 ShopeX (https://www.shopex.cn)
+<style>
+    .tpl-extra-config {
+        border: 1px solid #e5e5e5;
+        background: #fafafa;
+        padding: 12px 16px 8px;
+        margin: 0 0 12px;
+        border-radius: 2px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .tpl-extra-config > h4 {
+        margin: 0 0 12px;
+        font-size: 14px;
+        font-weight: bold;
+        color: #333;
+    }
+    .tpl-extra-config .config-row {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        margin-bottom: 12px;
+    }
+    .tpl-extra-config .config-label {
+        flex: 0 0 110px;
+        width: 110px;
+        color: #666;
+        font-size: 14px;
+        line-height: 28px;
+        white-space: nowrap;
+    }
+    .tpl-extra-config .config-body {
+        flex: 1;
+        min-width: 0;
+    }
+    .tpl-extra-config .config-days-input {
+        width: 60px !important;
+        display: inline-block !important;
+        vertical-align: middle;
+        box-sizing: border-box;
+    }
+    .tpl-extra-config .remind-unit {
+        display: inline-block;
+        margin-left: 8px;
+        color: #666;
+        font-size: 13px;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+    .tpl-extra-config .config-tip {
+        display: block;
+        color: #888;
+        font-size: 12px;
+        line-height: 18px;
+        margin: 6px 0 0;
+    }
+    .tpl-extra-config .config-warn {
+        display: block;
+        color: #996600;
+        font-size: 12px;
+        line-height: 18px;
+        margin: 8px 0 0;
+    }
+    .tpl-extra-config .config-guide {
+        color: #666;
+        font-size: 12px;
+        line-height: 20px;
+        margin: 8px 0 0;
+        background: #fff;
+        border: 1px dashed #ddd;
+        padding: 8px 10px;
+    }
+    .tpl-extra-config .config-platforms {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: center;
+        line-height: 24px;
+    }
+    .tpl-extra-config .config-platforms > label {
+        display: inline-flex !important;
+        align-items: center;
+        flex: 0 0 auto !important;
+        width: auto !important;
+        margin: 0 16px 6px 0 !important;
+        white-space: nowrap;
+    }
+    /* 覆盖全局 .form-field 纵向布局，避免配置块被拉成整列 */
+    #cfg-auth-expire .form-field,
+    #cfg-token-invalid .form-field,
+    #cfg-token-recover .form-field {
+        width: 100% !important;
+        flex-direction: row !important;
+        margin-bottom: 0 !important;
+        padding-right: 0 !important;
+    }
 
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
--->
-
+    .form-layout .form-layout-block > .form-layout-fields  {
+        padding-left: 16px;
+        padding-top: 0px;
+        padding-bottom: 0px;
+        padding-right: 0px;
+    }
+</style>
 <div class="form-layout">
     <form method="post" id="fm1" action="index.php?app=monitor&ctl=admin_alarm_template&act=save">
         <div class="form-layout-block">
             <h3>基本信息</h3>
             <div class="form-layout-fields">
-                <div class="form-field" style="width: 50%">
+                <div class="form-field" style="width: 50%; padding-top: 15px;">
                     <span class="form-field-label">模板类型：</span>
                     <div class="form-radios">
                         <td>
@@ -58,11 +145,12 @@
             <div class="form-layout-fields">
                 <div class="form-field">
                     <span class="form-field-label">发送类型：</span>
-                    <div class="form-radios">
+                    <div class="form-radios" id="send-type-radios">
                         <{foreach from=$send_type key=typeKey item=typeVal}>
                             <label><input name="send_type" type="radio" <{if $data.send_type==$typeKey}>checked<{/if}> value="<{$typeKey}>"><{$typeVal}></label>
                         <{/foreach}>
                     </div>
+                    <span id="send-type-hint" style="color:#909399;font-size:12px;margin-left:8px;display:none;">失败订单批量通知仅支持邮箱</span>
                 </div>
             </div>
             <div class="form-layout-fields">
@@ -78,6 +166,140 @@
                 <div class="form-field" style="width: 50%">
                     <span class="form-field-label">模板内容：</span>
                     <textarea class="form-input" name="content" id="template-content" style="height: 180px" placeholder="请输入模板内容" ><{$data.content}></textarea>
+                    <div id="order-fail-var-tip" style="display:none;background:#f4f8ff;border:1px solid #d9ecff;color:#606266;font-size:12px;padding:8px 12px;border-radius:3px;margin-top:6px;line-height:1.8;">
+                        可用变量：{start_time} {end_time} {order_count} {csv_file}（按组织拆信；明细见 CSV 附件，最多 5000 条）
+                    </div>
+                </div>
+            </div>
+
+            <!-- 失败订单批量通知：频次/时刻 -->
+            <div class="form-layout-fields" id="cfg-order-fail-notify" style="display:none;">
+                <div class="form-field" style="width:100%;">
+                    <div class="tpl-extra-config">
+                        <h4>失败订单批量通知配置</h4>
+                        <div class="config-row">
+                            <span class="config-label"><span style="color:red;">*</span>发送频次：</span>
+                            <div class="config-body">
+                                <select name="template_config[digest_frequency]" id="cfg-digest-frequency" class="form-input" style="width:160px;">
+                                    <option value="1" <{if $data.template_config.digest_frequency==1 || !$data.template_config.digest_frequency}>selected="selected"<{/if}>>每天一次</option>
+                                    <option value="2" <{if $data.template_config.digest_frequency==2}>selected="selected"<{/if}>>一天两次</option>
+                                    <option value="3" <{if $data.template_config.digest_frequency==3}>selected="selected"<{/if}>>一天三次</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="config-row">
+                            <span class="config-label"><span style="color:red;">*</span>发送时刻：</span>
+                            <div class="config-body">
+                                <div id="cfg-digest-times" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+                                <p class="config-tip">仅支持整点（HH:00，服务器本地时间），须与频次数量一致且不重复</p>
+                                <{if $data.template_config.last_check_time}>
+                                <p class="config-tip">汇总水位 last_check_time：<{$data.template_config.last_check_time}></p>
+                                <{/if}>
+                                <{if $data.template_config.enabled_at}>
+                                <p class="config-tip">启用时间 enabled_at：<{$data.template_config.enabled_at}></p>
+                                <{/if}>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <script type="text/plain" id="cfg-digest-times-preset"><{if $data.template_config.digest_times}><{$data.template_config.digest_times|implode:','}><{/if}></script>
+
+            <!-- 授权到期配置 -->
+            <div class="form-layout-fields" id="cfg-auth-expire" style="display:none;">
+                <div class="form-field" style="width:100%;">
+                    <div class="tpl-extra-config">
+                        <h4>授权到期配置</h4>
+                        <div class="config-row">
+                            <span class="config-label"><span style="color:red;">*</span>到期前提醒：</span>
+                            <div class="config-body">
+                                <input class="form-input config-days-input" type="text" name="template_config[remind_days]" id="cfg-remind-days"
+                                       value="<{if $data.template_config.remind_days}><{$data.template_config.remind_days}><{else}>7<{/if}>" />
+                                <span class="remind-unit">天 (1 ~ 365)</span>
+                                <p class="config-tip">从「设置的到期前 X 天」开始，每日触发系统消息 + 邮件，直至过期当天。例如配置 30：到期前 30、29、28 … 2、1、0 天都会提醒。</p>
+                            </div>
+                        </div>
+                        <div class="config-row">
+                            <span class="config-label"><span style="color:red;">*</span>适用平台：</span>
+                            <div class="config-body">
+                                <div class="form-checkbox config-platforms">
+                                    <{foreach from=$authExpirePlatforms key=pKey item=pLabel}>
+                                    <label>
+                                        <input type="checkbox" name="template_config[shop_types][]" value="<{$pKey}>"
+                                            <{if $data.event_type == 'system_auth_expire'}>
+                                                <{if is_array($data.template_config.shop_types) && in_array($pKey, $data.template_config.shop_types)}>checked="checked"<{/if}>
+                                            <{else}>
+                                                checked="checked"
+                                            <{/if}>
+                                        /> &nbsp;<{$pLabel}>
+                                    </label>
+                                    <{/foreach}>
+                                </div>
+                                <p class="config-warn">⚠ xhs / dewu / wxshipin 仅有 token 刷新，无平台授权过期；不支持提醒。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 店铺 token 失效配置 -->
+            <div class="form-layout-fields" id="cfg-token-invalid" style="display:none;">
+                <div class="form-field" style="width:100%;">
+                    <div class="tpl-extra-config">
+                        <h4>店铺 token 失效配置</h4>
+                        <div class="config-row">
+                            <span class="config-label"><span style="color:red;">*</span>适用平台：</span>
+                            <div class="config-body">
+                                <div class="form-checkbox config-platforms">
+                                    <{foreach from=$tokenInvalidPlatforms key=pKey item=pLabel}>
+                                    <label>
+                                        <input type="checkbox" name="template_config[shop_types][]" value="<{$pKey}>"
+                                            <{if $data.event_type == 'system_shop_token_invalid'}>
+                                                <{if is_array($data.template_config.shop_types) && in_array($pKey, $data.template_config.shop_types)}>checked="checked"<{/if}>
+                                            <{else}>
+                                                checked="checked"
+                                            <{/if}>
+                                        /> &nbsp;<{$pLabel}>
+                                    </label>
+                                    <{/foreach}>
+                                </div>
+                                <div class="config-guide">
+                                    <strong>失效处理引导</strong><br>
+                                    依据矩阵下发的 auto_unbind 自动分流：<br>
+                                    · auto_unbind="1" → 矩阵已自动解绑(拼多多)，通知文案不引导手动解绑再绑定。<br>
+                                    · auto_unbind="0" → 通知文案追加「点击跳转到前端店铺管理」引导手动解绑再绑定。
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 店铺 token 恢复配置 -->
+            <div class="form-layout-fields" id="cfg-token-recover" style="display:none;">
+                <div class="form-field" style="width:100%;">
+                    <div class="tpl-extra-config">
+                        <h4>店铺 token 恢复配置</h4>
+                        <div class="config-row">
+                            <span class="config-label"><span style="color:red;">*</span>适用平台：</span>
+                            <div class="config-body">
+                                <div class="form-checkbox config-platforms">
+                                    <{foreach from=$tokenRecoverPlatforms key=pKey item=pLabel}>
+                                    <label>
+                                        <input type="checkbox" name="template_config[shop_types][]" value="<{$pKey}>"
+                                            <{if $data.event_type == 'system_shop_token_recover'}>
+                                                <{if is_array($data.template_config.shop_types) && in_array($pKey, $data.template_config.shop_types)}>checked="checked"<{/if}>
+                                            <{else}>
+                                                checked="checked"
+                                            <{/if}>
+                                        /> &nbsp;<{$pLabel}>
+                                    </label>
+                                    <{/foreach}>
+                                </div>
+                                <p class="config-warn">⚠ 矩阵侧 token 恢复能力仅有【拼多多】平台支持提供；其他平台该场景不适用。</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -97,23 +319,109 @@
             searchMinLength: 0
         });
     });
-    // 根据event类型自动填充模板内容（参考 archive.html 的 addEvent 用法）
     (function(){
         var selectEl = $('event-type-select');
         var contentEl = $('template-content');
         if(!selectEl || !contentEl){return;}
+
+        var blocks = {
+            'system_auth_expire': $('cfg-auth-expire'),
+            'system_shop_token_invalid': $('cfg-token-invalid'),
+            'system_shop_token_recover': $('cfg-token-recover'),
+            'order_fail_notify': $('cfg-order-fail-notify')
+        };
+
+        var setBlockEnabled = function(block, enabled){
+            if(!block){return;}
+            block.setStyle('display', enabled ? '' : 'none');
+            block.getElements('input,select,textarea').each(function(el){
+                el.disabled = !enabled;
+            });
+        };
+
+        var hourOptionsHtml = (function(){
+            var html = '';
+            for (var h = 0; h < 24; h++) {
+                var v = (h < 10 ? '0' : '') + h + ':00';
+                html += '<option value="' + v + '">' + v + '</option>';
+            }
+            return html;
+        })();
+
+        var presetTimes = [];
+        var presetEl = $('cfg-digest-times-preset');
+        if (presetEl && presetEl.get('text')) {
+            presetTimes = presetEl.get('text').split(',').filter(function(x){ return !!x; });
+        }
+
+        var renderDigestTimes = function(n, values){
+            var box = $('cfg-digest-times');
+            if (!box) return;
+            box.empty();
+            n = parseInt(n, 10) || 1;
+            for (var i = 0; i < n; i++) {
+                var sel = new Element('select', {
+                    'name': 'template_config[digest_times][]',
+                    'class': 'form-input',
+                    'styles': {'width': '110px'}
+                });
+                sel.set('html', hourOptionsHtml);
+                sel.value = (values && values[i]) ? values[i] : '00:00';
+                box.adopt(sel);
+            }
+        };
+
+        var lockSendTypeEmail = function(isFail){
+            var hint = $('send-type-hint');
+            var radios = $$('#send-type-radios input[name=send_type]');
+            if (hint) hint.setStyle('display', isFail ? '' : 'none');
+            radios.each(function(el){
+                if (isFail) {
+                    el.checked = (el.value === 'email');
+                    el.disabled = (el.value !== 'email');
+                } else {
+                    el.disabled = false;
+                }
+            });
+        };
+
+        var toggleConfigBlocks = function(type){
+            Object.each(blocks, function(block, key){
+                setBlockEnabled(block, key === type);
+            });
+            var isFail = (type === 'order_fail_notify');
+            lockSendTypeEmail(isFail);
+            var tip = $('order-fail-var-tip');
+            if (tip) tip.setStyle('display', isFail ? '' : 'none');
+            if (isFail) {
+                var freqEl = $('cfg-digest-frequency');
+                var freq = freqEl ? freqEl.value : '1';
+                renderDigestTimes(freq, presetTimes.length ? presetTimes : null);
+            }
+        };
+
         var fill = function(type){
             if(!type){return;}
             var holder = $('tpl-' + type);
-            if(holder){ // 仅在空内容时自动填充，避免覆盖已有内容
+            if(holder){
                 contentEl.value = holder.value;
             }
         };
-        // 初次载入
+
+        var freqEl = $('cfg-digest-frequency');
+        if (freqEl) {
+            freqEl.addEvent('change', function(){
+                renderDigestTimes(this.value, null);
+            });
+        }
+
         fill(selectEl.value);
-        // 下拉变化时填充（若当前为空）
+        toggleConfigBlocks(selectEl.value);
+
         selectEl.addEvent('change', function(){
             fill(this.value);
+            presetTimes = [];
+            toggleConfigBlocks(this.value);
         });
     })();
 </script>

@@ -18,12 +18,19 @@
 /**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0 
+ * @Version:  1.0
  * @DateTime: 2022/8/24 16:09:06
  * @describe: 第三方退货单
  * ============================
  */
 class console_finder_wms_delivery {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = 'wms_status,delivery_status';
 
     /*public $column_edit = "操作";
@@ -36,6 +43,7 @@ class console_finder_wms_delivery {
 
     public $detail_item = "基础物料详情";
     public function detail_item($id){
+        if ($this->vue_mode) { return []; }
         $render = app::get('console')->render();
         $items = app::get('console')->model('wms_delivery_items')->getList('*', ['wd_id'=>$id]);
         $render->pagedata['items'] = $items;
@@ -51,6 +59,7 @@ class console_finder_wms_delivery {
             $logdata[$k]['operate_time'] = date('Y-m-d H:i:s',$v['operate_time']);
         }
         $render->pagedata['log'] = $logdata;
+        if ($this->vue_mode) { return []; }
         return $render->fetch('admin/oplog.html');
     }
 }

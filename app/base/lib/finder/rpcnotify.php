@@ -17,6 +17,13 @@
 
 class base_finder_rpcnotify
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $detail_basic = '基本信息';
     var $addon_cols   = "msg";
     

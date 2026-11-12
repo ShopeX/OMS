@@ -1051,32 +1051,18 @@ EOF;
 
     public function callback_config()
     {
+        // 读写链路（kvstore callback 配置 + 矩阵回调地址同步）抽到
+        // omevirtualwms_capability_callback，与 Vue 侧 api_wms 共用同一实现
+        $capability = kernel::single('omevirtualwms_capability_callback');
+
         if ($_POST) {
-            $callback = $_POST['callback'];
-            base_kvstore::instance('omevirtualwms')->store('callback', $callback);
-            #矩阵请求地址变更
-            $networkModel = app::get('base')->model('network');
-            if ($callback['status'] == '0') {
-#内网
-                #异步
-                $update_sdf = array('node_url' => 'http://rpc.ex-sandbox.com');
-                $filter     = array('node_id' => '1');
-                $networkModel->update($update_sdf, $filter);
-            } elseif ($callback['status'] == '2') {
-#外网
-                #异步
-                $update_sdf = array('node_url' => MATRIX_URL); //'http://matrix.ecos.shopex.cn');
-                $filter     = array('node_id' => '1');
-                $networkModel->update($update_sdf, $filter);
-            } else {
-#模拟
-                $update_sdf = array('node_url' => kernel::base_url(1) . '/index.php/openapi/virtualwms/call');
-                $filter     = array('link_status' => 'active');
-                $networkModel->update($update_sdf, $filter);
+            $callback = (isset($_POST['callback']) && is_array($_POST['callback'])) ? $_POST['callback'] : array();
+            if ($callback) {
+                $capability->save($callback);
             }
         }
-        base_kvstore::instance('omevirtualwms')->fetch('callback', $callback);
-        $this->pagedata['callback'] = $callback;
+
+        $this->pagedata['callback'] = $capability->load()['callback'];
         $this->page('callback_config.html');
     }
 

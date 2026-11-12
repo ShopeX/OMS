@@ -17,6 +17,13 @@
 
 class o2o_finder_extend_filter_store
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     /**
      * 获取_extend_colums

@@ -14,8 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 class console_finder_stockaccount extends eccommon_analysis_abstract implements eccommon_analysis_interface{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $detail_options = array(
         'hidden' => true,
     );
@@ -24,10 +30,6 @@ class console_finder_stockaccount extends eccommon_analysis_abstract implements 
         'hidden' => true,
     );
 
-    /**
-     * 查找er
-     * @return mixed 返回结果
-     */
     public function finder(){
         $filter = $this->_params;
 

@@ -114,10 +114,19 @@ class erpapi_shop_matrix_luban_request_aftersale extends erpapi_shop_request_aft
         $aftersale['receiver_address_id'] = ($addressInfo['contact_id'] ? $addressInfo['contact_id'] : 0);
         $aftersale['addressInfo'] = $addressInfo;
         
-        //获取子订单号
-        $returnLubanObj = app::get('ome')->model('return_product_luban');
-        $return_luban = $returnLubanObj->dump(array('shop_id'=>$shop_id, 'return_id'=>$aftersale['return_id']), '*');
-        $aftersale['oid'] = $return_luban['oid'];
+        //获取子订单号（退款拒绝可能直接传入 oid，无 return_id 时保留入参）
+        $passedOid = isset($aftersale['oid']) ? $aftersale['oid'] : '';
+        if (!empty($aftersale['return_id'])) {
+            $returnLubanObj = app::get('ome')->model('return_product_luban');
+            $return_luban = $returnLubanObj->dump(array('shop_id'=>$shop_id, 'return_id'=>$aftersale['return_id']), '*');
+            if (!empty($return_luban['oid'])) {
+                $aftersale['oid'] = $return_luban['oid'];
+            }
+        }
+        
+        if (empty($aftersale['oid']) && $passedOid !== '' && $passedOid !== null) {
+            $aftersale['oid'] = $passedOid;
+        }
         
         //获取京东云交易返回的退货回寄地址
         $jdAddressInfo = array();
@@ -737,8 +746,6 @@ class erpapi_shop_matrix_luban_request_aftersale extends erpapi_shop_request_aft
         //异步返回结果
         if($response['rsp'] == 'succ'){
             $response = $this->_formatResultStatus($response);
-        }else{
-            //失败处理
         }
         
         //[兼容]售后请求的单据号(默认使用的订单号)
@@ -768,7 +775,79 @@ class erpapi_shop_matrix_luban_request_aftersale extends erpapi_shop_request_aft
         }
         $returnProductObj->update($saveData, array('return_bn'=>$callback_params['return_bn']));
         
+//        // 退款申请拒绝异步收口（apply_id 由 refuse_message 传入）
+//        if (!empty($callback_params['apply_id'])) {
+//            $this->_handleRefundRefuseCallback($response, $callback_params);
+//        }
+        
         return $response;
+    }
+    
+    /**
+     * 抖音退款申请拒绝回调收口
+     * - 成功 / 平台已完结：保持本地拒绝，幂等补生成退货售后单（有退货单且未生成过才生成）
+     * - 其它失败：回滚拒绝前状态
+     *
+     * @param array $response
+     * @param array $callback_params
+     * @return void
+     */
+    protected function _handleRefundRefuseCallback($response, $callback_params)
+    {
+        $apply_id = intval($callback_params['apply_id']);
+        if ($apply_id <= 0) {
+            return;
+        }
+        
+        $refundApplyMdl = app::get('ome')->model('refund_apply');
+        $operLogObj = app::get('ome')->model('operation_log');
+        $applyInfo = $refundApplyMdl->dump(array('apply_id' => $apply_id), '*');
+        if (empty($applyInfo)) {
+            return;
+        }
+        
+        $err_msg = isset($response['err_msg']) ? $response['err_msg'] : (isset($response['msg']) ? $response['msg'] : '');
+        $isTerminalDone = $this->_isTerminalAlreadyDoneMsg($err_msg);
+        
+        // 平台拒绝成功，或售后已完结无需再审：保持拒绝态，并按退货单补售后单
+        if ($response['rsp'] == 'succ' || $isTerminalDone) {
+            if ((string)$applyInfo['status'] === '3') {
+                kernel::single('ome_order_func')->update_order_pay_status($applyInfo['order_id'], true, __CLASS__.'::'.__FUNCTION__);
+                kernel::single('ome_refund_apply')->generateAftersaleIfReshipPending($applyInfo);
+                $memo = $isTerminalDone
+                    ? ('平台售后已完结，保持拒绝并检查补生成售后单：'.$err_msg)
+                    : '抖音平台拒绝退款成功';
+                $operLogObj->write_log('refund_refuse@ome', $apply_id, $memo);
+            }
+            return;
+        }
+        
+        // 其它失败：回滚拒绝前状态
+        $prev_status = isset($callback_params['prev_status']) ? $callback_params['prev_status'] : '';
+        if ($prev_status !== '' && $prev_status !== null && (string)$applyInfo['status'] === '3') {
+            $refundApplyMdl->update(
+                array('status' => $prev_status, 'last_modified' => time()),
+                array('apply_id' => $apply_id, 'status' => '3')
+            );
+            $operLogObj->write_log('refund_refuse@ome', $apply_id, '抖音拒绝退款失败，回滚状态至'.$prev_status.'：'.$err_msg);
+        } else {
+            $operLogObj->write_log('refund_refuse@ome', $apply_id, '抖音拒绝退款失败：'.$err_msg);
+        }
+    }
+    
+    /**
+     * 是否平台「已完结无需再审」类错误
+     *
+     * @param string $err_msg
+     * @return bool
+     */
+    protected function _isTerminalAlreadyDoneMsg($err_msg)
+    {
+        if ($err_msg === '' || $err_msg === null) {
+            return false;
+        }
+        
+        return (strpos($err_msg, '已完结') !== false) || (strpos($err_msg, '无需再次审核') !== false);
     }
 
     public function getRefuseReason($return_id=null){

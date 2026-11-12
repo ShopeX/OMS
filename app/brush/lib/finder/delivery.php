@@ -16,6 +16,13 @@
  */
 
 class brush_finder_delivery{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $detail_basic = "发货单详情";
     public $detail_item = "基础物料详情";
     private $write = '2';

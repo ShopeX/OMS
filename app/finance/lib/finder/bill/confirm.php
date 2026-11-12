@@ -16,6 +16,13 @@
  */
 
 class finance_finder_bill_confirm{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     var $column_operator = '操作';
     var $column_operator_width = 65;

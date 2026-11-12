@@ -22,6 +22,13 @@
  */
 class console_finder_delivery_package
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $detail_delivery = '物流包裹明细列表';
     
     var $addon_cols = 'delivery_id,logi_no,bn,product_id';

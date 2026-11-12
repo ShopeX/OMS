@@ -29,6 +29,7 @@ $db['account'] = array(
             'label'=>'用户名',
         ),
         'login_password'=>array('type'=>'varchar(64)','required' => true,'comment'=>'登录密码'),
+        'password_changed_at'=>array('type'=>'int unsigned','default'=>'0','comment'=>'密码最后修改时间(unix timestamp)'),
         'times'=>array('type'=>'tinyint','required' => false,'comment'=>'失败次数'),
         'login_time'=>array('type'=>'time','required' => false,'comment'=>'登录时间'),
         'disabled'=>array('type'=>'bool','default'=>'false'),

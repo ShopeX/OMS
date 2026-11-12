@@ -24,6 +24,13 @@
  * ============================
  */
 class inventorydepth_finder_shop_skustockset {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     
     public $addon_cols = 'skus_id,shop_product_bn,branch_id';
 

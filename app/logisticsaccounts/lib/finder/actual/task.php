@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @物流任务列表操作
  *
@@ -29,8 +30,16 @@
  * @package    logisticsaccounts
  * @author     sunjing <sunjing@shopex.cn>
  */
+
 class logisticsaccounts_finder_actual_task
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
      var $column_view = '操作';
      var $column_view_width = "140";
@@ -82,12 +91,6 @@ EOF;
     var $addon_cols = "actual_number,actual_total";
     var $column_account = "对账计数";
     var $column_account_width = "250";
-
-    /**
-     * column_account
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
 
     public function column_account($row)
     {

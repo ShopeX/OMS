@@ -17,10 +17,13 @@
 
 class omeanalysts_finder_ome_delivery_order_item
 {
-    /**
-     * __construct
-     * @return mixed 返回值
-     */
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public function __construct()
     {}
 

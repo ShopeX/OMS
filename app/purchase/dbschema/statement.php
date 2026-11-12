@@ -44,7 +44,7 @@ $db['statement']=array (
       'editable' => false,
       'in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'object_bn' =>                  //TODO:单据bn，名字修正？
@@ -56,7 +56,7 @@ $db['statement']=array (
       'in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'statement_time' => 
@@ -87,7 +87,7 @@ $db['statement']=array (
       'in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'object_id' =>                  //TODO:单据id，名字修正？
@@ -105,7 +105,7 @@ $db['statement']=array (
       'in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'pay_add' =>
     array (
@@ -117,7 +117,7 @@ $db['statement']=array (
       'in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'paid' =>
     array (
@@ -129,7 +129,7 @@ $db['statement']=array (
       'in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'final_pay' =>
     array (
@@ -141,7 +141,7 @@ $db['statement']=array (
       'in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'initial_receive' =>
     array (
@@ -153,7 +153,7 @@ $db['statement']=array (
       'in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'receive_add' =>
     array (
@@ -165,7 +165,7 @@ $db['statement']=array (
       'in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'received' =>
     array (
@@ -177,7 +177,7 @@ $db['statement']=array (
       'in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'final_receive' =>
     array (
@@ -189,7 +189,7 @@ $db['statement']=array (
       'in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'difference' =>
     array (
@@ -201,7 +201,7 @@ $db['statement']=array (
       'in_list' => true,
       'default_in_list' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
   ),
   'index' => 

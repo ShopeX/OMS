@@ -14,23 +14,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
 
 class pam_passport_oidc implements pam_interface_passport
 {
     /**
      * 任务登陆标识
-     * 
+     *
      * @var string
-     * */
+     **/
     public $loginType = 'SSO';
 
     /**
      * undocumented function
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function __construct()
     {
         
@@ -59,75 +64,78 @@ class pam_passport_oidc implements pam_interface_passport
 
     }
 
-        /**
-     * callback
-     * @return mixed 返回值
-     */
-    public function callback() {
-        $sdf = ['code'=>$_GET['code']];
+    public function callback()
+    {
+        $state = (string)($_GET['state'] ?? '');
+        $loginUrl = desktop_auth_oidc::vueLoginUrl();
 
-        $_GOTO = kernel::base_url(1).'/index.php?ctl=passport';
-
-        if(empty($_GET['code'])) {
-            die('<script>location="'.$_GOTO.'";</script>');
+        if (empty($_GET['code'])) {
+            header('Location: ' . $loginUrl);
+            exit;
         }
 
-        kernel::single('base_session')->start();
-        $rs = kernel::single('erpapi_router_request')->set('account','account')->user_login($sdf);
-        if($rs['rsp'] == 'succ') {
-            die('<script>location="'.kernel::get_host_url().'";</script>');
+        if (!desktop_auth_oidc::validateState($state)) {
+            error_log('OIDC state validation failed');
+            header('Location: ' . desktop_auth_oidc::vueLoginUrl(['oidc_error' => 'state']));
+            exit;
         }
 
-        header('Content-Type:text/html; charset=utf-8');
-        die('登录失败:' . $rs['msg'].'<script>setTimeout(function(){location='.$_GOTO.';},3000);</script>');
+        $rs = kernel::single('erpapi_router_request')->set('account', 'account')->user_login([
+            'code' => $_GET['code'],
+            'oidc_state' => $state,
+        ]);
+
+        if (($rs['rsp'] ?? '') === 'succ') {
+            $userId = (int)($rs['user_id'] ?? 0);
+            if ($userId > 0) {
+                pam_trust_grant::issue($userId, 'oidc');
+                header('Location: ' . desktop_auth_oidc::vueLoginUrl(['oidc' => '1']));
+                exit;
+            }
+        }
+
+        $message = trim((string)($rs['msg'] ?? ($rs['err_msg'] ?? 'OIDC 登录失败')));
+        if ($state !== '') {
+            desktop_auth_oidc::discardChallenge($state);
+        }
+        header('Location: ' . desktop_auth_oidc::vueLoginUrl([
+            'oidc_error' => 'login',
+            'message' => $message,
+        ]));
+        exit;
     }
 
-    /**
-     * loginout
-     * @param mixed $auth auth
-     * @param mixed $backurl backurl
-     * @return mixed 返回值
-     */
     public function loginout($auth, $backurl = "index.php")
     {
+        $userId = (int)($_SESSION['account'][$auth->type] ?? 0);
+        if ($userId <= 0) {
+            $userId = desktop_auth_context::userId();
+        }
         unset($_SESSION['account'][$auth->type]);
         unset($_SESSION['last_error']);
-        $rs = kernel::single('erpapi_router_request')->set('account','account')->user_loginOutUrl([]);
-        if($rs['rsp'] == 'succ') {
+        $rs = kernel::single('erpapi_router_request')->set('account','account')->user_loginOutUrl([
+            'user_id' => $userId,
+        ]);
+        if(($rs['rsp'] ?? '') == 'succ' && !empty($rs['data'])) {
+            desktop_auth_oidc::clearIdToken($userId);
             kernel::single('base_session')->destory();
 
             die('<script>location="'.$rs['data'].'";</script>');
         }
     }
 
-    /**
-     * 获取_data
-     * @return mixed 返回结果
-     */
     public function get_data()
     {
     }
 
-    /**
-     * 获取_id
-     * @return mixed 返回结果
-     */
     public function get_id()
     {
     }
 
-    /**
-     * 获取_expired
-     * @return mixed 返回结果
-     */
     public function get_expired()
     {
     }
 
-    /**
-     * 获取_config
-     * @return mixed 返回结果
-     */
     public function get_config()
     {
         $oidc = app::get('ome')->getConf('pam.passport.oidc.enable');

@@ -167,7 +167,7 @@ $db['sales'] = array(
             'in_list'       => true,
             'label'         => '是否开发票',
             'width'         => 80,
-            'filtertype'    => 'yes',
+            'filtertype' => 'normal',
             'filterdefault' => true,
         ),
         'shop_id'              => array(
@@ -350,7 +350,7 @@ $db['sales'] = array(
             'editable' => false,
             'in_list'  => true,
             'default'  => 'false',
-            'filtertype'    => 'yes',
+            'filtertype' => 'normal',
             'filterdefault' => true,
         ),
         'check_msg'  => array(
@@ -404,7 +404,7 @@ $db['sales'] = array(
         'extra_info'      => array(
             'type'            => 'varchar(25)',
             'label'           => '交易分类编码',
-            'filtertype'      => 'yes',
+            'filtertype' => 'normal',
             'filterdefault'   => true,
             'in_list'         => true,
             'default_in_list' => true,

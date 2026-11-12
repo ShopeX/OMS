@@ -902,7 +902,7 @@ class ome_reship_luban
     }
     
     /**
-     * 售后仅退款是否自动拒绝
+     * 售后仅退款单据不进行重复拒绝 【系统仅自动拒绝一次】
      * 
      * @param int $refund_apply_bn 退款申请单号
      * @param array $oldApplyInfo 原退款单信息
@@ -940,6 +940,9 @@ class ome_reship_luban
             
             return false;
         }
+        
+        //log
+        $operLogMdl->write_log('refund_apply@ome', $refundApplyInfo['apply_id'], '查询售后仅退款是否有自动拒绝记录!');
         
         return true; 
     }

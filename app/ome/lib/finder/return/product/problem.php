@@ -16,6 +16,13 @@
  */
 
 class ome_finder_return_product_problem{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $detail_basic = "售后问题详情";
     
     function detail_basic($problem_id){

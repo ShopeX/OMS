@@ -37,7 +37,7 @@ $db['purchase_refunds']=array (
       'default_in_list' => false,
       'is_title' => true,
       'searchtype' => 'has',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'rp_id' =>
@@ -66,7 +66,7 @@ $db['purchase_refunds']=array (
       'editable' => false,
       'in_list' => true,
       'default_in_list' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'po_type' =>
@@ -81,7 +81,7 @@ $db['purchase_refunds']=array (
       'editable' => false,
       'in_list' => true,
       'default_in_list' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'type' =>
@@ -97,7 +97,7 @@ $db['purchase_refunds']=array (
       'editable' => false,
       'in_list' => true,
       'default_in_list' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'operator' =>
@@ -108,7 +108,7 @@ $db['purchase_refunds']=array (
       'editable' => false,
       'in_list' => true,
       'default_in_list' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'payment' =>
@@ -172,7 +172,7 @@ $db['purchase_refunds']=array (
       'editable' => false,
       'in_list' => true,
       'default_in_list' => true,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
     ),
     'statement_status' =>
     array (
@@ -189,7 +189,7 @@ $db['purchase_refunds']=array (
       'editable' => false,
       'in_list' => true,
       'default_in_list' => false,
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
     ),
     'memo' =>

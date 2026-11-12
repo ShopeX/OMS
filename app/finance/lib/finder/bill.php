@@ -16,6 +16,13 @@
  */
 
 class finance_finder_bill{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     
 
     /*var $column_edit = "操作";

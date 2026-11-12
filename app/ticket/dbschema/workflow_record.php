@@ -84,6 +84,7 @@ $db['workflow_record'] = array(
             'default_in_list' => true,
             'searchtype' => 'nequal',
             'filtertype' => 'normal',
+            'filterdefault' => false,
             'order' => 32,
         ),
         'action' => array(

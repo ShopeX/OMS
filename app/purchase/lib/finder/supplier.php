@@ -15,6 +15,13 @@
  * limitations under the License.
  */
 class purchase_finder_supplier{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $detail_basic = "详细信息";
     var $detail_current_account = "往来帐";
     var $detail_balance = "预付款";

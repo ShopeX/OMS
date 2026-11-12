@@ -1,4 +1,19 @@
 <?php
+/**
+ * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 $db['delivery_order']=array (
   'columns' =>
   array (
@@ -10,16 +25,16 @@ $db['delivery_order']=array (
       'editable' => false,
     ),
    
-    'delivery_bn' =>
+     'delivery_bn' =>
     array (
       'type' => 'varchar(32)',
       'required' => true,
       'label' => '发货单号',
       'comment' => '配送流水号',
       'editable' => false,
-      'width' =>140,
+      'width' =>180,
       'searchtype' => 'nequal',
-      'filtertype' => 'yes',
+      'filtertype' => 'normal',
       'filterdefault' => true,
       'in_list' => true,
       'default_in_list' => true,
@@ -30,7 +45,7 @@ $db['delivery_order']=array (
     array (
       'type' => 'table:shop@ome',
       'label' => '来源店铺',
-      'width' => 75,
+      'width' => 110,
       'editable' => false,
       'in_list' => true,
       'filtertype' => 'normal',
@@ -40,7 +55,7 @@ $db['delivery_order']=array (
     array (
       'type' => 'varchar(50)',
       'label' => '店铺类型',
-      'width' => 75,
+      'width' => 110,
       'editable' => false,
       'in_list' => true,
       'default_in_list' => true,
@@ -52,7 +67,7 @@ $db['delivery_order']=array (
       'label' => '会员用户名',
       'comment' => '订货会员ID',
       'editable' => false,
-      'width' =>75,
+      'width' =>110,
       'in_list' => true,
       'default_in_list' => true,
       'order'           => 4,
@@ -63,6 +78,7 @@ $db['delivery_order']=array (
       'label' => '发货时间',
       'comment' => '发货时间',
       'editable' => false,
+      'width' =>160,
       'in_list' => true,
       'filterdefault' => true,
       'filtertype'  => 'time',
@@ -73,7 +89,7 @@ $db['delivery_order']=array (
         'type'            => 'time',
         'label'           => '销售时间',
         'editable'        => false,
-        'width'           => 130,
+        'width'           => 260,
         'filtertype'      => 'time',
         'filterdefault'   => true,
         'in_list'         => true,
@@ -85,7 +101,7 @@ $db['delivery_order']=array (
         'type'            => 'table:operation_organization@ome',
         'label'           => '运营组织',
         'editable'        => false,
-        'width'           => 60,
+        'width'           => 110,
         'filtertype'      => 'normal',
         'filterdefault'   => true,
         'in_list'         => true,
@@ -107,7 +123,7 @@ $db['delivery_order']=array (
       'label' => '物流公司',
       'comment' => '物流公司名称',
       'editable' => false,
-      'width' =>75,
+      'width' =>110,
       'in_list' => true,
       'default_in_list' => true,
     ),
@@ -117,7 +133,7 @@ $db['delivery_order']=array (
       'label' => '物流单号',
       'comment' => '物流单号',
       'editable' => false,
-      'width' =>130,
+      'width' =>180,
       'in_list' => true,
       'default_in_list' => true,
 	  'filtertype' => 'normal',
@@ -133,7 +149,7 @@ $db['delivery_order']=array (
       'searchtype' => 'tequal',
       'filtertype' => 'normal',
       'filterdefault' => true,
-      'width' =>75,
+      'width' =>120,
       'in_list' => true,
       'default_in_list' => true,
     ),
@@ -145,7 +161,7 @@ $db['delivery_order']=array (
       'editable' => false,
       'filtertype' => 'normal',
       'filterdefault' => true,
-      'width' =>130,
+      'width' =>200,
       'in_list' => true,
       'default_in_list' => true,
     ),
@@ -171,7 +187,7 @@ $db['delivery_order']=array (
       'comment' => '收货人地址',
       'editable' => false,
       'filtertype' => 'normal',
-      'width' =>150,
+      'width' =>280,
       'in_list' => true,
     ),
     'ship_zip' =>
@@ -180,7 +196,7 @@ $db['delivery_order']=array (
       'label' => '收货邮编',
       'comment' => '收货人邮编',
       'editable' => false,
-      'width' =>75,
+      'width' =>110,
       'in_list' => true,
       'default_in_list' => true,
     ),

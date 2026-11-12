@@ -22,6 +22,13 @@
  */
 class crm_finder_gift_rule_logs
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $addon_cols = 'rule_id,gift_id';
     
     public $_giftObj = null;
@@ -44,8 +51,14 @@ class crm_finder_gift_rule_logs
     var $column_edit_order = 1;
     function column_edit($row)
     {
-        $finder_id = $_GET['_finder']['finder_id'];
+        $finder_id = $_GET['_finder']['finder_id'] ?? '';
         $sid = $row['sid'];
+        
+        if ($this->vue_mode) {
+            return [
+                ['key' => 'edit', 'label' => '预警设置', 'action' => 'edit', 'sid' => $sid]
+            ];
+        }
         
         $url = sprintf('index.php?app=crm&ctl=admin_gift_rule_logs&act=edit&sid=%d&finder_id=%s', $sid, $finder_id);
         
@@ -59,8 +72,13 @@ class crm_finder_gift_rule_logs
     function column_rule_name($row)
     {
         $ruleInfo = $this->_ruleObj->dump(array('id'=>$row[$this->col_prefix.'rule_id']), 'title');
+        $title = $ruleInfo['title'] ?? '';
         
-        return $ruleInfo['title'];
+        if ($this->vue_mode) {
+            return ['text' => $title];
+        }
+        
+        return $title;
     }
     
     var $column_rule_status = '规则状态';
@@ -69,11 +87,14 @@ class crm_finder_gift_rule_logs
     function column_rule_status($row)
     {
         $ruleInfo = $this->_ruleObj->dump(array('id'=>$row[$this->col_prefix.'rule_id']), 'id');
-        if($ruleInfo){
-            return '使用中';
-        }else{
-            return '已删除';
+        $status = $ruleInfo ? '使用中' : '已删除';
+        $type = $ruleInfo ? 'success' : 'info';
+        
+        if ($this->vue_mode) {
+            return ['text' => $status, 'type' => $type];
         }
+        
+        return $status;
     }
     
     var $column_gift_name = '赠品名称';
@@ -82,8 +103,13 @@ class crm_finder_gift_rule_logs
     function column_gift_name($row)
     {
         $productInfo = $this->_giftObj->dump(array('gift_id'=>$row[$this->col_prefix.'gift_id']), 'gift_name');
+        $name = $productInfo['gift_name'] ?? '';
         
-        return $productInfo['gift_name'];
+        if ($this->vue_mode) {
+            return ['text' => $name];
+        }
+        
+        return $name;
     }
     
     var $column_gift_status = '赠品状态';
@@ -92,10 +118,13 @@ class crm_finder_gift_rule_logs
     function column_gift_status($row)
     {
         $productInfo = $this->_giftObj->dump(array('gift_id'=>$row[$this->col_prefix.'gift_id']), 'gift_id,is_del');
-        if($productInfo['is_del'] == '1'){
-            return '禁用';
-        }else{
-            return '启用';
+        $status = $productInfo['is_del'] == '1' ? '禁用' : '启用';
+        $type = $productInfo['is_del'] == '1' ? 'danger' : 'success';
+        
+        if ($this->vue_mode) {
+            return ['text' => $status, 'type' => $type];
         }
+        
+        return $status;
     }
 }

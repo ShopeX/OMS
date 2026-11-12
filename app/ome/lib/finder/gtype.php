@@ -16,6 +16,13 @@
  */
 
 class ome_finder_gtype{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     var $column_control = '类型操作';
     function column_control($row){

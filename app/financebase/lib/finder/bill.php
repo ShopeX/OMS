@@ -16,6 +16,13 @@
  */
 
 class financebase_finder_bill{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
 	var $detail_basic = "原始数据";
     function detail_basic($id){

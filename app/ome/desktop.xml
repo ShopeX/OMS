@@ -160,12 +160,12 @@
 
     <workground name="日志管理" id="monitor_center"  order="1820" icon="icon-caozuorizhi-01">
         <menugroup name="接口日志" en="api-log">
-            <menu controller='admin_api_log' action='index' permission='setting_api_log' display='true' order='600001'>日志列表</menu>
+            <menu controller='admin_api_log' action='index' permission='setting_api_log' display='true' order='600001' target='/m-ome/api-log/index'>日志列表</menu>
             <menu controller='admin_api_stock' action='index' permission='api_stock_log' display='true' order='600002'>库存同步列表</menu>
         </menugroup>
         <menugroup name="操作日志" en="operation-log">
-            <menu controller='admin_operation_log' action='index' permission='operation_log' display='true' order='6000100'>操作日志</menu>
-            <menu controller='admin_operation_log' action='login_list' permission='login_log' display='true' order='6000200'>登录日志</menu>
+            <menu controller='admin_operation_log' action='index' permission='operation_log' display='true' order='6000100' target='/m-ome/operation-log/index'>操作日志</menu>
+            <menu controller='admin_operation_log' action='login_list' permission='login_log' display='true' order='6000200' target='/m-ome/login-list/index'>登录日志</menu>
         </menugroup>
     </workground>
 
@@ -386,9 +386,9 @@
             <menu controller='admin_setting' action='product_problem' permission='setting_product_problem' display='true' order='1000500'>售后问题类型设置</menu>
             <menu controller='admin_refund_reason' action='index' permission='setting_refund_reason' display='true' order='1000550'>退款原因设置</menu>
             <menu controller='admin_return_address' action='index' permission='aftersale_return_address' display='true' order='1000600'>地址库列表</menu>
-            <menu controller='admin_return_batch' action='index' permission='aftersale_return_batch' display='true' order='1000700'>批量操作设置</menu>
+            <menu controller='admin_return_batch' action='index' permission='aftersale_return_batch' display='true' order='1000700' target="/m-ome/return-batch/index">批量操作设置</menu>
             <menu controller='admin_branchset' action='index' permission='aftersale_branchset' display='true' order='1000800'>退货仓库设置</menu>
-            <menu controller='admin_return_setting' action='index' permission='aftersale_return_setting' display='true' order='1000900'>退换货自动审核设置</menu>
+            <menu controller='admin_return_setting' action='index' permission='aftersale_return_setting' display='true' order='1000900' target='/m-ome/return-setting/index'>退换货自动审核设置</menu>
         </menugroup>
         <menugroup name="管理员管理" en="admin-administration">
             <menu controller='admin_group' action='index' permission='setting_order_confirm_group' display='true' order='4000100'>订单确认小组管理</menu>

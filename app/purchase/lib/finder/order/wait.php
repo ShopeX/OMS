@@ -22,6 +22,13 @@
  */
 class purchase_finder_order_wait
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = '';
     public $detail_detail = '详情';
     public $detail_detail_order = '10';
@@ -50,6 +57,7 @@ class purchase_finder_order_wait
         $logs = $logObj->read_log(array('obj_id'=>$id,'obj_type'=>'order_wait@purchase'),0,-1);
 
         $render->pagedata['logs'] = $logs;
+        if ($this->vue_mode) { return []; }
         return $render->fetch("admin/order/log.html");
     }
 }

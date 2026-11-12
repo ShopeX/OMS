@@ -24,6 +24,13 @@
  * ============================
  */
 class console_finder_wms_storeprocess {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     public $detail_item = "基础物料详情";
     public function detail_item($id){
@@ -44,6 +51,7 @@ class console_finder_wms_storeprocess {
             $logdata[$k]['operate_time'] = date('Y-m-d H:i:s',$v['operate_time']);
         }
         $render->pagedata['log'] = $logdata;
+        if ($this->vue_mode) { return []; }
         return $render->fetch('admin/oplog.html');
     }*/
 }

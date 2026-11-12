@@ -17,6 +17,13 @@
 
 
 class desktop_finder_recycle{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $actions;
     function __construct($app){
         $finder_id = $_GET['_finder']['finder_id'];

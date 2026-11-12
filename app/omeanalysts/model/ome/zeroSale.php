@@ -19,10 +19,6 @@ class omeanalysts_mdl_ome_zeroSale extends dbeav_model{
 
     var $table_name = 'zero_sale';
 
-    /**
-     * 搜索Options
-     * @return mixed 返回值
-     */
     public function searchOptions()
     {
         return array(
@@ -31,11 +27,6 @@ class omeanalysts_mdl_ome_zeroSale extends dbeav_model{
         );
     }
 
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
     public function table_name($real=false)
     {
         if($real){
@@ -45,10 +36,6 @@ class omeanalysts_mdl_ome_zeroSale extends dbeav_model{
         }
     }
 
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema()
     {
         $catSaleStatis_model = $this->app->model('zero_sale');
@@ -59,7 +46,7 @@ class omeanalysts_mdl_ome_zeroSale extends dbeav_model{
             'label' => '库存',
             'width' =>60,
             'searchtype' => 'has',
-            'filtertype' => 'yes',
+            'filtertype' => 'normal',
             'filterdefault' => true,
             'order' => 6,
         );
@@ -68,11 +55,6 @@ class omeanalysts_mdl_ome_zeroSale extends dbeav_model{
         return $schema;
     }
 
-    /**
-     * count
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function count($filter=null){
         $store_tablename = 'sdb_omeanalysts_branch_product_stock_detail';
         $sql = 'SELECT count(*) c FROM `'.$this->table_name(true).'` AS zero JOIN `'.$store_tablename.'` AS store ON zero.bpsd_id=store.id WHERE '.$this->_filter($filter);
@@ -115,23 +97,11 @@ class omeanalysts_mdl_ome_zeroSale extends dbeav_model{
         return $data;
     }
 
-    /**
-     * modifier_months
-     * @param mixed $months months
-     * @return mixed 返回值
-     */
     public function modifier_months($months)
     {
         return substr($months,0,4).'-'.substr($months,4);
     }
     
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter,$tableAlias=null,$baseWhere=null){
         $where = ' AND 1';
         // 日期搜索
@@ -180,10 +150,6 @@ class omeanalysts_mdl_ome_zeroSale extends dbeav_model{
         return parent::_filter($filter,$tableAlias,$baseWhere) . $where;
     }
     
-    /**
-     * export_params
-     * @return mixed 返回值
-     */
     public function export_params(){
         //获取框架filter信息
         $params = unserialize($_POST['params']);
@@ -206,10 +172,6 @@ class omeanalysts_mdl_ome_zeroSale extends dbeav_model{
         return $params;
     }
 
-    /**
-     * 获取_export_main_title
-     * @return mixed 返回结果
-     */
     public function get_export_main_title(){
         $title = array(
            'col:仓库名称',
@@ -223,14 +185,6 @@ class omeanalysts_mdl_ome_zeroSale extends dbeav_model{
     }
     
      //注：$filter是在export_params()方法里获取到的filter,$offset,$limit已做处理，直接带到getList里即可
-    /**
-     * 获取_export_main
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $limit limit
-     * @param mixed $data 数据
-     * @return mixed 返回结果
-     */
     public function get_export_main($filter,$offset,$limit,&$data){
         $list=$this->getList('*',$filter,$offset*$limit,$limit);
         $branchModel = app::get('ome')->model('branch');

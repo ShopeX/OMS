@@ -37,24 +37,16 @@ class omeauto_auto_type_address extends omeauto_auto_type_abstract implements om
      * 获取输入UI
      *
      * @param mixed $val
-     * @return String
+     * @return String|Array
      */
     public function getUI($val) {
-    
+
         $tpl = kernel::single('base_render');
         $role = array_shift($val);
-        //$tpl->pagedata['role'] = $role;
-
-
         $init = json_decode(base64_decode($role), true);
-        $tpl->pagedata['selected_area'] = json_encode($init['content']);
+        $tpl->pagedata['selected_area'] = json_encode($init['content'] ?? []);
 
-        // 输出父节点
-        $regionLists = app::get('eccommon')->model('regions')->getList('region_path',array('region_id' => $init['content']));
-
-//        $region_path = array_filter(explode(',',$regionLists[0]['region_path']));
-
-//        array_pop($region_path);
+        $regionLists = app::get('eccommon')->model('regions')->getList('region_path', array('region_id' => $init['content'] ?? []));
 
         $parent_path = array();
         foreach($regionLists as $key=>$value){
@@ -65,8 +57,14 @@ class omeauto_auto_type_address extends omeauto_auto_type_abstract implements om
         $parent_path = array_values(array_unique($parent_path));
         $tpl->pagedata['parent_path'] = json_encode($parent_path);
 
+        if ($this->vue_mode) {
+            return $tpl->pagedata;
+        }
+
         return $tpl->fetch($this->getTemplateName(), 'omeauto');
     }
+
+    
     /**
      * 检查输入的参数
      * 

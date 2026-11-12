@@ -68,6 +68,8 @@ class ome_ctl_admin_setting extends desktop_controller{
         $basicMaterialBarcode    = kernel::single('material_basic_material_barcode');
         $opObj    = app::get('ome')->model('operation_log');
         
+        $msg = '';
+        
         //配置信息保存
         if($_POST['set']){
             $settins = $_POST['set'];
@@ -351,6 +353,7 @@ class ome_ctl_admin_setting extends desktop_controller{
 
         //其他的配置暂时不动，直接赋值，后面细分到具体app
         // $show_tabs = $this->tabs;
+        $show_tabs = array();
 
         $servicelist = kernel::servicelist('system_setting');
 

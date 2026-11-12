@@ -24,6 +24,7 @@ class sales_aftersale_type_refund
         if (!$is_archive && (string)$apply_detail[0]['archive'] === '1') {
             $is_archive = true;
         }
+        
         if ($is_archive) {
             $archive_ordObj = kernel::single('archive_interface_orders');
             $orderData      = $archive_ordObj->getOrders($apply_detail[0]['order_id'], 'member_id,order_bn,ship_mobile');
@@ -48,10 +49,11 @@ class sales_aftersale_type_refund
         }
 
         if ($reshipData[0]['reship_id']) {
-            
+            // unset
             unset($apply_detail);
             
             $data = kernel::single('sales_aftersale_type_change')->generate_aftersale($reshipData[0]['reship_id']);
+            
             return $data;
         }
 
@@ -60,7 +62,6 @@ class sales_aftersale_type_refund
         $pamData    = $Opam->getList('login_name', array('account_id' => $apply_detail[0]['verify_op_id']), 0, 1);
 
         if ($apply_detail[0]['payment']) {
-            $payment_cfgObj = app::get('ome')->model('payment_cfg');
             $payment_cfg    = $payment_cfgObj->dump(array('id' => $apply_detail[0]['payment']), 'custom_name');
             $paymethod      = $payment_cfg['custom_name']; //支付方式  varchar
         } else {
@@ -158,6 +159,39 @@ class sales_aftersale_type_refund
         // 退款明细
         $aftersale_items = array();
         $product_data = $apply_detail[0]['product_data'] ? @unserialize($apply_detail[0]['product_data']) : array();
+        if (!is_array($product_data)) {
+            $product_data = array();
+        }
+        
+        // 明细申请/已退金额以退款申请金额为准分摊（兼容 product_data.price 仍为平台原价）
+        $refundShareTotal = $apply_detail[0]['refunded'];
+        if ($refundShareTotal === null || $refundShareTotal === '') {
+            $refundShareTotal = $apply_detail[0]['money'];
+        }
+        
+        $refundShareRows = array();
+        foreach ($product_data as $k => $v) {
+            $num = (isset($v['num']) && $v['num'] > 0) ? $v['num'] : 1;
+            $weight = bcmul((float) (isset($v['price']) ? $v['price'] : 0), (float) $num, 2);
+            
+            if (bccomp((string) $weight, '0', 2) <= 0) {
+                $weight = '1';
+            }
+            
+            $refundShareRows[$k] = array(
+                'porth_field' => $weight,
+                'num'         => $num,
+            );
+        }
+        
+        if (!empty($refundShareRows)) {
+            $refundShareRows = kernel::single('ome_order')->calculate_part_porth($refundShareRows, array(
+                'part_total'  => $refundShareTotal,
+                'part_field'  => 'refund_share',
+                'porth_field' => 'porth_field',
+            ));
+        }
+        
         $data['platform_amount'] = 0;
         $data['settlement_amount'] = 0;
         $data['actually_amount'] = 0;
@@ -165,7 +199,10 @@ class sales_aftersale_type_refund
         foreach ($product_data as $k => $v)
         {
             $product_id = $v['product_id'];
-            $saleprice = bcmul((float)$v['price'], (float)$v['num'], 2);
+            
+            $num = (isset($v['num']) && $v['num'] > 0) ? $v['num'] : 1;
+            $saleprice = isset($refundShareRows[$k]['refund_share']) ? $refundShareRows[$k]['refund_share'] : bcmul((float) $v['price'], (float) $num, 2);
+            $itemPrice = bcdiv((string) $saleprice, (string) $num, 2);
             
             //关联的销售物料
             $returnItemInfo = $returnItems['products'][$product_id];
@@ -185,13 +222,14 @@ class sales_aftersale_type_refund
             $data['settlement_amount'] += $settlement_amount;
             $data['platform_pay_amount'] += $platform_pay_amount;
             $data['actually_amount'] += $actually_amount;
+            
             //items
             $aftersale_items[] = array(
                 'bn'            => $v['bn'],
                 'product_name'  => $v['name'],
                 'product_id'    => $v['product_id'],
                 'num'           => $v['num'],
-                'price'         => $v['price'],
+                'price'         => $itemPrice,
                 'saleprice'     => $saleprice,
                 'return_type'   => 'refunded',
                 'money'         => $saleprice,

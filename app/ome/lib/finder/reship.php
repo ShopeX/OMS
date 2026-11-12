@@ -16,6 +16,13 @@
  */
 
 class ome_finder_reship{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     
     //平台售后状态
     static $_platformStatus = null;
@@ -581,7 +588,7 @@ EOF;
 
 
     var $column_changebranch_id = '换货仓';
-    var $column_changebranch_id_width='80';
+    var $column_changebranch_id_width = 130;
     function column_changebranch_id($row, $list){
         $changebranch_id = $row[$this->col_prefix .'changebranch_id'];
 
@@ -607,13 +614,7 @@ EOF;
     
 
     var $column_change_order_id = '换货订单号';
-    var $column_change_order_id_width='80';
-    /**
-     * column_change_order_id
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
+    var $column_change_order_id_width = 160;
     public function column_change_order_id($row,$list){
         $change_order_id = $row[$this->col_prefix .'change_order_id'];
         if ($change_order_id){

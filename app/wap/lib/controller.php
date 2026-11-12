@@ -26,20 +26,49 @@ class wap_controller extends base_controller{
         header("Expires: Mon, 26 Jul 1997 05:00:00 GMT");// 强制查询etag
         header('Progma: no-cache');
         $this->defaultwg = $this->defaultWorkground;
-        parent::__construct($app);
+        // base_session start 放在父类之前，供 2FA appointStore 等场景使用
         kernel::single('base_session')->start();
 
         $_GOTO = app::get('wap')->router()->gen_url(array('ctl'=>'passport','act'=>'index'), true);
+        $isPassport = get_class($this) === 'wap_ctl_passport';
 
-        $auth = pam_auth::instance(pam_account::get_account_type('desktop'));
-        $account = $auth->account();
-        if(get_class($this)!='wap_ctl_passport' && !$account->is_valid()){
-            echo "<script>location ='$_GOTO'</script>";
-            exit;
+        if (!$isPassport) {
+            $wapToken = $_COOKIE['wap-token-key'] ?? null;
+            if (!$wapToken) {
+                $this->redirectToLogin($_GOTO);
+            }
+
+            try {
+                $claims = desktop_auth_jwt::decodeWithValidation($wapToken, true);
+                $userId = (int)($claims['user_id'] ?? 0);
+                if ($userId <= 0) {
+                    throw new desktop_auth_exception('Invalid user ID in token');
+                }
+                // User existence + status 兜底（decodeWithValidation 只验 JWT 签名和 exp，不查库）
+                $userModel = app::get('desktop')->model('users');
+                $user = $userModel->dump(
+                    ['user_id' => $userId],
+                    'user_id,status',
+                    [':account@pam' => ['login_name']]
+                );
+                if (!$user || ($user['status'] ?? '0') !== '1' || empty($user['account']['login_name'])) {
+                    $this->redirectToLogin($_GOTO);
+                }
+                // 写 desktop_auth_context（内存态，不写 SESSION）
+                desktop_auth_context::setUserId($userId);
+            } catch (desktop_auth_exception $e) {
+                if ($e->getMessage() === 'Token has expired' && $this->refreshWapJwtSession()) {
+                    // refreshWapJwtSession 内部已通过 desktop_auth_context::setUserId 写入
+                } else {
+                    $this->redirectToLogin($_GOTO);
+                }
+            }
         }
 
+        // desktop_user 必须在 JWT context 写入之后才初始化
+        parent::__construct($app);
         $this->user = kernel::single('desktop_user');
-        if(get_class($this)!='wap_ctl_passport'){
+        if(!$isPassport){
             $this->status = $this->user->get_status();
             if(!$this->status&&$this->status==0){
                 $this->pagedata['link_url'] = $_GOTO;
@@ -141,6 +170,68 @@ class wap_controller extends base_controller{
             'data' => $data
         ];
         exit(json_encode($result, JSON_UNESCAPED_UNICODE));
+    }
+
+    protected function redirectToLogin(string $_GOTO): void
+    {
+        desktop_auth_jwt_transport::clearWapAuthCookies();
+        setcookie('relogin', '', time() - 3600, '/');
+        echo "<script>location ='$_GOTO'</script>";
+        exit;
+    }
+
+    protected function refreshWapJwtSession(): bool
+    {
+        $refreshToken = desktop_auth_jwt::extractWapRefreshToken();
+        if ($refreshToken === null || $refreshToken === '') {
+            return false;
+        }
+
+        try {
+            try {
+                $payload = desktop_auth_jwt::consumeRefreshToken($refreshToken);
+            } catch (desktop_auth_exception $e) {
+                desktop_auth_jwt::revokeSessionOnRefreshReuse($refreshToken, $e);
+                throw $e;
+            }
+
+            $userId = (int)($payload['sub'] ?? 0);
+            if ($userId <= 0) {
+                return false;
+            }
+
+            $userModel = app::get('desktop')->model('users');
+            $user = $userModel->dump(
+                ['user_id' => $userId],
+                'user_id,name,super,status',
+                [':account@pam' => ['login_name']]
+            );
+            if (!$user || ($user['status'] ?? '0') !== '1' || empty($user['account']['login_name'])) {
+                return false;
+            }
+
+            $loginName = (string)$user['account']['login_name'];
+            $profile = [
+                'is_super' => (bool)($user['super'] ?? false),
+                'login_time' => desktop_auth_jwt::preservedLoginTimeFromClaims($payload),
+                // SCRUM-7917 Plan B: rotate within the SAME session family.
+                'fid' => (string)($payload['fid'] ?? ''),
+            ];
+            $refreshExpiresAt = (int)($payload['exp'] ?? 0);
+            $tokens = desktop_auth_jwt_flow::issueTokensForUser(
+                $userId,
+                $loginName,
+                $profile,
+                false,
+                $refreshExpiresAt > 0 ? $refreshExpiresAt : null
+            );
+            desktop_auth_jwt_transport::setWapAuthCookies($tokens);
+            desktop_auth_context::setUserId($userId);
+            desktop_auth_context::setLoginName($loginName);
+            return true;
+        } catch (desktop_auth_exception $e) {
+            return false;
+        }
     }
 
     /**

@@ -34,7 +34,7 @@ $db['sales']=[
             'in_list' => true,
             'default_in_list' => true,
             'filterdefault' => true,
-            'filtertype' => 'yes',
+            'filtertype' => 'normal',
             'order'     => 2,
         ],
         'bill_bn' => [
@@ -46,7 +46,7 @@ $db['sales']=[
             'in_list' => true,
             'default_in_list' => true,
             'filterdefault' => true,
-            'filtertype' => 'yes',
+            'filtertype' => 'normal',
             'order' => 3,
         ],
         'bill_type' => [
@@ -150,7 +150,7 @@ $db['sales']=[
                     'default_in_list' => true,
                     'searchtype' => 'nequal',
                     'filterdefault' => true,
-                    'filtertype' => 'yes',
+                    'filtertype' => 'normal',
                     'order' => 6,
             ),
         'at_time'           => [

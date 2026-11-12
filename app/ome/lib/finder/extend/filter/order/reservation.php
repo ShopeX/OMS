@@ -1,6 +1,13 @@
 <?php
 class ome_finder_extend_filter_order_reservation
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     function get_extend_colums()
     {
         $db = [];

@@ -16,6 +16,13 @@
  */
 
 class ome_finder_operation_log {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     var $addon_cols = 'operation,op_id,op_name,operate_time,memo,ip,obj_id';
     
     public $column_opname = '操作者';

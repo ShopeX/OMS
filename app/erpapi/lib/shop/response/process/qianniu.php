@@ -113,7 +113,52 @@ class erpapi_shop_response_process_qianniu extends erpapi_shop_response_abstract
      */
     public function modifysku($sdf)
     {
-
+        // shop_type
+        $shop_type = $sdf['shop_type'];
+        
+        // 淘宝自助改sku需要在1S之内返回是否允许修改SKU
+        if(in_array($shop_type, ['taobao'])){
+            // 记录开始执行时间（微秒），优先用 Convert 传入的起点
+            $startTime = !empty($sdf['_modifysku_start_time']) ? floatval($sdf['_modifysku_start_time']) : microtime(true);
+            
+            // 检查订单是否允许修改SKU
+            $checkResult = kernel::single('ome_order_qianniu')->checkOrderModifySku($sdf);
+            
+            // 记录执行结束时间（微秒）
+            $endTime = microtime(true);
+            $spendS = round($endTime - $startTime, 4);
+            $spendMs = round(($endTime - $startTime) * 1000, 2);
+            $timingData = array(
+                'start_time' => $startTime,
+                'end_time' => $endTime,
+                'spend_seconds' => $spendS, // 耗时（秒）
+                'spend_millisecond' => $spendMs, // 耗时（毫秒）
+            );
+            
+            // check
+            if($checkResult['rsp'] == 'succ'){
+                $failMsgCode = '';
+                $rsp_msg = '允许修改SKU';
+            }else{
+                $failMsgCode = '3003';
+                if (!empty($checkResult['data']['msg_code'])) {
+                    $failMsgCode = $checkResult['data']['msg_code'];
+                }
+                
+                $rsp_msg = '不允许修改SKU' . ($checkResult['msg'] ? '：' . $checkResult['msg'] : '');
+            }
+            
+            // 返回结果
+            $result = array(
+                'rsp' => ($checkResult['rsp'] == 'succ' ? 'succ' : 'fail'),
+                'msg' => $rsp_msg,
+                'msg_code' => $failMsgCode,
+                'data' => $timingData,
+            );
+            
+            return $result;
+        }
+        
         //记录师傅要更换sku的状态
         $orderExtendModel = app::get('ome')->model('order_extend');
         $orderExtendInfo = $orderExtendModel->dump(['order_id'=>$sdf['order_id']],'bool_extendstatus');

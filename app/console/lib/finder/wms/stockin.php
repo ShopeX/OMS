@@ -24,6 +24,13 @@
  * ============================
  */
 class console_finder_wms_stockin {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     public $addon_cols = 'wms_status,iso_status';
 
     /*public $column_edit = "操作";

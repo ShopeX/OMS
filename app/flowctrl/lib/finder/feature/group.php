@@ -23,6 +23,13 @@
  */
 
 class flowctrl_finder_feature_group{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     var $column_edit = '操作';
     function column_edit($row){

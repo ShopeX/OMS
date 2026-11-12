@@ -103,7 +103,6 @@ class console_ctl_admin_vopick extends desktop_controller{
         
         $purchaseLib    = kernel::single('purchase_purchase_order');
         
-        $pickInfo   = array();
         $pickObj    = app::get('console')->model('pick_bills');
         $pickInfo   = $pickObj->dump(array('bill_id'=>$bill_id, 'status'=>1), '*');
         
@@ -168,15 +167,13 @@ class console_ctl_admin_vopick extends desktop_controller{
         $bill_ids      = array_filter($bill_ids);
         unset($_POST, $bill_id);
         
-        if(empty($bill_ids) || empty($out_branch_id))
-        {
+        if(empty($bill_ids) || empty($out_branch_id)){
             $this->end(false, "无效操作,请检查!");
         }
         
         //拣货单信息
         $pickList   = $pickObj->getList('*', array('bill_id'=>$bill_ids));
-        if(empty($pickList))
-        {
+        if(empty($pickList)){
             $this->end(false, "拣货单不存在,请检查!");
         }
         
@@ -239,8 +236,7 @@ class console_ctl_admin_vopick extends desktop_controller{
             {
                 //货号是否存在并检查仓库供货关系
                 $productInfo    = $pickLib->checkProduct($item['barcode'], $out_branch_id, $error_msg);
-                if(!$productInfo)
-                {
+                if(!$productInfo){
                     $this->end(false, $error_msg);
                 }
 
@@ -251,15 +247,13 @@ class console_ctl_admin_vopick extends desktop_controller{
                 $num    = $item['num'];
                 
                 //补发计算剩余未发货数量
-                if($is_reissue)
-                {
+                if($is_reissue){
                     $sql            = "SELECT sum(actual_num) as num FROM sdb_purchase_pick_stockout_bill_items 
                                        WHERE po_id=". $p_val['po_id'] ." AND bill_id=". $bill_id. " AND barcode='". $item['barcode'] ."'";
                     $actual_num    = $pickObj->db->selectrow($sql);
                     
                     $num    = $num - intval($actual_num['num']);
-                    if($num <= 0)
-                    {
+                    if($num <= 0){
                         continue;//货品数量已发完，跳过
                     }
                 }

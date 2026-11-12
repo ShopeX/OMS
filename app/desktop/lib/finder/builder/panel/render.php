@@ -18,6 +18,13 @@
 
 class desktop_finder_builder_panel_render
 {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     private $finder;
 
     function __contruct($finder_aliasname){

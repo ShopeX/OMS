@@ -15,6 +15,9 @@
  * limitations under the License.
  */
 
+/**
+ * 供应商管理
+ */
 class console_ctl_admin_supplier extends desktop_controller{
 
     var $name = "供应商";
@@ -24,28 +27,27 @@ class console_ctl_admin_supplier extends desktop_controller{
      * 供应商列表显示
      */
     function index(){
-
-    	$singleselect = $_GET['singleselect'];
-    	if (!$singleselect){
-    		$actions =
-    		array(
-             array(
-               'label'=>'添加供应商',
-               'href'=>'index.php?app=console&ctl=admin_supplier&act=addsupplier',
-               'target' => '_blank',
-             ),
-             array(
-                'label' => '导出模板',
-                'href' => 'index.php?app=console&ctl=admin_supplier&act=exportTemplate',
-                'target' => '_blank',
-             ),
+        $singleselect = $_GET['singleselect'];
+        if (!$singleselect){
+            $actions = array(
+                 array(
+                   'label'=>'添加供应商',
+                   'href'=>'index.php?app=console&ctl=admin_supplier&act=addsupplier',
+                   'target' => '_blank',
+                 ),
+                 array(
+                    'label' => '导出模板',
+                    'href' => 'index.php?app=console&ctl=admin_supplier&act=exportTemplate',
+                    'target' => '_blank',
+                 ),
             );
+            
             $export = true;
             $import = true;
             $filter = true;
-    	}
-        $params =
-        array(
+        }
+        
+        $params = array(
           'title'=>$this->name,
           'actions' => $actions,
           'use_buildin_new_dialog' => false,
@@ -57,8 +59,8 @@ class console_ctl_admin_supplier extends desktop_controller{
           'finder_cols'=>'column_edit,name,brief,arrive_days,operator,credit_lv,telphone,addr,zip,bank,fax',
           'orderBy' => 'supplier_id desc',
         );
+        
         $this->finder('purchase_mdl_supplier', $params);
-
     }
 
     /*
@@ -93,42 +95,41 @@ class console_ctl_admin_supplier extends desktop_controller{
      * @return string
      */
     function addsupplier(){
-
         //调用ome/model/supplier模块
         $oSuuplier = app::get('purchase')->model("supplier");
 
         if ($_POST['addSubmit']=="do"){
-
+            // unset
             unset($_POST['addSubmit']);
+            
             $gotourl = 'index.php?app=console&ctl=admin_supplier';
             $this->begin($gotourl);
+            
             //表单验证
             $oSuuplier->validate($_POST);
             $result = $oSuuplier->save_supplierDo($_POST);
             $message = $result ? '保存成功' : '保存失败';
+            
             $this->end($result, app::get('base')->_($message));
-
         }else{
-
             //信用等级
             $this->pagedata['credit_lev'] = $oSuuplier->getCreditlve();
+            
             //供应品牌
             $this->pagedata['brand'] = app::get('purchase')->model("supplier")->getBrand();
 
             //显示添加供应商窗口
             $this->singlepage('admin/supplier/add_supplier.html');
         }
-
     }
 
     /**
      * 编辑供应商
-     * 
+     *
      * @param number
      * @return boolean
      */
     function editsupplier($supplier_id){
-
         if($_POST['arrive_days'] == ''){
             $_POST['arrive_days'] = NULL;
         }
@@ -137,8 +138,9 @@ class console_ctl_admin_supplier extends desktop_controller{
         $oSupplier = app::get('purchase')->model("supplier");
 
         if ($_POST['editSubmit']=="do"){
-
+            // unset
             unset($_POST['editSubmit']);
+            
             $gotourl = 'index.php?app=console&ctl=admin_supplier';
 
             $this->begin($gotourl);
@@ -148,10 +150,7 @@ class console_ctl_admin_supplier extends desktop_controller{
             $result = $oSupplier->save_supplierDo($_POST,true);
             $msg = $result ? '成功' : '失败';
             $this->end($result, app::get('base')->_('修改'.$msg));
-
-
         }else{
-
             //获取供应商详情
             $filter = array("supplier_id"=>$supplier_id);
             $supplierDetail = $oSupplier->dump($filter,'*');
@@ -173,7 +172,7 @@ class console_ctl_admin_supplier extends desktop_controller{
             }
 
             //读取品牌数据表
-            $brandlist = &$oBrandlist->getBrand();
+            $brandlist = $oBrandlist->getBrand();
 
             $supplierDetail['contacter'] = unserialize($supplierDetail['contacter']);
             if (!strstr($supplierDetail['area'],":")){
@@ -190,7 +189,6 @@ class console_ctl_admin_supplier extends desktop_controller{
     /*
      * 获取采购员 getOperator
      */
-
     public function getOperator()
     {
         $sid = $_GET['sid'];
@@ -205,13 +203,6 @@ class console_ctl_admin_supplier extends desktop_controller{
 
     /*
      * 供应商所有采购单预付款
-     * @package balance
-     * @param int
-     */
-    /**
-     * balance
-     * @param mixed $supplier_id ID
-     * @return mixed 返回值
      */
     public function balance($supplier_id=null)
     {
@@ -227,33 +218,21 @@ class console_ctl_admin_supplier extends desktop_controller{
 
     /*
      * 验证添加的供应商是否存在
-     * is_supplier
      */
-
     public function is_supplier()
     {
         $bn = $_POST['bn'];
         $name = $_POST['name'];
         $oSupplier = app::get('purchase')->model("supplier");
-        if ( $oSupplier->dump(array('bn'=>$bn), 'supplier_id') or $oSupplier->dump(array('name'=>$name), 'supplier_id') )
-        {
+        if ( $oSupplier->dump(array('bn'=>$bn), 'supplier_id') or $oSupplier->dump(array('name'=>$name), 'supplier_id') ){
             die('1');#已存在
-        }
-        else
-        {
+        }else{
             die('0');#未存在
         }
     }
-
-
+    
     /*
      * 商品历史价格查询
-     */
-    /**
-     * history_price
-     * @param mixed $supplier_id ID
-     * @param mixed $goods_id ID
-     * @return mixed 返回值
      */
     public function history_price($supplier_id,$goods_id)
     {
@@ -282,7 +261,6 @@ class console_ctl_admin_supplier extends desktop_controller{
     /*
      * 品牌选择 choice_brand
      */
-
     public function choice_brand()
     {
         $oBrand = app::get('purchase')->model("supplier");
@@ -296,7 +274,6 @@ class console_ctl_admin_supplier extends desktop_controller{
      * 供应商查找
      */
     function getSupplier(){
-
         $name = $_GET['name'];
         if ($name){
             $supplier = app::get('purchase')->model('supplier');
@@ -306,11 +283,10 @@ class console_ctl_admin_supplier extends desktop_controller{
         }
     }
 
-   /*
-     * 供应商查找 by id
+    /**
+     * 供应商查找
      */
     function getSupplierById(){
-
         $supplier_id = $_POST['id'];
         if ($supplier_id){
             $supplier = app::get('purchase')->model('supplier');
@@ -320,7 +296,5 @@ class console_ctl_admin_supplier extends desktop_controller{
             echo "{id:'".$data['supplier_id']."',name:'".$data['name']."'}";
         }
     }
-
-
 }
 ?>

@@ -629,14 +629,29 @@ class ome_ctl_admin_refund_apply extends desktop_controller
             #回写
 
             if($shop_type == 'luban'){
-                //更新主表信息 快手为拒绝退款操作
+                // 先落拒绝态；有关联退货单且未生成售后单时先补售后单；异步失败则回滚拒绝态
+                $prev_status = $refunddata['status'];
+                
+                // update
                 $oRefund_apply->update(array('status'=>3,'memo'=>$newmemo['op_content']),array('apply_id' => $apply_id));
+                
+                // 更新订单支付状态
+                kernel::single('ome_order_func')->update_order_pay_status($refunddata['order_id'], true, __CLASS__.'::'.__FUNCTION__);
+                
+                // 退货完成后的退款申请：必须有退货单且未生成过售后单才补生成
+                kernel::single('ome_refund_apply')->generateAftersaleIfReshipPending($refunddata);
+                
                 $ary_notice = array(
                     'order_id' => $refunddata['order_id'],
+                    'shop_id' => $refunddata['shop_id'],
                     'return_bn' => $refunddata['refund_apply_bn'],
                     'shop_type' => $refunddata['shop_type'],
                     'return_type' => 'refund',
                     'kinds' => 'refund',
+                    'oid' => $refunddata['oid'],
+                    'apply_id' => $apply_id,
+                    'return_id' => $refunddata['return_id'],
+                    'prev_status' => $prev_status,
                     'memo' => array(
                         'reject_reason_code' => $newmemo['seller_refuse_reason_id'],
                         'remark' => $newmemo['op_content'],

@@ -35,7 +35,7 @@ $db['refund_apply'] = array(
             'default_in_list' => true,
             'is_title'      => true,
             'searchtype'    => 'nequal',
-            'filtertype'    => 'yes',
+            'filtertype' => 'normal',
             'filterdefault' => true,
         ),
         'order_id'         => array(
@@ -58,7 +58,7 @@ $db['refund_apply'] = array(
             'label'         => '支付类型',
             'width'         => 110,
             'editable'      => false,
-            'filtertype'    => 'yes',
+            'filtertype' => 'normal',
             'filterdefault' => true,
             'in_list'       => true,
         ),
@@ -102,7 +102,7 @@ $db['refund_apply'] = array(
             'editable'      => false,
             'in_list'       => true,
             'label'         => '付款方式',
-            'filtertype'    => 'yes',
+            'filtertype' => 'normal',
             'filterdefault' => true,
         ),
         'memo'             => array(
@@ -161,7 +161,7 @@ $db['refund_apply'] = array(
             'in_list'         => true,
             'default_in_list' => true,
             'label'           => '退款状态',
-            'filtertype'      => 'yes',
+            'filtertype' => 'normal',
             'filterdefault'   => true,
         ),
         'disabled'         => array(
@@ -209,7 +209,7 @@ $db['refund_apply'] = array(
             'label' => '退款来源',
             'in_list' => true,
             'default_in_list' => false,
-            'filtertype' => 'yes',
+            'filtertype' => 'normal',
             'filterdefault' => true,
         ),
         'bcmoney'          => array(
@@ -368,7 +368,7 @@ $db['refund_apply'] = array(
             'type'            => 'varchar(50)',
             'label'           => '来源渠道',
             'default'         => 'direct',
-            'filtertype'      => 'yes',
+            'filtertype' => 'normal',
             'filterdefault'   => true,
             'in_list'         => true,
             'default_in_list' => true,

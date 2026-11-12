@@ -17,6 +17,13 @@
 
 
 class desktop_finder_top_filter extends desktop_finder_builder_prototype{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
     
     function main($full_object_name,$panel_id){
         $view = $_GET['view'];

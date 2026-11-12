@@ -79,8 +79,7 @@ class console_ctl_admin_delivery extends desktop_controller {
             break;
         }
 
-        if($user->has_permission('console_process_receipts_print_export'))
-        {
+        if($user->has_permission('console_process_receipts_print_export')){
             $base_filter_str = http_build_query($base_filter);
             if ($_GET['view'] == '0') {
                 $query_status = 'progress';
@@ -204,7 +203,6 @@ class console_ctl_admin_delivery extends desktop_controller {
 
         return $sub_menu;
     }
-
     
     /**
      * 发送至第三方
@@ -304,7 +302,6 @@ class console_ctl_admin_delivery extends desktop_controller {
 
         $this->splash('success', null, '命令已经被成功发送！！');
     }
-    
     
     /**
      * 撤销订单
@@ -410,15 +407,18 @@ class console_ctl_admin_delivery extends desktop_controller {
         $autohide = array('autohide'=>3000);
         $this->begin('index.php?app=ome&ctl=admin_delivery&showmemo&p[0]='.$_POST['id']);
         $is_super = kernel::single('desktop_user')->is_super();
-         if (!$is_super) {
+        if (!$is_super) {
              $this->end(false, '非超级管理员不可操作');
-         }
+        }
+        
         if (empty($_POST['id']) && !empty($_POST['flag'])){
             $this->end(false, '请选择至少一张发货单', '', $autohide);
         }
+        
         if (empty($_POST['memo'])){
             $this->end(false, '备注请不要留空', '', $autohide);
         }
+        
         $delivery_id = $_POST['delivery_id'];
         $dlyObj = app::get('ome')->model("delivery");
         $orderObj = app::get('ome')->model("orders");
@@ -473,7 +473,6 @@ class console_ctl_admin_delivery extends desktop_controller {
             }
 
             //取关联订单号进行还原
-            
             if($order_ids){
                 foreach ($order_ids as $id){
                     $order['order_id'] = $id;
@@ -499,6 +498,7 @@ class console_ctl_admin_delivery extends desktop_controller {
             $processResult = $storeManageLib->processBranchStore($params, $err_msg);
             kernel::single('ome_order_object_splitnum')->backDeliverySplitNum($deliveryInfo['delivery_id']);
         }
+        
         //冻结库存释放
         $this->end(true, '操作成功', 'index.php?app=console&ctl=admin_delivery&act=pauseorder', $autohide);
     }
@@ -620,12 +620,9 @@ class console_ctl_admin_delivery extends desktop_controller {
             }
         }
 
-        $this->end(true, '批量撤销发货单成功');  
-
+        $this->end(true, '批量撤销发货单成功');
     }
     
-
-
     public function toBatchSearch()
     {
         $base_filter = array(
@@ -639,8 +636,8 @@ class console_ctl_admin_delivery extends desktop_controller {
         if ($branch_ids){
             $base_filter['branch_id'] = $branch_ids;
         }
+        
         $_POST = array_merge($_POST, $base_filter);
-
         
         $this->pagedata['request_url'] = $this->url.'&act=doBatchSearch';
 
@@ -653,7 +650,6 @@ class console_ctl_admin_delivery extends desktop_controller {
     */
     public function doBatchSearch()
     {
-        
         parse_str($_POST['primary_id'], $postdata);
 
         if (!$postdata['f']) { echo 'Error: 请先选择发货单';exit;}
@@ -675,7 +671,6 @@ class console_ctl_admin_delivery extends desktop_controller {
 
         $retArr['itotal'] = count($deliverys);
         foreach ($deliverys as  $delivery) {
-
             $wms_id = kernel::single('ome_branch')->getWmsIdById($delivery['branch_id']);
             $notice_params = array(
                 'delivery_bn'   =>  $delivery['delivery_bn'],
@@ -691,11 +686,9 @@ class console_ctl_admin_delivery extends desktop_controller {
             }else{
                 $retArr['ifail']++;
             }
-            
         }
 
         echo json_encode($retArr),'ok.';exit;
-
     }
 
     public function getSearchBranchids(){
@@ -718,12 +711,8 @@ class console_ctl_admin_delivery extends desktop_controller {
         * @return void
         * @author 
         **/
-       public function showSensitiveData($delivery_id, $fieldType='')
-       {
-            // if (!kernel::single('desktop_user')->has_permission('sensitive_data_show')) {
-            //     $this->splash('error',null,'您无权查看该数据');
-            // }
-
+    public function showSensitiveData($delivery_id, $fieldType='')
+    {
             $deliveryMdl = app::get('console')->model('delivery');
 
             $delivery = $deliveryMdl->db_dump($delivery_id,'shop_id,shop_type,ship_name,ship_tel,ship_mobile,ship_addr,delivery_id,delivery_bn,member_id,ship_province,ship_city,ship_district,memo');
@@ -733,8 +722,7 @@ class console_ctl_admin_delivery extends desktop_controller {
 
                 $delivery['uname'] = $member['uname'];
             }
-
-
+            
             $order_ids = $deliveryMdl->getOrderIdByDeliveryId($delivery['delivery_id']);
 
             $order = app::get('ome')->model('orders')->db_dump(array ('order_id' => $order_ids),'order_bn');
@@ -742,13 +730,9 @@ class console_ctl_admin_delivery extends desktop_controller {
 
             // 处理加密
             $delivery['encrypt_body'] = kernel::single('ome_security_router',$delivery['shop_type'])->get_encrypt_body($delivery, 'delivery', $fieldType);
-
-            // 推送日志
-            // kernel::single('base_hchsafe')->order_log(array('operation'=>'查看发货单收货人信息','tradeIds'=>array($delivery['delivery_bn'])));
             
-
             $this->splash('success',null,null,'redirect',$delivery);
-       }
+    }
     
     /**
      * 查询京东包裹发货状态
@@ -768,8 +752,7 @@ class console_ctl_admin_delivery extends desktop_controller {
         
         //[兼容]通过退货单号查询
         $show_cancel = false;
-        if($reship_id && empty($delivery_id))
-        {
+        if($reship_id && empty($delivery_id)){
             $tempInfo = $rePackageObj->dump(array('reship_id'=>$reship_id), '*');
             $delivery_id = $tempInfo['delivery_id'];
             
@@ -831,7 +814,6 @@ class console_ctl_admin_delivery extends desktop_controller {
         $this->pagedata['reship_id'] = $reship_id;
         $this->singlepage("admin/delivery/package_status.html");
     }
-    
     
     /**
      * 通知京东云交易平台提前发货
@@ -931,14 +913,6 @@ class console_ctl_admin_delivery extends desktop_controller {
                 $operLogObj->write_log('delivery_modify@ome', $delivery_id, $error_msg);
             }
         }
-        
-        /****
-        if($syncErrorDly){
-            $error_msg = '发货单号：'.  implode(',', $syncErrorDly) .'推荐失败,请查看发货单日志!';
-            
-            $this->end(false, $error_msg);
-        }
-        ***/
         
         if(empty($syncDlyIds)){
             $this->splash('error', null, '没有需要通知的发货单(默认已过滤通知成功、没有京东订单号的记录)。');

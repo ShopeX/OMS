@@ -23,6 +23,13 @@
  */
 
 class flowctrl_finder_feature{
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     var $addon_cols = "type,config";
 

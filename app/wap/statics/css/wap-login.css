@@ -1,0 +1,182 @@
+/* WAP login page - PC visual alignment */
+.login-page {
+  min-height: 100vh;
+  background: url('../img/login-bg.jpg') center center / cover no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.login-container {
+  width: 100%;
+  max-width: 420px;
+}
+
+.login-box {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 30px 80px rgba(13, 27, 57, 0.55);
+  border-radius: 20px;
+  padding: 36px 32px;
+}
+
+.login-logo {
+  display: block;
+  width: 100%;
+  max-width: 220px;
+  margin: 0 auto 8px;
+}
+
+.login-title {
+  text-align: center;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 24px;
+  letter-spacing: 1px;
+}
+
+.login-field {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.login-field .icon-field {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 20px;
+  color: #aaa;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.login-field input {
+  width: 100%;
+  padding: 12px 12px 12px 40px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #333;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.login-field input:focus {
+  outline: none;
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.2);
+}
+
+.login-field .verifycode-input {
+  width: 38%;
+  padding-left: 12px;
+}
+
+.login-field .verifycode-img {
+  height: 40px;
+  border-radius: 6px;
+  vertical-align: middle;
+  margin-left: 8px;
+}
+
+.login-field .changeimg-link {
+  padding-left: 8px;
+  font-size: 14px;
+  color: #157fe3;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.login-field .changeimg-link:hover {
+  color: #1677ff;
+}
+
+.but_login {
+  width: 100%;
+  padding: 13px 24px;
+  background: #000;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  letter-spacing: 4px;
+  transition: background 0.2s;
+  margin-top: 8px;
+  box-sizing: border-box;
+}
+
+.but_login:hover {
+  background: #333;
+}
+
+.but_login:active {
+  background: #000;
+}
+
+.login-footer {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.login-footer .version,
+.login-footer .copyright {
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* WAP login footer — Powered by mini-logo */
+#footer.footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  text-align: center;
+  z-index: 10;
+  padding: 8px 0;
+}
+
+.footer-text {
+  font-size: 12px;
+  color: #999;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1;
+}
+
+.footer-text a {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.footer-text img {
+  height: 12px;
+  width: auto;
+  display: block;
+  vertical-align: middle;
+}
+
+/* Mobile responsive */
+@media screen and (max-width: 480px) {
+  .login-container {
+    max-width: 100%;
+  }
+  .login-box {
+    border-radius: 16px;
+    padding: 28px 20px;
+  }
+}

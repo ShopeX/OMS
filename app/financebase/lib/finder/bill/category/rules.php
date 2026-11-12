@@ -16,6 +16,13 @@
  */
 
 class financebase_finder_bill_category_rules {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     var $addon_cols = 'account_id_plus,account_id_minus';
     var $col_prefix = ''; // 动态设置的前缀，用于addon_cols字段
@@ -24,6 +31,17 @@ class financebase_finder_bill_category_rules {
     var $column_edit_width = "150";
 
     function column_edit($row) {
+        // Vue Finder 契约：结构化行操作（不下发 legacy HTML 片段）
+        if ($this->vue_mode) {
+            if (!kernel::single('desktop_user')->has_permission('shop_settlement_rules_edit')) {
+                return array();
+            }
+
+            return array(
+                array('key' => 'edit', 'label' => '编辑', 'action' => 'edit'),
+            );
+        }
+
         $finder_id = $_GET['_finder']['finder_id'];
 
         // 检查编辑权限
@@ -99,6 +117,28 @@ class financebase_finder_bill_category_rules {
 	var $column_platform_width = "500";
 	var $column_platform_order = 20;
 	function column_platform($row) {
+		// Vue Finder 契约：结构化平台链接（蓝色=已设置/红色=未设置），前端渲染链接、点击打开平台规则设置页
+		if ($this->vue_mode) {
+			$oFunc = kernel::single('financebase_func');
+			$platform = $oFunc->getShopPlatform(true);
+
+			$tmp = app::get('financebase')->model('bill_category_rules')->getRow('rule_content', array('rule_id' => $row['rule_id']));
+			$rule_content = !empty($tmp['rule_content']) ? json_decode($tmp['rule_content'], 1) : array();
+			if (!is_array($rule_content)) {
+				$rule_content = array();
+			}
+
+			$list = array();
+			foreach ($platform as $key => $value) {
+				$list[] = array(
+					'platform'   => (string) $key,
+					'label'      => (string) $value,
+					'configured' => (isset($rule_content[$key]) && $rule_content[$key]) ? true : false,
+				);
+			}
+
+			return array('platforms' => $list);
+		}
 
 		$finder_id = $_GET['_finder']['finder_id'];
 		$oFunc = kernel::single('financebase_func');
@@ -128,7 +168,24 @@ class financebase_finder_bill_category_rules {
 		// 使用ome模块的read_log方法，与经销商品价格保持一致
 		$omeLogMdl = app::get('ome')->model('operation_log');
 		$logList = $omeLogMdl->read_log(array('obj_id' => $rule_id, 'obj_type' => 'bill_category_rules@financebase'), 0, -1);
-		
+
+		// Vue Finder 契约：结构化下发，不下发 legacy 的 <a> HTML；编辑类日志 can_snapshot=true 供前端跳「查看快照」
+		if ($this->vue_mode) {
+			$list = array();
+			foreach ((array) $logList as $v) {
+				$list[] = array(
+					'operate_time' => date('Y-m-d H:i:s', $v['operate_time']),
+					'op_name'      => $v['op_name'],
+					'operation'    => $v['operation'],
+					'memo'         => $v['memo'] ?: '',
+					'log_id'       => $v['log_id'],
+					'can_snapshot' => strpos((string) $v['operation'], '编辑') !== false,
+				);
+			}
+
+			return array('logs' => $list);
+		}
+
 		$finder_id = $_GET['_finder']['finder_id'];
 		
 		if ($logList) {
@@ -151,4 +208,3 @@ class financebase_finder_bill_category_rules {
 	}
 
 }
-

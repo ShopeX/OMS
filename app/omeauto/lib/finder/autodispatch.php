@@ -16,6 +16,13 @@
  */
 
 class omeauto_finder_autodispatch {
+    protected $vue_mode = false;
+
+    public function setVueMode(bool $vue): void
+    {
+        $this->vue_mode = $vue;
+    }
+
 
     static $orderTypes = null;
 

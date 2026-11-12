@@ -66,10 +66,8 @@ class ome_service_login {
         if ($account_id) {
 
             kernel::single('base_session')->start();
-            $_SESSION['account'][$type] = $account_id;
-            $_SESSION['login_time'] = time();
-            $_SESSION['needChangePassword'] = null;
-            $_SESSION['login_trust'] = true;    
+            // SESSION auth writes removed - JWT is now primary auth
+            // Keeping $_SESSION['account'][$type] for backward compatibility (read only)
             if ($params['visitor_role'] == 'taobao') {
 
                 app::get('omestart')->setConf('tb_session', $params['top_session']);

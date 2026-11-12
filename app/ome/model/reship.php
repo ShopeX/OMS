@@ -1268,6 +1268,13 @@ class ome_mdl_reship extends dbeav_model{
        }
        $order_sdf['title']=$tostr ? json_encode($tostr):'';
        
+       // 是否极速换货
+       $topspeedCreateLib = kernel::single('ome_order_platform_taobao_aftersale');
+       $topspeedFlagType = isset($reshipinfo['flag_type']) ? $reshipinfo['flag_type'] : 0;
+       if ($topspeedCreateLib->isTopspeedShopType($reshipinfo['shop_type']) && $topspeedCreateLib->isTopspeedByFlagType($topspeedFlagType)) {
+           $order_sdf['order_type'] = 'exchange';
+       }
+       
        //create order
        $result =  $this->app->model('orders')->create_order($order_sdf);
        
@@ -1279,7 +1286,17 @@ class ome_mdl_reship extends dbeav_model{
           //更新退货单上状态
           $reshipObj = app::get('ome')->model('reship');
           $reshipObj->update(array('change_order_id'=>$order_sdf['order_id'],'change_status'=>'1'),array('reship_id'=>$reshipinfo['reship_id']));
-          kernel::single('ome_service_aftersale')->returngoods_agree($reshipinfo['return_id']);
+
+          $topspeedLib = kernel::single('ome_order_platform_taobao_aftersale');
+          // 极速换货：17 提前建单不得调用平台确认收货
+          $skipReturngoodsAgree = $topspeedLib->shouldSkipReturngoodsAgreeOnCreate($reshipinfo);
+          if (!$skipReturngoodsAgree) {
+              kernel::single('ome_service_aftersale')->returngoods_agree($reshipinfo['return_id']);
+          }
+          $isTopspeedFlag = $topspeedLib->isTopspeedByFlagType(isset($reshipinfo['flag_type']) ? $reshipinfo['flag_type'] : 0);
+          if ($isTopspeedFlag) {
+              $topspeedLib->markTopspeedOnChangeOrder($order_sdf['order_id']);
+          }
           $extend_data = array('orig_reship_id'=>$reshipinfo['reship_id'],'order_id'=>$order_sdf['order_id']);
           
           //小红书平台：根据return_id查询换货收货地址表中的encrypt_source_data，提取openAddressId到extend_field，openAddressId用于获取电子面单取号
