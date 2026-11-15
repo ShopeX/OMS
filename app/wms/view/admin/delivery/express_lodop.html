@@ -121,6 +121,25 @@
                             <div id="dly_printer_div" style="float:left;width: 80%;" ></div>
                             <div id="dly_printer" style="float:right;width:19%;"></div>
                         </div>
+
+                        <{if $printTmpl.template_type == 'normal' && $appCtl == 'app=wms&ctl=admin_receipts_print'}>
+                        <!-- 普通快递单（Lodop 模板）：打印完成后录入快递单号并回填 -->
+                        <span style="font-size: 13px; color: blue; cursor: pointer; text-decoration: underline;" onclick="showBindLogi();">只关联快递单号，请点击这里！</span>
+                        <div id="printFinishTip" class="note" style="display:none; font-size:14px; font-weight:700;">请在<font color="red">打印完成</font>后，再进行快递单号的关联！&nbsp;&nbsp;
+                            <span style="font-weight:100;">批量关联快递单号时请认真核对第一张和最后一张的快递面单上的单号和收货人信息和电脑上的是否一致！</span></div>
+                        <div id="logiNoBox" class="order-box" style="display:none;">
+                            <h3>快递单号录入（保存后回填发货单）</h3>
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                <{foreach from=$items key=delivery_id item=item}>
+                                <tr>
+                                    <td width="30%"><{$item.delivery_bn}>：<{$item.consignee.name}></td>
+                                    <td><input type="text" class="logi_no_input" name="id[<{$delivery_id}>]" value="<{$item.logi_no}>" style="width:220px;" /></td>
+                                </tr>
+                                <{/foreach}>
+                            </table>
+                            <{button label="保存单号" type="button" class="btn-primary" onclick="saveLogiNo();"}>
+                        </div>
+                        <{/if}>
                     </td>
                 </tr>
             </table>
@@ -142,6 +161,100 @@
             }
         <{ /if }>
     </script>
+    <{if $printTmpl.template_type == 'normal' && $appCtl == 'app=wms&ctl=admin_receipts_print'}>
+    <script type="text/javascript">
+        // 普通快递单：默认隐藏单号录入区，打印完成后/手动入口唤起
+        function showBindLogi(){
+            $('printFinishTip').setStyle('display','');
+            $('logiNoBox').setStyle('display','');
+        }
+        function showLogiNoBox(){
+            $('logiNoBox').setStyle('display','');
+        }
+
+        // 连号规则：第一行扫描/输入单号后按回车，后续行按“前缀+尾部数字递增”自动填充（对齐老 shopexplugin next_express）
+        function is_num(str){
+            return /^[0-9]+$/.test(str);
+        }
+
+        function autoFillNextLogi(el){
+            var str = el.value.trim();
+            if (str == '') {
+                return alert('请扫描快递单号');
+            }
+            var end = str.substr(str.length-1, 1);
+            if (!is_num(end)) {
+                return alert('请输入正确的快递单号!');
+            }
+            var num = str.match(/[1-9]\d*\b/g);
+            if (!num) {
+                return;
+            }
+            num = num[num.length-1];
+            var len = str.lastIndexOf(num);
+            var start = str.substring(0, len);
+            var n = new Number(num) + 1;
+            var inputs = $$('.logi_no_input');
+            var cur = inputs.indexOf(el);
+            for (var i = cur + 1; i < inputs.length; i++) {
+                if (!/^id\[\d+\]$/.test(inputs[i].name)) {
+                    continue;
+                }
+                inputs[i].value = start + n;
+                n++;
+            }
+        }
+
+        $$('.logi_no_input').each(function(el){
+            el.addEvent('keydown', function(e){
+                if (e.key == 'enter') {
+                    e.preventDefault();
+                    autoFillNextLogi(el);
+                }
+            });
+        });
+
+        // 收集非空单号（仅接受纯数字 delivery_id，排除主-子单复合键），回填 delivery_bill.logi_no 并置打印状态
+        function saveLogiNo(){
+            var succData = '', succIds = '', hasInput = false;
+            $$('.logi_no_input').each(function(el){
+                if (el.value != '' && /^id\[\d+\]$/.test(el.name)) {
+                    hasInput = true;
+                    succData = succData + '&' + el.name + '=' + el.value;
+                    succIds = succIds + ',' + el.name.replace(/^id\[|\]$/g,'');
+                }
+            });
+            if (!hasInput) {
+                return alert('请先填写快递单号');
+            }
+            if (confirm('您本次要求绑定的快递单号可能存在问题，请与打印面单仔细核对！确定要提交绑定吗？\n\n注意：如果物流单号错误，则可能导致回写发货状态失败或与物流相关的不可预知错误！') == false) {
+                return;
+            }
+            new Request({url:'index.php?app=wms&ctl=admin_receipts_print&act=insertExpress&finder_id=<{$env.get.finder_id}>',method:'post',data:succData,
+                onSuccess:function(json){
+                    if (json != 'SUCC'){
+                        alert(json);
+                    }else{
+                        new Request({url:'index.php?app=wms&ctl=admin_receipts_print&act=setPrintStatus',method:'post',data:'type=express&str='+succIds,
+                            onSuccess:function(json){
+                                if (json == 'true'){
+                                    if (confirm('物流单号已经成功绑定！\n\n你要退出本窗口继续其它操作吗？')) {
+                                        window.close();
+                                    }
+                                    if (opener && opener.finderGroup && opener.finderGroup['<{$env.get.finder_id}>']) {
+                                        opener.finderGroup['<{$env.get.finder_id}>'].refresh();
+                                    }
+                                }else {
+                                    alert('设置打印状态时发生错误！');
+                                }
+                            }
+                        }).send();
+                    }
+                }
+            }).send();
+        }
+    </script>
+    <{/if}>
     <{include file="admin/delivery/include/template_lodop.html" app="wms"}>
 <{ /if }>
 

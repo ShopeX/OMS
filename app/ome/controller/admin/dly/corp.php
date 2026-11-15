@@ -116,8 +116,9 @@ class ome_ctl_admin_dly_corp extends desktop_controller
         if (app::get('logisticsmanager')->is_installed()) {
             //新版控件打印
             $templateObj = app::get("logisticsmanager")->model('express_template');
-            $templates   = $templateObj->getList("template_id,template_name,template_type");
+            $templates   = $templateObj->getList("template_id,template_name,template_type,control_type");
             $normalTmpl  = $cainiaoTmpl  = $electronTmpl = $kuaishouTmpl = $wphvipTmpl  = $huaweiTmpl  = $xhsTmpl = $wxshipinTmpl = $meituan4bulkpurchasingTmpl = $akcTmpl = array();
+            $normalCainiaoTmpl = array();
             foreach ($templates as $val) {
                 if ($val['template_type'] == 'normal') {
                     $normalTmpl[] = $val;
@@ -154,6 +155,16 @@ class ome_ctl_admin_dly_corp extends desktop_controller
             }
             $this->pagedata['cainiaoTmpl'] = $cainiaoTmpl;
             $this->pagedata['normalTmpl'] = $normalTmpl;
+            // 普通面单“菜鸟控件”仅提供老菜鸟云打印模板（数据键为本地字段，不依赖取号报文）
+            $normalCainiaoTmpl = array();
+            foreach ((array)$cainiaoTmpl as $val) {
+                if ($val['template_type'] == 'cainiao') {
+                    $normalCainiaoTmpl[] = $val;
+                }
+            }
+            $this->pagedata['normalCainiaoTmpl'] = $normalCainiaoTmpl;
+            $this->pagedata['normalShopVal'] = '';
+            $this->pagedata['normalCainiaoVal'] = '';
             $this->pagedata['pddTmpl']  = $pddTmpl;
             $this->pagedata['jdTmpl']   = $jdTmpl;
             $this->pagedata['douyinTmpl']   = $douyinTmpl;
@@ -269,8 +280,9 @@ class ome_ctl_admin_dly_corp extends desktop_controller
         if (app::get('logisticsmanager')->is_installed()) {
             //新版控件打印
             $templateObj = app::get("logisticsmanager")->model('express_template');
-            $templates   = $templateObj->getList("template_id,template_name,template_type");
+            $templates   = $templateObj->getList("template_id,template_name,template_type,control_type");
             $canniaoId  = $kuaishouTmpl = $wphvipTmpl = $xhsTmpl = $wxshipinTmpl = $akcTmpl = array();
+            $normalTmpl = $pddTmpl = $jdTmpl = $douyinTmpl = $wphvipTmpl = $dewuTmpl = $sfTmpl = $youzanTmpl = $wxshipinTmpl = $meituan4bulkpurchasingTmpl = $akcTmpl = $electronTmpl = $cainiaoTmpl = $normalCainiaoTmpl = array();
             foreach ($templates as $val) {
                 if ($val['template_type'] == 'normal') {
                     $normalTmpl[] = $val;
@@ -307,6 +319,26 @@ class ome_ctl_admin_dly_corp extends desktop_controller
             }
 
             $this->pagedata['normalTmpl']   = $normalTmpl;
+            // 普通面单“菜鸟控件”仅提供老菜鸟云打印模板
+            foreach ((array)$cainiaoTmpl as $val) {
+                if ($val['template_type'] == 'cainiao') {
+                    $normalCainiaoTmpl[] = $val;
+                }
+            }
+            $this->pagedata['normalCainiaoTmpl'] = $normalCainiaoTmpl;
+            // 普通面单控件回显：菜鸟模板 → 菜鸟控件；其余（含 lodop 升级模板与老普通模板）→ ShopEx控件
+            $normalShopVal = '';
+            $normalCainiaoVal = '';
+            if ($dly_info['tmpl_type'] == 'normal' && $dly_info['prt_tmpl_id']) {
+                $boundTmpl = $templateObj->dump($dly_info['prt_tmpl_id'], 'template_id,template_type,control_type');
+                if ($boundTmpl && $boundTmpl['template_type'] == 'cainiao') {
+                    $normalCainiaoVal = $dly_info['prt_tmpl_id'];
+                } else {
+                    $normalShopVal = $dly_info['prt_tmpl_id'];
+                }
+            }
+            $this->pagedata['normalShopVal'] = $normalShopVal;
+            $this->pagedata['normalCainiaoVal'] = $normalCainiaoVal;
             $this->pagedata['cainiaoTmpl']  = $cainiaoTmpl;
             $this->pagedata['pddTmpl']      = $pddTmpl;
             $this->pagedata['jdTmpl']       = $jdTmpl;
@@ -416,6 +448,9 @@ class ome_ctl_admin_dly_corp extends desktop_controller
 
         if (app::get('logisticsmanager')->is_installed()) {
             if ($dlycorp['tmpl_type'] == 'normal') {
+                if (empty($dlycorp['normal_tmpl_id'])) {
+                    $this->end(false, app::get('base')->_('请选择快递单模板'));
+                }
                 $dlycorp['prt_tmpl_id'] = $dlycorp['normal_tmpl_id'];
                 $dlycorp['shop_id']     = '';
                 $dlycorp['channel_id']  = 0;
@@ -459,7 +494,7 @@ class ome_ctl_admin_dly_corp extends desktop_controller
                 $dlycorp['channel_id']  = $dlycorp['electron_channel_id'];
 
             }
-            unset($dlycorp['normal_tmpl_id'], $dlycorp['electron_tmpl_id'], $dlycorp['cainao_tmpl_id'], $dlycorp['electron_channel_id'], $dlycorp['electron_type']);
+            unset($dlycorp['normal_tmpl_id'], $dlycorp['normal_tmpl_id_shopex'], $dlycorp['normal_tmpl_id_cainiao'], $dlycorp['normal_control'], $dlycorp['electron_tmpl_id'], $dlycorp['cainao_tmpl_id'], $dlycorp['electron_channel_id'], $dlycorp['electron_type']);
 
         }
 

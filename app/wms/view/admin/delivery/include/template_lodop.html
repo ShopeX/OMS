@@ -134,6 +134,10 @@
                 },
                 onPrintSuccess:function(data){
                     printFinishShow(data);
+                    // 普通快递单：打印完成后切换到快递单号关联界面（对齐老 shopexplugin 流程）
+                    if ('normal' == '<{$printTmpl.template_type}>' && typeof showBindLogi === 'function') {
+                        setTimeout(showBindLogi, 1000);
+                    }
                 },
                 onPrintFailure:function(data){
                     printFinishShow(data);

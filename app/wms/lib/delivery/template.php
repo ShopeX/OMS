@@ -463,6 +463,9 @@ class wms_delivery_template
             $data['seller_id']          = $value_list['seller_id'];
             $data['waybill_no_check']   = $value_list['channel_mobile'] ? substr($value_list['channel_mobile'], -6) : '';//寄方电话后6位 运单号合法校验
             $data['cp_code']            = strtoupper($value_list['logi_type']);
+        } elseif (in_array($value_list['printTpl']['template_type'], array('cainiao', 'cainiao_standard', 'cainiao_user'))) {
+            // 普通物流公司绑定菜鸟控件模板：无电子面单取号报文，cp_code 用物流公司编码兜底，其余菜鸟专有字段保持空值
+            $data['cp_code'] = strtoupper($value_list['logi_type']);
         }
 
         $data['batch_logi_no']  = $value_list['batch_logi_no'];

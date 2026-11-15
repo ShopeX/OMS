@@ -306,10 +306,22 @@
         <div class="division">
             <table width="100%" border="0" cellpadding="0" cellspacing="0">
                 <{if $logisticsmanager=='true'}>
-                <tr id="normalTmpl">
-                    <th><{t}>选择普通面单模板：<{/t}></th>
-                    <td><{input type="select" name='normal_tmpl_id' rows=$normalTmpl valueColumn="template_id" labelColumn="template_name" value=$dt_info.prt_tmpl_id vtype="required" style="width:100px;"}> <em><font color='red'>*</font></em></td>
+                <tr id="normalTmplType">
+                    <th><{t}>选择控件类型：<{/t}></th>
+                    <td>
+                        <input type="radio" value="shopex" name="normal_control" onchange="normalControlChange()" <{if $normalCainiaoVal==''}>checked<{/if}>><{t}>ShopEx控件<{/t}>
+                        <input type="radio" value="cainiao" name="normal_control" onchange="normalControlChange()" <{if $normalCainiaoVal!=''}>checked<{/if}>><{t}>菜鸟控件<{/t}>
+                    </td>
                 </tr>
+                <tr id="normalShopTmplRow">
+                    <th><{t}>选择ShopEx控件模板：<{/t}></th>
+                    <td><{input type="select" id='normal_tmpl_id_shopex' name='normal_tmpl_id_shopex' rows=$normalTmpl valueColumn="template_id" labelColumn="template_name" value=$normalShopVal vtype="required" style="width:100px;"}> <em><font color='red'>*</font></em></td>
+                </tr>
+                <tr id="normalCainiaoTmplRow" style="display:none;">
+                    <th><{t}>选择菜鸟控件模板：<{/t}></th>
+                    <td><{input type="select" id='normal_tmpl_id_cainiao' name='normal_tmpl_id_cainiao' rows=$normalCainiaoTmpl valueColumn="template_id" labelColumn="template_name" value=$normalCainiaoVal style="width:100px;"}> <em><font color='red'>*</font></em></td>
+                </tr>
+                <input type="hidden" name="normal_tmpl_id" value="<{$dt_info.prt_tmpl_id}>">
                 <tr id="electronTmplType">
                     <th><{t}>选择控件类型：<{/t}></th>
                     <td>
@@ -383,7 +395,8 @@
                 <{else}>
                 $('dly_type').set('value', '<{$dt_info.type}>');
                 <{/if}>
-                $('normalTmpl').show();
+                $('normalTmplType').show();
+                $('normalShopTmplRow').show();
                 $('electronTmplType').hide();
                 $('electronTmplName').hide();
                 $('normalChannel').show();
@@ -391,10 +404,13 @@
                 $('normalShop').show();
                 $('electronShop').hide();
                 $("btn-search").show();
+                normalControlChange();
             }else if($$('input[name=tmpl_type]:checked').get('value') == 'electron'){
                 $('electronTmplType').show();
                 $('electronTmplName').show();
-                $('normalTmpl').hide();
+                $('normalTmplType').hide();
+                $('normalShopTmplRow').hide();
+                $('normalCainiaoTmplRow').hide();
                 $('electronTmpl').hide();
                 $('cainiaoTmpl').hide();
                 $('electronChannel').show();
@@ -409,6 +425,32 @@
 
     tmplTypeChange();
     electronTypeChange();
+
+    // 普通面单控件类型切换：显隐对应模板下拉
+    function normalControlChange(){
+        var v = $$('input[name=normal_control]:checked').get('value');
+        $('normalShopTmplRow').hide();
+        $('normalCainiaoTmplRow').hide();
+        if (v == 'cainiao') {
+            $('normalCainiaoTmplRow').show();
+        } else {
+            $('normalShopTmplRow').show();
+        }
+        syncNormalTmpl();
+    }
+
+    // 把当前可见下拉的值同步到 normal_tmpl_id（后端保存仍读 normal_tmpl_id）
+    function syncNormalTmpl(){
+        var v = $$('input[name=normal_control]:checked').get('value');
+        var val = '';
+        if (v == 'cainiao') {
+            val = $('normal_tmpl_id_cainiao').get('value');
+        } else {
+            val = $('normal_tmpl_id_shopex').get('value');
+        }
+        $$('input[name=normal_tmpl_id]').set('value', val || '');
+        return val || '';
+    }
     function electronTypeChange(){
         var channelShop = JSON.decode('<{$channelShop}>');
         var jsonelectronchannel = JSON.decode('<{$jsonelectronchannel}>');
@@ -618,6 +660,16 @@
         }
     });
     
+    // 提交前同步普通面单所选模板到 normal_tmpl_id，未选则拦截
+    $('btn-dly_corp').addEvent('click', function(){
+        if ($$('input[name=tmpl_type]:checked') && $$('input[name=tmpl_type]:checked').get('value') == 'normal') {
+            if (!syncNormalTmpl()) {
+                alert('请选择快递单模板');
+                return false;
+            }
+        }
+    });
+
     $('form-dly_corp').store('target',{
         onRequest:function(){
             $('btn-dly_corp').set('disabled', 'true');
