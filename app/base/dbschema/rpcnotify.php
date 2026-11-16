@@ -98,7 +98,6 @@ $db['rpcnotify']=array (
       'in_list' => true,
       'default_in_list' => true,
     ),
-    ),
     'shop_bn' => array (
         'type' => 'varchar(20)',
         'required' => false,
