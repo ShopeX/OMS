@@ -18,11 +18,6 @@
 class o2o_mdl_branch_products extends console_mdl_branch_product{
     var $export_name = '门店库存';
 
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
     public function table_name($real = false){
         if($real){
            $table_name = 'sdb_ome_branch_product';
@@ -32,10 +27,6 @@ class o2o_mdl_branch_products extends console_mdl_branch_product{
         return $table_name;
     }
 
-    /**
-     * __construct
-     * @return mixed 返回值
-     */
     public function __construct() {
         parent::__construct();
         // 初始化导出相关属性
@@ -45,8 +36,9 @@ class o2o_mdl_branch_products extends console_mdl_branch_product{
     
     /**
      * 重写导出方法，确保只导出门店类型的库存数据
+     * 签名需与父类 console_mdl_branch_product::fgetlist_csv 保持兼容
      */
-    function fgetlist_csv(&$data, $filter, $offset, $exportType = 1) {
+    function fgetlist_csv(&$data, $filter, $offset, $exportType = 1, $limit = 1000, $orderby = null) {
         // 确保只导出门店类型的库存数据
         if (!isset($filter['b_type'])) {
             $filter['b_type'] = '2';
@@ -61,10 +53,10 @@ class o2o_mdl_branch_products extends console_mdl_branch_product{
             }
             $data['content']['main'][] = '"'.implode('","',$title).'"';
         }
-        //$limit =100;
         $barcodeLib = kernel::single('material_basic_material_barcode');
 
-        if( !$list=$this->getlists('*',$filter,0,-1) )return false;
+        // 与父类一致：按分片读取，避免全量库存进内存
+        if( !$list=$this->getlists('*',$filter,$offset * $limit,$limit,$orderby) )return false;
 
         $list = material_basic_material_master::fillListRowsWithIdField($list, 'product_id');
         $masterCols = material_basic_material_master::extraCols();
