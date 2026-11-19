@@ -24,7 +24,8 @@ abstract class ome_tgservice_version_abstract{
     public function __construct(){
         $this->db = kernel::database();
         $this->shell = kernel::single('base_shell_webproxy');
-
+        
+        $deploy_info = array();
         if(empty($this->deploy_info)){
             require_once(ROOT_DIR.'/script/tgservice_version.php');
             $this->deploy_info = $deploy_info;
@@ -63,6 +64,7 @@ abstract class ome_tgservice_version_abstract{
             }
 
             base_certificate::set_release_version($this->release_version);
+            base_certificate::update_node($domain);
             app::get('ome')->setConf('tg_version',$params['release_version']);
 
             $sass_params = array(
@@ -86,13 +88,6 @@ abstract class ome_tgservice_version_abstract{
 
         ob_clean();
 
-        // SaaS 功能已禁用，密钥已删除
-        // 此功能不再可用
-        $this->ilog("SaaS 功能已禁用，callback_tosass 方法不再可用");
-        return false;
-        
-        // 以下代码已禁用
-        /*
         $api = new SaasOpenClient();
         $api->appkey = SASS_APP_KEY;
         $api->secretKey = SAAS_SECRE_KEY;
@@ -115,10 +110,11 @@ abstract class ome_tgservice_version_abstract{
     }
 
     public function main($operation = 'install',$params = array(),&$msg = '',$obj){
-        $res = $obj->$operation($params,$sass_params,$msg,$is_callback);
+        $is_callback = false;
+        $res = $obj->$operation($params,$params,$msg,$is_callback);
         if($res){
             if($is_callback){
-                $obj->callback_tosass($sass_params);
+                $obj->callback_tosass($params);
             }
             $this->ilog("Active process finished.");
             return true;
@@ -148,6 +144,7 @@ abstract class ome_tgservice_version_abstract{
 
         app::get('ome')->setConf('tg_version',$params['release_version']);
         base_certificate::set_release_version($this->release_version);
+        base_certificate::update_node(sprintf('http://%s',$params['domain']));
 
         $certi_id = kernel::single('base_certificate')->certi_id();//应用证书号
         $node_id = kernel::single('base_shopnode')->node_id('ome'); //应用节点号
@@ -211,6 +208,8 @@ abstract class ome_tgservice_version_abstract{
         // $this->shell->exec_command("install drm");
 
         $this->ilog("Update Ok.");
+
+        kernel::single('base_certificate')->register(sprintf('http://%s',$data['domain']));
 
         // 更新产品版本
         if (strstr($data['domain'], '.tp-erp.taoex.com')) {
@@ -482,13 +481,11 @@ abstract class ome_tgservice_version_abstract{
      * 导入数据，格式为 SQLyog 导出的SQL文件格式 (初始化数据)
      */
     private function importData() {
-
-        $fp = fopen(ROOT_DIR . '/script' .initDB, 'r');
-
+        $init_db = defined('initDB') ? constant('initDB') : '';
+        $fp = ($init_db !== '') ? fopen(ROOT_DIR . '/script' . $init_db, 'r') : false;
         if ($fp) {
             $sql =  '';
             while($line = fgets($fp)) {
-
                $sql .= $line;
                if (preg_match('/;[\n\r\t]{0,}$/is', $line)) {
 
