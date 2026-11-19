@@ -22,7 +22,6 @@ class ome_finder_reship{
     {
         $this->vue_mode = $vue;
     }
-
     
     //平台售后状态
     static $_platformStatus = null;
@@ -527,7 +526,7 @@ EOF;
     /**
      * 行样式
      * todo: 绿色list-even、黄色selected、红色list-warning
-     * 
+     *
      * @param array $row
      * @return string
      */
@@ -769,12 +768,6 @@ EOF;
     
     protected $__deliveryList = [];
     
-    /**
-     * 获取Delivery
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回结果
-     */
     public function getDelivery($row, $list)
     {
         $reship_id = $row['reship_id'];
