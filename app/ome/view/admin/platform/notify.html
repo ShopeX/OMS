@@ -1,0 +1,230 @@
+<style>
+.pn-detail { padding: 12px 16px 24px; background:#f5f6f8; min-height:480px; }
+.pn-detail a.pn-back { color:#2d8cf0; text-decoration:none; margin-right:16px; }
+.pn-detail .pn-header { margin-bottom:12px; font-size:14px; color:#333; }
+.pn-detail .pn-header .pn-page-title { font-weight:bold; color:#333; }
+.pn-detail .pn-tabs { border-bottom:1px solid #e5e5e5; margin-bottom:16px; background:#fff; padding:0 12px; }
+.pn-detail .pn-tab {
+    display:inline-block;
+    padding:10px 16px;
+    margin-right:4px;
+    border-bottom:2px solid transparent;
+    color:#666;
+    cursor:pointer;
+}
+.pn-detail .pn-tab.active {
+    border-bottom-color:#2d8cf0;
+    color:#2d8cf0;
+    font-weight:bold;
+}
+.pn-detail .pn-tab .pn-tab-count { color:#ff6900; }
+.pn-detail .pn-shop-panel { display:none; }
+.pn-detail .pn-shop-panel.active { display:block; }
+.pn-detail .pn-card-box {
+    background:#fff;
+    border:1px solid #e8e8e8;
+    border-radius:4px;
+    padding:16px 18px 20px;
+    margin-bottom:16px;
+}
+.pn-detail .pn-card-box .pn-card-head {
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    margin-bottom:14px;
+}
+.pn-detail .pn-card-box h3 { margin:0 0 6px; font-size:15px; }
+.pn-detail .pn-meta { color:#999; font-size:12px; line-height:18px; }
+.pn-detail .pn-date { color:#666; font-size:12px; white-space:nowrap; }
+.pn-detail .pn-cards { display:flex; gap:12px; }
+.pn-detail .pn-stat {
+    flex:1;
+    border:1px solid #eee;
+    border-radius:4px;
+    padding:14px 14px 12px;
+    background:#fafafa;
+    min-width:0;
+}
+.pn-detail .pn-stat .pn-stat-title { font-size:13px; font-weight:bold; margin-bottom:8px; }
+.pn-detail .pn-stat .pn-num { font-size:28px; font-weight:bold; line-height:1.2; margin-bottom:6px; }
+.pn-detail .pn-stat .pn-num.orange { color:#e67a2e; }
+.pn-detail .pn-stat .pn-desc { font-size:12px; color:#888; margin-bottom:12px; min-height:36px; }
+.pn-detail .pn-stat .pn-btn {
+    display:inline-block;
+    padding:6px 14px;
+    border-radius:3px;
+    font-size:12px;
+    cursor:pointer;
+    text-decoration:none;
+}
+.pn-detail .pn-stat .pn-btn-primary {
+    background:#2d8cf0;
+    color:#fff;
+    border:1px solid #2d8cf0;
+}
+.pn-detail .pn-stat .pn-btn-ghost {
+    background:#fff;
+    color:#2d8cf0;
+    border:1px solid #2d8cf0;
+}
+.pn-detail .pn-stat .pn-note { margin-top:10px; font-size:11px; color:#aaa; line-height:16px; }
+.pn-detail .pn-history-box {
+    background:#fff;
+    border:1px solid #e8e8e8;
+    border-radius:4px;
+    padding:16px 18px;
+}
+.pn-detail .pn-history-head {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:12px;
+}
+.pn-detail .pn-history-head h3 { margin:0; font-size:14px; }
+.pn-detail .pn-history-tip { font-size:12px; color:#999; }
+.pn-detail .pn-history-item {
+    padding:12px 0;
+    border-top:1px solid #f0f0f0;
+}
+.pn-detail .pn-history-item:first-child { border-top:none; }
+.pn-detail .pn-history-row {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:4px;
+}
+.pn-detail .pn-history-title { color:#2d8cf0; font-size:13px; }
+.pn-detail .pn-history-title .pn-tag {
+    display:inline-block;
+    margin-left:6px;
+    padding:0 6px;
+    border:1px solid #c5d9f5;
+    color:#2d8cf0;
+    font-size:11px;
+    border-radius:2px;
+    background:#f0f6ff;
+}
+.pn-detail .pn-history-time { color:#999; font-size:12px; }
+.pn-detail .pn-history-summary { color:#666; font-size:12px; line-height:18px; }
+.pn-detail .pn-empty { padding:20px 0; color:#999; text-align:center; }
+</style>
+
+<div class="pn-detail" id="pn-detail">
+    <div class="pn-header">
+        <a class="pn-back" href="<{$back_url}>">返回首页</a>
+        <span class="pn-page-title">平台通知</span>
+    </div>
+
+    <{if !$data.has_shop}>
+        <div class="pn-card-box">
+            <div class="pn-empty">暂无绑定的抖音店铺，无法展示平台通知。</div>
+        </div>
+    <{else}>
+        <div class="pn-tabs" id="pn-tabs">
+            <{foreach from=$data.tabs item=tab name=pn_tab}>
+            <span class="pn-tab<{if $smarty.foreach.pn_tab.first}> active<{/if}>" data-shop-bn="<{$tab.shop_bn}>">
+                <{$tab.label}> <span class="pn-tab-count">(<{$tab.count}>)</span>
+            </span>
+            <{/foreach}>
+        </div>
+
+        <{foreach from=$data.shops item=shop name=pn_shop}>
+        <div class="pn-shop-panel<{if $smarty.foreach.pn_shop.first}> active<{/if}>" data-shop-bn="<{$shop.shop_bn}>">
+            <div class="pn-card-box">
+                <div class="pn-card-head">
+                    <div>
+                        <h3><{$shop.snapshot.title}></h3>
+                        <div class="pn-meta">
+                            店铺编码：<{$shop.shop_bn}>；数据来源：<{$shop.snapshot.source}>；每日 02:00 拉取并同步到本页。
+                        </div>
+                    </div>
+                    <div class="pn-date">
+                        数据日期：<{$shop.snapshot.data_date}>
+                        <{if $shop.snapshot.is_today}> (今日快照)<{/if}>
+                    </div>
+                </div>
+
+                <div class="pn-cards">
+                    <div class="pn-stat">
+                        <div class="pn-stat-title">建议下架（低效品）</div>
+                        <div class="pn-num orange"><{$shop.snapshot.suggest_offline}></div>
+                        <div class="pn-desc">长期无流量无转化，建议清理</div>
+                        <a class="pn-btn pn-btn-primary" href="https://fxg.jinritemai.com/ffa/g/list" target="_blank" rel="noopener noreferrer">批量下架 -&gt;</a>
+                        <div class="pn-note">[强制下架] 商品：已获商家授权可由系统自动清理（本期仅展示统计）。</div>
+                    </div>
+                    <div class="pn-stat">
+                        <div class="pn-stat-title">高潜力待优化</div>
+                        <div class="pn-num"><{$shop.snapshot.optimize}></div>
+                        <div class="pn-desc">缺乏商图 / 主图视频，可一键采纳</div>
+                        <a class="pn-btn pn-btn-ghost" href="https://fxg.jinritemai.com/ffa/g/diagnose" target="_blank" rel="noopener noreferrer">去优化 -&gt;</a>
+                    </div>
+                    <div class="pn-stat">
+                        <div class="pn-stat-title">AI 托管未开启</div>
+                        <div class="pn-num"><{$shop.snapshot.ai_hosting}></div>
+                        <div class="pn-desc">标题 / 主图 / 主图视频托管（本期暂未接入）</div>
+                        <span class="pn-btn pn-btn-ghost" title="本期仅展示，暂不支持操作">去开启 -&gt;</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pn-history-box">
+                <div class="pn-history-head">
+                    <h3>历史通知（每日效率优化快照，保留 7 天，自动滚动清理）</h3>
+                    <span class="pn-history-tip">含今日快照，保留近 7 天，自动滚动清理</span>
+                </div>
+                <{if $shop.history}>
+                    <{foreach from=$shop.history item=item}>
+                    <div class="pn-history-item">
+                        <div class="pn-history-row">
+                            <div class="pn-history-title">
+                                <{$item.title}>
+                                <span class="pn-tag"><{$item.tag}></span>
+                            </div>
+                            <div class="pn-history-time"><{$item.notifytime}></div>
+                        </div>
+                        <div class="pn-history-summary"><{$item.summary}></div>
+                    </div>
+                    <{/foreach}>
+                <{else}>
+                    <div class="pn-empty">暂无历史通知</div>
+                <{/if}>
+            </div>
+        </div>
+        <{/foreach}>
+    <{/if}>
+</div>
+
+<script>
+(function(){
+    var root = document.getElementById('pn-detail');
+    if (!root) return;
+    var tabs = root.querySelectorAll('#pn-tabs .pn-tab');
+    var panels = root.querySelectorAll('.pn-shop-panel');
+    if (!tabs.length) return;
+
+    function activate(shopBn) {
+        for (var i = 0; i < tabs.length; i++) {
+            if (tabs[i].getAttribute('data-shop-bn') === shopBn) {
+                tabs[i].className = 'pn-tab active';
+            } else {
+                tabs[i].className = 'pn-tab';
+            }
+        }
+        for (var j = 0; j < panels.length; j++) {
+            if (panels[j].getAttribute('data-shop-bn') === shopBn) {
+                panels[j].className = 'pn-shop-panel active';
+            } else {
+                panels[j].className = 'pn-shop-panel';
+            }
+        }
+    }
+
+    for (var k = 0; k < tabs.length; k++) {
+        (function(tab){
+            tab.onclick = function(){
+                activate(tab.getAttribute('data-shop-bn'));
+            };
+        })(tabs[k]);
+    }
+})();
+</script>

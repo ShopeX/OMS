@@ -1,0 +1,118 @@
+<style>
+/* 挂件外层由 dashboard 以 class 名作为 id 渲染，尺寸写在此处避免静态 CSS 缓存不生效 */
+#ome_desktop_widgets_platformnotify,
+.platform-notify-widget {
+    width: 430px !important;
+    height: 249px !important;
+    min-width: 430px !important;
+    min-height: 249px !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+}
+#ome_desktop_widgets_platformnotify .dashbd-bd,
+.platform-notify-widget .dashbd-bd {
+    height: 100%;
+    box-sizing: border-box;
+}
+#ome_desktop_widgets_platformnotify .dashbd-list,
+.platform-notify-widget .dashbd-list {
+    height: 218px !important;
+    min-height: 218px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+}
+#widgets_platformnotify {
+    width: 100%;
+    height: 100%;
+    min-height: 215px;
+    max-height: 218px;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+#widgets_platformnotify .pn-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 16px 12px;
+    cursor: pointer;
+    text-decoration: none;
+    color: #333;
+    box-sizing: border-box;
+}
+#widgets_platformnotify .pn-item:hover { background: #f7f9fc; }
+#widgets_platformnotify .pn-icon {
+    width: 42px;
+    height: 42px;
+    line-height: 42px;
+    text-align: center;
+    border-radius: 50%;
+    background: #ffe8d6;
+    color: #e67a2e;
+    font-size: 12px;
+    font-weight: bold;
+    flex-shrink: 0;
+    margin-right: 12px;
+    overflow: hidden;
+    white-space: nowrap;
+}
+#widgets_platformnotify .pn-body { flex: 1; min-width: 0; }
+#widgets_platformnotify .pn-title {
+    font-weight: bold;
+    font-size: 13px;
+    line-height: 20px;
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#widgets_platformnotify .pn-sub {
+    font-size: 12px;
+    color: #888;
+    line-height: 18px;
+}
+#widgets_platformnotify .no_infos {
+    padding: 40px 10px;
+    color: #999;
+    text-align: center;
+}
+</style>
+<div class="clearfix dashbd-row" id="widgets_platformnotify">
+    <{if $notify || $platform_list}>
+        <{if $notify}>
+        <a class="pn-item" href="<{$notify.detail_url}>">
+            <div class="pn-icon">抖店</div>
+            <div class="pn-body">
+                <div class="pn-title"><{$notify.title}></div>
+                <div class="pn-sub"><{$notify.subtitle}></div>
+            </div>
+        </a>
+        <{/if}>
+        <{foreach from=$platform_list item=pitem}>
+        <a class="pn-item" href="<{$pitem.href}>" target="_blank">
+            <div class="pn-icon"><{$pitem.platform_name}></div>
+            <div class="pn-body">
+                <div class="pn-title"><{$pitem.title}></div>
+                <{if $pitem.publish_date}>
+                <div class="pn-sub"><{$pitem.publish_date}></div>
+                <{/if}>
+            </div>
+        </a>
+        <{/foreach}>
+    <{elseif !$has_shop}>
+        <div class="no_infos">暂无平台通知</div>
+    <{else}>
+        <div class="no_infos">暂无平台通知......</div>
+    <{/if}>
+</div>
+<script>
+(function () {
+    var el = document.getElementById('ome_desktop_widgets_platformnotify');
+    if (!el) return;
+    el.style.width = '430px';
+    el.style.height = '249px';
+    el.style.minWidth = '430px';
+    el.style.minHeight = '249px';
+    el.style.overflow = 'hidden';
+    el.style.boxSizing = 'border-box';
+})();
+</script>
