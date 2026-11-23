@@ -1,26 +1,11 @@
-<!--
-  Copyright 2012-2026 ShopeX (https://www.shopex.cn)
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
--->
 <desktop>
     <widgets id="ome_desktop_widgets_waittask" order='30'>待办事务表</widgets>
     <widgets id="ome_desktop_widgets_greenchannel" order='32'>绿色通道</widgets>
     <widgets id="ome_desktop_widgets_productinfo" order='40'>产品信息</widgets>
-    <widgets id="ome_desktop_widgets_consultandpatch" order='50'>资讯及补丁</widgets>
     <widgets id="base_desktop_widgets_msgnotify" order='60'>系统消息</widgets>
 
     <permissions>
+        <permission id="ome.action.platform_notify.view">平台通知</permission>
         <permission id="order_view_active">当前订单</permission>
         <permission id="order_view">历史订单</permission>
         <permission id="order_dispatch">订单调度</permission>
@@ -381,6 +366,7 @@
             <menu controller="admin_setting" action="set_collection_account" permission="setting_payment_account" display="true" order="1000400">收款账号管理</menu>
             <menu controller='admin_setting' action='abnormal' permission='setting_order_abnormal' display='true' order='1000400'>订单异常类型设置</menu>
             <menu controller='admin_platform_set' action='index' permission='ome_platform_set' display='true' order='1000500'>平台相关设置</menu>
+            <menu controller='admin_platform_notify' action='index' permission='ome.action.platform_notify.view' display='false' order='1000510'>平台通知</menu>
         </menugroup>
         <menugroup name="售后设置" en="aftersale-set">
             <menu controller='admin_setting' action='product_problem' permission='setting_product_problem' display='true' order='1000500'>售后问题类型设置</menu>

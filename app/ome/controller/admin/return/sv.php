@@ -49,6 +49,7 @@ class ome_ctl_admin_return_sv extends desktop_controller {
     function edit($reship_id,$from_type='')
     {
         @ini_set('memory_limit','512M');
+        $reship_id = intval($reship_id);
         # 先进行收货处理 判断是否已经收货
         $reship_detail = $this->app->model('reship')->dump($reship_id,'is_check,branch_id');
         $is_check = $reship_detail['is_check'];
@@ -263,6 +264,7 @@ class ome_ctl_admin_return_sv extends desktop_controller {
      **/
     function tosave($reship_id,$status){
         set_time_limit(0);
+        $reship_id = intval($reship_id);
         if($_POST['from_type'] == 'index'){
            $this->begin();
         }else{
@@ -330,6 +332,8 @@ class ome_ctl_admin_return_sv extends desktop_controller {
                 if (!$_POST['por_id']) {
                     $this->end(false,$this->app->_('请选择质检明细!'));
                 }
+                $_POST['por_id'] = intval($_POST['por_id']);
+                $_POST['reship_id'] = intval($_POST['reship_id']);
 
                 $reship_bn = $row[0]['reship_bn'];
                 $order_id = $row[0]['order_id'];
@@ -605,6 +609,7 @@ class ome_ctl_admin_return_sv extends desktop_controller {
     public function recheck($reship_id)
     {
         $this->begin();
+        $reship_id = intval($reship_id);
         if (!$reship_id) {
             $this->end(false,$this->app->_('退换货单不能为空!'));
         }
@@ -629,7 +634,7 @@ class ome_ctl_admin_return_sv extends desktop_controller {
      * @return void
      */
     public function ajaxCheckExpire(){
-        $reship_id = $_POST['reship_id'];
+        $reship_id = intval($_POST['reship_id']);
         $expire_bn = $_POST['expire_bn'];
         if(empty($reship_id) || empty($expire_bn)){
             echo json_encode(array('res'=>'fail', 'msg'=>'无效操作，请检查'));

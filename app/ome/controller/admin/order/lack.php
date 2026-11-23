@@ -218,6 +218,7 @@ class ome_ctl_admin_order_lack extends desktop_controller {
         }else{
             $product_id = $_POST['product_id'];
         }
+        $product_id = array_map('intval', (array)$product_id);
 
         $this->pagedata['product_ids'] = implode(',',$product_id);
         // 获取供应商id

@@ -25,10 +25,6 @@ class o2o_finder_extend_filter_inventory
     }
 
 
-    /**
-     * 获取_extend_colums
-     * @return mixed 返回结果
-     */
     public function get_extend_colums()
     {
         $storeList = app::get('o2o')->model('store')->getList('store_bn,name');

@@ -42,7 +42,7 @@ class omeauto_auto_type_customer extends omeauto_auto_type_abstract implements o
     //检查输入的参数
     public function checkParams($params)
     {
-        if (empty($params['class_id'])) {
+        if (empty($params['customer'])) {
             return "你还没有选择客户分类\n\n请勾选以后再试！！";
         }
         
@@ -59,22 +59,30 @@ class omeauto_auto_type_customer extends omeauto_auto_type_abstract implements o
     {
         $classifyMdl = app::get('material')->model('customer_classify');
         
+        $classIds = is_array($params['customer']) ? $params['customer'] : array($params['customer']);
+        
         //客户分类
         $caption = '';
+        $classNames = array();
         $classList = $classifyMdl->getList('class_id,class_name', array('disabled'=>'false'), 0, -1);
         if($classList){
             $classList = array_column($classList, null, 'class_id');
             
-            foreach ($classList as $key => $val)
+            // check selected
+            foreach ($classIds as $classId)
             {
-                if($key == $params['class_id']){
-                    $caption = sprintf('订单明细中包含 [%s] 客户分类', $val['class_name']);
+                if (isset($classList[$classId])) {
+                    $classNames[] = $classList[$classId]['class_name'];
                 }
             }
         }
         
+        if ($classNames) {
+            $caption = sprintf('客户分类包含：[%s] ', implode('、', $classNames));
+        }
+        
         //role
-        $role = array('role'=>'customer', 'caption'=>$caption, 'content'=>array('class_id'=>$params['class_id']));
+        $role = array('role'=>'customer', 'caption'=>$caption, 'content'=>array('classIds'=>$params['customer']));
         
         return json_encode($role);
     }
@@ -93,8 +101,15 @@ class omeauto_auto_type_customer extends omeauto_auto_type_abstract implements o
         
         $salesMaterialObj = app::get('material')->model('sales_material');
         
-        //客户分类
-        $class_id = intval($this->content['class_id']);
+        //客户分类（兼容旧数据单值）
+        $classIds = isset($this->content['classIds']) ? $this->content['classIds'] : array();
+        if (!is_array($classIds)) {
+            $classIds = array($classIds);
+        }
+        
+        if (empty($classIds)) {
+            return false;
+        }
         
         //获取订单明细中的基础物料
         $goodsIds = array();
@@ -121,7 +136,7 @@ class omeauto_auto_type_customer extends omeauto_auto_type_abstract implements o
         {
             $sm_id = $val['sm_id'];
             
-            if($val['class_id'] == $class_id){
+            if(in_array($val['class_id'], $classIds)){
                 $virtualBns[$sm_id] = $val['sales_material_bn'];
             }
         }

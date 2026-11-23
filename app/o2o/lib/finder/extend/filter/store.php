@@ -25,10 +25,6 @@ class o2o_finder_extend_filter_store
     }
 
 
-    /**
-     * 获取_extend_colums
-     * @return mixed 返回结果
-     */
     public function get_extend_colums()
     {
         // 门店下拉：[编码]名称

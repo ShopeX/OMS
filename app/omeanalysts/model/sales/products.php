@@ -116,11 +116,21 @@ class omeanalysts_mdl_sales_products extends dbeav_model
             $where[] = " S.org_id in ('".implode('\',\'',$filter['org_id'])."')";
         }
         
-        //货号
+        //货号（单行前缀匹配，多行精确匹配）
         if(isset($filter['bn']) && $filter['bn']){
-            $where[] = " SI.bn LIKE '". addslashes($filter['bn']) ."%'";
-            
             $_SESSION['bn'] = $filter['bn'];
+            if(is_string($filter['bn']) && strpos($filter['bn'], "\n") !== false){
+                $bnList = array_unique(array_map('trim', array_filter(explode("\n", $filter['bn']))));
+                if($bnList){
+                    $escapedBns = array();
+                    foreach($bnList as $bn){
+                        $escapedBns[] = addslashes($bn);
+                    }
+                    $where[] = " SI.bn IN ('".implode("','", $escapedBns)."')";
+                }
+            }else{
+                $where[] = " SI.bn LIKE '". addslashes($filter['bn']) ."%'";
+            }
         }else{
             unset($_SESSION['bn']);
         }
@@ -187,17 +197,19 @@ class omeanalysts_mdl_sales_products extends dbeav_model
         if(isset($filter['_sale_num_search']) && is_numeric($filter['sale_num'])){
             if(isset($filter['_sale_amount_search']) && is_numeric($filter['sale_amount'])){
                 $_sql = $_sql .' AND ';
+            }else{
+                $_sql = $groupByStr.' HAVING ';
             }
             
             switch ($filter['_sale_num_search']){
-                case 'than': $_sql = $groupByStr.' sale_num >'.$filter['sale_num'];break;
-                case 'lthan': $_sql = $groupByStr.' sale_num <'.$filter['sale_num'];break;
-                case 'nequal': $_sql = $groupByStr.' sale_num ='.$filter['sale_num'];break;
-                case 'sthan': $_sql = $groupByStr.' sale_num <='.$filter['sale_num'];break;
-                case 'bthan': $_sql = $groupByStr.' sale_num >='.$filter['sale_num'];break;
+                case 'than': $_sql = $_sql.' sale_num >'.$filter['sale_num'];break;
+                case 'lthan': $_sql = $_sql.' sale_num <'.$filter['sale_num'];break;
+                case 'nequal': $_sql = $_sql.' sale_num ='.$filter['sale_num'];break;
+                case 'sthan': $_sql = $_sql.' sale_num <='.$filter['sale_num'];break;
+                case 'bthan': $_sql = $_sql.' sale_num >='.$filter['sale_num'];break;
                 case 'between':
                     if($filter['sale_num_from'] && $filter['sale_num_to'] ){
-                        $_sql = $groupByStr.'(sale_num  >='.$filter['sale_num_from'].' AND sale_num < '.$filter['sale_num_to'].')';
+                        $_sql = $_sql.'(sale_num  >='.$filter['sale_num_from'].' AND sale_num < '.$filter['sale_num_to'].')';
                     }else{
                         $_sql = '';
                     }
@@ -226,8 +238,14 @@ class omeanalysts_mdl_sales_products extends dbeav_model
         if(isset($filter['time_to']) && $filter['time_to']){
             $filter['time_to'] = $filter['time_to'].' 23:59:59';
         }
-        
-        $sql = 'SELECT count(*) as _count FROM (SELECT SI.product_id FROM sdb_ome_sales_items SI LEFT JOIN sdb_ome_sales S ON SI.sale_id = S.sale_id WHERE '.$this->_filter($filter).' GROUP BY S.shop_id, SI.sales_material_bn, SI.product_id ) as tb';
+
+        // _filter 在销售量/销售额条件时已内嵌 group by ... HAVING，不可再外拼 GROUP BY
+        $hasHaving = !empty($filter['_sale_amount_search']) || !empty($filter['_sale_num_search']);
+        if($hasHaving){
+            $sql = 'SELECT count(*) as _count FROM (SELECT SI.product_id, sum(SI.nums) as sale_num, sum(SI.sales_amount) as sale_amount FROM sdb_ome_sales_items SI LEFT JOIN sdb_ome_sales S ON SI.sale_id = S.sale_id WHERE '.$this->_filter($filter).') as tb';
+        }else{
+            $sql = 'SELECT count(*) as _count FROM (SELECT SI.product_id FROM sdb_ome_sales_items SI LEFT JOIN sdb_ome_sales S ON SI.sale_id = S.sale_id WHERE '.$this->_filter($filter).' GROUP BY S.shop_id, SI.sales_material_bn, SI.product_id ) as tb';
+        }
         
         $row = $this->db->select($sql);
 
@@ -423,7 +441,7 @@ class omeanalysts_mdl_sales_products extends dbeav_model
                     'width' => 120,
                     'searchtype' => 'has',
                     'editable' => true,
-                    'filtertype' => 'normal',
+                    'filtertype' => 'textarea',
                     'filterdefault' => 'true',
                     'in_list' => true,
                     'default_in_list' => true,

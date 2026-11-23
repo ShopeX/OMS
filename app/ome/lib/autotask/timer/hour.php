@@ -1,20 +1,4 @@
-<?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+<?PHP
 /**
  * 每小时执行任务处理类
  *
@@ -27,7 +11,10 @@ class ome_autotask_timer_hour
     public function process($params, &$error_msg=''){
         @ini_set('memory_limit','1024M');
         set_time_limit(0); ignore_user_abort(1);
-
+        
+        // hour
+        $hour = date('H');
+        
         // 每小时触发回写 在misctask中
         //kernel::single('erpapi_misc_task')->minute();
         
@@ -61,6 +48,11 @@ class ome_autotask_timer_hour
         
         // 每小时触发：库存增加自动审核订单
         //kernel::single('ome_autotask_timer_autoconfirmorderstockinc')->process($params, $error_msg);
+        
+        // 每天凌晨两点：查询诊断商品列表及其处理建议（只限抖音类型的店铺）
+        if($hour == 2){
+            kernel::single('ome_shop_platform_luban_product')->getProductSuggestionBusiness();
+        }
         
         return true;
     }

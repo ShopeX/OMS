@@ -31,7 +31,6 @@ class ome_ctl_admin_finance extends desktop_controller
                 'label'    => __('未支付'),
                 'filter'   => array(
                     'pay_status'             => ['0', '8'],
-                    // 'pay_confirm'            => ' (`total_amount` > `payed` or `total_amount`=0) ',
                     'process_status' => array('unconfirmed', 'confirmed', 'is_retrial', 'is_declare'),
                     'is_fail'                => 'false',
                 ),
@@ -40,9 +39,7 @@ class ome_ctl_admin_finance extends desktop_controller
             1 => array(
                 'label'    => __('全部'),
                 'filter'   => array(
-                    'pay_status'             => ['0','3','8','4'],
-                    // 'pay_status_set'         => '1',
-                    // 'pay_confirm'            => ' (`total_amount` > `payed` or `total_amount`=0) ',
+                    'pay_status'             => ['0','3','8'],
                     'process_status_noequal' => array('cancel', 'remain_cancel', 'is_retrial'),
                     'is_fail'                => 'false',
                 ),
@@ -51,37 +48,16 @@ class ome_ctl_admin_finance extends desktop_controller
             2 => array(
                 'label'    => __('部分支付'),
                 'filter'   => array(
-                    // 'pay_status_part'        => 'yes',
-                    'pay_status'             => ['3','4'],
-                    // 'pay_confirm'            => ' (`total_amount` > `payed` or `total_amount`=0) ',
+                    'pay_status'             => ['3'],
                     'process_status_noequal' => array('cancel', 'remain_cancel', 'is_retrial'),
                     'is_fail'                => 'false',
                 ),
                 'optional' => false,
             ),
-//            3 => array(
-//                'label'    => __('支付中'),
-//                'filter'   => array(
-//                    'pay_status'             => '8',
-//                    'is_fail'                => 'false',
-//                    'process_status_noequal' => array('cancel', 'remain_cancel', 'is_retrial'),
-//                ),
-//                'optional' => false,
-//            ),
-            // 4 => array(
-            //     'label'    => __('支付失败'),
-            //     'filter'   => array(
-            //         'pay_status'             => '8',
-            //         'payment_fail'           => true,
-            //         'is_fail'                => 'false',
-            //         'process_status_noequal' => array('cancel', 'remain_cancel', 'is_retrial'),
-            //     ),
-            //     'optional' => false,
-            // ),
         );
-
-        //协同版支持货到付款发货追回_过滤掉"已退货"订单
-        $base_filter = array('ship_status' => '0');
+        
+        // 订单发货状态（需要支持货到付款订单：已发货 + 未付款）
+        $base_filter = array('ship_status' => ['0', '1']);
 
         //check shop permission
         $organization_permissions = kernel::single('desktop_user')->get_organization_permission();
@@ -130,12 +106,9 @@ class ome_ctl_admin_finance extends desktop_controller
 
         if (!isset($_GET['view'])) {
             $params['base_filter'] = array(
-                // 'pay_confirm'            => ' (`total_amount` > `payed` or `total_amount`=0) ',
                 'process_status' => array('unconfirmed', 'confirmed', 'is_retrial', 'is_declare'),
-                // 'pay_status_set'         => 'yes',
-                // 'ship_status|noequal'    => '4',
                 'pay_status' => ['0', '8'],
-                'ship_status' => '0',
+                'ship_status' => ['0', '1'], // 订单发货状态（需要支持货到付款订单：已发货 + 未付款）
                 'is_fail' => 'false',
             );
         }

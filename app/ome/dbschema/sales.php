@@ -100,7 +100,6 @@ $db['sales'] = array(
             'editable'        => false,
             'in_list'         => true,
             'default_in_list' => false,
-            #'sdfpath' => 'payinfo/pay_name',
         ),
         'delivery_cost'        => array(
             'type'            => 'money',
@@ -212,8 +211,6 @@ $db['sales'] = array(
             ),
             'label'           => '支付状态',
             'default_in_list' => false,
-            #'filtertype' => 'normal',
-            #'filterdefault' => true,
             'in_list'         => false,
         ),
         'logi_id'              => array(
@@ -221,8 +218,6 @@ $db['sales'] = array(
             'comment'  => '物流公司ID',
             'editable' => false,
             'label'    => '物流公司',
-            #'filtertype' => 'normal',
-            #'filterdefault' => true,
         ),
         'logi_name'            => array(
             'type'            => 'varchar(100)',
@@ -230,7 +225,7 @@ $db['sales'] = array(
             'comment'         => '物流公司名称',
             'editable'        => false,
             'width'           => 75,
-            'in_list'         => false,
+            'in_list'         => true,
             'default_in_list' => false,
         ),
         'logi_no'              => array(
@@ -239,7 +234,7 @@ $db['sales'] = array(
             'comment'         => '物流单号',
             'editable'        => false,
             'width'           => 110,
-            'in_list'         => false,
+            'in_list'         => true,
             'default_in_list' => false,
         ),
         'order_check_id'       => array(
@@ -334,7 +329,6 @@ $db['sales'] = array(
             'filterdefault' => true,
         ),
         'org_id'               => array(
-            // 'type'            => 'table:operation_organization@ome',
             'type'            => 'number',
             'label'           => '运营组织',
             'editable'        => false,

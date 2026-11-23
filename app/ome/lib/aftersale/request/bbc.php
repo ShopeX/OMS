@@ -83,8 +83,6 @@ class ome_aftersale_request_bbc extends ome_aftersale_abstract{
         $this->_render->pagedata['refundinfo'] = $refundinfo;
         unset($refundinfo);
         return '';//后续有需要再调整这里样式，目前用不到
-        $html = $this->_render->fetch('admin/refund/plugin/refund_bbc.html');
-        return $html;
     }
 
     function pre_save_refund($apply_id,$data)

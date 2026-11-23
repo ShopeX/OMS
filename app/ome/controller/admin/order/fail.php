@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 class ome_ctl_admin_order_fail extends desktop_controller
 {
     public $name       = "订单中心";

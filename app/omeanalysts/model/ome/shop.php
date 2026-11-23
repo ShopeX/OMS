@@ -179,6 +179,18 @@ class omeanalysts_mdl_ome_shop extends dbeav_model{
                );
             }
         }
+
+        // 日期降序优先，同日内按销售金额从大到小
+        usort($data, function ($a, $b) {
+            $cmp = strcmp($b['time'], $a['time']);
+            if ($cmp !== 0) {
+                return $cmp;
+            }
+            if ($a['sale_amount'] == $b['sale_amount']) {
+                return 0;
+            }
+            return ($a['sale_amount'] < $b['sale_amount']) ? 1 : -1;
+        });
         
         return $data;
     }

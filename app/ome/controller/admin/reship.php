@@ -122,9 +122,7 @@ class ome_ctl_admin_reship extends desktop_controller{
             }
             $return_model = $this->app->model('return_product_tmall');
             $return_tmall = $return_model->dump(array('return_id' => $return_id));
-
-
-
+            
             if($_FILES['refuse_proof']['size'] != 0){
                 if ($_FILES ['refuse_proof'] ['size'] > 512000) {
                     $this->end(false,'上传文件不能超过500K!');
@@ -144,11 +142,10 @@ class ome_ctl_admin_reship extends desktop_controller{
                 $rh = fopen($_FILES['refuse_proof']['tmp_name'],'rb');
                 $imagebinary = fread($rh, filesize($_FILES['refuse_proof']['tmp_name']));
                 fclose($rh);
+                
                 $imagebinary = base64_encode($imagebinary);
-
             }
-
-
+            
             $aftersale_service = kernel::single('ome_service_aftersale');
             $data = array(
                 'leave_message'     => $refuse_message,
@@ -169,25 +166,28 @@ class ome_ctl_admin_reship extends desktop_controller{
                   'reship_id' => $reship_detail['reship_id'],
                 );
                 $result = kernel::single('console_event_trigger_reship')->cancel($wms_id, $data, true);
-
             }
+            
             $oOperation_log = app::get('ome')->model('operation_log');//写日志
 
             if (!$rs || $rs['rsp'] == 'fail' || ($result &&$result['rsp']=='fail')) {
                 $oOperation_log->write_log('return@ome',$return_id,'拒绝确认收货失败,原因:'.$rs['msg']);
                 $this->end(false,$rs['msg']);
             }
+            
             //更新退货单状态
             $reshipObj->update(array('is_check'=>'5','t_end'=>time()),array('reship_id'=>$reship_id));
 
             //判断是否是已确认拒绝如果是需要释放冻结库存
             kernel::single('console_reship')->releaseChangeFreeze($reship_id);
+            
             // 退货单取消后的service扩展点
             foreach(kernel::servicelist('console.service.reship.cancel.after') as $object) {
                 if(method_exists($object, 'cancel_reship_after')) {
                     $object->cancel_reship_after($reship_id);
                 }
             }
+            
             $memo = '拒绝确认收货';
             if($return_id){
                 $oOperation_log->write_log('return@ome',$return_id,$memo);

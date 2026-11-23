@@ -195,7 +195,7 @@ class o2o_ctl_admin_branch_product extends desktop_controller{
     function do_save(){
         $this->begin();
         
-        $bm_ids = $_POST['bm_id'];
+        $bm_ids = array_map('intval', (array)$_POST['bm_id']);
         if(!$bm_ids){
             $this->end(false,'请选择基础物料');
         }
@@ -207,7 +207,7 @@ class o2o_ctl_admin_branch_product extends desktop_controller{
         //获取branch_id
         $mdlOmeBranch = app::get('ome')->model('branch');
         $rs_branch_id = $mdlOmeBranch->dump(array("branch_bn"=>$post_selected_store_bn),"branch_id");
-        $branch_id = $rs_branch_id['branch_id'];
+        $branch_id = intval($rs_branch_id['branch_id']);
         
         $mdlO2oBranchProduct = app::get('o2o')->model('branch_product');
         
@@ -222,9 +222,10 @@ class o2o_ctl_admin_branch_product extends desktop_controller{
             }
             $bm_ids = array();
             foreach ($data as $var_data){
-                $bm_ids[] = $var_data["bm_id"];
+                $bm_ids[] = intval($var_data["bm_id"]);
             }
         }
+        $bm_ids = array_map('intval', (array)$bm_ids);
     
         //先判断是否存在供货关系 
         $rs_b_p = $mdlO2oBranchProduct->getList("bm_id",array('branch_id'=>$branch_id,"bm_id|in"=>$bm_ids));
@@ -249,6 +250,7 @@ class o2o_ctl_admin_branch_product extends desktop_controller{
         
         foreach ($bm_ids as $var_bm_id){
             //插入数据
+            $var_bm_id = intval($var_bm_id);
             $insert_sql = "insert into sdb_o2o_branch_product (`branch_id`,`bm_id`) values (".$branch_id.",".$var_bm_id.")";
             $mdlO2oBranchProduct->db->exec($insert_sql);
         }

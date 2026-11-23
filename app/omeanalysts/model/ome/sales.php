@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class omeanalysts_mdl_ome_sales extends dbeav_model{
 
     var $has_export_cnf = true;
@@ -25,29 +9,19 @@ class omeanalysts_mdl_ome_sales extends dbeav_model{
 
     /**
      * 须加密字段
-     * 
+     *
      * @var string
-     * */
+     **/
     private $__encrypt_cols = array(
         'ship_name'   => 'simple',
         'ship_tel'    => 'phone',
         'ship_mobile' => 'phone',
     );
 
-        /**
-     * __construct
-     * @param mixed $app app
-     * @return mixed 返回值
-     */
     public function __construct($app){
         return parent::__construct(app::get('ome'));
     }
 
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
     public function table_name($real=false){
         if($real){
             $table_name = kernel::database()->prefix.'ome_sales';
@@ -58,11 +32,6 @@ class omeanalysts_mdl_ome_sales extends dbeav_model{
         return $table_name;
     }
 
-    /**
-     * 获取_sales
-     * @param mixed $filter filter
-     * @return mixed 返回结果
-     */
     public function get_sales($filter = null){
 
         $cols = 'count(S.order_id) as order_counts,sum(S.total_amount) as total_amounts,sum(S.cost_freight) as cost_freights,sum(S.sale_amount) as sale_amounts,sum(S.discount) as discounts,sum(S.delivery_cost_actual) as delivery_cost_actuals,sum(additional_costs) as additional_costs';
@@ -76,11 +45,6 @@ class omeanalysts_mdl_ome_sales extends dbeav_model{
         return $rows[0];
     }
 
-    /**
-     * count
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function count($filter = null){
 
         // $sql = 'SELECT count(*) as _count FROM (SELECT S.sale_id FROM sdb_ome_sales S left join sdb_ome_delivery D on S.delivery_id = D.delivery_id WHERE '.$this->_filter($filter).') as omeanalysts_sales';
@@ -145,7 +109,7 @@ class omeanalysts_mdl_ome_sales extends dbeav_model{
             $rows[$key]['products_type'] = $total_products_types;
             $rows[$key]['goods_sales_price'] = $goods_sales_prices;
             $rows[$key]['cost_amount'] = $cost_amounts;
-            $rows[$key]['shop_type'] = kernel::single('omeanalysts_shop')->getShopDetail($row['shop_id']); 
+            $rows[$key]['shop_type'] = kernel::single('omeanalysts_shop')->getShopDetail($row['shop_id']);
             $rows[$key]['ship_area'] = $ship_area[1];
 
             $cost_amount = $rows[$key]['cost_amount']?$rows[$key]['cost_amount']:0;
@@ -240,12 +204,6 @@ class omeanalysts_mdl_ome_sales extends dbeav_model{
         return $rows;
     }
 
-    /**
-     * 获取SkuItems
-     * @param mixed $data 数据
-     * @param mixed $filter filter
-     * @return mixed 返回结果
-     */
     public function getSkuItems(&$data,$filter){
         // $sql = 'select sum(SI.nums) as nums,sum(SI.cost_amount) as goods_cost from sdb_ome_sales_items SI left join sdb_ome_sales S on SI.sale_id = S.sale_id where '.$this->_filter($filter);
         $sql = 'SELECT sum(SI.nums) as nums,sum(SI.cost_amount) as goods_cost FROM sdb_ome_sales_items SI WHERE sale_id in (SELECT sale_id FROM sdb_ome_sales S WHERE '. $this->_filter($filter) .')';
@@ -253,7 +211,7 @@ class omeanalysts_mdl_ome_sales extends dbeav_model{
         $s_data = $this->db->selectrow($sql);
         $data['product_nums'] = $s_data['nums'];
         $data['cost_amounts'] = $s_data['goods_cost'];
-/* 
+/*
         set_time_limit(0);
 
         $offset = 0;
@@ -267,13 +225,6 @@ class omeanalysts_mdl_ome_sales extends dbeav_model{
 
     }
 
-    /**
-     * countSkuitems
-     * @param mixed $offset offset
-     * @param mixed $data 数据
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function countSkuitems($offset,&$data,$filter){
 
         $limit = 1000;
@@ -294,13 +245,6 @@ class omeanalysts_mdl_ome_sales extends dbeav_model{
         return true;
     }
 
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter,$tableAlias=null,$baseWhere=null){
 
         $where = '';
@@ -348,7 +292,7 @@ class omeanalysts_mdl_ome_sales extends dbeav_model{
         if(isset($filter['shop_id']) && $filter['shop_id']){
             if (!is_array($filter['shop_id'])) {
                 $where .= '  AND S.shop_id = \''.addslashes($filter['shop_id']).'\'';
-            } else {      
+            } else {
                 if (count($filter['shop_id']) == 1) {
                     $where .= '  AND S.shop_id = \''.addslashes($filter['shop_id'][0]).'\'';
                 } else {
@@ -415,13 +359,6 @@ class omeanalysts_mdl_ome_sales extends dbeav_model{
         return $out_filter;
     }
 
-    /**
-     * money_filter
-     * @param mixed $key key
-     * @param mixed $filter filter
-     * @param mixed $target target
-     * @return mixed 返回值
-     */
     public function money_filter($key,$filter,$target){
         switch($filter['_'.$key.'_search']){
             case 'than':
@@ -459,23 +396,10 @@ class omeanalysts_mdl_ome_sales extends dbeav_model{
         return $_where;
     }
 
-    /**
-     * exportName
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function exportName(&$data){
         $data['name'] = $_POST['time_from'].'到'.$_POST['time_to'].'订单销售情况';
     }
 
-    /**
-     * fgetlist_csv
-     * @param mixed $data 数据
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $exportType exportType
-     * @return mixed 返回值
-     */
     public function fgetlist_csv( &$data,$filter,$offset,$exportType = 1 ){
 
         if( isset($_SESSION['filter']) && $_SESSION['filter'] ){
@@ -578,12 +502,6 @@ class omeanalysts_mdl_ome_sales extends dbeav_model{
 
     }
 
-    /**
-     * export_csv
-     * @param mixed $data 数据
-     * @param mixed $exportType exportType
-     * @return mixed 返回值
-     */
     public function export_csv($data,$exportType = 1 ){
 
         $output = array();
@@ -593,12 +511,6 @@ class omeanalysts_mdl_ome_sales extends dbeav_model{
         echo implode("\n",$output);
     }
 
-    /**
-     * io_title
-     * @param mixed $filter filter
-     * @param mixed $ioType ioType
-     * @return mixed 返回值
-     */
     public function io_title( $filter=null,$ioType='csv'){
         switch( $ioType ){
             case 'csv':
@@ -635,10 +547,6 @@ class omeanalysts_mdl_ome_sales extends dbeav_model{
         return $this->ioTitle[$ioType][$filter];
     }
 
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema(){
         $schema = array (
             'columns' => array (
@@ -757,8 +665,6 @@ class omeanalysts_mdl_ome_sales extends dbeav_model{
                     'orderby' =>true,
                     'order' =>'11',
                     'width' =>85,
-                    'filtertype' => 'normal',
-                    'filterdefault' => true,
                 ),
                 'delivery_cost_actual' => array (
                     'type' => 'money',
@@ -1075,13 +981,6 @@ class omeanalysts_mdl_ome_sales extends dbeav_model{
         return $data;
     }
 
-    /**
-     * modifier_shop_id
-     * @param mixed $shop_id ID
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_shop_id($shop_id,$list,$row){
         static $shopList;
 

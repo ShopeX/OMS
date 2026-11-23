@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 $db['reship'] = array(
     'columns' => array(
         'reship_id'          => array(
@@ -258,7 +257,7 @@ $db['reship'] = array(
             'comment'         => '状态',
             'editable'        => false,
             'label'           => '状态',
-            'width'           => 65,
+            'width'           => 110,
             'in_list'         => false,
             'default_in_list' => false,
         ),
@@ -284,7 +283,7 @@ $db['reship'] = array(
             'comment'         => '当前状态',
             'editable'        => false,
             'label'           => '当前状态',
-            'width'           => 110,
+            'width'           => 130,
             'in_list'         => true,
             'default_in_list' => true,
         ),
@@ -421,8 +420,11 @@ $db['reship'] = array(
             'type'     => 'table:branch@ome',
             'editable' => false,
             'in_list'  => true,
+            'default_in_list' => true,
             'label'    => '仓库',
             'comment'  => '仓库',
+            'filtertype' => 'normal',
+            'filterdefault' => true,
         ),
         'bcmoney'            => array(
             'type'    => 'money',
@@ -551,6 +553,24 @@ $db['reship'] = array(
             'label' => '标识',
             'editable' => false,
             'default' => '0',
+        ),
+        'is_not_combine' => array(
+            'type' => 'bigint(20)',
+            'default' => 0,
+            'editable' => false,
+            'label' => '是否不允许审核',
+            'comment' => '退款转退货拦截：是否不允许审核，位掩码同orders.is_not_combine',
+            'in_list' => false,
+            'default_in_list' => false,
+        ),
+        'order_type' => array(
+            'type' => 'varchar(32)',
+            'default' => '',
+            'editable' => false,
+            'label' => '订单类型',
+            'comment' => '退款转退货拦截：订单类型，platform=平台订单',
+            'in_list' => false,
+            'default_in_list' => false,
         ),
         'platform_status' => array(
             'type' => 'varchar(30)',

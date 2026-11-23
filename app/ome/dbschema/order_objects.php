@@ -318,6 +318,7 @@ $db['order_objects'] = array(
         'idx_oid' => array('columns' => array('oid')),
         'idx_goods_id' => array('columns' => array('goods_id')),
         'idx_name'  => array('columns' => array('name')),
+        'idx_goodsid_shopgoodsid_orderid' => array('columns' => array('goods_id', 'shop_goods_id', 'order_id')),
     ),
     'comment' => '订单子单表,用于存储平台的订单购买行明细',
     'charset' => 'utf8mb4',

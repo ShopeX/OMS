@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class omeauto_ctl_autodispatch extends omeauto_controller{
     var $workground = "setting_tools";
 
@@ -76,6 +60,7 @@ class omeauto_ctl_autodispatch extends omeauto_controller{
         $data = array_filter($_POST);
          //修改
         if ($data['oid']) {
+             $data['oid'] = intval($data['oid']);
              kernel::database()->query(sprintf("update sdb_omeauto_order_type set did=0 where did=%s", $data["oid"]));
         }
         $data['config'] = is_array($data['config'])?$data['config']:NULL;
@@ -83,6 +68,7 @@ class omeauto_ctl_autodispatch extends omeauto_controller{
         $data['org_id'] = isset($data['org_id']) ? $data['org_id'] : 1; //默认为1,后面添加组织关系,就会自动关联.
         app::get('omeauto')->model('autodispatch')->save($data);
         foreach( (array)$data['config']['autoOrders'] as $tid) {
+            $tid = intval($tid);
             kernel::database()->query(sprintf("update sdb_omeauto_order_type set did=%s where tid=%s",$data["oid"], $tid));
         }
         echo "SUCC";
@@ -90,6 +76,7 @@ class omeauto_ctl_autodispatch extends omeauto_controller{
 
     function setStatus($oid, $status) {
 
+        $oid = intval($oid);
         if ($status == 'true') {
             $disabled = 'false';
         } else {
@@ -103,6 +90,7 @@ class omeauto_ctl_autodispatch extends omeauto_controller{
 
     function setDefaulted($oid) {
 
+        $oid = intval($oid);
         if ($oid && $oid > 0) {
             $dispatchObj = app::get('omeauto')->model('autodispatch');
             $data = $dispatchObj->dump($oid, 'oid,config');
@@ -124,6 +112,7 @@ class omeauto_ctl_autodispatch extends omeauto_controller{
 
     function removeDefaulted($oid) {
 
+        $oid = intval($oid);
         if ($oid && $oid > 0) {
             //置指定仓库为缺省发货仓库
             kernel::database()->query("update sdb_omeauto_autodispatch set defaulted='false' where oid={$oid}");
@@ -147,11 +136,6 @@ class omeauto_ctl_autodispatch extends omeauto_controller{
         return $info;
     }
 
-    /**
-     * ajax_get_group
-     * @param mixed $org_id ID
-     * @return mixed 返回值
-     */
     public function ajax_get_group($org_id){
         $groupObj = app::get('ome')->model('groups');
         $ordTypeObj = app::get('omeauto')->model('order_type');

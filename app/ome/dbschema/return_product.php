@@ -404,6 +404,24 @@ $db['return_product'] = array(
             'in_list'  => false,
             'default_in_list' => false,
         ),
+        'is_not_combine' => array(
+            'type' => 'bigint(20)',
+            'default' => 0,
+            'editable' => false,
+            'label' => '是否不允许审核',
+            'comment' => '退款转退货拦截：是否不允许审核，位掩码同orders.is_not_combine',
+            'in_list' => false,
+            'default_in_list' => false,
+        ),
+        'order_type' => array(
+            'type' => 'varchar(32)',
+            'default' => '',
+            'editable' => false,
+            'label' => '订单类型',
+            'comment' => '退款转退货拦截：订单类型，platform=平台订单',
+            'in_list' => false,
+            'default_in_list' => false,
+        ),
         'jsrefund_flag'           => array(
             'type'            => array(
                 0  => '否',

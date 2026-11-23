@@ -1,34 +1,24 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/**
- * 华强宝请求
- *
- * @category 
- * @package 
- * @author chenping<chenping@shopex.cn>
- * @version $Id: Z
+ * 物流跟踪请求（快递鸟订阅 / 顺丰路由注册 + 按配置查询）
  */
 class ome_event_trigger_shop_hqepay
 {
     public $node_id = '1227722633';
     
     public function check_bind_status(){
-        
+        $provider = $this->getTrackProvider();
+
+        if ($provider == 'sf') {
+            // Matrix 绑定：第三方快递 sf 且已回填 node_id
+            $channel = app::get('channel')->model('channel')->dump([
+                'channel_type' => 'kuaidi',
+                'node_type'    => 'sf',
+                'filter_sql'   => 'node_id IS NOT NULL AND node_id!=""',
+            ]);
+            return $channel ? true : false;
+        }
+
         $channel = app::get('channel')->model('channel')->dump([
             'channel_type' => 'kuaidi',
             'node_type'    => 'kdn',
@@ -40,11 +30,78 @@ class ome_event_trigger_shop_hqepay
         }
         return true;
     }
-    #增强版快递鸟物流订阅
+
+    /**
+     * 物流跟踪来源：kdn（默认）| sf
+     */
+    public function getTrackProvider()
+    {
+        $provider = app::get('ome')->getConf('ome.logistics.track.provider');
+        return $provider ?: 'kdn';
+    }
+
+    /**
+     * 是否开启物流跟踪
+     */
+    public function isTrackEnabled()
+    {
+        return app::get('ome')->getConf('ome.delivery.hqepay') != 'false';
+    }
+
+    /**
+     * 发货后订阅物流
+     * - 跟踪关闭：跳过
+     * - 来源 sf：顺丰订阅（store.trade.pub.appreciation）
+     * - 来源 kdn：快递鸟增强订阅
+     */
     public function hqepay_pub($delivery_id){
+        if (!$this->isTrackEnabled()) {
+            return true;
+        }
+
         $rs = $this->check_bind_status();
         if(!$rs){return true;}
 
+        if ($this->getTrackProvider() == 'sf') {
+            return $this->sf_pub($delivery_id);
+        }
+
+        return $this->kdn_pub($delivery_id);
+    }
+
+    /**
+     * 顺丰物流订阅（store.trade.pub.appreciation）
+     * 必填：logistic_code=物流单号；tid=订单号可选
+     */
+    public function sf_pub($delivery_id)
+    {
+        $delivery = app::get('ome')->model('delivery')->getFinishDelivery($delivery_id);
+        if (!$delivery || empty($delivery['logi_no'])) {
+            return true;
+        }
+
+        $orderBn = '';
+        if (!empty($delivery['orders'][0]['order_bn'])) {
+            $orderBn = $delivery['orders'][0]['order_bn'];
+        }
+
+        $sdf = array(
+            'logistic_code' => $delivery['logi_no'],
+            'logi_no'       => $delivery['logi_no'],
+            'tid'           => $orderBn,
+            'order_bn'      => $orderBn,
+            'delivery_bn'   => $delivery['delivery_bn'],
+        );
+
+        kernel::single('erpapi_router_request')->set('hqepay', 'sf')->sf_pub($sdf, true);
+        return true;
+    }
+
+    /**
+     * 增强版快递鸟物流订阅
+     */
+    public function kdn_pub($delivery_id)
+    {
         $delivery = app::get('ome')->model('delivery')->getFinishDelivery($delivery_id);
         if (!$delivery){return true;} 
         
@@ -154,6 +211,7 @@ class ome_event_trigger_shop_hqepay
         );
 
         kernel::single('erpapi_router_request')->set('hqepay', $this->node_id)->hqepay_pub($sdf,true);
+        return true;
     }
    
     #过滤特殊字符

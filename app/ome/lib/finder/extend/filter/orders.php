@@ -33,13 +33,13 @@ class ome_finder_extend_filter_orders{
         }
         $order_bool_list =kernel::single('ome_order_bool_type')->getOrder_type_list();
         
-        // 线上店铺列表（按是否常用店铺进行排序）
+        // 线上店铺 + 门店店铺列表（按是否常用店铺进行排序）
         $shopFilter = array(
-            's_type' => '1',
+            'disabled' => 'false',
         );
         $shopList = app::get('ome')->model('shop')->getList('name,shop_id', $shopFilter, 0, -1, 'is_common_shop ASC, s_status DESC');
         
-        $shopName = array_column($shopList, 'name','shop_id');
+        $shopNames = array_column($shopList, 'name','shop_id');
         
         //物流服务标签列表
         $axOrderLib = kernel::single('dchain_order');
@@ -56,7 +56,7 @@ class ome_finder_extend_filter_orders{
         $db['orders']=array (
             'columns' => array (
                 'shop_id' => array(
-                    'type'          => $shopName,
+                    'type'          => $shopNames,
                     'label'         => '来源店铺',
                     'width'         => 100,
                     'editable'      => false,

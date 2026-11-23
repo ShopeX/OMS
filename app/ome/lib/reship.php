@@ -792,7 +792,7 @@ class ome_reship{
         $reship_ids[0] = $reship_id;
         
         $reshipObj = app::get('ome')->model('reship');
-        $reshipInfo = $reshipObj->dump(array('reship_id'=>$reship_id), 'reship_id,reship_bn,return_logi_no,is_check');
+        $reshipInfo = $reshipObj->dump(array('reship_id'=>$reship_id), '*');
         
         if (!$this->matchReturnAutoApproveMode($reship_id, $error_msg)) {
             if ($this->shouldMarkReshipPaidEqualAutoBlockOnMatchFail()) {
@@ -806,8 +806,28 @@ class ome_reship{
         $mstLogiApprove = app::get('ome')->getConf('return.logi_auto_approve');
         if($mstLogiApprove == 'on'){
            if(empty($reshipInfo['return_logi_no'])){
+               // 解决场景：审核必须有退回物流单号时，创建换货单之后，没有预占库存冻结
+               if ($reshipInfo['return_type'] == 'change' && $reshipInfo['changebranch_id']) {
+                   // 查询是否存在冻结流水
+                   $stockFreezeMdl = app::get('material')->model('basic_material_stock_freeze');
+                   $_filter = [
+                       'obj_id' => $reship_id,
+                       'bill_type' => material_basic_material_stock_freeze::__RESHIP,
+                       'branch_id|in' => [$reshipInfo['changebranch_id'], 0],
+                   ];
+                   $stock_freeze = $stockFreezeMdl->db_dump($_filter);
+                   if (!$stock_freeze) {
+                       $freeze_error_msg = '';
+                       $result = kernel::single('console_reship')->addChangeFreeze($reship_id, $freeze_error_msg);
+                       if(!$result){
+                           $error_msg = '配置已开启：审核必须有退回物流单号；换货预占库存失败：'. $freeze_error_msg;
+                           return false;
+                       }
+                   }
+               }
+               
                $error_msg = '配置已开启：审核必须有退回物流单号，请检查!';
-                return false;
+               return false;
             }
         }
         

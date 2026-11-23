@@ -421,6 +421,8 @@ class ome_mdl_return_product extends dbeav_model
             $error_msg = '售后申请单已处理完成';
             return false;
         }
+        
+        // 创建退换货单
         if($status==3 && $choose_type_flag){
              //接收数据，并做相应的操作类型转换
              $status_type = $adata['choose_type']?$adata['choose_type']:'1';
@@ -516,7 +518,7 @@ class ome_mdl_return_product extends dbeav_model
      }
 
      /**
-      * undocumented function
+      * 创建退换货单
       *
       * @return void
       * @author
@@ -534,9 +536,11 @@ class ome_mdl_return_product extends dbeav_model
         $fudaiLib = kernel::single('material_fukubukuro_dispatch');
         
         $returninfo = $Oproduct->dump(array('return_id'=>$return_id));
+        
         //判断来源
         $source = $returninfo['source'];
         $edit_reship_flag = false;
+        
         //判断退货单重复
         if ($return_id){
             $flag_type = $returninfo['flag_type'];
@@ -590,6 +594,7 @@ class ome_mdl_return_product extends dbeav_model
             'shop_id'=>$orderinfo['shop_id'],
             'platform_status' => $returninfo['platform_status'],
         );
+        
         if($edit_reship_flag){
             $sdf['reship_id'] = $reshipdata['reship_id'];
         }
@@ -689,7 +694,6 @@ class ome_mdl_return_product extends dbeav_model
                     $tmoney += ($v['num'] * $tmp_items[$v['product_id']]);
                 }
             }
-            
         }
         
         $change = array();
@@ -707,8 +711,7 @@ class ome_mdl_return_product extends dbeav_model
             }
         }
         
-        if ($returninfo['source'] == 'matrix' )
-        {
+        if ($returninfo['source'] == 'matrix' ){
             if($returninfo['shop_type'] == 'tmall'){
                 $tmall_detail = kernel::single('ome_service_aftersale')->get_return_type(array('return_id'=>$return_id));
             }else if(in_array($returninfo['shop_type'],['luban','pinduoduo','youzan'])){
@@ -720,7 +723,6 @@ class ome_mdl_return_product extends dbeav_model
                 }
             }
             
-
             if ($tmall_detail['refund_type'] == 'change'){
                 $sdf['source'] = 'matrix';
                 //微盟换出订单号使用平台的
@@ -731,12 +733,12 @@ class ome_mdl_return_product extends dbeav_model
                 }
                 $buyer_address = $tmall_detail['buyer_address'] ? explode('^^^',$tmall_detail['buyer_address']) : '';
                 if ($buyer_address){
-
                     $sdf['ship_addr'] = array_pop($buyer_address);
                     $ship_area = implode('/',$buyer_address);
                     kernel::single('eccommon_regions')->region_validate($ship_area);
                     $sdf['ship_area'] = $ship_area;
                 }
+                
                 $status = '2' ;
                 $exchange_sku = $tmall_detail['exchange_sku'];
                 $change_price = $tmoney/$tmall_detail['exchange_num'];
@@ -830,6 +832,7 @@ class ome_mdl_return_product extends dbeav_model
                 $sdf['return_logi_name'] = $tmall_detail['buyer_logistic_name'];
                 $sdf['return_logi_no'] = $tmall_detail['buyer_logistic_no'];
                 $sdf['change_amount'] =  $tmoney;
+                
                 $tmall_change_flag = true;
                 if (kernel::single('ome_reship_const')->isNewExchange($returninfo['flag_type'])) {
                     $sdf['flag_type'] = $returninfo['flag_type'] | ome_reship_const::__NEW_EXCHANGE_REPAIR;

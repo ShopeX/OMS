@@ -100,7 +100,7 @@ class o2o_ctl_admin_delivery_processed extends desktop_controller {
 
     function batch_sync()
     {
-        $ids = $_POST['delivery_id'];
+        $ids = array_map('intval', (array)$_POST['delivery_id']);
         $db = kernel::database();
         if (!empty($ids)) {
             $sql = "SELECT w.* FROM sdb_wap_delivery as w left join sdb_ome_delivery as o on w.outer_delivery_bn=o.delivery_bn WHERE w.status='3' AND o.process='false' AND w.delivery_id in(".implode(',', $ids).")";
@@ -127,7 +127,7 @@ class o2o_ctl_admin_delivery_processed extends desktop_controller {
      */
     public function batch_received()
     {
-        $ids = $_POST['delivery_id'];
+        $ids = array_map('intval', (array)$_POST['delivery_id']);
         $db = kernel::database();
         if (!empty($ids)) {
             $sql = "SELECT w.* FROM sdb_wap_delivery as w left join sdb_ome_delivery as o on w.outer_delivery_bn=o.delivery_bn WHERE w.status='3'  AND w.delivery_id in(".implode(',', $ids).")";

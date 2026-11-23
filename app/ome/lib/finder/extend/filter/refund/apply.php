@@ -25,11 +25,13 @@ class ome_finder_extend_filter_refund_apply
         //单据种类
         $boolTypeOptions =kernel::single('ome_refund_bool_type')->getSearchOptions();
         
-        // 线上店铺列表（按是否常用店铺进行排序）
+        // 线上店铺 + 门店店铺列表（按是否常用店铺进行排序）
         $shopFilter = array(
-            's_type' => '1',
+            'disabled' => 'false',
         );
-        $shopNames = array_column(app::get('ome')->model('shop')->getList('name,shop_id', $shopFilter),'name','shop_id');
+        $shopList = app::get('ome')->model('shop')->getList('name,shop_id', $shopFilter, 0, -1, 'is_common_shop ASC, s_status DESC');
+        
+        $shopNames = array_column($shopList, 'name','shop_id');
         
         //平台售后状态
         $platformStatus = kernel::single('ome_refund_func')->get_source_status('all', 'all');

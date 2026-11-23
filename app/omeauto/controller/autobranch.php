@@ -65,6 +65,7 @@ class omeauto_ctl_autobranch extends omeauto_controller {
     function setDefault($bid) {
 
         //$this->begin('');
+        $bid = intval($bid);
         if ($bid && $bid > 0) {
             //全部取消缺省
             kernel::database()->query("update sdb_ome_branch set defaulted='false'");
@@ -86,6 +87,7 @@ class omeauto_ctl_autobranch extends omeauto_controller {
     function removeDefault($bid) {
 
         //$this->begin('');
+        $bid = intval($bid);
         if ($bid && $bid > 0) {
             //全部取消缺省
             kernel::database()->query("update sdb_ome_branch set defaulted='false'");
@@ -112,15 +114,16 @@ class omeauto_ctl_autobranch extends omeauto_controller {
 
             $data['area_conf'] = array();
         }
+        $data['branch_id'] = intval($data['branch_id']);
         //修改
         if ($data['branch_id']) {
-            kernel::database()->query("update sdb_omeauto_order_type set bid=0 where bid={$data[branch_id]}");
+            kernel::database()->query("update sdb_omeauto_order_type set bid=0 where bid={$data['branch_id']}");
         }
         app::get('ome')->model('branch')->save($data);
         //更新订单类型相关表
         foreach ((array) $data['area_conf'] as $tid) {
-
-            kernel::database()->query("update sdb_omeauto_order_type set bid={$data[branch_id]} where tid={$tid}");
+            $tid = intval($tid);
+            kernel::database()->query("update sdb_omeauto_order_type set bid={$data['branch_id']} where tid={$tid}");
         }
 
         echo "SUCC";

@@ -1,27 +1,11 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class ome_ctl_admin_delivery_back extends desktop_controller {
 
     var $name = "退回服务";
     var $workground = "aftersale_center";
 
     /**
-     * 
+     *
      * 拒收退货单列表
      */
     function index(){
@@ -160,8 +144,8 @@ class ome_ctl_admin_delivery_back extends desktop_controller {
 
     /**
      * 显示待拒收发货单明细及相关信息(作废: 此方法已不在使用)
-     * 
-     * */
+     *
+     **/
     function process($deliveryId,$orderIds)
     {
 
@@ -206,7 +190,7 @@ class ome_ctl_admin_delivery_back extends desktop_controller {
         $deliveryObj = app::get('ome')->model('delivery');
         $branchObj = app::get('ome')->model('branch');
         
-        $order_id = $_POST['order_id'];
+        $order_id = intval($_POST['order_id']);
         $order_bn = $_POST['order_bn'];
         $instock_branch = $_POST['instock_branch'];
         
@@ -228,6 +212,8 @@ class ome_ctl_admin_delivery_back extends desktop_controller {
         //组织数据
         $refuseList = array();
         foreach ($instock_branch as $delivery_id => $in_branch_id){
+            $delivery_id = intval($delivery_id);
+            $in_branch_id = intval($in_branch_id);
             
             //发货单
             $sql = "SELECT b.delivery_id FROM sdb_ome_delivery_order AS a LEFT JOIN sdb_ome_delivery AS b ON a.delivery_id=b.delivery_id 
@@ -284,11 +270,6 @@ class ome_ctl_admin_delivery_back extends desktop_controller {
         $this->splash('success', null, '命令已经被成功发送！！');
     }
 
-    /**
-     * finish_check
-     * @param mixed $reship_id ID
-     * @return mixed 返回值
-     */
     public function finish_check($reship_id){
 
         $Oreship = $this->app->model('reship');
@@ -301,11 +282,6 @@ class ome_ctl_admin_delivery_back extends desktop_controller {
         $this->page('admin/delivery/return/finish_check.html');
     }
 
-    /**
-     * do_finish_check
-     * @param mixed $reship_id ID
-     * @return mixed 返回值
-     */
     public function do_finish_check($reship_id){
         $this->begin();
         $reshipobj = $this->app->model('reship');

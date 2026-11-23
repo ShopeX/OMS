@@ -79,6 +79,7 @@ class omeauto_ctl_autoconfirm extends omeauto_controller {
         
         //修改
         if ($data['oid']) {
+             $data['oid'] = intval($data['oid']);
              kernel::database()->query(sprintf("update sdb_omeauto_order_type set oid=0 where oid=%s", $data["oid"]));
         }
         app::get('omeauto')->model('autoconfirm')->save($data);
@@ -86,6 +87,7 @@ class omeauto_ctl_autoconfirm extends omeauto_controller {
         //更新订单类型相关表
         foreach( (array)$data['config']['autoOrders'] as $tid)
         {
+            $tid = intval($tid);
             kernel::database()->query(sprintf("update sdb_omeauto_order_type set oid=%s where tid=%s", $data["oid"], $tid));
         }
         
@@ -96,6 +98,7 @@ class omeauto_ctl_autoconfirm extends omeauto_controller {
     
     function setStatus($oid, $status) {
         
+        $oid = intval($oid);
         if ($status == 'true') {
             $disabled = 'false';
         } else {
@@ -109,6 +112,7 @@ class omeauto_ctl_autoconfirm extends omeauto_controller {
     
     function setDefaulted($oid) {
         
+        $oid = intval($oid);
         if ($oid && $oid > 0) {
             $confirmObj = app::get('omeauto')->model('autoconfirm');
             $data = $confirmObj->dump($oid, 'oid,config');
@@ -130,6 +134,7 @@ class omeauto_ctl_autoconfirm extends omeauto_controller {
     
     function removeDefaulted($oid) {
         
+        $oid = intval($oid);
         if ($oid && $oid > 0) {
             //置指定仓库为缺省发货仓库
             kernel::database()->query("update sdb_omeauto_autoconfirm set defaulted='false' where oid={$oid}");

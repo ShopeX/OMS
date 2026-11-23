@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class o2o_mdl_store_refuse_analysis extends dbeav_model
 {
     var $has_export_cnf = true;
@@ -29,11 +13,6 @@ class o2o_mdl_store_refuse_analysis extends dbeav_model
         return $row['reason_name'] ?? $reasonId;
     }
 
-    /**
-     * 获取_reason_analysis
-     * @param mixed $filter filter
-     * @return mixed 返回结果
-     */
     public function get_reason_analysis($filter = null)
     {
         $sql = 'SELECT count(sra.reason_id) as num , rr.reason_name as name FROM sdb_o2o_store_refuse_analysis as sra right join sdb_o2o_refuse_reason as rr on sra.reason_id = rr.reason_id and ' . $this->_get_filter($filter) . ' GROUP BY rr.reason_id,rr.reason_name ORDER BY rr.reason_name';
@@ -42,13 +21,6 @@ class o2o_mdl_store_refuse_analysis extends dbeav_model
         return $row;
     }
 
-    /**
-     * _get_filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _get_filter($filter, $tableAlias = null, $baseWhere = null)
     {
         $where = array(1);

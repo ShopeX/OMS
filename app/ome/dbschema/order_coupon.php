@@ -39,7 +39,6 @@ $db['order_coupon'] = array(
             'filtertype' => 'normal',
             'filterdefault' => true,
         ),
-
         'type_name'     => array(
             'type'          => 'varchar(50)',
             'label'         => '优惠名称',
@@ -87,14 +86,14 @@ $db['order_coupon'] = array(
         'amount'        => array(
             'type'    => 'money',
             'default' => '0.000',
-            'label'   => '金额',
-            'width'   => 75,
+            'label'   => '单价',
+            'width'   => 110,
         ),
         'total_amount'        => array(
             'type'    => 'money',
             'default' => '0.000',
             'label'   => '小计金额',
-            'width'   => 75,
+            'width'   => 110,
         ),
         'oid'           => array(
             'type'     => 'varchar(50)',

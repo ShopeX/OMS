@@ -15,7 +15,14 @@
  * limitations under the License.
  */
 
-class ome_finder_reship{
+/**
+ * 售后退换货单filter
+ *
+ * @author shopex开发团队
+ * @version 2026.11.11
+ */
+class ome_finder_reship
+{
     protected $vue_mode = false;
 
     public function setVueMode(bool $vue): void
@@ -32,11 +39,10 @@ class ome_finder_reship{
             unset($this->column_edit);
         }
     }
+    
     var $addon_cols = 'need_sv,is_check,archive,source,order_id,changebranch_id,return_id,return_type,change_order_id,shop_type,flag_type,sync_code,status,abnormal_status,platform_status,return_freight,shop_id';
-
+    
     var $detail_basic = "退货单详情";
-
-    public static $change_order = array();
     function detail_basic($reship_id)
     {
         $basicMaterialExtObj = app::get('material')->model('basic_material_ext');
@@ -47,7 +53,6 @@ class ome_finder_reship{
 
         $branchLib = kernel::single('ome_branch');
         $reshipLib = kernel::single('ome_reship');
-
         $keplerLib = kernel::single('ome_reship_kepler');
         
         //退货单信息
@@ -72,27 +77,28 @@ class ome_finder_reship{
 
         //退回物流信息
         $return_id    = $detail['return_id'];
-        if($return_id && empty($detail['return_logi_id']))
-        {
+        if($return_id && empty($detail['return_logi_id'])){
             $reProductObj    = app::get('ome')->model('return_product');
             $product_detail  = $reProductObj->dump(array('return_id'=>$return_id), 'process_data');
             $process_data    = ($product_detail['process_data'] ? unserialize($product_detail['process_data']) : '');
-            if($process_data)
-            {
+            if($process_data){
                 $corpinfo = $corpObj->dump(array('name'=>$process_data['shipcompany']), 'corp_id');
 
                 $detail['return_logi_no']    = $process_data['logino'];
             }
         }
+        
         if($return_id) {
             $render->pagedata['return_freight_data'] = app::get('ome')->model('return_freight')->db_dump(['return_id'=>$return_id]);
         }
+        
         if(is_numeric($detail['return_logi_name'])){
             $corpinfo = $corpObj->dump($detail['return_logi_name'], 'name');
             $detail['return_logi_name']=$corpinfo['name'];
         }
 
         $render->pagedata['detail'] = $detail;
+        
         //[换货]关联的销售物料的类型
         if($detail['return_type'] == 'change'){
             $reshipObjects    = app::get('ome')->model('reship_objects');
@@ -106,8 +112,7 @@ class ome_finder_reship{
             }
             unset($temp_data);
         }
-        $branchlib = kernel::single('ome_branch');
-
+        
         //退换货明细
         $reship_item = $oReship->getItemList($reship_id);
         
@@ -121,6 +126,13 @@ class ome_finder_reship{
             $orderLib = kernel::single('ome_order');
             $orderItemList = $orderLib->getOrderItemByItemIds($orderItemIds);
         }
+
+        //基础物料关联条形码
+        $barcodeList = array();
+        $bmIds = array_filter(array_column($reship_item, 'product_id'));
+        if($bmIds){
+            $barcodeList = kernel::single('material_codebase')->getBarcodeByBmIds($bmIds);
+        }
         
         //format
         $lucky_flag = false;
@@ -131,6 +143,7 @@ class ome_finder_reship{
             $spec_info    = $basicMaterialExtObj->dump(array('bm_id'=>$value['product_id']), '*');
             $reship_item[$key]['spec_info'] = $spec_info['specifications'];
             $reship_item[$key]['specifications'] = $spec_info['specifications'];
+            $reship_item[$key]['barcode'] = isset($barcodeList[$value['product_id']]) ? $barcodeList[$value['product_id']]['code'] : '';
             
             //price
             $reship_item[$key]['price'] = sprintf('%.2f', $reship_item[$key]['price']);
@@ -138,20 +151,18 @@ class ome_finder_reship{
             //amount
             $reship_item[$key]['amount'] = $reship_item[$key]['amount'] > 0 ? $reship_item[$key]['amount'] : sprintf('%.2f',$reship_item[$key]['num'] * $reship_item[$key]['price']);
             $reship_item[$key]['gap']    = $value['return_type'] == 'return' ? $value['num'] -  $value['normal_num'] - $value['defective_num'] : 0;
-            #换货的销售物料类型
+            
+            // 换货的销售物料类型
             if($value['obj_id']){
                 $reship_item[$key]['item_type']    = $reship_objects[$value['obj_id']]['obj_type'];
                 $reship_item[$key]['sales_material_bn'] = $reship_objects[$value['obj_id']]['sales_material_bn'];
             }else{
                 $reship_item[$key]['item_type'] = $value['obj_type'];
             }
-
+            
             if ($value['return_type'] == 'change' && $value['changebranch_id']){
-
-                $branch_detail = $branchlib->getBranchInfo($value['changebranch_id'],'name');
-
+                $branch_detail = $branchLib->getBranchInfo($value['changebranch_id'],'name');
                 $reship_item[$key]['branch_name'] = $branch_detail['name'];
-
             }
             
             //销售物料类型名称
@@ -228,6 +239,7 @@ class ome_finder_reship{
                     $packageList[$key]['ship_status_name'] = $shipStatusList[$shipping_status];
                 }
             }
+            
             $render->pagedata['packageList'] = $packageList;
 
             //获取售后服务单
@@ -244,11 +256,17 @@ class ome_finder_reship{
             $itemMdl = app::get('ome')->model('change_items');
             $changeItems = $itemMdl->getlist('*',array('return_id'=>$detail['return_id']));
             if ($changeItems && !isset($recover['change'])) {
+                $changeBmIds = array_filter(array_column($changeItems, 'product_id'));
+                $changeBarcodeList = $changeBmIds ? kernel::single('material_codebase')->getBarcodeByBmIds($changeBmIds) : array();
+                foreach ($changeItems as $ck => $cItem) {
+                    $changeItems[$ck]['barcode'] = isset($changeBarcodeList[$cItem['product_id']]) ? $changeBarcodeList[$cItem['product_id']]['code'] : '';
+                }
                 $recover['change'] = $changeItems;
             }
-        
+            
             $render->pagedata['exchangeAddress'] = app::get('ome')->model('return_exchange_receiver')->db_dump(['return_id'=>$detail['return_id']]);
         }
+        
         $render->pagedata['finder_id'] = ($_GET['_finder']['finder_id'] ? $_GET['_finder']['finder_id'] : $_GET['finder_id']);
         $render->pagedata['is_hqepay_on'] = $is_hqepay_on;
         $render->pagedata['items'] = $recover;
@@ -278,9 +296,11 @@ class ome_finder_reship{
             $dc_data = $oDc->dump($process_data['shipcompany']);
             $process_data['shipcompany'] = !empty($dc_data['name'])?$dc_data['name']:'';
         }
+        
         $Oreason = $Oreship->dump(array('reship_id'=>$reship_id),'reason');
         $Oreason['reason'] = unserialize($Oreason['reason']);
         $render->pagedata['detail'] = $process_data;
+        
         return $render->fetch('admin/reship/detail_acceptreturned.html');
     }
 
@@ -334,19 +354,25 @@ class ome_finder_reship{
             $item_ids[] = $reshipItem['item_id'];
             $reshipItemsData[$reshipItem['item_id']] = $reshipItem;
         }
+        
         $tmpReturnInfo = $oReshipPDAReturnInfo->getList('*', array('item_id|in' => $item_ids), 0, -1, 'id desc');
         $branch_tmp = $oReship->db->select("SELECT branch_id,name FROM sdb_ome_branch WHERE b_type=1");
+        
         foreach ($branch_tmp as $branch_item) {
             $branch[$branch_item['branch_id']] = $branch_item['name'];
         }
+        
         foreach ($tmpReturnInfo as $key => &$rinfo) {
             $pdaReturnInfo[$key][$rinfo['item_id']] = $rinfo;
+            
             // 退货仓库
             $pdaReturnInfo[$key][$rinfo['item_id']]['return_branch_id'] = $branch[$rinfo['return_branch_id']];
         }
+        
         $render->pagedata['reshipData'] = $reshipData;
         $render->pagedata['reshipItemsData'] = $reshipItemsData;
         $render->pagedata['pdaReturnInfo'] = $pdaReturnInfo;
+        
         return $render->fetch('admin/reship/detail_abnormalreturn.html');
     }
 
@@ -356,12 +382,15 @@ class ome_finder_reship{
         if ($_REQUEST['act'] == 'jingxiao') {
             return '';
         }
+        
         if(!$this->dmShop[$row[$this->col_prefix.'shop_id']]) {
             $this->dmShop[$row[$this->col_prefix.'shop_id']] = app::get('ome')->model('shop')->db_dump(['shop_id'=>$this->__currDlyInfo['shop_id']], 'delivery_mode');
         }
+        
         if($this->dmShop[$row[$this->col_prefix.'shop_id']]['delivery_mode'] == 'jingxiao') {
             return '';
         }
+        
         $addressObj = app::get('ome')->model('return_address');
         $oReship = app::get('ome')->model('reship');
         $reship_items = $oReship->dump($row['reship_id'],'reship_bn,source,return_type,return_id,change_order_id,change_status,shop_type,branch_id');
@@ -373,6 +402,7 @@ class ome_finder_reship{
         }else{
             $edit_title = '编辑';
         }
+        
         $precheck = kernel::single('ome_reship')->is_precheck_reship($row[$this->col_prefix.'is_check'],$row[$this->col_prefix.'need_sv']);
 
         //查询寄件地址
@@ -394,7 +424,6 @@ class ome_finder_reship{
 
         $quality_check = '  <a target="dialog::{width:1200,height:546,title:\'质检退换货单:'.$reship_items['reship_bn'].'\'}" href="index.php?app=ome&ctl=admin_return_sv&act=edit&p[0]='.$row['reship_id'].'&finder_id='.$_GET['_finder']['finder_id'].'">收货/质检</a>';
 
-        
         $rejectFreight = '';
         if($row[$this->col_prefix.'return_id'] && $row[$this->col_prefix.'return_freight'] > 0) {
             $rfRow = app::get('ome')->model('return_freight')->db_dump(['return_id'=>$row[$this->col_prefix.'return_id']], 'handling_advice');
@@ -411,7 +440,6 @@ class ome_finder_reship{
                 $close_changeBtn = sprintf('<a href="javascript:if (confirm(\'确认关闭换货订单,关闭后,换货订单不会生成\')){W.page(\'index.php?app=ome&ctl=admin_reship&act=close_change&p[0]=%s&finder_id=%s\', $extend({method: \'get\'}, JSON.decode({})), this);}void(0);" target="">关闭换货</a>',$row['reship_id'],$_GET['_finder']['finder_id']);
             }
             
-            
             //取消按钮
             $cancel = '  <a target="dialog::{width:600,height:400,title:\'取消退换货单号:'.$reship_items['reship_bn'].'\'}" href="index.php?app=ome&ctl=admin_reship&act=refuse_message&p[0]='.$row['reship_id'].'&finder_id='.$_GET['_finder']['finder_id'].'">取消</a>  ';
         }
@@ -424,8 +452,8 @@ class ome_finder_reship{
             'part_cancel'   => 'aftersale_rchange_refuse',
             'doback'        => 'aftersale_rchange_back',
             'quality_check' => 'aftersale_rchange_sv',
-
         );
+        
         if(!kernel::single('desktop_user')->is_super()){
             $returnLib = kernel::single('ome_return');
             foreach ($permissions as $key=>$permission) {
@@ -436,11 +464,13 @@ class ome_finder_reship{
                 }
             }
         }
+        
         $ismemo = kernel::single('desktop_user')->has_permission('add_reship_memo');
         $memobtn='';
         if($ismemo){
             $memobtn = '  <a target="dialog::{width:700,height:350,title:\'添加退货单备注:'.$reship_items['reship_bn'].'\'}" href="index.php?app=ome&ctl=admin_reship&act=addmemo&p[0]='.$row['reship_id'].'&finder_id='.$_GET['_finder']['finder_id'].'">添加退货备注</a>  ';
         }
+        
         switch($row[$this->col_prefix.'is_check']){
             case '0':
             case '12':
@@ -451,10 +481,12 @@ class ome_finder_reship{
                 $cols = $quality_check;
               }else{
                   $cols .= $cancel . $change_orderBtn . $rejectFreight.$memobtn;
-                    //关闭换货订单
-                    if($close_changeBtn){
-                        $cols .= ' | '. $close_changeBtn;
-                    }
+                  
+                  //关闭换货订单
+                  if($close_changeBtn){
+                      $cols .= ' | '. $close_changeBtn;
+                  }
+                  
                   //[京东一件代发]
                   $branchLib = kernel::single('ome_branch');
                   $wms_type = $branchLib->getNodetypBybranchId($reship_items['branch_id']);
@@ -465,7 +497,6 @@ class ome_finder_reship{
                           $cols .= $select_address;
                       }
                   }
-
               }
             break;
             case '2':
@@ -475,7 +506,6 @@ class ome_finder_reship{
                if(in_array($row['sync_status'], array('1','2')) && $row['sync_msg']){
                    $cols .= $cancel;
                }
-               
             break;
             case '3':
             case '13':
@@ -519,7 +549,7 @@ EOF;
             default:
                $cols = 'wrong';
         }
-       
+        
         return $cols ? $cols : '';
     }
 
@@ -565,10 +595,6 @@ EOF;
                 $a_order = array_column($a_order, 'order_bn', 'order_id');
             }
             return $a_order[$order_id];
-            /*
-            $archive_ordObj = kernel::single('archive_interface_orders');
-            $order = $archive_ordObj->getOrders($filter,'order_bn');
-            */
         }else{
             static $o_order;
             if (!isset($o_order)) {
@@ -577,16 +603,10 @@ EOF;
                 $o_order = array_column($o_order, 'order_bn', 'order_id');
             }
             return $o_order[$order_id];
-            /*
-            $orderObj = app::get('ome')->model('orders');
-            $order = $orderObj->dump($filter,'order_bn');
-            */
         }
-        // return $order['order_bn'];
     }
-
-
-    var $column_changebranch_id = '换货仓';
+    
+    var $column_changebranch_id = '换货仓库';
     var $column_changebranch_id_width = 130;
     function column_changebranch_id($row, $list){
         $changebranch_id = $row[$this->col_prefix .'changebranch_id'];
@@ -600,18 +620,11 @@ EOF;
                 $branchList = array_column($branchList, 'name', 'branch_id');
             }
             return $branchList[$changebranch_id];
-            /*
-            $branchObj = app::get('ome')->model('branch');
-            $branch = $branchObj->db->selectrow('select name FROM sdb_ome_branch WHERE branch_id='.$changebranch_id);
-            return $branch['name'];
-            */
         }else{
             return '-';
         }
     }
-
     
-
     var $column_change_order_id = '换货订单号';
     var $column_change_order_id_width = 160;
     public function column_change_order_id($row,$list){
@@ -625,17 +638,8 @@ EOF;
                 $orderList = array_column($orderList, 'order_bn', 'order_id');
             }
             return $orderList[$change_order_id];
-            /*
-            if (self::$change_order[$change_order_id]){
-                return self::$change_order[$change_order_id];
-            }else{
-                $orderObj = app::get('ome')->model('orders');
-                $order_detail = $orderObj->dump(array('order_id'=>$change_order_id),'order_bn');
-                self::$change_order[$change_order_id] = $order_detail['order_bn'];
-                return self::$change_order[$change_order_id];
-            }
-            */
         }
+        
         return '';
     }
 
@@ -652,23 +656,15 @@ EOF;
                 $dataList = array_column($dataList,'current_phase_timeout','return_id');
             }
             $return_id = $row['return_id'];
+            
             if ($dataList[$return_id]) {
                 return "<div style='width:120px;height:20px;background-color:green;color:#FFFFFF;text-align:center;'>".date('Y-m-d H:i:s',$dataList[$return_id])."</div>";
             } else {
                 return '-';
             }
-            /*
-            $tmallObj = app::get('ome')->model('return_product_tmall');
-            $tmall_detail = $tmallObj->dump(array('return_id'=>$row['return_id'],'refund_type'=>'change'),'current_phase_timeout');
-            if ($tmall_detail && $tmall_detail['current_phase_timeout']){
-               return "<div style='width:120px;height:20px;background-color:green;color:#FFFFFF;text-align:center;'>".date('Y-m-d H:i:s',$tmall_detail['current_phase_timeout'])."</div>";;
-            }
-            */
-
         }else{
             return '-';
         }
-
     }
 
     //退货单标识
@@ -679,8 +675,7 @@ EOF;
         $flag_type = $row[$this->col_prefix.'flag_type'];
         return kernel::single('ome_reship_const')->getHtml($flag_type);
     }
-
-
+    
     //同步WMS错误码
     var $column_sync_code = "同步WMS错误码";
     var $column_sync_code_width = 150;
@@ -698,6 +693,7 @@ EOF;
                     $sync_codes[] = $v[$this->col_prefix.'sync_code'];
                 }
             }
+            
             $abnormalObj = app::get('wmsmgr')->model('abnormal_code');
             $tempList = $abnormalObj->getList('abnormal_id,abnormal_code,abnormal_name', array('abnormal_type'=>'return','abnormal_code'=>$sync_codes), 0, 500);
             if($tempList){
@@ -707,6 +703,7 @@ EOF;
                     $error_codes[$abnormal_code] = $val['abnormal_name'];
                 }
             }
+            
             unset($tempList);
         }
 
@@ -736,7 +733,6 @@ EOF;
         return self::$_platformStatus[$platform_status];
     }
     
-
     var $column_abnormal_status = '异常标识';
     var $column_abnormal_status_width = 150;
     function column_abnormal_status($row)
@@ -746,7 +742,6 @@ EOF;
     
     var $column_aftersale_type = '售后类型';
     var $column_aftersale_type_width = 85;
-    
     function column_aftersale_type($row)
     {
         $flag_type      = $row[$this->col_prefix . 'flag_type'];
@@ -759,7 +754,6 @@ EOF;
     
     var $column_delivery_bn = '发货单号';
     var $column_delivery_bn_width = 120;
-    
     function column_delivery_bn($row,$list)
     {
         $data = $this->getDelivery($row,$list);
@@ -785,6 +779,7 @@ EOF;
             $salesDelOrderitemList = app::get('sales')->model('delivery_order_item')->getList('delivery_id,delivery_bn,order_id,order_bn,order_item_id', ['order_item_id' => $orderItemIds]);
             $salesDelOrderitemList = array_column($salesDelOrderitemList, null, 'order_item_id');
         }
+        
         foreach ($itemList as $item) {
             $delivery_bn                                             = $salesDelOrderitemList[$item['order_item_id']]['delivery_bn'] ?? '';
             $this->__deliveryList[$item['reship_id']]['delivery_bn'] = $delivery_bn;

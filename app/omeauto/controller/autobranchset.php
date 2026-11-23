@@ -64,15 +64,16 @@ class omeauto_ctl_autobranchset extends omeauto_controller {
 
         //$this->begin("index.php?app=omeauto&ctl=autoconfirm&act=index");
         $data = $_POST;
+        $data['tid'] = intval($data['tid']);
         $autobranchObj = app::get('omeauto')->model('autobranch');
         $autobranch = $autobranchObj ->getlist('bid',array('tid'=>$data['tid']));
         $old_branch = array();
         foreach ($autobranch as $branch ) {
             $old_branch[] = $branch['bid'];
         }
-       $delet_branch = array_diff($old_branch,$data['bind_conf']);
+       $delet_branch = array_diff($old_branch,(array)$data['bind_conf']);
         if (isset($data['bind_conf']) && is_array($data['bind_conf']) && count($data['bind_conf']) > 1) {
-            $branchIds            = array_values($data['bind_conf']);
+            $branchIds            = array_map('intval', array_values($data['bind_conf']));
             $branchList           = app::get('ome')->model('branch')->getList('branch_id,is_ctrl_store', ['branch_id' => $branchIds]);
             $is_ctrl_store_values = array_column($branchList, 'is_ctrl_store');
             // 去重后检查是否只有一种值
@@ -84,22 +85,23 @@ class omeauto_ctl_autobranchset extends omeauto_controller {
         }
         
        foreach ( $delet_branch as $dv ) {
-           
+           $dv = intval($dv);
            kernel::database()->exec("delete from sdb_omeauto_autobranch  where tid={$data['tid']} AND bid={$dv}");
        }
        $is_default = array_flip((array)$data['is_default']);
-       kernel::database()->query("update sdb_omeauto_order_type set bid=0 where tid='".$data['tid']."'");
+       kernel::database()->query("update sdb_omeauto_order_type set bid=0 where tid=".$data['tid']);
        
-        foreach ($data['bind_conf'] as $k=>$v ) {
+        foreach ((array)$data['bind_conf'] as $k=>$v ) {
+            $v = intval($v);
             if ($is_default[$v] =='0') {
                 $branch_id = $v;
                 
-                kernel::database()->query("update sdb_omeauto_order_type set bid=".$branch_id." where tid='".$data['tid']."'");
+                kernel::database()->query("update sdb_omeauto_order_type set bid=".$branch_id." where tid=".$data['tid']);
             }
             $auto_data = array(
                     'tid'=>$data['tid'],
                     'bid'=>$v,
-                    'weight'=>$data['weight'][$v],
+                    'weight'=>intval($data['weight'][$v]),
                     'is_default'=>$is_default[$v] === '0' ? '1' : '0',
                 );
                 

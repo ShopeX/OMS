@@ -585,9 +585,10 @@ EOF;
         //人工预占库存根据branch_id显示商品列表用
         if ($_GET['app_id'] == "material" && $_GET["object"] == "basic_material" && $_GET["name"] == "bm_id") {
             $params["base_filter"] = array("bm_id" => "-1");
-            if (isset($_GET["filter"]["branch_id"]) && intval($_GET["filter"]["branch_id"]) > 0) {
+            $bid = isset($_GET["filter"]["branch_id"]) ? intval($_GET["filter"]["branch_id"]) : 0;
+            if ($bid > 0) {
                 $params["base_filter"] = [
-                    'filter_sql' => ' bm_id IN(SELECT product_id FROM sdb_ome_branch_product WHERE branch_id = "'.$_GET["filter"]["branch_id"].'")',
+                    'filter_sql' => ' bm_id IN(SELECT product_id FROM sdb_ome_branch_product WHERE branch_id = '.$bid.')',
                 ];
             }
         }
@@ -826,7 +827,7 @@ EOF;
     public function deleteRule()
     {
         $this->begin('');
-        $ids     = $_POST['id'];
+        $ids     = array_map('intval', (array)$_POST['id']);
         $giftObj = app::get('ome')->model('gift_rule');
         if (!empty($ids)) {
             foreach ($ids as $id) {

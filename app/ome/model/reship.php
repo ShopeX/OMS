@@ -465,6 +465,7 @@ class ome_mdl_reship extends dbeav_model{
                     $object->after_create($sdf_data['reship_id']);
                 }
             }
+            
             //存在相关的售后单 更新相关字段 为了售后问题类型的统计添加的字段(problem_id)，并且给该字段赋值
             if($sdf_data['return_id']){
                 $oProduct = $this->app->model('return_product');
@@ -490,6 +491,8 @@ class ome_mdl_reship extends dbeav_model{
                 $sql = "UPDATE sdb_ome_reship SET flag_type=flag_type | ". $flag_type ." WHERE reship_id=".$sdf_data['reship_id'];
                 $reshipObj->db->exec($sql);
             }
+            
+            // 换货单预占库存
             if ($needFreeze && ($sdf_data['return_type'] == 'change' || $sdf_data['changebranch_id'])) {
                 $error_msg = '';
                 $result = kernel::single('console_reship')->addChangeFreeze($sdf_data['reship_id'], $error_msg);
@@ -498,6 +501,7 @@ class ome_mdl_reship extends dbeav_model{
                     $oOperation_log->write_log('reship@ome', $sdf_data['reship_id'], '换货预占库存失败:'. $error_msg);
                 }
             }
+            
             //[京东云交易]保存退货单与京东包裹关系明细
             $wms_type = $branchLib->getNodetypBybranchId($branch_id);
             if($wms_type == 'yjdf' && $is_create){
@@ -543,7 +547,7 @@ class ome_mdl_reship extends dbeav_model{
       
       $rs = array('status'=>'succ','msg'=>'保存成功！');
       
-    # 保存退货及已有的换货明细
+    // 保存退货及已有的换货明细
     if ($type == 'return' && $param['goods_bn'] && is_array($param['goods_bn']) ){
         //获取数据库中的退货数据
         $rs_return_data = $object->getList("bn,product_id,item_id",array("reship_id"=>$reship_id,"return_type"=>"return"));
@@ -768,7 +772,7 @@ class ome_mdl_reship extends dbeav_model{
         
         $reship_data = $this->dump(array('reship_id'=>$reship_id));
         $reship_data['return_logi_id'] = $reship_data['return_logi_name'];
-       // $dc_data = $oDc->dump($reship_data['return_logi_name']);
+        
         $order_data = $oOrders->dump($reship_data['order_id']);
 
         if ($reship_data['change_order_id']) {

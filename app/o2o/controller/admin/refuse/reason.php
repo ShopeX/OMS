@@ -157,7 +157,7 @@ class o2o_ctl_admin_refuse_reason extends desktop_controller
     {
         $this->begin('');
         
-        $ids    = $_POST['reason_id'];
+        $ids    = array_map('intval', (array)$_POST['reason_id']);
         if($ids)
         {
             $refuseObj    = app::get('o2o')->model('refuse_reason');

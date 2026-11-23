@@ -2329,14 +2329,14 @@ class ome_ctl_admin_order extends desktop_controller{
         }
 
         foreach($branch_id as $value){
-
+            $value = intval($value);
             $branchObj = app::get('ome')->model('branch');
             if (!$storeCode) {
-                $branch = $branchObj->db->selectrow("SELECT branch_id,name FROM sdb_ome_branch WHERE branch_id='".$value."'");
+                $branch = $branchObj->db->selectrow("SELECT branch_id,name FROM sdb_ome_branch WHERE branch_id=".$value);
             }else{
-                $branch = $branchObj->db->selectrow("SELECT branch_id,name FROM sdb_ome_branch WHERE branch_bn='".$storeCode."'");
+                $branch = $branchObj->db->selectrow("SELECT branch_id,name FROM sdb_ome_branch WHERE branch_bn=".$branchObj->db->quote($storeCode));
                 if (!$branch) {
-                    $branch = $branchObj->db->selectrow("SELECT branch_id,name FROM sdb_ome_branch WHERE branch_id='".$value."'");
+                    $branch = $branchObj->db->selectrow("SELECT branch_id,name FROM sdb_ome_branch WHERE branch_id=".$value);
                 }
 
 
@@ -2347,7 +2347,7 @@ class ome_ctl_admin_order extends desktop_controller{
                     'relation_branch_bn' => $storeCode,
                     'type' => 'jdlvmi',
                 ));
-                 $branch = $branchObj->db->selectrow("SELECT branch_id,name FROM sdb_ome_branch WHERE branch_id='".$branch_relation['branch_id']."'");
+                 $branch = $branchObj->db->selectrow("SELECT branch_id,name FROM sdb_ome_branch WHERE branch_id=".intval($branch_relation['branch_id']));
             }
             if(is_array($branch) && $branch['branch_id']>0){
                 break;
@@ -2423,14 +2423,14 @@ class ome_ctl_admin_order extends desktop_controller{
         }
 
         foreach($branch_id as $value){
-
+            $value = intval($value);
             $branchObj = app::get('ome')->model('branch');
             if (!$storeCode) {
-                $branch = $branchObj->db->selectrow("SELECT branch_id,name FROM sdb_ome_branch WHERE branch_id='".$value."'");
+                $branch = $branchObj->db->selectrow("SELECT branch_id,name FROM sdb_ome_branch WHERE branch_id=".$value);
             }else{
-                $branch = $branchObj->db->selectrow("SELECT branch_id,name FROM sdb_ome_branch WHERE branch_bn='".$storeCode."'");
+                $branch = $branchObj->db->selectrow("SELECT branch_id,name FROM sdb_ome_branch WHERE branch_bn=".$branchObj->db->quote($storeCode));
                 if (!$branch) {
-                    $branch = $branchObj->db->selectrow("SELECT branch_id,name FROM sdb_ome_branch WHERE branch_id='".$value."'");
+                    $branch = $branchObj->db->selectrow("SELECT branch_id,name FROM sdb_ome_branch WHERE branch_id=".$value);
                 }
 
 
@@ -2441,7 +2441,7 @@ class ome_ctl_admin_order extends desktop_controller{
                     'relation_branch_bn' => $storeCode,
                     'type' => 'jdlvmi',
                 ));
-                 $branch = $branchObj->db->selectrow("SELECT branch_id,name FROM sdb_ome_branch WHERE branch_id='".$branch_relation['branch_id']."'");
+                 $branch = $branchObj->db->selectrow("SELECT branch_id,name FROM sdb_ome_branch WHERE branch_id=".intval($branch_relation['branch_id']));
             }
             if(is_array($branch) && $branch['branch_id']>0){
                 break;
@@ -2466,6 +2466,7 @@ class ome_ctl_admin_order extends desktop_controller{
             $defaultExpressType['yes'] = 'HXPJBEST';
             return $defaultExpressType;
         }
+        
         is_string($order['mark_text']) && $order['mark_text'] = unserialize($order['mark_text']);
         is_string($order['custom_mark']) && $order['custom_mark'] = unserialize($order['custom_mark']);
 
@@ -2558,7 +2559,7 @@ class ome_ctl_admin_order extends desktop_controller{
             }
         } else {
             //检查
-            $orders = $_POST['orderIds'];
+            $orders = array_map('intval', (array)$_POST['orderIds']);
             $consignee = $_POST['consignee'];
             $logiId = $_POST['logi_id'];
             $consignee['memo'] = $_POST['delivery_remark'];
@@ -2593,7 +2594,7 @@ class ome_ctl_admin_order extends desktop_controller{
             $branchObj    = app::get('ome')->model('branch');
             $corpObj      = app::get('ome')->model('dly_corp');
 
-            $branch_id    = $_POST['branch_id'];
+            $branch_id    = intval($_POST['branch_id']);
             $temp_branch  = $branchObj->db->selectrow("SELECT * FROM sdb_ome_branch WHERE branch_id=". $branch_id);
 
             // 判断是否为自有仓，用ome_branch表的owner判断，全峰会有问题
@@ -4056,7 +4057,7 @@ class ome_ctl_admin_order extends desktop_controller{
         $oOrder = $this->app->model("orders");
         $oShop  = $this->app->model('shop');
 
-        $order_id       = $_POST['order_id'];
+        $order_id       = intval($_POST['order_id']);
         $order          = $oOrder->dump($order_id);
         $shop_detail    = $oShop->dump(array('shop_id'=>$order['shop_id']), 'node_type');
         $node_type      = $shop_detail['node_type'];
@@ -4569,7 +4570,7 @@ class ome_ctl_admin_order extends desktop_controller{
 
             $oOrder     = $this->app->model("orders");
 
-            $order_id   = $_POST['order_id'];
+            $order_id   = intval($_POST['order_id']);
             $order      = $oOrder->dump($order_id);
 
             if ($order['pause'] == 'false'){
@@ -6035,7 +6036,7 @@ class ome_ctl_admin_order extends desktop_controller{
         $order_id = intval($_POST['order_id']);
         $branch_id = intval($_POST['branch_id']);
         $logi_id = intval($_POST['logi_id']);
-        $orderIds = ($_POST['order_ids'] ? explode(',', $_POST['order_ids']) : array());
+        $orderIds = ($_POST['order_ids'] ? array_map('intval', explode(',', $_POST['order_ids'])) : array());
         $orderIds = array_filter($orderIds); //合单多个订单ID
 
         //check
@@ -6527,12 +6528,6 @@ class ome_ctl_admin_order extends desktop_controller{
 
 
     function getSalesMaterialByAddNormalOrder(){
-        // $pro_id = $_POST['product_id'];
-
-        // if (is_array($pro_id)){
-        //     $filter['sm_id'] = $pro_id;
-        // }
-
         $sm_id = $_POST['sm_id'];
         $sales_material_bn = $_GET['bn'];
         $sales_material_name = $_GET['name'];
@@ -6708,7 +6703,7 @@ class ome_ctl_admin_order extends desktop_controller{
      */
     public function ajax_o2o_store_list()
     {
-        $shop_name  = $_POST['shop_name'];
+        $shop_name  = trim($_POST['shop_name']);
         $corp_id    = intval($_POST['logi_id']);
         $region_id  = intval($_POST['region_id']);
         $order_id = intval($_POST['order_id']);
@@ -6759,7 +6754,7 @@ class ome_ctl_admin_order extends desktop_controller{
         $c_sql    = '';
         if($shop_name)
         {
-            $sql    = 'SELECT {field} FROM sdb_o2o_store AS a WHERE a.name LIKE "%'. $shop_name .'%"'. $where;
+            $sql    = 'SELECT {field} FROM sdb_o2o_store AS a WHERE a.name LIKE '.$storeObj->db->quote('%'.$shop_name.'%'). $where;
             $flag   = true;
         }
         else

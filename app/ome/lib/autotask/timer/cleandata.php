@@ -42,9 +42,16 @@ class ome_autotask_timer_cleandata
         
         //定期清理 退款未退货 半年前已完结的单据
         kernel::single('ome_refund_noreturn')->clean();
-
+        
         // 定期清理 预警通知
         kernel::single('monitor_event_notify')->clean('7');
+        
+        // 定期清理WMS发货单回传结果（六个月前已经完成的记录）
+        kernel::single('console_wms_delivery')->cleanWmsDelivery();
+        
+        // 定期清理WMS退货单回传结果（六个月前已经完成的记录）
+        kernel::single('console_wms_delivery')->cleanWmsReship();
+        
         return true;
     }
 }

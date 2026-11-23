@@ -149,12 +149,13 @@ class omeauto_ctl_order_labels extends omeauto_controller
         }
         
         // list
-        $labelList = $this->_mdl->getList('*', array('label_id'=>$_POST['label_id']));
+        $labelList = $this->_mdl->getList('*', array('label_id'=>array_map('intval', (array)$_POST['label_id'])));
         $labelList = array_column($labelList, null, 'label_id');
         
         // delete label
         foreach($_POST['label_id'] as $label_id)
         {
+            $label_id = intval($label_id);
             //判断是否已经有订单使用
             $labelInfo = $orderLabelObj->dump(array('label_id'=>$label_id), 'bill_type,bill_id,label_name');
             if($labelInfo){

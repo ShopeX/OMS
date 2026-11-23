@@ -8,7 +8,7 @@
 class ome_order_combine_const
 {
     // 禁止审核订单
-    const __LARGE_APPLIANCES = 0x0001;
+    const __PROHIBIT_CONFIRM_ORDER = 0x0001; // 之前用的常量名：__LARGE_APPLIANCES
     
     // 赠品审批
     const __ORDER_GIFT_APPROVAL = 0x0002;
@@ -29,7 +29,7 @@ class ome_order_combine_const
     const __NONE_BUFA_RESHIP = 0x0040;
     
     private $status = array(
-        self::__LARGE_APPLIANCES => array('identifier'=>'禁止审核', 'text'=>'禁止审核', 'color'=>'#FF6A6A', 'search'=>'true'),
+        self::__PROHIBIT_CONFIRM_ORDER => array('identifier'=>'禁止审核', 'text'=>'禁止审核', 'color'=>'#FF6A6A', 'search'=>'true'),
         self::__ORDER_GIFT_APPROVAL => array('identifier'=>'赠品审批', 'text'=>'赠品审批', 'color'=>'#FF00FF', 'search'=>'true'),
         self::__WAIT_SAP_CANCEL_ODN => array('identifier'=>'等待ODN取消', 'text'=>'等待取消ODN单据', 'color'=>'#FFA500', 'search'=>'true'),
         

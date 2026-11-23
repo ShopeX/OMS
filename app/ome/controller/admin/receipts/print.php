@@ -1914,12 +1914,12 @@ class ome_ctl_admin_receipts_print extends desktop_controller {
             exit;
         }
 
-         $num = $_REQUEST['num'];
-         $str = $_REQUEST['delivery_id'];
+         $num = intval($_REQUEST['num']);
+         $str = intval($_REQUEST['delivery_id']);
 
         //写入日志
         $opObj = $this->app->model('operation_log');
-        $opObj->write_log('delivery_bill_print@ome', $_REQUEST['delivery_id'], '补打快递单('.$num.')份');
+        $opObj->write_log('delivery_bill_print@ome', $str, '补打快递单('.$num.')份');
 
         // 1,增加子数据
         // 2,更新主物流单delivery  中logi_number，delivery_logi_number信息

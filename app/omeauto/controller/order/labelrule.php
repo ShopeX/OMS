@@ -395,6 +395,7 @@ class omeauto_ctl_order_labelrule extends omeauto_controller
         
         foreach($_POST['id'] as $id)
         {
+            $id = intval($id);
             //启用状态下,不可删除
             $ruleInfo = $ruleObj->dump(array('id'=>$id), 'id,name,disabled');
             if($ruleInfo['disabled'] != 'true'){
