@@ -18,7 +18,6 @@
 
 class base_charset_default implements base_charset_interface 
 {
-
     function local2utf($strFrom,$charset='zh') {
         return $this->utfconvert($strFrom,$charset,false);
     }
@@ -103,7 +102,6 @@ class base_charset_default implements base_charset_interface
         }
         return $str;
     }
-
     
     function utf82u($Char){
         switch(strlen($Char)){
@@ -126,14 +124,9 @@ class base_charset_default implements base_charset_interface
                 return $OutStr;
         }
     }
-	
-	/**
-	 * 替换utf-8字符集的bomtou 
-	 * @param string 传入待处理的字符串
-	 * @return mixed 待处理的字符串或者false
-	 */
-	public function replace_utf8bom($str)  
-	{  
+    
+    public function replace_utf8bom($str)  
+    {  
         if(substr($str,0,3)=="\xEF\xBB\xBF"){
             $str = substr($str,3);
             return $str;
@@ -141,21 +134,15 @@ class base_charset_default implements base_charset_interface
             return false;  
         }
     }
-	
-	/**
-	 * 判断是否是utf-8字符集
-	 * @param string 传入字符串
-	 * @return boolean true or false
-	 */
-	public function is_utf8($word)
-	{
+    
+    public function is_utf8($word)
+    {
         if(substr($word,0,3)=="\xEF\xBB\xBF"){
             return true;
-		}elseif(mb_detect_encoding($word) == 'UTF-8'){
+        }elseif(mb_detect_encoding($word) == 'UTF-8'){
             return true;
         }else{
-			return false;
-		}
-	}
-
-}//End Class
+            return false;
+        }
+    }
+}

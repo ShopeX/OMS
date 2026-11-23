@@ -19,10 +19,10 @@ class archive_mdl_delivery extends dbeav_model{
     var $has_many = array(
         'delivery_items' => 'delivery_items',
         'delivery_order' => 'delivery_order',
-
     );
+    
     /**
-     * ������ֶ�
+     * 须加密字段
      *
      * @var string
      **/
@@ -34,7 +34,7 @@ class archive_mdl_delivery extends dbeav_model{
     );
 
     /**
-     * ���ݶ���ID��ȡ������.
+     * 根据订单ID获取发货单
      * @param   
      * @return 
      * @access  public
@@ -58,12 +58,10 @@ class archive_mdl_delivery extends dbeav_model{
         }
         
         return $delivery_list;
-
     }
-
     
     /**
-     * ����order_id
+     * 根据order_id
      * @param  
      * @return  
      * @access  public
@@ -76,17 +74,10 @@ class archive_mdl_delivery extends dbeav_model{
         foreach ( $order_delivery as $delivery ) {
             $ids[] = $delivery['delivery_id'];
         }
+        
         return $ids;
     }
-
     
-    /**
-     * ��������ϸ
-     * @param  
-     * @return  
-     * @access  public
-     * @author sunjing@shopex.cn
-     */
     function _get_delivery_items($deliveryIds)
     {
         $deliveryIds_str = implode(',',$deliveryIds);
@@ -95,20 +86,12 @@ class archive_mdl_delivery extends dbeav_model{
         foreach ($items as $item ) {
             $item_list[$item['delivery_id']][] = $item;
         }
+        
         return $item_list;
     }
-
     
-    /**
-     * ��ȡ��������������
-     * @param  
-     * @return  
-     * @access  public
-     * @author sunjing@shopex.cn
-     */
     function _get_delivery_logino($deliveryIds)
     {
-        
         $logi_no_list = $this->db->select("SELECT delivery_id,logi_no FROM sdb_archive_delivery_bill WHERE delivery_id in(".$deliveryIds.")");
         $logi_no = array();
         foreach ( $logi_no_list as $logi ) {
@@ -116,15 +99,6 @@ class archive_mdl_delivery extends dbeav_model{
         }
         return $logi_no;
     }
-
-    /*
-     * ���ݶ���id��ȡ��������Ϣ
-     *
-     * @param string $cols
-     * @param bigint $order_id ����id
-     *
-     * @return array $delivery ����������
-     */
 
     function getDeliveryByOrder($cols="*",$order_id){
         $delivery_ids = $this->_get_deliveryId($order_id);
@@ -183,5 +157,4 @@ class archive_mdl_delivery extends dbeav_model{
         return $data;
     }
 }
-
 ?>
