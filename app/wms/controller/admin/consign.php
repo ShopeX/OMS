@@ -859,8 +859,8 @@ class wms_ctl_admin_consign extends desktop_controller{
 	 * 删除子快递单
 	 */
     function del_deliveryBill(){
-        $b_id = $_POST['b_id'];
-        $delivery_id = $_POST['delivery_id'];
+        $b_id = intval($_POST['b_id']);
+        $delivery_id = intval($_POST['delivery_id']);
 
         $dlyBillObj = app::get('wms')->model('delivery_bill');
         $deliveryBillItemMdl  = app::get('wms')->model('delivery_bill_items');

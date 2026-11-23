@@ -48,6 +48,7 @@ class wmsmgr_finder_smart
         }
 
         $finder_id = $_GET['_finder']['finder_id'];
+        $finder_vid = $_GET['_finder']['finder_vid'];
         $node_type = $row[$this->col_prefix.'node_type'];
         $node_id = $row[$this->col_prefix.'node_id'];
         $channel_id = $row[$this->col_prefix.'channel_id'];
@@ -77,7 +78,7 @@ class wmsmgr_finder_smart
                 case 'other':
                 default:
                     $bind_btn .= empty($node_id) ?
-                ' | <a href="'. $url .'&act=apply_bindrelation&p[0]='.$app_id.'&p[1]='.$callback_url.'&p[2]='.$api_url.'" target="_blank">申请绑定</a>' : ' | 已绑定';
+                ' | <a href="'. $url .'&act=apply_bindrelation&p[0]='.$app_id.'&p[1]='.$callback_url.'&p[2]='.$api_url.'&finder_id='.$finder_id.'&finder_vid='.$finder_vid.'" target="_blank">申请绑定</a>' : ' | 已绑定';
                 break;
             }
         }

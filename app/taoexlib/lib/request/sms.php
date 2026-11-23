@@ -1,21 +1,5 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/**
 * 短信模板请求
 */
 class taoexlib_request_sms{
@@ -202,11 +186,8 @@ class taoexlib_request_sms{
 
     public function _request($api_url,$method,$params){
         $url = 'http://openapi.ishopex.cn:80/api';
-        $key = defined('SMS_ISHOPEX_KEY') && SMS_ISHOPEX_KEY ? SMS_ISHOPEX_KEY : '';
-        $secret = defined('SMS_ISHOPEX_SECRET') && SMS_ISHOPEX_SECRET ? SMS_ISHOPEX_SECRET : '';
-        if (empty($key) || empty($secret)) {
-            throw new Exception('短信服务密钥未配置，请检查 config/sms_secrets.php 或环境变量');
-        }
+        $key = '7F97Z0';
+        $secret = '76MASB5G3X3A199LAQOV';
         $http = new taoexlib_request_client($url, $key, $secret);
         if ($method == 'post'){
             $result = $http->post($api_url,$params);
@@ -412,11 +393,8 @@ class taoexlib_request_sms{
             }
             $account = unserialize($account);
             $url = 'https://openapi.shopex.cn:80/';
-            $key = defined('SMS_SHOPEX_KEY') && SMS_SHOPEX_KEY ? SMS_SHOPEX_KEY : '';
-            $secret = defined('SMS_SHOPEX_SECRET') && SMS_SHOPEX_SECRET ? SMS_SHOPEX_SECRET : '';
-            if (empty($key) || empty($secret)) {
-                throw new Exception('短信服务密钥未配置，请检查 config/sms_secrets.php 或环境变量');
-            }
+            $key = 'n4v7d32k';
+            $secret = '6kcft2jbr5c7xiyoo7mz';
             $http = new taoexlib_request_client($url, $key, $secret);
             $http->sign_params_in_url=false;
             $params = array(

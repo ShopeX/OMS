@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class wms_ctl_admin_receipts_print extends desktop_controller {
     var $workground = "wms_delivery";
 
@@ -152,10 +136,6 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
         return $sub_menu;
     }
 
-    /**
-     * notice
-     * @return mixed 返回值
-     */
     public function notice()
     {
         $this->page('admin/receipts/notice.html');
@@ -435,16 +415,6 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
                 'target' => "_blank",
             );*/
 
-            unset($params['actions']['orderbycreatetime']);
-        }elseif($is_pickup){
-            //官方物流提货
-           /* $params['actions']['stock'] = array(
-                'label' => '官方物流提货',
-             
-                'submit' => 'index.php?app=wms&ctl=admin_receipts_print&act=toPrintStock' . $attach,
-                'target' => "_blank",
-            );*/
-            
             unset($params['actions']['orderbycreatetime']);
         }else{
             //批量更换物流按钮
@@ -772,7 +742,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 打印发货单
-     * 
+     *
      */
     function toPrintMerge() {
         $_err = 'false';
@@ -819,7 +789,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 新版打印发货单
-     * 
+     *
      */
     function toPrintMergeNew() {
         $_err = 'false';
@@ -895,10 +865,10 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 打印新版本数据结构重组
-     * 
+     *
      * @return void
      * @author chenping<chenping@shopex.cn>
-     * */
+     **/
     private function format_print_delivery($delivery)
     {
         $format_delivery_items = array();
@@ -976,7 +946,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 打印快递单
-     * 
+     *
      * 修改 加了一个补打快递单的开关 wujian@shopex.cn 2012年3月14日
      */
     function toPrintShip($afterPrint=true)
@@ -1308,10 +1278,10 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
 
     }
 
-     /**
-      * 
-      * 补打物流单
-      */
+    /**
+     *
+     * 补打物流单
+     */
      public function addPrintShip(){
         if(is_array($_REQUEST['b_id']) && count($_REQUEST['b_id']) > 0){
             $this->addPrintShipNoData();
@@ -1320,12 +1290,12 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
 
         kernel::database()->beginTransaction();
 
-        $num = $_REQUEST['num'];
-        $str = $_REQUEST['delivery_id'];
+        $num = intval($_REQUEST['num']);
+        $str = intval($_REQUEST['delivery_id']);
 
         //写入日志
         $opObj = app::get('ome')->model('operation_log');
-        $opObj->write_log('delivery_bill_print@wms', $_REQUEST['delivery_id'], '补打快递单('.$num.')份');
+        $opObj->write_log('delivery_bill_print@wms', $str, '补打快递单('.$num.')份');
 
         $dlyObj     = app::get('wms')->model('delivery');
         $dlyBillObj = app::get('wms')->model('delivery_bill');
@@ -1464,10 +1434,10 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
         }
      }
 
-     /**
-      * 
-      * 补打物流单(无需更新数据)
-      */
+    /**
+     *
+     * 补打物流单(无需更新数据)
+     */
      public function addPrintShipNoData(){
          if(is_array($_REQUEST['b_id'])){
             if(count($_REQUEST['b_id']) == 1){
@@ -1560,7 +1530,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 批量更改物流
-     * 
+     *
      * @param void
      * @return void
      */
@@ -1611,7 +1581,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 更换物流公司
-     * 
+     *
      */
     function doChangeDly() {
         $this->begin();
@@ -1698,10 +1668,10 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 更新发货单的打印状态
-     * 
+     *
      * @param string $type
      * @param int $dly_id
-     * 
+     *
      */
     function setPrintStatus() {
         $current_otmpl_name = $_POST['current_otmpl_name'] ? $_POST['current_otmpl_name'] : '默认';
@@ -1852,7 +1822,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 打印备货单
-     * 
+     *
      */
     function toPrintStock() {
         $_err = 'false';
@@ -1956,7 +1926,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 录入快递单号
-     * 
+     *
      */
     function insertExpress() {
         if (empty($_POST['id'])) {
@@ -2033,7 +2003,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 保存发货单详情信息
-     * 
+     *
      */
     function doDetail() {
         $status = $_POST['status'] ? $_POST['status'] : 0;
@@ -2229,7 +2199,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 保存货品货位详情信息
-     * 
+     *
      */
     function doItemDetail() {
         $this->begin();
@@ -2284,7 +2254,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 打印页面初始化 获取打印批次号
-     * 
+     *
      * @return Array
      */
     function _getPrintQueue($ids) {
@@ -2300,7 +2270,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 检查是否能同批次打印
-     * 
+     *
      * @return bool
      */
     function _checkPrintQueue($ids, &$msg) {
@@ -2465,7 +2435,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * rebackPrintStyle
-     * 
+     *
      * @access public
      * @return void
      */
@@ -2499,7 +2469,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
     /**
      * 根据发货单ID修改它对映的发货配置
      * 一旦打印了任何一种单据就不
-     * 
+     *
      * @author chenping<chenping@shopex.cn>
      */
     private function updateDeliCfg($deliIds,$sku='') {
@@ -2575,17 +2545,13 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
         echo '"'.implode('","',$title).'"';
     }
 
-    /**
-     * shipStatus
-     * @return mixed 返回值
-     */
     public function shipStatus(){
         return array('succ'=> '已发货','unsucc'=> '未发货');#已发货状态以外的，都是未发货
     }
 
     /**
      * 打印新版快递单
-     * 
+     *
      * 修改 加了一个补打快递单的开关 wujian@shopex.cn 2012年3月14日
      */
     function toPrintExpre($afterPrint=true) {
@@ -3164,7 +3130,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
 
     /**
      * 检查发货类型
-     * */
+     **/
     public function checkDeliveryType($id) {
         $dlyObj = app::get('wms')->model('delivery');
         $channelObj = app::get("logisticsmanager")->model("channel");
@@ -3232,7 +3198,7 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
     }
 
     /**
-     * 运单号异步页面
+     *运单号异步页面
      */
     public function async_logino_page() {
         $channel_id = $_GET['channel_id'];
@@ -3259,10 +3225,6 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
         }
     }
 
-    /**
-     * 获取WaybillLogiNo
-     * @return mixed 返回结果
-     */
     public function getWaybillLogiNo() {
 
         $channel_id = $_POST['channel_id'];
@@ -3276,10 +3238,6 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
 
     }
 
-    /**
-     * 获取ExtLogiNo
-     * @return mixed 返回结果
-     */
     public function getExtLogiNo() {
 
         $channel_id = $_POST['channel_id'];
@@ -3295,12 +3253,6 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
 
 
     #处理淘宝分销类型订单备注
-    /**
-     * fomate_tbfx_memo
-     * @param mixed $memo memo
-     * @param mixed $markShowMethod markShowMethod
-     * @return mixed 返回值
-     */
     public function fomate_tbfx_memo($memo = null,$markShowMethod ='last'){
         return '留言：'.preg_replace('/(买家|分销商|系统).*\(\d{4}-\d{1,2}-\d{1,2}\s{0,}\d{1,2}:\d{1,2}:\d{1,2}\)\s{0,}\(.*\)\s{0,}[:|：]/isU', '', $memo);
     }
@@ -3308,7 +3260,6 @@ class wms_ctl_admin_receipts_print extends desktop_controller {
     /*
      * 获取当前准备打印的发货单号
      */
-
     public function getPreparePrintIds(){
         $delivery_ids = $_REQUEST['delivery_id']?$_REQUEST['delivery_id']:[];
         $isSelectAll = $_REQUEST['isSelectedAll'];

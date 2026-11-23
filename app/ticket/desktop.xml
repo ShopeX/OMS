@@ -10,11 +10,11 @@
     <permission id="ticket_workflow_record_list">审批流记录列表</permission>
     <permission id="ticket_workflow_record_operate">审批流记录操作</permission>
   </permissions>
+
+  <!--
   <workground name="工单管理" id="ticket_manager" order="120" icon="icon-dingdanguanli-01">
     <menugroup name="审批流管理" en="ticket-workflow">
       <menu controller='admin_workflow_template' action='index' permission='ticket_workflow_template_list' display='true' order='20100' target='/m-audit-template-list'>审批流模板列表</menu>
-      <!-- <menu controller='admin_workflow_template' action='operate' permission='ticket_workflow_template_operate' display='false' order='20110'>审批流模板操作</menu> -->
-      <!-- <menu controller='admin_workflow_node' action='index' permission='ticket_workflow_node_list' display='true' order='20120'>审批流节点列表</menu> -->
       <menu controller='admin_workflow_flow' action='getSceneTypeList' permission='ticket_workflow_get_scene' display='false' order='20121'>审批流场景类型</menu>
       <menu controller='admin_workflow_flow' action='getWorkflowBySceneType' permission='ticket_workflow_get_scene' display='false' order='20122'>获取审批流配置</menu>
       <menu controller='admin_workflow_flow' action='saveWorkflow' permission='ticket_workflow_get_scene' display='false' order='20121'>保存审批流</menu>
@@ -28,4 +28,5 @@
       <menu controller='admin_workflow_record' action='operate' permission='ticket_workflow_record_operate' display='false' order='20170'>审批结果操作</menu>
     </menugroup>
   </workground>
+  -->
 </desktop>

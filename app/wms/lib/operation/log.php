@@ -82,6 +82,9 @@ class wms_operation_log{
             // SET商品
             'set_materialprice_create' => array('name'=>'创建加价购', 'type'=>'basic_material_price@miele'),
             'set_materialprice_edit' => array('name'=>'编辑加价购', 'type'=>'basic_material_price@miele'),
+            
+            // 系统消息提醒
+            'base_rpc_notify' => array('name'=>'系统消息提醒', 'type'=>'rpcnotify@base'),
         );
         
         return array('wms'=>$operations);

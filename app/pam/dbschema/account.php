@@ -14,8 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
 $db['account'] = array(
     'columns'=>array(
         'account_id'=>array('type'=>'number','pkey'=>true,'extra' => 'auto_increment',),

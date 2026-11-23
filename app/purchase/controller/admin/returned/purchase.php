@@ -1,21 +1,9 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * 退货单
+ * @author ome team
+ * @copyright www.shopex.cn 2010.4.27
  */
-
-
 class purchase_ctl_admin_returned_purchase extends desktop_controller{
 
     var $name = "退货单";
@@ -114,7 +102,7 @@ class purchase_ctl_admin_returned_purchase extends desktop_controller{
 
     /**
      * 保存详情
-     * 
+     *
      */
     function doDetail(){
         $this->begin('index.php?app=purchase&ctl=admin_returned_purchase');
@@ -161,7 +149,7 @@ class purchase_ctl_admin_returned_purchase extends desktop_controller{
 
     /**
      * 新建采购退货单
-     * 
+     *
      */
     function add(){
         $suObj = $this->app->model('supplier');
@@ -235,10 +223,13 @@ class purchase_ctl_admin_returned_purchase extends desktop_controller{
     {
         $libBranchProduct    = kernel::single('ome_branch_product');
         
-        $product_id = explode('_', $_POST['product_id']);
-        $branch_id = $_POST['branch_id'];
+        $productIds = explode('_', $_POST['product_id']);
+        $branch_id = intval($_POST['branch_id']);
         
-        $row = $libBranchProduct->getStoreListByBranch($branch_id,$product_id);
+        // 过滤数组的空值
+        $productIds = array_filter($productIds);
+        
+        $row = $libBranchProduct->getStoreListByBranch($branch_id, $productIds);
         echo json_encode($row);
     }
 
@@ -357,7 +348,7 @@ class purchase_ctl_admin_returned_purchase extends desktop_controller{
 
     /**
      * 修改退货单
-     * 
+     *
      */
     function editReturn($rp_id){
         $this->begin('index.php?app=purchase&ctl=admin_returned_purchase&act=index');
@@ -524,9 +515,9 @@ class purchase_ctl_admin_returned_purchase extends desktop_controller{
         $this->end(true, '已完成');
     }
 
-    /**
+     /**
      * 退货出库
-     * 
+     *
      */
     function purchaseShift($rp_id){
         $this->begin('index.php?app=purchase&ctl=admin_returned_purchase&act=oList');
@@ -561,9 +552,9 @@ class purchase_ctl_admin_returned_purchase extends desktop_controller{
         $this->singlepage("admin/returned/purchase/purchase_shift.html");
     }
 
-    /**
+     /**
      * 保存退货出库
-     * 
+     *
      */
     function doShift() {
         $this->begin('index.php?app=purchase&ctl=admin_returned_purchase&act=oList');
@@ -688,7 +679,7 @@ class purchase_ctl_admin_returned_purchase extends desktop_controller{
 
     /**
      * 打印退货单
-     * 
+     *
      * @param int $rp_id
      */
     function printItem($rp_id){
@@ -736,7 +727,7 @@ class purchase_ctl_admin_returned_purchase extends desktop_controller{
 
     /**
      * 拒绝退货
-     * 
+     *
      * @param int $po_id
      */
     function cancel($rp_id){

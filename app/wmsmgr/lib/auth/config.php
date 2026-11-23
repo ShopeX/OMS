@@ -1,24 +1,9 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/**
  * CONFIG
  *
- * @category
- * @package
+ * @category 
+ * @package 
  * @author chenping<chenping@shopex.cn>
  * @version $Id: Z
  */
@@ -78,11 +63,6 @@ class wmsmgr_auth_config
 
         );
     
-    /**
-     * __construct
-     * @return mixed 返回值
-     */
-
     public function __construct()
     {
 
@@ -116,19 +96,11 @@ class wmsmgr_auth_config
 
     }
 
-    /**
-     * 获取Config
-     * @return mixed 返回结果
-     */
     public function getConfig()
     {
         return $this->__config;
     }
 
-    /**
-     * 获取AdapterList
-     * @return mixed 返回结果
-     */
     public function getAdapterList()
     {
         $adapter = array();
@@ -140,11 +112,6 @@ class wmsmgr_auth_config
         return $adapter;
     }
 
-    /**
-     * 获取PlatformList
-     * @param mixed $adapter adapter
-     * @return mixed 返回结果
-     */
     public function getPlatformList($adapter)
     {
         $platform = array();
@@ -156,11 +123,6 @@ class wmsmgr_auth_config
         return $platform;
     }
 
-    /**
-     * 获取PlatformParam
-     * @param mixed $platform platform
-     * @return mixed 返回结果
-     */
     public function getPlatformParam($platform)
     {
         return $this->__config['openapiwms']['platform'][$platform]['params'];

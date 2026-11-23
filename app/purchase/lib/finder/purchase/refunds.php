@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 class purchase_finder_purchase_refunds{
     protected $vue_mode = false;
 

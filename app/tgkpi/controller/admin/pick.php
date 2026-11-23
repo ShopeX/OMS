@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class tgkpi_ctl_admin_pick extends desktop_controller{
     var $name = "拣货绩效";
     var $workground = "pick";
@@ -39,9 +23,10 @@ class tgkpi_ctl_admin_pick extends desktop_controller{
         //查询需要捡货数和已完成数
         //$oPick = $this->app->model('pick');
         //$picks = $oPick->getList('pick_status,delivery_id',array('pick_owner'=>$pick_owner,'pick_start_time'=>array(strtotime(date('Y-m-d')),time())));
+        $db = kernel::database();
         $sql = "SELECT pick_status,delivery_id FROM sdb_tgkpi_pick
-                WHERE pick_owner='$pick_owner' AND (pick_start_time BETWEEN '".strtotime(date('Y-m-d'))."' AND '".time()."')";
-        $picks = kernel::database()->select($sql);
+                WHERE pick_owner=".$db->quote($pick_owner)." AND (pick_start_time BETWEEN '".strtotime(date('Y-m-d'))."' AND '".time()."')";
+        $picks = $db->select($sql);
 
 		//增加了检货人姓名的输出
         $arr = array('running'=>0,'finish'=>0, 'name' => $user['name']);
@@ -238,10 +223,6 @@ class tgkpi_ctl_admin_pick extends desktop_controller{
         die('<script>window.location="?app=tgkpi&ctl=admin_pick&act=index";</script>');
     }
 
-    /**
-     * 设置CheckFail
-     * @return mixed 返回操作结果
-     */
     public function setCheckFail(){
         if($_POST){
             $pickObj = $this->app->model('pick');

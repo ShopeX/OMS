@@ -93,19 +93,6 @@ class pam_passport_wap implements pam_interface_passport{
             kernel::single('pam_login_error_counter')->increment($auth->appid);
             return false;
         }
-        // 先查询账户信息，获取 is_hash256 字段值
-        $accountInfo = app::get('pam')->model('account')->getList('account_id,is_hash256',array(
-            'login_name'=>$_POST['uname'],
-            'account_type' => $auth->type,
-            'disabled' => 'false',
-        ),0,1);
-        
-        if(empty($accountInfo)){
-            $usrdata['log_data'] = app::get('pam')->_('用户').$_POST['uname'].app::get('pam')->_('验证失败！');
-            $_SESSION['error'] = app::get('pam')->_('用户名或密码错误');
-            $_SESSION['error_count'][$auth->appid] = $_SESSION['error_count'][$auth->appid]+1;
-            return false;
-        }
         
         // 根据 is_hash256 值选择加密方式（0=MD5，1=MD5+SHA256）
         // 处理 is_hash256 字段：NULL、空字符串、'0' 都视为 0（旧加密方式），其他值视为 1（新加密方式）

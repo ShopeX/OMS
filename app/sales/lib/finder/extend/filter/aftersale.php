@@ -37,12 +37,12 @@ class sales_finder_extend_filter_aftersale{
                 'order_bn' => array (
                     'type' => 'varchar(30)',
                     'label' => '订单号',
-                    'width' => 130,
+                    'width' => 180,
                     'filtertype' => 'textarea',
                     'filterdefault' => true,
                     'editable' => false,
                     'in_list' => true,
-                    'order'=>2,
+                    'order' => 2,
                     'default_in_list' => true,
                 ),
                 'shop_id' => array(

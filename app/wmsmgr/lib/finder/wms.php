@@ -136,6 +136,7 @@ class wmsmgr_finder_wms{
         }
 
         $finder_id = $_GET['_finder']['finder_id'];
+        $finder_vid = $_GET['_finder']['finder_vid'];
         $node_type = $row[$this->col_prefix.'node_type'];
         $channel_type  = $row[$this->col_prefix.'channel_type'];
         $node_id = $row[$this->col_prefix.'node_id'];
@@ -146,7 +147,10 @@ class wmsmgr_finder_wms{
         $adapter = kernel::single('wmsmgr_func')->getAdapterByChannelId($channel_id);
 
         $edit_btn = '<a href="index.php?app=wmsmgr&ctl=admin_wms&act=edit&p[0]='.$row[$this->col_prefix.'channel_id'].'&finder_id='.$finder_id.'" target="dialog::{width:670,height:380,title:\'第三方仓储\'}">编辑</a>';
-
+        $bind_btn = '';
+        $extend_button = '';
+        $expressBtn = '';
+        
         //初始化物流公司
         $logi_btn = '';
         
@@ -162,30 +166,30 @@ class wmsmgr_finder_wms{
                 case 'bim':
                 case 'bms':
                 case 'yph':
-                    $bind_btn .= $node_id ? sprintf(' | <a href="index.php?app=wmsmgr&ctl=admin_wms&act=unbind_shop&p[0]=%s" style="color:#990000;">取消绑定</a>',$channel_id) : sprintf(' | <a href="index.php?app=wmsmgr&ctl=admin_wms&act=bind_page&p[0]=%s&finder_id=%s" target="dialog::{width:650,height:300,title:\'绑定店铺\'}">申请绑定</a>',$channel_id,$finder_id);
+                    $bind_btn .= $node_id ? sprintf(' | <a href="index.php?app=wmsmgr&ctl=admin_wms&act=unbind_shop&p[0]=%s" style="color:#990000;">取消绑定</a>',$channel_id) : sprintf(' | <a href="index.php?app=wmsmgr&ctl=admin_wms&act=bind_page&p[0]=%s&finder_id=%s&finder_vid=%s" target="dialog::{width:650,height:300,title:\'绑定店铺\'}">申请绑定</a>',$channel_id,$finder_id, $finder_vid);
                     break;
                 case 'yjdf':
                     if($node_id){
                         //$bind_btn .= sprintf(' | <a href="index.php?app=wmsmgr&ctl=admin_wms&act=unbind_shop&p[0]=%s" style="color:#990000;">取消绑定</a>',$channel_id);
                         
-                        $bind_btn .= ' | <a target="dialog::{width:500,height:300,title:\'取消绑定\'}" href="index.php?app=wmsmgr&ctl=admin_wms&act=unbind_verify&p[0]='. $channel_id .'&finder_id='.$_GET['_finder']['finder_id'].'" style="color:#990000;">取消绑定</a>';
+                        $bind_btn .= ' | <a target="dialog::{width:500,height:300,title:\'取消绑定\'}" href="index.php?app=wmsmgr&ctl=admin_wms&act=unbind_verify&p[0]='. $channel_id .'&finder_id='.$_GET['_finder']['finder_id'].'&finder_vid='.$finder_vid.'" style="color:#990000;">取消绑定</a>';
                         
                         //初始化物流公司
                         $relationObj = app::get('wmsmgr')->model('express_relation');
                         $relationCount = $relationObj->count(array('wms_id'=>$channel_id));
                         if($relationCount < 20){
-                            $logi_btn = ' | <a href="index.php?app=wmsmgr&ctl=admin_wms&act=initializeLogi&p[0]='.$row[$this->col_prefix.'channel_id'].'&finder_id='.$finder_id.'" target="dialog::{width:500,height:300,title:\'初始化京东物流公司映射关系\'}">初始化物流公司</a>';
+                            $logi_btn = ' | <a href="index.php?app=wmsmgr&ctl=admin_wms&act=initializeLogi&p[0]='.$row[$this->col_prefix.'channel_id'].'&finder_id='.$finder_id.'&finder_vid='.$finder_vid.'" target="dialog::{width:500,height:300,title:\'初始化京东物流公司映射关系\'}">初始化物流公司</a>';
                         }
                         
                     }else{
-                        $bind_btn .= sprintf(' | <a href="index.php?app=wmsmgr&ctl=admin_wms&act=bindNodeId&p[0]=%s&finder_id=%s" target="dialog::{width:300,height:200,title:\'输入node_id\'}">申请绑定</a>',$channel_id,$finder_id);
+                        $bind_btn .= sprintf(' | <a href="index.php?app=wmsmgr&ctl=admin_wms&act=bindNodeId&p[0]=%s&finder_id=%s&finder_vid=%s" target="dialog::{width:300,height:200,title:\'输入node_id\'}">申请绑定</a>',$channel_id,$finder_id, $finder_vid);
                     }
                     
                     break;
                 case 'other':
                 default:
                     $bind_btn .= empty($node_id) ?
-                ' | <a href="index.php?app=wmsmgr&ctl=admin_wms&act=apply_bindrelation&p[0]='.$app_id.'&p[1]='.$callback_url.'&p[2]='.$api_url.'" target="_blank">申请绑定</a>' : ' | 已绑定';
+                ' | <a href="index.php?app=wmsmgr&ctl=admin_wms&act=apply_bindrelation&p[0]='.$app_id.'&p[1]='.$callback_url.'&p[2]='.$api_url.'&finder_id='.$finder_id.'&finder_vid='.$finder_vid.'" target="_blank">申请绑定</a>' : ' | 已绑定';
                 break;
             }
             

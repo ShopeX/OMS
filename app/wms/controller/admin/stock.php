@@ -226,7 +226,7 @@ class wms_ctl_admin_stock extends desktop_controller{
                 }
                 $filter['product_id|in'] = $product_ids;
             } else {
-                $filter['product_id|in'] = explode(',', $_POST['product_ids']);
+                $filter['product_id|in'] = array_map('intval', explode(',', $_POST['product_ids']));
             }
         }
         $oBranchPorduct = app::get('ome')->model('branch_product');
@@ -357,8 +357,8 @@ class wms_ctl_admin_stock extends desktop_controller{
      */
     function show_storage_life()
     {
-        $branch_id    = $_POST['branch_id'];
-        $bm_id        = $_POST['bm_id'];
+        $branch_id    = intval($_POST['branch_id']);
+        $bm_id        = intval($_POST['bm_id']);
 
         if(empty($branch_id) || empty($bm_id))
         {
@@ -413,6 +413,8 @@ class wms_ctl_admin_stock extends desktop_controller{
      */
     function export_expire($bm_id, $branch_id)
     {
+        $bm_id = intval($bm_id);
+        $branch_id = intval($branch_id);
         header("Content-Type: text/csv");
         header("Content-Disposition: attachment; filename=".date('Ymd').".csv");
         header('Cache-Control:must-revalidate,post-check=0,pre-check=0');
@@ -493,8 +495,8 @@ class wms_ctl_admin_stock extends desktop_controller{
      */
     function show_warn_storage_life()
     {
-        $branch_id    = $_POST['branch_id'];
-        $bm_id        = $_POST['bm_id'];
+        $branch_id    = intval($_POST['branch_id']);
+        $bm_id        = intval($_POST['bm_id']);
 
         if(empty($branch_id) || empty($bm_id))
         {

@@ -221,18 +221,18 @@ class wap_ctl_store extends wap_controller
         //搜索条件
         if($_POST['sel_type'] && $_POST['sel_keywords'])
         {
-            $keywords    = htmlspecialchars(trim($_POST['sel_keywords']));
+            $kw = trim($_POST['sel_keywords']);
             switch ($_POST['sel_type'])
             {
                 case 'item_bn':
-                    $where    .= " AND b.material_bn='". $keywords ."'";
+                    $where    .= " AND b.material_bn=".$proStoreObj->db->quote($kw);
                     break;
                 case 'item_name':
-                    $where    .= " AND b.material_name like'%". $keywords ."%'";
+                    $where    .= " AND b.material_name like ".$proStoreObj->db->quote('%'.$kw.'%');
                     break;
             }
             $this->pagedata['sel_type']    = $_POST['sel_type'];
-            $this->pagedata['sel_keywords']    = $keywords;
+            $this->pagedata['sel_keywords']    = htmlspecialchars($kw);
         }
         
         $c_sql    = "SELECT count(*) AS num FROM sdb_ome_branch_product AS a LEFT JOIN sdb_material_basic_material AS b ON a.product_id=b.bm_id WHERE ". $where;

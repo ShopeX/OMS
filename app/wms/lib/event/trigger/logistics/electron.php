@@ -167,8 +167,14 @@ class wms_event_trigger_logistics_electron {
                 $directRet['succ'][] = $succ;
             }
         }
+        
         if($param['fail']) {
             foreach($param['fail'] as $succ) {
+                // check msg
+                if(isset($succ['msg']) && $succ['msg']){
+                    $succ['msg'] = $this->appendShopReauthHint($succ['msg']);
+                }
+                
                 $directRet['fail'][] = $succ;
             }
         }
@@ -184,10 +190,16 @@ class wms_event_trigger_logistics_electron {
             }
             if ($backRet['fail']) {
                 foreach ($backRet['fail'] as $val) {
+                    // check msg
+                    if(isset($val['msg']) && $val['msg']){
+                        $val['msg'] = $this->appendShopReauthHint($val['msg']);
+                    }
+                    
                     $directRet['fail'][] = $val;
                 }
             }
         }
+        
         $directRet['doFail'] = count($directRet['fail']);
         $directRet['doSucc'] = count($directRet['succ']);
         $directRet['dealResult'] = 1;
@@ -297,6 +309,21 @@ class wms_event_trigger_logistics_electron {
         $child = $billId ? '子包裹' . $billId : '';
         $logMsg = $curr_op_name."分派," . $child . "获取运单号" . $logMsg . $bnFlag;
         return $logMsg;
+    }
+
+    /**
+     * SessionKey 相关错误时追加重新授权提示
+     */
+    private function appendShopReauthHint($msg) {
+        $keywords = array('非法的SessionKey', '过期的SessionKey', '请使用有效的SessionKey');
+        
+        foreach ($keywords as $keyword) {
+            if (strpos($msg, $keyword) !== false) {
+                return $msg . '：（请重新授权店铺）';
+            }
+        }
+        
+        return $msg;
     }
 
     //获取大头笔

@@ -111,13 +111,14 @@ class wap_ctl_branch_product extends wap_controller
         
         if($_POST['sel_type'] && $_POST['sel_keywords'])
         {
+            $kw = trim($_POST['sel_keywords']);
             switch ($_POST['sel_type'])
             {
                 case 'item_bn':
-                    $where    .= " AND a.material_bn='". htmlspecialchars(trim($_POST['sel_keywords'])) ."'";
+                    $where    .= " AND a.material_bn=".$branchProObj->db->quote($kw);
                     break;
                 case 'item_name':
-                    $where    .= " AND a.material_name like '%". htmlspecialchars(trim($_POST['sel_keywords'])) ."'%";
+                    $where    .= " AND a.material_name like ".$branchProObj->db->quote('%'.$kw.'%');
                     break;
             }
         }
@@ -183,13 +184,14 @@ class wap_ctl_branch_product extends wap_controller
         
         if($_POST['sel_type'] && $_POST['sel_keywords'])
         {
+            $kw = trim($_POST['sel_keywords']);
             switch ($_POST['sel_type'])
             {
                 case 'item_bn':
-                    $where    .= " AND a.material_bn='". htmlspecialchars(trim($_POST['sel_keywords'])) ."'";
+                    $where    .= " AND a.material_bn=".$branchProObj->db->quote($kw);
                     break;
                 case 'item_name':
-                    $where    .= " AND a.material_name like '%". htmlspecialchars(trim($_POST['sel_keywords'])) ."'%";
+                    $where    .= " AND a.material_name like ".$branchProObj->db->quote('%'.$kw.'%');
                     break;
             }
         }
@@ -243,13 +245,14 @@ class wap_ctl_branch_product extends wap_controller
         
         if($_POST['sel_type'] && $_POST['sel_keywords'])
         {
+            $kw = trim($_POST['sel_keywords']);
             switch ($_POST['sel_type'])
             {
                 case 'item_bn':
-                    $where    .= " AND b.material_bn='". htmlspecialchars(trim($_POST['sel_keywords'])) ."'";
+                    $where    .= " AND b.material_bn=".$branchProObj->db->quote($kw);
                     break;
                 case 'item_name':
-                    $where    .= " AND b.material_name like '%". htmlspecialchars(trim($_POST['sel_keywords'])) ."'%";
+                    $where    .= " AND b.material_name like ".$branchProObj->db->quote('%'.$kw.'%');
                     break;
             }
         }
@@ -293,7 +296,7 @@ class wap_ctl_branch_product extends wap_controller
     function saveRelate()
     {
         $redirect    = app::get('wap')->router()->gen_url(array('ctl'=>'branch_product','act'=>'unrelation'), true);
-        $bm_ids      = $_POST['bm_id'];
+        $bm_ids      = array_filter(array_map('intval', (array)$_POST['bm_id']));
         if(empty($bm_ids))
         {
             echo json_encode(array('error'=>true, 'message'=>'请选择货品', 'redirect'=>null));
@@ -327,9 +330,10 @@ class wap_ctl_branch_product extends wap_controller
         }
         
         //插入数据
-        $branch_id    = $this->branch_id;
+        $branch_id    = intval($this->branch_id);
         foreach ($bm_ids as $var_bm_id)
         {
+            $var_bm_id = intval($var_bm_id);
             $insert_sql    = "insert into sdb_o2o_branch_product (`branch_id`,`bm_id`) values (". $branch_id .",". $var_bm_id .")";
             $branchProObj->db->exec($insert_sql);
         }

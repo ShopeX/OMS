@@ -1,20 +1,4 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class wms_ctl_admin_delivery_refuse extends desktop_controller {
 
     //var $name = "拒收服务";
@@ -135,7 +119,7 @@ class wms_ctl_admin_delivery_refuse extends desktop_controller {
     function doprocess(){
         $this->begin();
 
-        $delivery_id = $_POST['delivery_id'];
+        $delivery_id = intval($_POST['delivery_id']);
         $orderIdString = $_POST['order_ids'];
         $reshipObj = app::get('ome')->model('reship');
         $deliveryObj = app::get('ome')->model('delivery');
@@ -148,8 +132,8 @@ class wms_ctl_admin_delivery_refuse extends desktop_controller {
         $c2c_shop_type = ome_shop_type::shop_list();
 
         $op_id = kernel::single('desktop_user')->get_id();
-        $branch_id = $_POST['instock_branch'];
-        $orderIds = explode(',',$orderIdString);
+        $branch_id = intval($_POST['instock_branch']);
+        $orderIds = array_map('intval', explode(',',$orderIdString));
         
         foreach((array)$orderIds as $orderid){
             $reshipData = array();
