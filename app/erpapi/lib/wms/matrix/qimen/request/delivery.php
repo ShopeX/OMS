@@ -577,9 +577,14 @@ class erpapi_wms_matrix_qimen_request_delivery extends erpapi_wms_request_delive
             foreach ($delivery_orders as $delivery_order) {
                 $delivery_ids[] = $delivery_order['delivery_id'];
             }
-
-            $delivery = app::get('ome')->model('delivery')->dump(array('delivery_id'=>$delivery_ids,'parent_id'=>0,'process'=>'true','status'=>'succ'),'delivery_bn');
-
+            
+            // 获取关联订单的发货单
+            $delivery = [];
+            if($delivery_ids){
+                $deliveryFilter = array('delivery_id'=>$delivery_ids,'parent_id'=>0,'process'=>'true','status'=>['succ', 'return_back']);
+                $delivery = app::get('ome')->model('delivery')->dump($deliveryFilter,'delivery_bn');
+            }
+            
             $delivery_extend = app::get('console')->model('delivery_extension')->dump(array('delivery_bn'=>$delivery['delivery_bn']));
             $params['wms_order_code'] = $delivery_extend['original_delivery_bn'];
 

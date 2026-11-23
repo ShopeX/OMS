@@ -1,20 +1,5 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/**
 *
 */
 class inventorydepth_mdl_shop_skus extends dbeav_model
@@ -283,7 +268,9 @@ class inventorydepth_mdl_shop_skus extends dbeav_model
             $stock_model = $sku['stock_model'] ?: '';
             $bidding_no = $sku['bidding_no'] ?: '';
             $bidding_type = $sku['bidding_type'] ?: '';
-    
+            // 京东引凤对接：透传 business_mode，brand_self 时强制不回写
+            $business_mode = isset($sku['business_mode']) ? $sku['business_mode'] : (isset($item['business_mode']) ? $item['business_mode'] : '');
+
             $sku = array(
                 'id'                    => $sku_id,
                 'shop_id'               => $shop['shop_id'],
@@ -306,6 +293,13 @@ class inventorydepth_mdl_shop_skus extends dbeav_model
                 'op_name'               => isset($sku['op_name']) ? $sku['op_name'] : '',
                 'sales_material_type'   => '1',
             );
+            // 京东引凤对接：business_mode 透传，brand_self 时强制 request=false
+            if ($business_mode) {
+                $sku['business_mode'] = $business_mode;
+                if ($business_mode === 'brand_self') {
+                    $sku['request'] = 'false';
+                }
+            }
 
             if ($item['title']) {
                 $sku['shop_title'] = $item['title'];
@@ -369,6 +363,9 @@ class inventorydepth_mdl_shop_skus extends dbeav_model
 
             $id = $sku['sku_id'] ? md5($shop['shop_id'].$iid.$sku['sku_id']) : md5($shop['shop_id'].$iid);
 
+            // 京东引凤对接：透传 business_mode，brand_self 时强制不回写
+            $business_mode = isset($sku['business_mode']) ? $sku['business_mode'] : (isset($item['business_mode']) ? $item['business_mode'] : '');
+
             $data[$id] = array(
                 'id'                    => $id,
                 'shop_id'               => $shop['shop_id'],
@@ -395,7 +392,14 @@ class inventorydepth_mdl_shop_skus extends dbeav_model
                 'mapping'               => '0',
                 'sales_material_type'   => '1',
             );
-            
+            // 京东引凤对接：business_mode 透传，brand_self 时强制 request=false
+            if ($business_mode) {
+                $data[$id]['business_mode'] = $business_mode;
+                if ($business_mode === 'brand_self') {
+                    $data[$id]['request'] = 'false';
+                }
+            }
+
             //mapping
             $sku['mapping'] = $this->getMapping($sku['outer_id'],$shop['shop_id'],$sku['bind'], $sku['sales_material_type']);
             
@@ -516,6 +520,9 @@ class inventorydepth_mdl_shop_skus extends dbeav_model
                     #  判断是否存在发布库存
                     $release_stock = 0;
                     
+                    // 京东引凤对接：透传 business_mode，brand_self 时强制不回写
+                    $business_mode = isset($sku['business_mode']) ? $sku['business_mode'] : (isset($item['business_mode']) ? $item['business_mode'] : '');
+
                     $data[$line_i] = array(
                         'shop_id' => $shop['shop_id'],
                         'shop_bn' => $shop['shop_bn'],
@@ -542,6 +549,13 @@ class inventorydepth_mdl_shop_skus extends dbeav_model
                         'request' => $request[$sku['taog_id']] == 'false' ? 'false' : 'true',
                         'update_time'=>time()
                     );
+                    // 京东引凤对接：business_mode 透传，brand_self 时强制 request=false
+                    if ($business_mode) {
+                        $data[$line_i]['business_mode'] = $business_mode;
+                        if ($business_mode === 'brand_self') {
+                            $data[$line_i]['request'] = 'false';
+                        }
+                    }
                     
                     //[兼容]得物平台出价编号
                     if($sku['bidding_no']){
@@ -579,6 +593,9 @@ class inventorydepth_mdl_shop_skus extends dbeav_model
 
                 $release_stock = 0;
                 
+                // 京东引凤对接：透传 business_mode，brand_self 时强制不回写
+                $business_mode = isset($item['business_mode']) ? $item['business_mode'] : '';
+
                 $data[$line_i] = array(
                     'shop_id' => $shop['shop_id'],
                     'shop_bn' => $shop['shop_bn'],
@@ -604,6 +621,13 @@ class inventorydepth_mdl_shop_skus extends dbeav_model
                     'id' => $item['taog_id'],
                     'request' => $request[$item['taog_id']]=='false' ? 'false' : 'true',
                 );
+                // 京东引凤对接：business_mode 透传，brand_self 时强制 request=false
+                if ($business_mode) {
+                    $data[$line_i]['business_mode'] = $business_mode;
+                    if ($business_mode === 'brand_self') {
+                        $data[$line_i]['request'] = 'false';
+                    }
+                }
                 
                 //[兼容]得物平台出价编号
                 if($item['bidding_no']){

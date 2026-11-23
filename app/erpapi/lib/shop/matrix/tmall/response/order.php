@@ -1,20 +1,5 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/**
  *
  *
  * @category
@@ -59,7 +44,10 @@ class erpapi_shop_matrix_tmall_response_order extends erpapi_shop_response_order
             $this->_ordersdf['is_sh_ship'] = 'true';
             $this->_ordersdf['sh_ship_exists'] = true;
         }
-
+        
+        // 其他平台订单金额明细(pmt_detail结构中平台没有提供的平台优惠明细)
+        $otherCouponList = [];
+        
         // 国补自补处理逻辑
         if (isset($this->_ordersdf['extend_field']['gov_subsidy'])) {
             $gov_subsidy = $this->_ordersdf['extend_field']['gov_subsidy'];
@@ -94,17 +82,108 @@ class erpapi_shop_matrix_tmall_response_order extends erpapi_shop_response_order
             if ($merchant_subsidy_amount > 0 && in_array($gov_subsidy_type_extra, [4, 6, 7, 8])) {
                 // 国补订单只有一个 order_object，直接处理第一个
                 if (isset($this->_ordersdf['order_objects'][0]['divide_order_fee'])) {
-                    $divide_order_fee = floatval($this->_ordersdf['order_objects'][0]['divide_order_fee']);
+                    $objectInfo = $this->_ordersdf['order_objects'][0];
+                    
+                    // divide_order_fee
+                    $divide_order_fee = floatval($objectInfo['divide_order_fee']);
                     
                     // 计算 settlement_amount = divide_order_fee - 商家出资金额
                     $settlement_amount = $divide_order_fee - $merchant_subsidy_amount;
                     
                     // 更新 order_object 的 settlement_amount
                     $this->_ordersdf['order_objects'][0]['settlement_amount'] = sprintf('%.2f', $settlement_amount);
+                    
+                    // 客户实付：需要减掉商家出资金额
+                    if ($gov_subsidy_type_extra == 4) {
+                        // 客户实付 = 客户实付 - 商家出资金额
+                        if(isset($objectInfo['actually_amount']) && floatval($objectInfo['actually_amount']) > 0){
+                            $baseActually = floatval($objectInfo['actually_amount']);
+                        }else{
+                            $baseActually = $divide_order_fee;
+                        }
+                        
+                        // actually_amount
+                        $this->_ordersdf['order_objects'][0]['actually_amount'] = sprintf('%.2f', $baseActually - $merchant_subsidy_amount);
+                        
+                        // 需要把【商家出资金额】塞进pmt_detail优惠方案中
+                        if (!isset($this->_ordersdf['pmt_detail']) || !is_array($this->_ordersdf['pmt_detail'])) {
+                            $this->_ordersdf['pmt_detail'] = array();
+                        }
+                        
+                        $this->_ordersdf['pmt_detail'][] = array(
+                            'pmt_amount'   => sprintf('%.2f', $merchant_subsidy_amount),
+                            'pmt_describe' => '国补商家出资',
+                        );
+                        
+                        // quantity
+                        $obj_quantity = $objectInfo['quantity'] ?: 1;
+                        
+                        // 单价优惠金额(保留两位小数)
+                        $obj_pmt_amount = sprintf('%.2f', $merchant_subsidy_amount / $obj_quantity);
+                        
+                        // 把商家出资金额放到coupon中
+                        $otherCouponList[] = array(
+                            'num'           => $obj_quantity,
+                            'material_bn'   => $objectInfo['bn'],
+                            'oid'           => $objectInfo['oid'],
+                            'material_name' => $objectInfo['name'],
+                            'type'          => 'merchant_subsidy_amount',
+                            'type_name'     => '国补商家出资',
+                            'coupon_type'   => '2', // 商家优惠
+                            'amount'        => $obj_pmt_amount, // 单价
+                            'total_amount'  => $merchant_subsidy_amount, // 小计金额
+                            'create_time'   => sprintf('%.0f', time()),
+                            'pay_time'      => kernel::single('ome_func')->date2time($this->_ordersdf['payment_detail']['pay_time']),
+                            'shop_type'     => 'taobao',
+                            'source'        => 'push',
+                        );
+                    }
                 }
             }
         }
 
+        // 平台红包 coupon_fee（单位：分 → 元）：仅扣客户实付 actually_amount，不改已支付/订单优惠/商家结算
+        $couponFee = 0;
+        if (isset($this->_ordersdf['coupon_fee']) && $this->_ordersdf['coupon_fee'] > 0) {
+            $couponFee = floatval($this->_ordersdf['coupon_fee']) / 100;
+        }
+        
+        if ($couponFee > 0 && isset($this->_ordersdf['order_objects'][0]['divide_order_fee'])) {
+            $objectInfo = $this->_ordersdf['order_objects'][0];
+            
+            if(isset($objectInfo['actually_amount']) && floatval($objectInfo['actually_amount']) > 0){
+                $baseActually = floatval($objectInfo['actually_amount']);
+            }else{
+                $baseActually = floatval($objectInfo['divide_order_fee']);
+            }
+            
+            // actually_amount
+            $this->_ordersdf['order_objects'][0]['actually_amount'] = sprintf('%.2f', $baseActually - $couponFee);
+            
+            // quantity
+            $obj_quantity = $objectInfo['quantity'] ?: 1;
+            
+            // 单价优惠金额(保留两位小数)
+            $obj_pmt_amount = sprintf('%.2f', $couponFee / $obj_quantity);
+            
+            // 把红包（coupon_feel）放到coupon中
+            $otherCouponList[] = array(
+                'num'           => $objectInfo['quantity'],
+                'material_bn'   => $objectInfo['bn'],
+                'oid'           => $objectInfo['oid'],
+                'material_name' => $objectInfo['name'],
+                'type'          => 'coupon_fee',
+                'type_name'     => '红包',
+                'coupon_type'   => '3', // 平台支付优惠
+                'amount'        => $obj_pmt_amount, // 单价
+                'total_amount'  => $couponFee, // 小计金额
+                'create_time'   => sprintf('%.0f', time()),
+                'pay_time'      => kernel::single('ome_func')->date2time($this->_ordersdf['payment_detail']['pay_time']),
+                'shop_type'     => 'taobao',
+                'source'        => 'push',
+            );
+        }
+        
         // 全部是屏蔽发货才定位平台自发
         $shShip = app::get('ome')->getConf('ome.platform.order.consign');
         if($shShip == 'true') {
@@ -369,6 +448,8 @@ class erpapi_shop_matrix_tmall_response_order extends erpapi_shop_response_order
                 }
             }
         }
+        
+        // 组织order_coupon平台订单金额明细
         if ($this->_ordersdf['pmt_detail']) {
             foreach ((array) $this->_ordersdf['pmt_detail'] as $key => $value) {
                 if (!is_array($value) || trim($value['pmt_amount']) == '' || trim($value['pmt_amount']) == 0) {
@@ -427,8 +508,14 @@ class erpapi_shop_matrix_tmall_response_order extends erpapi_shop_response_order
                 }
             }
         }
-    
+        
+        // 其他平台订单金额明细(pmt_detail结构中平台没有提供的平台优惠明细)
+        if ($otherCouponList) {
+            $coupon = array_merge($coupon, $otherCouponList);
+        }
+        
         $this->_ordersdf['coupon_data']         = $coupon;
+        
         //针对预售订单 优惠价是负的处理
         if ($this->_ordersdf['trade_type'] == 'step' || $this->_ordersdf['t_type'] == 'step'){
             $presale_flag = false;

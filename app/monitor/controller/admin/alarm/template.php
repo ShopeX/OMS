@@ -62,18 +62,22 @@ class monitor_ctl_admin_alarm_template extends desktop_controller
         if ($id) {
             $data = $eventTemplateMdl->dump(array('template_id' => $id), '*');
         }
+        if (!isset($data['template_config']) || !is_array($data['template_config'])) {
+            $data['template_config'] = array();
+        }
         $eventTemplateLib = kernel::single('monitor_event_template');
         
         //模板类型
         $eventType                   = $eventTemplateLib->getEventType();
         $this->pagedata['eventType'] = $eventType;
         // 默认模板内容映射
-        $this->pagedata['eventDefaultContent'] = kernel::single('monitor_event_template')->getEventDefaultContent();
+        $this->pagedata['eventDefaultContent'] = $eventTemplateLib->getEventDefaultContent();
+        $this->pagedata['authExpirePlatforms'] = $eventTemplateLib->getAuthExpirePlatforms();
+        $this->pagedata['tokenInvalidPlatforms'] = $eventTemplateLib->getTokenInvalidPlatforms();
+        $this->pagedata['tokenRecoverPlatforms'] = $eventTemplateLib->getTokenRecoverPlatforms();
         $this->pagedata['data']      = $data;
         $sendType = $eventTemplateMdl->schema['columns']['send_type']['type'];
         $this->pagedata['send_type'] = $sendType;
-//        $pmtKeywords = app::get('monitor')->getConf('monitor.check.pmt.name');
-//        $this->pagedata['pmt_keywords'] = $pmtKeywords;
         $this->page('admin/alarm/event/template/addTemplate.html');
     }
     
@@ -83,6 +87,7 @@ class monitor_ctl_admin_alarm_template extends desktop_controller
         $this->begin('index.php?app=monitor&ctl=admin_alarm_template&act=index');
         
         $eventTemplateMdl = app::get('monitor')->model('event_template');
+        $eventTemplateLib = kernel::single('monitor_event_template');
         
         $data = $_POST;
         
@@ -97,7 +102,6 @@ class monitor_ctl_admin_alarm_template extends desktop_controller
         if (empty($data['content'])) {
             $this->end(false, '模板内容不能为空，请检查!');
         }
-//        $data['content'] = htmlspecialchars($data['content']);
         $data['content'] = str_replace('<script>','',$data['content']);
         $data['content'] = str_replace('</script>','',$data['content']);
     

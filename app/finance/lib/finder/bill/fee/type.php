@@ -24,10 +24,6 @@ class finance_finder_bill_fee_type{
     }
 
 
-    /**
-     * __construct
-     * @return mixed 返回值
-     */
     public function __construct()
     {
         $this->_render = app::get('finance')->render();

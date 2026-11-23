@@ -1,21 +1,5 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/**
  * 货品明细controller
  *
  *
@@ -99,6 +83,14 @@ class inventorydepth_ctl_shop_skus extends desktop_controller {
         }
         
         if ($_POST) {
+            if ($config === 'true' || $config === true) {
+                $brandSelfSkus = $this->app->model('shop_skus')->getList('id', array('id' => $_POST['id'], 'business_mode' => 'brand_self'));
+                if ($brandSelfSkus) {
+                    $this->splash('error','javascript:finderGroup["'.$_GET['finder_id'].'"].refresh.delay(400,finderGroup["'.$_GET['finder_id'].'"]);',$this->app->_('引凤货品（brand_self）不允许开启自动回写库存'));
+                    return;
+                }
+            }
+
             $this->app->model('shop_skus')->update(array('request'=>$config), $_POST);
 
             // 记录操作日志

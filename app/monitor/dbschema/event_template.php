@@ -51,13 +51,14 @@ $db['event_template'] = array(
             'in_list'         => true,
             'default_in_list' => true,
             'is_title'        => true,
+            'width'           => 260,
             'order'           => 20,
         ),
         'event_type'    => array(
             'type'            => 'varchar(50)',
             'label'           => '模板类型',
             'comment'         => '模板类型',
-            'width'           => 120,
+            'width'           => 160,
             'editable'        => false,
             'in_list'         => true,
             'default_in_list' => true,
@@ -85,6 +86,12 @@ $db['event_template'] = array(
             'comment'  => '模板内容',
             'editable' => false,
         ),
+        'template_config'        => array(
+            'type'     => 'serialize',
+            'editable' => false,
+            'label'    => '扩展配置',
+            'comment'  => '按模板类型存储的扩展配置（提前天数、适用平台等）',
+        ),
         'status'        => array(
             'type'            => array(
                 '0' => '未审核',
@@ -105,6 +112,7 @@ $db['event_template'] = array(
             'label'   => '来源渠道',
             'comment' => '来源渠道',
             'default' => 'local',
+            'order'           => 90,
         ),
         'disabled'           => array(
             'type'     => 'bool',
@@ -113,6 +121,7 @@ $db['event_template'] = array(
             'in_list'         => true,
             'default_in_list' => true,
             'editable' => false,
+            'order'           => 92,
         ),
         'at_time'       => array(
             'type'            => 'TIMESTAMP',
@@ -134,7 +143,6 @@ $db['event_template'] = array(
             'width'           => 180,
             'order'           => 99,
         ),
-    
     ),
     'comment' => '监控事件模板',
     'index'   => array(

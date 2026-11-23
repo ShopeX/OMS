@@ -197,6 +197,13 @@ class erpapi_shop_matrix_360buy_response_order extends erpapi_shop_response_orde
                     }
                 }
 
+                // 京东引凤：sendPayMap[1410] == 1 标记引凤订单
+                if ($sendpayMap['1410'] == '1') {
+                    $this->_ordersdf['store_order'] = '京仓订单';
+                    $this->_ordersdf['order_type'] = 'platform';
+                    $this->_ordersdf['__yinfeng_order'] = true;
+                }
+
                 // 集运标识转成oms本地标识
                 if($sendpayMap['1086'] == '1') {
                     $this->_ordersdf['extend_field']['consolidate_info'] = [

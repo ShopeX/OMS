@@ -172,8 +172,13 @@ class erpapi_shop_matrix_pinduoduo_response_order extends erpapi_shop_response_o
             }
         }
 
-        // 拼多多平台优惠金额
-        if ($this->_ordersdf['platform_discount']) {
+        // 拼多多平台优惠：v3 时走 sku 优惠明细 coupon插件；否则走 platform_discount 老逻辑
+        $pddCouponVersion = isset($this->_ordersdf['extend_field']['version'])
+            ? $this->_ordersdf['extend_field']['version']
+            : 0;
+        if ($pddCouponVersion >= 3) {
+            $this->_ordersdf['coupon_oid_field'] = 'oid';
+        } elseif ($this->_ordersdf['platform_discount'] && $this->_ordersdf['platform_discount'] > 0) {
             $this->_ordersdf['platform_cost_amount'] = $this->_ordersdf['platform_discount'];
         }
         

@@ -119,6 +119,19 @@ class erpapi_misc_task
         // [失败重试]请求WMS推送失败的发货单
         $deliveryLib = kernel::single('console_delivery');
         $deliveryLib->retryRequestWmsDelivery();
+        
+        // [失败重试]接收WMS发货单回传结果（每5分钟；扫今天、5分钟前仍未处理完成）
+        $now = time();
+        $wmsDeliveryKv = base_kvstore::instance('setting_wms_erpapi');
+        $last = 0;
+        $wmsDeliveryKv->fetch('retry_pending_wms_delivery', $last);
+        if (!$last || $now >= ((int) $last + 300)) {
+            // exec
+            kernel::single('console_wms_delivery')->retryPendingWmsDelivery();
+            
+            // 缓存
+            $wmsDeliveryKv->store('retry_pending_wms_delivery', $now);
+        }
     }
 
     public function hour()

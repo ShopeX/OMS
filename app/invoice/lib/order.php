@@ -362,6 +362,13 @@ class invoice_order
         if(empty($of_id)){
             return [false,'更新失败,无效的of_id'];
         }
+
+        //订单签收会固定回填invoice_amount，若回填后再判断会被误认为开票内容变化，导致已开蓝票按content_update误触发红冲，因此必须基于原始参数判断真实变化。
+        $hasInvoiceContentUpdate = $this->hasInvoiceContentUpdate($params);
+        $invoiceUpdateContext = array(
+            'scene' => isset($params['status']) && $params['status'] == 'finish' ? 'order_sign' : '',
+            'content_changed' => $hasInvoiceContentUpdate,
+        );
         
         $addon = json_encode($params);
         $opObj = app::get('ome')->model('operation_log');
@@ -422,13 +429,42 @@ class invoice_order
             $opObj->write_log('invoice_edit@invoice', $id, $invoiceInfo['source_bn'].',订单签收完成更新可操作状态');
         }
     
+        //统一进入updateInvoice，由红冲入口根据签收场景及内容变化决定是否冲红。
         $params['is_status'] = $invoiceInfo['is_status'];
         $params['mode'] = $invoiceInfo['mode'];
         $params['type_id'] = $invoiceInfo['type_id'];
-        $this->updateInvoice($id,$params);
-        
+        $this->updateInvoice($id,$params,$invoiceUpdateContext);
+
         $opObj->write_log('invoice_edit@invoice', $id, '发票信息发生更新，更新内容：'. $addon);
         return [true,'更新成功'];
+    }
+
+    /**
+     * 判断订单变化是否涉及需要重新开票的内容。
+     *
+     * @param array $params
+     * @return bool
+     */
+    private function hasInvoiceContentUpdate($params)
+    {
+        //items字段可能由调用方固定传入，只有存在实际差异项时才属于开票明细变化。
+        if (!empty($params['items'])) {
+            return true;
+        }
+
+        $contentFields = array(
+            'is_status',
+            'mode',
+            'title',
+            'ship_tax',
+            'ship_bank',
+            'ship_bank_no',
+            'ship_company_addr',
+            'ship_company_tel',
+            'invoice_amount',
+        );
+
+        return (bool) array_intersect(array_keys($params), $contentFields);
     }
     
     /**
@@ -437,8 +473,9 @@ class invoice_order
      * @Vsersion: 2023/6/6 下午6:14
      * @param $id
      * @param $params
+     * @param array $context 调用上下文，用于区分订单签收与真实开票内容变化
      */
-    public function updateInvoice($id,$params)
+    public function updateInvoice($id,$params,$context = array())
     {
         $invoiceMdl = app::get('invoice')->model('order');
         $invoiceItemMdl = app::get('invoice')->model('order_items');
@@ -470,13 +507,23 @@ class invoice_order
             $updateInvoiceData['amount'] = $params['invoice_amount'];
             $updateInvoiceData['cost_tax'] = array_sum(array_column($invoice_order_items,'cost_tax'));
         }
+        $isOrderSignWithoutContentChange = isset($context['scene'])
+            && $context['scene'] == 'order_sign'
+            && empty($context['content_changed']);
         if ($params['is_status'] == '1') {
             if ($params['mode'] == '0' && $params['type_id'] == '1') {
                 $updateInvoiceData['is_make_invoice'] = '2';
             }else{
-                $type = 'content_update';
-                kernel::single('invoice_process')->cancel(['id'=>$id],$type);
-                $updateInvoiceData['action_type'] = $type;
+                /*
+                 * 红冲入口保护：订单签收只更新可操作状态，发票内容未变化时不能按
+                 * content_update发起红冲。签收同时发生抬头、税号、金额或商品明细
+                 * 变化时content_changed为true，仍按原流程冲红重开。
+                 */
+                if (!$isOrderSignWithoutContentChange) {
+                    $type = 'content_update';
+                    kernel::single('invoice_process')->cancel(['id'=>$id],$type);
+                    $updateInvoiceData['action_type'] = $type;
+                }
             }
         }
         if ($updateInvoiceData) {

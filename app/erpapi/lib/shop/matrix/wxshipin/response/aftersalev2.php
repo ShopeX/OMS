@@ -22,6 +22,35 @@
  */
 class erpapi_shop_matrix_wxshipin_response_aftersalev2 extends erpapi_shop_response_aftersalev2
 {
+    protected function _formatAddParams($params)
+    {
+        $sdf = parent::_formatAddParams($params);
+
+        $platformDiscountReturnAmountFen = isset($sdf['extend_field']['refund_info']['platform_discount_return_amount'])
+            ? $sdf['extend_field']['refund_info']['platform_discount_return_amount']
+            : null;
+        if ($platformDiscountReturnAmountFen === null || $platformDiscountReturnAmountFen === '' || !is_numeric($platformDiscountReturnAmountFen)) {
+            return $sdf;
+        }
+
+        $platformDiscountReturnAmount = bcdiv((string) $platformDiscountReturnAmountFen, '100', 2);
+        if (bccomp($platformDiscountReturnAmount, '0', 2) <= 0 || bccomp($sdf['refund_fee'], $platformDiscountReturnAmount, 2) < 0) {
+            return $sdf;
+        }
+
+        /*
+         * 视频号下发的refund_fee是商品结算退款总额，包含客户实付退款和平台优惠退回金额，
+         * 但OMS订单payed只记录客户实付。若直接按refund_fee校验并扣减payed，连续部分退款时
+         * 会因首笔多扣平台优惠，导致后续退款被“订单支付金额小于退款金额”错误拦截。
+         * 参考SCRUM-7365的通用处理，将平台优惠单独记录供售后结算金额加回，并将refund_fee
+         * 还原为客户退款金额，后续商品明细也会按该金额走公共分摊逻辑。
+         */
+        $sdf['platform_discount_return_amount'] = $platformDiscountReturnAmount;
+        $sdf['refund_fee'] = bcsub($sdf['refund_fee'], $platformDiscountReturnAmount, 2);
+
+        return $sdf;
+    }
+
     protected function _getAddType($sdf)
     {
         //需要退货才更新为售后单

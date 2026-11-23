@@ -33,10 +33,10 @@ class erpapi_invoice_matrix_baiwang_request_invoice extends erpapi_invoice_reque
 
     public function create($sdf)
     {
-
         $order         = $sdf['order'];
         $requestParams = $sdf['params'];
-
+        $primary_bn = ($order['invoice_apply_bn'] ? $order['invoice_apply_bn'] : $sdf['invoice_apply_bn']);
+        
         $title = "百望电子发票开蓝票-" . $order['invoice_apply_bn'];
 
         $params['data']  = json_encode($requestParams);
@@ -45,7 +45,7 @@ class erpapi_invoice_matrix_baiwang_request_invoice extends erpapi_invoice_reque
         $this->__resultObj->mock_method = STORE_INVOICE_ISSUE;
 
         $callback = [];
-        $rs       = $this->__caller->call(STORE_INVOICE_ISSUE, $params, $callback, $title, 20, $order['invoice_apply_bn']);
+        $rs       = $this->__caller->call(STORE_INVOICE_ISSUE, $params, $callback, $title, 20, $primary_bn);
 
         return $rs;
     }

@@ -21,18 +21,25 @@ class erpapi_system_response_process_msg
 
     public function notify($sdf)
     {
+        $error_msg = '';
+        
         if (!$sdf['node_id']) {
             return array('rsp' => 'fail', 'msg' => '节点不能为空');
         }
         
+        $rpcNotifyMdl = app::get('base')->model('rpcnotify');
         $shopMdl = app::get('ome')->model('shop');
         
-        $shop = $shopMdl->dump(array('node_id' => $sdf['node_id']), 'shop_id,addon,name');
-
-        if (!$shop) {
+        // 店铺信息
+        $shopInfo = $shopMdl->dump(array('node_id' => $sdf['node_id']), '*');
+        if (!$shopInfo) {
             return array('rsp' => 'fail', 'msg' => '店铺未绑定');
         }
-
+        
+        // 模板类型
+        $event_type = 'system_message'; // 系统消息通知
+        
+        // access_token_available
         if (isset($sdf['content']['access_token_available'])) {
             $sdf['msg_type'] = 'system'; // 消息类型
             $sdf['event_type'] = $event_type;
@@ -43,12 +50,24 @@ class erpapi_system_response_process_msg
             return $this->processAccessTokenNotify($shopMdl, $shopInfo, $sdf);
         }
         
-        $rpcNotifyMdl = app::get('base')->model('rpcnotify');
-        $sdf['content']['info'] = '【' . $shop['name'] . '】' . $sdf['content']['info'];
-        $data         = [
+        // info
+        $sdf['content']['info'] = '【' . $shopInfo['name'] . '】' . $sdf['content']['info'];
+        
+        // 含「授权将于」关键字时，为店铺授权到期预警提醒
+        if (isset($sdf['content']['info']) && mb_strpos($sdf['content']['info'], '授权将于') !== false) {
+            $event_type = 'system_auth_expire';
+        }
+        
+        // data
+        $data = [
             'callback'   => '',
             'rsp'        => 'succ',
             'msg'        => json_encode($sdf['content'],JSON_UNESCAPED_UNICODE),
+            'event_type' => $event_type, // 模板类型
+            'msg_type' => 'system', // 消息类型
+            'shop_type' => ($shopInfo['node_type'] ? $shopInfo['node_type'] : $shopInfo['shop_type']),
+            'shop_bn' => $shopInfo['shop_bn'],
+            'org_id' => intval($shopInfo['org_id']),
             'notifytime' => strtotime($sdf['date'])
         ];
         $insert_id = $rpcNotifyMdl->insert($data);
@@ -104,11 +123,21 @@ class erpapi_system_response_process_msg
         return array('rsp' => 'succ', 'msg' => '消息已接收');
     }
 
-    protected function processAccessTokenNotify($shopMdl, $shop, $sdf)
+    protected function processAccessTokenNotify($shopMdl, $shopInfo, $sdf)
     {
         $tokenAvailable = (string) $sdf['content']['access_token_available'];
         if ($tokenAvailable === '-1') {
-            $warnMsg = '【' . $shop['name'] . '】 access_token 已失效，请及时处理，'.(isset($sdf['content']['info']) && !empty($sdf['content']['info']) ?  $sdf['content']['info'] : '') ;
+            // insert
+            $saveSdf = $sdf;
+            
+            // 服务过期时间
+            if(!isset($sdf['content']['info']) || empty($sdf['content']['info'])){
+                $saveSdf['content']['info'] = '【' . $shopInfo['name'] . '】服务已过期（过期时间：'. $sdf['content']['dead_line'] .'）';
+            }
+            
+            kernel::single('ome_system_rpcnotify')->saveRpcNotify($saveSdf);
+            
+            $warnMsg = '【' . $shopInfo['name'] . '】 access_token 已失效，请及时处理，'.(isset($sdf['content']['info']) && !empty($sdf['content']['info']) ?  $sdf['content']['info'] : '') ;
             $this->sendSystemNotify($warnMsg);
 
             return array('rsp' => 'succ', 'msg' => '消息已接收');
@@ -118,7 +147,10 @@ class erpapi_system_response_process_msg
             return array('rsp' => 'succ', 'msg' => '消息已接收');
         }
 
-        $expireTime = trim((string) $sdf['content']['access_token_expire_in']);
+        $dead_line = trim((string) $sdf['content']['dead_line']);
+        $access_token_expire_in = trim((string) $sdf['content']['access_token_expire_in']);
+        
+        $expireTime = ($access_token_expire_in ? $access_token_expire_in : $dead_line);
         if (!$expireTime) {
             return array('rsp' => 'fail', 'msg' => 'access_token_expire_in不能为空');
         }
@@ -128,15 +160,25 @@ class erpapi_system_response_process_msg
             return array('rsp' => 'fail', 'msg' => 'access_token_expire_in格式错误');
         }
 
-        $addon = is_array($shop['addon']) ? $shop['addon'] : array();
+        $addon = is_array($shopInfo['addon']) ? $shopInfo['addon'] : array();
         $addon['session_expire_time'] = $expireTimestamp;
-        $shopMdl->update(array('addon' => $addon), array('shop_id' => $shop['shop_id']));
+        $shopMdl->update(array('addon' => $addon), array('shop_id' => $shopInfo['shop_id']));
 
         if (($expireTimestamp - time()) < self::SESSION_EXPIRE_WARNING_DAYS * 86400) {
-            $warnMsg = '【' . $shop['name'] . '】 access_token 将于7天内过期，请及时处理，到期时间：'.$expireTime.(isset($sdf['content']['info']) && !empty($sdf['content']['info']) ?  $sdf['content']['info'] : '') ;
+            $warnMsg = '【' . $shopInfo['name'] . '】 access_token 将于7天内过期，请及时处理，到期时间：'.$expireTime.(isset($sdf['content']['info']) && !empty($sdf['content']['info']) ?  $sdf['content']['info'] : '') ;
             $this->sendSystemNotify($warnMsg);
         }
-
+        
+        // insert
+        $saveSdf = $sdf;
+        
+        // 服务过期提醒
+        if(!isset($sdf['content']['info']) || empty($sdf['content']['info'])){
+            $saveSdf['content']['info'] = '【' . $shopInfo['name'] . '】服务到期提醒（到期时间：'. $expireTime .'）';
+        }
+        
+        kernel::single('ome_system_rpcnotify')->saveRpcNotify($saveSdf);
+        
         return array('rsp' => 'succ', 'msg' => '消息已接收');
     }
 

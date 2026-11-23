@@ -229,4 +229,47 @@ class erpapi_shop_matrix_luban_request_product extends erpapi_shop_request_produ
         
         return $result;
     }
+    
+    /**
+     * 获取查询诊断商品接口
+     *
+     * @return null
+     */
+    protected function get_product_suggestion_apiname($sdf=[])
+    {
+        return SHOP_GET_PRODUCT_SUGGESTION_LIST;
+    }
+    
+    /**
+     * 获取查询诊断商品请求参数
+     *
+     * @param $sdf
+     * @return array
+     */
+    protected function get_product_suggestion_params($sdf=[])
+    {
+        // param
+        $param = parent::get_product_suggestion_params($sdf);
+        
+        // OMS抖音店铺编码（此字段不用传给平台API接口）
+        $param['shop_bn'] = $this->__channelObj->channel['shop_bn'];
+        
+        // 页码
+        $param['page_no'] = 1;
+        
+        // 每页查询数量（仅取 total，不需要拉全量列表）
+        $param['page_size'] = 10;
+        
+        // 商品处理建议：force_offline强制下架, suggest_offline建议下架, optimize牵引优化
+        if($sdf['suggestion']){
+            $param['suggestion'] = $sdf['suggestion'];
+        }else{
+            $param['suggestion'] = 'force_offline';
+        }
+        
+        // 批量查询商品处理建议：force_offline强制下架, suggest_offline建议下架, optimize牵引优化
+        //$param['suggestion_list'] = array('force_offline', 'suggest_offline', 'optimize');
+        
+        return $param;
+    }
 }

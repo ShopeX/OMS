@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * sunjing@shopex.cn
  * 换货订单处理
@@ -46,6 +47,7 @@ class erpapi_shop_response_process_exchange {
             
             // 换货地址
             $this->_dealExchangeReceiver($sdf['return_product']['return_id'], $sdf);
+            
             //更新售后申请附加信息表
             $this->_dealTableAdditional($sdf['table_additional'], $idBn);
 
@@ -58,7 +60,7 @@ class erpapi_shop_response_process_exchange {
                 );
             }
             
-             //退转换处理
+            //退转换处理
             kernel::single('ome_return')->processChange($sdf);
 
             //更新售后单
@@ -70,6 +72,7 @@ class erpapi_shop_response_process_exchange {
 
             $returnProductItems = $insertData['return_product_items'];
             unset($insertData['return_product_items']);
+            
             $returnGiftItems = $insertData['return_gift_items'];
             unset($insertData['return_gift_items']);
             
@@ -95,38 +98,17 @@ class erpapi_shop_response_process_exchange {
             if(!$rs) {
                 return array('rsp'=>'fail', 'msg'=>'售后申请单新建失败');
             }
+            
             $this->_insertReturnProductItems($returnProductItems, $insertData['return_id']);
             
             // 天猫极速换货打标
             if (!empty($sdf['is_topspeed_exchange'])) {
                 kernel::single('ome_order_platform_taobao_aftersale')->markTopspeedOnReturnAndReship($insertData['return_id']);
             }
-            //防止并发赠品多次携带到售后申请单明细，update阻塞查询判断。
-//            $giftMsg = '';
-//            if ($returnGiftItems) {
-//                $giftOrderItemId = array_column($returnGiftItems, 'order_item_id');
-//                $returnProductItemMdl = app::get('ome')->model('return_product_items');
-//                $res = kernel::database()->exec("UPDATE sdb_ome_orders SET createtime=`createtime` WHERE order_id =".$insertData['order_id']);
-//                if ($res['rs']) {
-//                    if (!$returnProductItemMdl->getList('order_item_id',array('order_item_id'=>$giftOrderItemId))) {
-//                        foreach($returnGiftItems as &$val) {
-//                            $val['return_id'] = $insertData['return_id'];
-//                        }
-//                        $sql = ome_func::get_insert_sql($returnProductItemMdl, $returnGiftItems);
-//                        $insertGiftRs = $returnProductItemMdl->db->exec($sql);
-//                        $operateLog = app::get('ome')->model('operation_log');
-//                        $giftMsg = '自动带出赠品成功';
-//                        if (!$insertGiftRs['rs']) {
-//                            $giftMsg = '自动带出赠品失败';
-//                        }
-//                    }
-//                }
-//            }
             
+            // log
             app::get('ome')->model('operation_log')->write_log('return@ome',$insertData['return_id'],'创建售后申请单');
-//            if ($giftMsg) {
-//                $operateLog->write_log('return@ome', $insertData['return_id'], $giftMsg);
-//            }
+            
             $msg = '创建售后申请单成功';
             $this->_dealExchangeReceiver($insertData['return_id'], $sdf);
             $idBn = array(
@@ -135,7 +117,7 @@ class erpapi_shop_response_process_exchange {
             );
             $this->_dealTableAdditional($sdf['table_additional'], $idBn);
             
-            //提前冻结库存
+            // 提前冻结库存：添加售后申请单的冻结库存
             kernel::single('ome_return_product')->addExchangeFreeze($insertData['return_id'], $sdf['branch_id']);
             
             //自动审核售后申请单
@@ -149,6 +131,7 @@ class erpapi_shop_response_process_exchange {
                     $isAutoGiftApprove = false;
                 }
             }
+            
             if($sdf['status']=='1' && $is_auto_approve == 'on' && $isAutoGiftApprove){
                 $sdf['status'] = '3';
 
@@ -471,7 +454,11 @@ class erpapi_shop_response_process_exchange {
                 if($sdf['sync_platform'] === true){
                     $is_sync_status = false; //同步给平台同意状态
                 }
+                
+                // 释放售后申请单的冻结库存
                 kernel::single('ome_return_product')->releaseChangeFreeze($data['return_id']);
+                
+                // 保存售后服务并创建换货单
                 $modelReturnProduct->tosave($data, $is_sync_status, $error_msg);
 
                 break;

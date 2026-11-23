@@ -61,6 +61,7 @@ class erpapi_wms_response_process_transferorder
     public function update($params)
     {
         $result = kernel::single('console_event_receive_transferorder')->ioStorage($params);
+        
         // 报警
         if($result['rsp'] == 'fail' && $params['status'] == 'FINISH') {
             kernel::single('monitor_event_notify')->addNotify('wms_transferorder_finish', [
@@ -68,6 +69,7 @@ class erpapi_wms_response_process_transferorder
                 'errmsg'      => $result['msg'],
             ]);
         }
+        
         return $result;
     }
 }

@@ -446,6 +446,7 @@ define('SHOP_WLB_ORDER_JZ_CONSIGN','store.wlb.order.jz.consign');         //新 
 
 define('HCHSAFE_JD_ADDISVLOG','store.isv.addisvlog');//京东风控登录
 define('STORE_JD_NPS_TOKEN', 'store.npsapi.gettoken'); //京东NPS获取加密Token
+define('SHOP_USER_PIN2XID', 'store.user.pin2xid'); //京东pin转xid
 
 define('STORE_AG_SENDGOODS_CANCEL','store.ag.sendgoods.cancel');                                              //淘宝AG未发货仅退款取消发货
 define('STORE_AG_LOGISTICS_WAREHOUSE_UPDATE','store.ag.logistics.warehouse.update');               //淘宝AG售后退货入仓状态回传
@@ -545,6 +546,7 @@ define('SHOP_AFTERSALE_EXCHANGE_REFUSE', 'store.exchange2.refuse'); //拒绝换�
 define('SHOP_SKU_SET_SELL_TYPE', 'store.item.sku.set'); //设置SKU区域库存发货时效
 define('SHOP_GET_ADDRESS_LIST', 'store.address.list.get'); //拉取商家退货地址列表
 define('SHOP_AFTERSALE_RETURN_REMARK', 'store.aftersale.order.remark'); //同步京东审核意见给到抖音平台
+define('SHOP_GET_PRODUCT_SUGGESTION_LIST', 'store.items.suggestion.get'); // 查询诊断商品列表及其处理建议
 
 //[得物]出价列表
 define("SHOP_GET_BIDDING_ALL", 'store.bidding.normal.list'); //[得物]获取平台所有出价列表
@@ -586,6 +588,7 @@ define('IDAAS_ACCOUNT_UPDATE', 'aliyun.idaas.account.update');
 define('IDAAS_ACCOUNT_DELETE', 'aliyun.idaas.account.delete');
 define('IDAAS_ACCOUNT_GET', 'aliyun.idaas.account.get');
 define('IDAAS_ACCOUNT_LOGIN', 'aliyun.idaas.account.login');
+define('IDAAS_ACCOUNT_CAPTCHA', 'aliyun.idaas.account.captcha');
 define('IDAAS_ACCOUNT_VERIFY_CODE', 'aliyun.idaas.account.verifycode');
 define('IDAAS_ACCOUNT_CODE_VERIFY', 'aliyun.idaas.account.codeverify');
 

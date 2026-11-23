@@ -1290,4 +1290,58 @@ class erpapi_shop_request_product extends erpapi_shop_request_abstract
         // 返回查询结果，包括商品数据和查询状态等信息
         return $result;
     }
+    
+    /**
+     * 查询诊断商品列表及其处理建议
+     * 平台文档：https://op.jinritemai.com/docs/api-docs/14/8339
+     * 平台接口名：/product/getProductSuggestionList
+     *
+     * @param $sdf
+     * @return void
+     */
+    public function getProductSuggestionList($sdf=[])
+    {
+        $title = '查询诊断商品列表及其处理建议';
+        
+        // shop_bn
+        $shop_bn = $this->__channelObj->channel['shop_bn'];
+        
+        // api接口
+        $api_name = $this->get_product_suggestion_apiname($sdf);
+        if (empty($api_name)){
+            return $this->error('接口暂不支持查询诊断商品!');
+        }
+        
+        // 请求参数
+        $params = $this->get_product_suggestion_params($sdf);
+        if (empty($params)){
+            return $this->error('查询诊断商品接口，没有请求参数!');
+        }
+        
+        // request
+        $result = $this->__caller->call($api_name, $params, null, $title, 5, $shop_bn);
+        
+        return $result;
+    }
+    
+    /**
+     * 获取查询诊断商品接口
+     *
+     * @return null
+     */
+    protected function get_product_suggestion_apiname($sdf=[])
+    {
+        return null;
+    }
+    
+    /**
+     * 获取查询诊断商品请求参数
+     *
+     * @param $sdf
+     * @return array
+     */
+    protected function get_product_suggestion_params($sdf=[])
+    {
+        return [];
+    }
 }

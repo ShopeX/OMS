@@ -48,7 +48,6 @@ class erpapi_wms_response_process_stockout
     public function status_update($params)
     {
         if ($params['delivery_bn']) {
-            
             return kernel::single('ome_event_receive_delivery')->update($params);
         } else {
 

@@ -30,8 +30,8 @@ class monitor_finder_event_template
     }
 
     var $column_edit = '操作';
-    var $column_edit_width = "75";
-    
+    var $column_edit_width = 80;
+    var $column_edit_order = 1;
     function column_edit($row)
     {
         $finder_vid = $_GET['finder_vid'];

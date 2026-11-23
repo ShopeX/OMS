@@ -250,12 +250,6 @@ class erpapi_shop_request_order extends erpapi_shop_request_abstract
         return $result;
     }
 
-    /**
-     * 添加OrderMemo
-     * @param mixed $order order
-     * @param mixed $memo memo
-     * @return mixed 返回值
-     */
     public function addOrderMemo($order,$memo){}
 
     /**

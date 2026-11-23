@@ -1060,46 +1060,6 @@ class erpapi_shop_response_aftersalev2 extends erpapi_shop_response_abstract {
         
         return [false, '匹配失败'];
     }
-
-
-    /**
-     * 换货申请转退货申请
-     * 
-     * @param $sdf
-     * @return array
-     */
-    public function getChangeApplyToReturnApply($sdf)
-    {
-        $returnMdl = app::get('ome')->model('return_product');
-        $reshipMdl = app::get('ome')->model('reship');
-
-        $refund_bn   = $sdf['refund_bn'];
-        $shop_id    = $sdf['shop_id'];
-
-        // 有进行中的换货申请
-        $return = $returnMdl->db_dump([
-            'return_bn' => $refund_bn,
-            'return_type' => 'change',
-            'status' => ['1','2','3','6','7','8'],
-            'shop_id' => $shop_id,
-        ]);
-        if ($return) {
-
-        }
-
-        // 有进行中的退换货单
-        $reship = $reshipMdl->db_dump([
-            'reship_bn' => $refund_bn,
-            'shop_id' => $shop_id,
-            'return_type' => 'change',
-            'is_check' => ['0', '1', '2'],
-        ]);
-        if ($reship) {
-
-        }
-
-        return [true, '请放心申请'];
-    }
     
     /**
      * 获取订单退货商品及计算退货明细金额

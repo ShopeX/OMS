@@ -53,6 +53,7 @@ class erpapi_router_mapping
         'ome.exchange.consigngoods.refuse' => 'shop.exchange.consigngoods_refuse', // 换货拒绝发出新品
         'ome.xc.order.add'               => 'shop.branch.wait',
         'system.msg.notify'              => 'system.msg.notify',
+        'system.access_token.notify'     => 'system.token.notify', // 平台 token 失效/恢复通知
         'ome.goods.add'                 => 'shop.goods.add',
         'ome.goods.delete'              => 'shop.goods.delete',
         'ome.qianniu.modifysku'         => 'shop.qianniu.modifysku',

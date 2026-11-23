@@ -138,6 +138,18 @@ class erpapi_shop_matrix_360buy_response_aftersalev2 extends erpapi_shop_respons
             }
         }
     
+        // 京东引凤售后标识：判断 extend_field.businessTag == 'afsPhoenixTag' 或 selfForBrandVendorFlag == true
+        if (in_array($sdf['refund_type'], array('return', 'reship'))) {
+            $extendField = $sdf['extend_field'];
+            if (is_array($extendField)) {
+                $isPhoenix = !empty($extendField['businessTag']) && $extendField['businessTag'] === 'afsPhoenixTag';
+                $isSelfForBrand = in_array($extendField['selfForBrandVendorFlag'] ?? null, array(true, 'true', 1, '1'), true);
+                if ($isPhoenix || $isSelfForBrand) {
+                    $sdf['flag_type'] = intval($sdf['flag_type']) | ome_reship_const::__YINFENG;
+                }
+            }
+        }
+
         return $sdf;
     }
 

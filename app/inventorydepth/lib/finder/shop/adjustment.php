@@ -1,21 +1,10 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * @author chenping<chenping@shopex.cn>
  */
+
 class inventorydepth_finder_shop_adjustment {
-    var $addon_cols = 'shop_id,request,simple,shop_iid,shop_bn,release_stock,mapping,bind,shop_type,bidding_type';
+    var $addon_cols = 'shop_id,request,simple,shop_iid,shop_bn,release_stock,mapping,bind,shop_type,bidding_type,business_mode';
     
     static $_saleMaterials = array();
     static $_shopCache = array();
@@ -112,6 +101,12 @@ EOF;
     public function column_request($row)
     {
         $request = $row[$this->col_prefix.'request'];
+        $business_mode = isset($row[$this->col_prefix.'business_mode']) ? $row[$this->col_prefix.'business_mode'] : '';
+        if ($business_mode === 'brand_self') {
+            $word = $this->app->_('关闭');
+            return '<span style="color:#a7a7a7;">'.$word.'（引凤）</span>';
+        }
+
         if ($request == 'true') {
             $word = $this->app->_('开启');
             $color = 'green';
@@ -354,6 +349,20 @@ EOF;
         return $this->_render->fetch('finder/adjustment/operation_log.html');
     }
     
+    //业务模式
+    public $column_business_mode = '业务模式';
+    public $column_business_mode_order = 19;
+    public function column_business_mode($row)
+    {
+        $business_mode = isset($row[$this->col_prefix.'business_mode']) ? $row[$this->col_prefix.'business_mode'] : '';
+
+        if ($business_mode === 'brand_self') {
+            return '引凤（品牌自营）';
+        }
+
+        return '-';
+    }
+
     //出价类型
     public $column_bidding_type = '出价类型';
     public $column_bidding_type_order = 99;

@@ -28,19 +28,21 @@ class monitor_event_notify
      * @Vsersion: 2022/10/17 下午4:06
      * @param $eventType
      * @param array $params
-     * @param string $send_type
-     * @param string $is_sync
+     * @param bool $is_sync
+     * @param array|null $templateList 已过滤的模板列表；null 时按 event_type 查询启用模板
      * @return bool
      */
-    public function addNotify($eventType, $params = array(), $is_sync = false)
+    public function addNotify($eventType, $params = array(), $is_sync = false, $templateList = null)
     {
         $eventTemplateMdl = app::get('monitor')->model('event_template');
         $eventNotifyMdl   = app::get('monitor')->model('event_notify');
-        $templateList     = $eventTemplateMdl->getList('*',[
-            'event_type' => $eventType,
-            'status'     => '1',
-            'disabled'   => 'false',
-        ]);
+        if ($templateList === null) {
+            $templateList = $eventTemplateMdl->getList('*',[
+                'event_type' => $eventType,
+                'status'     => '1',
+                'disabled'   => 'false',
+            ]);
+        }
         if ($templateList) {
             foreach ($templateList as $key => $templateInfo) {
                 $notifyData = array();
@@ -108,6 +110,7 @@ class monitor_event_notify
         if ($notifyInfo['status'] == '1' || $notifyInfo['status'] == '3' ) {
             return ['rsp' =>'fail','msg'=> '已发送不能重复发送'];
         }
+        
         //关闭模板不发送内容
         $eventTemplateMdl = app::get('monitor')->model('event_template');
         $eventTemplateInfo = $eventTemplateMdl->db_dump(['template_id'=>$notifyInfo['template_id']]);
@@ -117,6 +120,7 @@ class monitor_event_notify
             return ['rsp' =>'fail','msg'=> $msg,'notify_id'=>$notifyInfo['notify_id']];
         }
         $notifyInfo['template_name'] = $eventTemplateInfo['template_name'];
+        
         // 更新为处理中
         $eventNotifyMdl->update(['status' => '3'], ['notify_id' => $notifyId]);
         

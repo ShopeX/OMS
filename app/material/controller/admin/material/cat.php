@@ -355,8 +355,8 @@ class material_ctl_admin_material_cat extends desktop_controller
                 //判断属性值是否已被使用,如使用不允许编辑
                 $edit_del = true;
                 if ($is_lock) {
-                    $prop_name = 'prop' . $prop_key . '_value';
-                    $sql       = "SELECT product_id FROM sdb_pim_product WHERE cate_id=" . $cate_id . " AND " . $prop_name . "='" . $val . "'";
+                    $prop_name = 'prop' . intval($prop_key) . '_value';
+                    $sql       = "SELECT product_id FROM sdb_pim_product WHERE cate_id=" . intval($cate_id) . " AND " . $prop_name . "=" . $categoryObj->db->quote($val);
                     $tempInfo  = $categoryObj->db->selectrow($sql);
                     if ($tempInfo) {
                         $edit_del = false;

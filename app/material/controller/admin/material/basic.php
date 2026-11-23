@@ -2081,7 +2081,8 @@ EOF;
 
 
             if($_POST['bm_id']){
-                foreach($_POST['bm_id'] as $bm_id){
+                $bm_ids = array_filter(array_map('intval', (array)$_POST['bm_id']));
+                foreach($bm_ids as $bm_id){
                     $check_rs = $checkObj->checkEditReadOnly($bm_id);
                     if ($check_rs['type']){
                         $this->end(false,'有出入库记录不可以删除');

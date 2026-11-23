@@ -111,16 +111,16 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
     public function confirm($sdf,$queue=false)
     {
         $orderModel = app::get('ome')->model('orders');
-        
+
         //[经销商订单]使用平台订单号
         $original_bn = $sdf['orderinfo']['order_bn'];
         if($sdf['is_dealer_order'] && $sdf['orderinfo']['platform_order_bn']){
             $original_bn = $sdf['orderinfo']['platform_order_bn'];
         }
-        
+
         //title
         $title = sprintf('发货状态回写[%s]-%s', $sdf['delivery_bn'], $original_bn);
-        
+
         // 只处理已发货与部分发货状态
         if ($sdf['status'] != 'succ' && !in_array($sdf['orderinfo']['ship_status'], array('1','2'))) {
             $rb = app::get('ome')->getConf('ome.delivery.back_node');
@@ -154,12 +154,12 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
         );
 
         $shipmentLogModel = app::get('ome')->model('shipment_log');
-        
+
         // 更新订单状态
         $orderModel->update(array('sync'=>'run'),array('order_id'=>$sdf['orderinfo']['order_id']));
-        
+
         $params = $this->get_confirm_params($sdf);
-        
+
         $callback = array(
            'class' => get_class($this),
            'method' => 'confirm_callback',
@@ -178,7 +178,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
             $callback['params']['merged_order_sns'] = $params['merged_order_sns'];
             $callback['params']['tid'] = $params['tid'];
         }
-        
+
         //请求接口名
         $api_method = $this->get_delivery_apiname($sdf);
         $api_msg = '';
@@ -203,7 +203,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
 
                 // 失败重试
                 $apiFailId  = $apiFailMdl->saveTriggerRequest(
-                    // $sdf['delivery_bn'], 
+                    // $sdf['delivery_bn'],
                     $parent_bn,
                     'deliveryBack', 
                     $api_method, 
@@ -226,8 +226,8 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
 
             // 失败重试
             $apiFailId  = $apiFailMdl->saveTriggerRequest(
-                // $sdf['delivery_bn'], 
-                $parent_bn, 
+                // $sdf['delivery_bn'],
+                $parent_bn,
                 'deliveryBack', 
                 $api_method, 
                 $api_msg
@@ -264,11 +264,11 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
         if($sdf['is_dealer_order'] && $sdf['orderinfo']['platform_order_bn']){
             //平台订单号
             $param['tid'] = $sdf['orderinfo']['platform_order_bn'];
-            
+
             //经销商订单标记
             $param['is_dealer_order'] = 'true';
         }
-        
+
         return $param;
     }
 
@@ -362,6 +362,17 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                 );
 
                 $orderModel->update($updateOrderData,array('order_id'=>$order_id,'sync|noequal'=>'succ'));
+                if ($status != 'succ') {
+                    kernel::single('ome_event_trigger_shop_order')->order_message_produce(array($order_id), ['consign_fail']);
+                } else {
+                    //淘宝加急发货状态回传平台
+                    app::get('ome')->model('misc_task')->saveMiscTask([
+                        'obj_id'    => intval($order_id),
+                        'obj_type'  => 'urgent_logistics_csg',
+                        'exec_time' => time(),
+                        'addon'     => json_encode(['scene' => 'consign_sync'], JSON_UNESCAPED_UNICODE),
+                    ]);
+                }
             }
         }
         /*
@@ -410,17 +421,17 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                         break;
                     }
                 }
-                
+
                 //前端已发货
                 $findKeywords = array('没有能发货', '已发货', '订单已完结');
                 foreach ($findKeywords as $findKey => $findVal)
                 {
                     if(strpos($err_msg, $findVal) !== false){
                         $sync_fail_type = 'shipped';
-                        
+
                         //标记为回传平台成功
                         $status = 'succ';
-                        
+
                         break;
                     }
                 }
@@ -457,11 +468,11 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                 $delivery_bn = isset($callback_params['delivery_bn']) ? $callback_params['delivery_bn'] : '';
                 $shop_name = '';
                 $platform = '';
-                
+
                 // 获取店铺信息和平台类型
                 if (!empty($orders)) {
                     $firstOrder = $orders[0];
-                    
+
                     // 获取店铺信息和平台类型
                     if (!empty($firstOrder['shop_id'])) {
                         $shopModel = app::get('ome')->model('shop');
@@ -479,7 +490,6 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                         $shop_type_code = $firstOrder['shop_type'] ? $firstOrder['shop_type'] : '';
                     }
 
-                    
                     // 将 shop_type 转换为中文
                     if ($shop_type_code) {
                         $platform = ome_shop_type::shop_name($shop_type_code);
@@ -489,7 +499,6 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                     }
                 }
 
-                
                 kernel::single('monitor_event_notify')->addNotify('order_delivery_platform_sync_error', [
                     'logi_no' => $logi_no,
                     'order_bn' => implode(',', array_column($orders, 'order_bn')),
@@ -609,43 +618,43 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
      * @author 
      **/
     public function logistics_update($sdf){}
-    
+
     /**
      * 发货单查询核销订单ID
-     * 
+     *
      * @param array $params
      * @return array
      */
     public function seller_lporderid($params)
     {
         $wmsDeliveryObj = app::get('wms')->model('delivery');
-        
+
         $title = sprintf('发货单查询核销订单ID[%s]-%s', $params['delivery_bn'], $params['order_bn']);
-        
+
         $order_bn = $params['order_bn'];
         $delivery_bn = $params['delivery_bn'];
         $wms_delivery_bn = $params['wms_delivery_bn'];
         $receive_code = $params['receive_code'];
-        
+
         //params
         $requestParams = array(
             'tid' => $order_bn,
             'receive_code' => $receive_code,
         );
-        
+
         //request
         $result = $this->__caller->call(SHOP_LOGISTICS_SELLER_ORDERS, $requestParams, null, $title, 10, $order_bn);
         if ($result['rsp'] != 'succ') {
             //update
             $wmsDeliveryObj->update(array('writeoff_status'=>3), array('delivery_bn'=>$wms_delivery_bn));
-            
+
             $result['error_msg'] = '发货单查询核销订单ID失败';
-            
+
             return $result;
         }
-        
+
         $data = json_decode($result['data'],true);
-        
+
         //data
         $lpOrderList = array();
         $writeoff_data = $data['writeoff_order_list']['write_off_order_d_t_o'];
@@ -654,15 +663,15 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
             {
                 $trade_id = $val['trade_id'];
                 $lp_order_id = $val['lp_order_id'];
-                
+
                 if(empty($trade_id) || empty($trade_id)){
                     continue;
                 }
-                
+
                 $lpOrderList[$trade_id] = $lp_order_id;
             }
         }
-        
+
         $lp_order_id = $lpOrderList[$order_bn];
         if($lp_order_id){
             //update
@@ -670,16 +679,16 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
         }else{
             //update
             $wmsDeliveryObj->update(array('writeoff_status'=>3), array('delivery_bn'=>$wms_delivery_bn));
-            
+
             $result['rsp'] = 'fail';
             $result['error_msg'] = '查询核销订单ID为空,请查看同步日志';
-            
+
             return $result;
         }
-        
+
         return $result;
     }
-    
+
     /**
      * 发货单签收核销
      *
@@ -690,32 +699,32 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
     {
         $wmsDeliveryObj = app::get('wms')->model('delivery');
         $operationMdl = app::get('ome')->model('operation_log');
-        
+
         $title = sprintf('发货单确认核销[%s]-%s', $params['delivery_bn'], $params['order_bn']);
-        
+
         $order_bn = $params['order_bn'];
         $delivery_bn = $params['delivery_bn'];
         $wms_delivery_bn = $params['wms_delivery_bn'];
         $wms_delivery_id = $params['wms_delivery_id'];
-        
+
         //params
         $requestParams = array(
             'tid' => $order_bn,
             'lp_order_id' => $params['lp_order_id'],
             'receive_code' => $params['receive_code'],
         );
-        
+
         //request
         $result = $this->__caller->call(SHOP_LOGISTICS_SELLER_WRITEOFF, $requestParams, null, $title, 10, $order_bn);
         if ($result['rsp'] != 'succ') {
             //update
             $wmsDeliveryObj->update(array('writeoff_status'=>4), array('delivery_bn'=>$wms_delivery_bn));
-            
+
             $result['error_msg'] = '发货单签收核销失败';
-            
+
             return $result;
         }
-        
+
         $data = json_decode($result['data'],true);
         $request_id = $data['request_id'];
         $orgResult = $data['result'];
@@ -724,18 +733,18 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
         }else{
             //请求成功,但结果是失败的
         }
-        
+
         //update
         $wmsDeliveryObj->update(array('writeoff_status'=>1), array('delivery_bn'=>$wms_delivery_bn));
-        
+
         //logs
         if($wms_delivery_id){
             $operationMdl->write_log('delivery_logi@wms', $wms_delivery_id, '确认核销成功，收货码：'. $params['receive_code'] .'，核销时间：'. date('Y-m-d H:i:s', time()));
         }
-        
+
         return $result;
     }
-    
+
     /**
      * 物流轨迹查询
      *
@@ -745,32 +754,32 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
     public function logistics_track($params)
     {
         $title = sprintf('同城配物流轨迹[%s]-%s', $params['delivery_bn'], $params['order_bn']);
-        
+
         $order_bn = $params['order_bn'];
         $delivery_bn = $params['delivery_bn'];
-        
+
         //params
         $requestParams = array(
             'tid' => $order_bn,
             'logi_code' => $params['logi_code'], //矩阵不需要,为了查日志方便
             'logi_no' => $params['logi_no'], //矩阵不需要,为了查日志方便
         );
-        
+
         //request
         $result = $this->__caller->call(SHOP_LOGISTICS_SELLER_TRACE, $requestParams, null, $title, 10, $order_bn);
         if ($result['rsp'] != 'succ') {
             $result['error_msg'] = '物流轨迹查询失败';
-            
+
             return $result;
         }
-        
+
         //data
         if(is_string($result['data'])){
             $data = json_decode($result['data'],true);
         }else{
             $data = $result['data'];
         }
-        
+
         //data
         $trackList = array();
         $mail_list = $data['mail_list']['top_logistics_mail_d_t_o'];
@@ -780,31 +789,31 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                 $tid = $val['tid'];
                 $out_sid = $val['out_sid'];
                 $status = $val['status'];
-                
+
                 if(empty($tid)){
                     continue;
                 }
-                
+
                 $trace_list = $val['trace_list']['top_logistics_node_d_t_o'];
                 if($trace_list){
                     $trackList[$tid] = $trace_list;
                 }
             }
         }
-        
+
         //check
         if(empty($trackList[$order_bn])){
             $result['rsp'] = 'fail';
             $result['error_msg'] = '没有获取到物流轨迹信息';
-            
+
             return $result;
         }
-        
+
         $result['data'] = $trackList[$order_bn];
-        
+
         return $result;
     }
-    
+
     /**
      * 修改物流公司信息
      *
@@ -814,34 +823,34 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
     public function logistics_resend($params)
     {
         $title = sprintf('修改同城配物流信息[%s]-%s', $params['delivery_bn'], $params['order_bn']);
-        
+
         $order_bn = $params['order_bn'];
         $delivery_bn = $params['delivery_bn'];
-        
+
         //params
         $requestParams = array(
             'tid' => $order_bn,
             'company_code' => $params['logi_code'],
             'out_sid' => $params['logi_no'],
         );
-        
+
         //[拆单]子订单列表
         if($params['sub_tids']){
             $requestParams['sub_tids'] = $params['sub_tids'];
         }
-        
+
         //request
         $result = $this->__caller->call(SHOP_LOGISTICS_SELLER_RESEND, $requestParams, null, $title, 10, $order_bn);
         if ($result['rsp'] != 'succ') {
-            
+
             $result['error_msg'] = '修改同城配物流信息失败';
-            
+
             return $result;
         }
-        
+
         return $result;
     }
-    
+
     /**
      * [翱象系统]同步仓库作业信息
      *
@@ -853,7 +862,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
         $original_bn = $sdf['delivery_bn'];
         $order_bn = ($sdf['order_bn'] ? $sdf['order_bn'] : $sdf['orderinfo']['order_bn']);
         $title = sprintf('翱象仓库作业同步[%s]', $order_bn);
-        
+
         //params
         $requestParams = array();
         if($sdf['process_status'] == 'confirm'){
@@ -863,22 +872,22 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
             //仓库接单
             $requestParams = $this->_formatAoxiangCreate($sdf);
         }
-        
+
         //callback
         $callback = array();
-        
+
         //request
         $result = $this->__caller->call(SHOP_AOXIANG_WAREHOUSE_REPORT, $requestParams, $callback, $title, 10, $original_bn);
         if ($result['rsp'] != 'succ') {
             $error_msg = ($result['message'] ? $result['message'] : $result['err_msg']);
             $result['error_msg'] = '同步发货单失败：'. $error_msg;
-            
+
             return $result;
         }
-        
+
         return $result;
     }
-    
+
     /**
      * [翱象系统]仓库接单--格式化请求数据
      *
@@ -889,23 +898,23 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
     {
         $nowTime = time();
         $create_time = ($sdf['create_time'] ? $sdf['create_time'] : time());
-        
+
         $order_bn = $sdf['order_bn'];
-        
+
         //订单类型
         $order_type = 'JYCK';
         $pre_order_code = '';
         if($sdf['orderinfo']['createway'] == 'after'){
             $order_type = 'HHCK';
-            
+
             //换货订单关联的原平台订单号
             $orderInfo = app::get('ome')->model('orders')->dump(array('order_bn'=>$order_bn), 'order_id,order_bn,relate_order_bn');
             $pre_order_code = $orderInfo['relate_order_bn'];
         }
-        
+
         //是否拆单(多批次发货)
         $is_split = $sdf['is_split'];
-        
+
         //单据信息
         $orderData = array (
             'order_code' => $order_bn, //订单号
@@ -915,7 +924,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
             'order_type' => $order_type, //单据类型(JYCK:一般交易出库,HHCK:换货出库,BFCK:补发出库,QTCK:其他出库单)
             'pre_order_code' => $pre_order_code, //原ERP发货单，条件必填（换货出库/补发出库）
         );
-        
+
         //单据作业信息
         $processData = array (
             'process_status' => 'ACCEPT', //作业状态
@@ -923,19 +932,19 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
             'logistics_type' => '2', //物流方式(2:自己联系物流,3:无需物流),默认2
             'operate_time' => ($nowTime * 1000), //操作时间(时间戳-毫秒)
         );
-        
+
         //发货明细
         $line_i = 0;
         $deliveryItems = array();
         foreach ($sdf['delivery_items'] as $itemKey => $itemVal)
         {
             $line_i++;
-            
+
             //check
             //if(empty($itemVal['oid'])){
             //    continue;
             //}
-            
+
             //items
             $deliveryItems[] = array (
                 'order_line_no' => $line_i, //行号
@@ -945,10 +954,10 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                 'plan_qty' => $itemVal['nums'], //发货数量
             );
         }
-        
+
         //包裹明细
         $packageData = array();
-        
+
         //params
         $params = array(
             'order' => json_encode($orderData), //单据信息
@@ -957,10 +966,10 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
             //'confirm_packages' => json_encode($packageData), //包裹明细
             'order_flag' => 'COD', //订单标记
         );
-        
+
         return $params;
     }
-    
+
     /**
      * [翱象系统]确认出库--格式化请求数据
      *
@@ -971,23 +980,23 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
     {
         $nowTime = time();
         $create_time = ($sdf['delivery_time'] ? $sdf['delivery_time'] : time());
-        
+
         $order_bn = $sdf['order_bn'];
-        
+
         //订单类型
         $order_type = 'JYCK';
         $pre_order_code = '';
         if($sdf['createway'] == 'after'){
             $order_type = 'HHCK';
-            
+
             //换货订单关联的原平台订单号
             $orderInfo = app::get('ome')->model('orders')->dump(array('order_bn'=>$order_bn), 'order_id,order_bn,relate_order_bn');
             $pre_order_code = $orderInfo['relate_order_bn'];
         }
-        
+
         //是否拆单(多批次发货)
         $is_split = $sdf['is_split'];
-        
+
         //单据信息
         $orderData = array (
             'order_code' => $order_bn, //订单号
@@ -997,7 +1006,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
             'order_type' => $order_type, //单据类型(JYCK:一般交易出库,HHCK:换货出库,BFCK:补发出库,QTCK:其他出库单)
             'pre_order_code' => $pre_order_code, //原ERP发货单，条件必填（换货出库/补发出库）
         );
-        
+
         //单据作业信息
         $processData = array (
             'process_status' => 'CONFIRM', //作业状态
@@ -1005,7 +1014,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
             'logistics_type' => '2', //物流方式(2:自己联系物流,3:无需物流),默认2
             'operate_time' => ($nowTime * 1000), //操作时间(时间戳-毫秒)
         );
-        
+
         //发货明细
         $orderItems = array();
         $scItems = array();
@@ -1013,7 +1022,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
         foreach ($sdf['delivery_items'] as $itemKey => $itemVal)
         {
             $line_i++;
-            
+
             $orderItems[] = array (
                 'order_line_no' => $line_i, //行号
                 'source_order_code' => $itemVal['order_bn'], //交易主单号
@@ -1021,7 +1030,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                 'sc_item_id' => $itemVal['bn'], //货品编码id
                 'actual_qty' => $itemVal['nums'], //发货数量
             );
-            
+
             //sc_items
             $scItems[] = array (
                 'order_line_no' => $line_i, //行号
@@ -1030,7 +1039,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                 'quantity' => $itemVal['nums'], //发货数量
             );
         }
-        
+
         //包裹明细
         $packageData = array();
         $packageData[0] = array(
@@ -1038,7 +1047,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
             'express_code' => $sdf['logi_type'],
             'sc_items' => $scItems,
         );
-        
+
         //params
         $params = array(
             'order' => json_encode($orderData), //单据信息
@@ -1047,13 +1056,14 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
             'confirm_packages' => json_encode($packageData), //出库包裹明细
             'order_flag' => 'COD', //订单标记
         );
-        
+
         return $params;
     }
+
     public function getPrintDelivery($sdf){}
 
     public function operationInWarehouse($sdf){}
-    
+
     /**
      * 获取订单发货oid子订单列表
      *
@@ -1066,25 +1076,25 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
         if(empty($sdf['delivery_items'])){
             return array();
         }
-        
+
         //组织包裹列表
         $oidList = array();
         foreach ($sdf['delivery_items'] as $key => $val)
         {
             $oid = $val['oid'];
-            
+
             //check
             if(empty($oid)){
                 continue;
             }
-            
+
             //子订单信息
             $oidList[$oid] = $oid;
         }
-        
+
         return $oidList;
     }
-    
+
     /**
      * 按发货子订单明细
      *
@@ -1097,27 +1107,27 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
         $logi_type = $sdf['logi_type']; //物流公司编码
         $logi_no = $sdf['logi_no']; //物流单号
         $logi_name = $sdf['logi_name']; //物流公司名称
-        
+
         //check
         if(empty($sdf['delivery_items'])){
             return array();
         }
-        
+
         //order_objects
         $objectList = array();
         foreach ($sdf['order_objects'] as $key => $val)
         {
             $oid = $val['oid'];
-            
+
             $objectList[$oid] = array('quantity'=>intval($val['quantity']));
         }
-        
+
         //初始化包裹信息(只有一个包裹)
         $packageList[$logi_no] = array(
             'company_code' => $logi_type,
             'out_sid' => $logi_no,
         );
-        
+
         //组织包裹列表
         $oidList = array();
         $consignStatus = array();
@@ -1125,24 +1135,24 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
         {
             $oid = $val['oid'];
             $item_number = intval($val['number']);
-            
+
             //check
             if(empty($oid)){
                 continue;
             }
-            
+
             //包裹发货数量
             //@todo：防止wms回传发货数量大于订单上商品购买数量；
             if($objectList[$oid]['quantity'] && $item_number > $objectList[$oid]['quantity']){
                 $item_number = $objectList[$oid]['quantity'];
             }
-            
+
             //子订单信息
             $oidList[$oid] = array(
                 'sub_tid' => $oid, //子订单id
                 'num' => $item_number, //发货数量
             );
-            
+
             //子订单发货情况
             $is_part_consign = false;
             if($val['sendnum'] < $val['nums']){
@@ -1152,7 +1162,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                     $is_part_consign = true;
                 }
             }
-            
+
             $consignStatus[$oid] = array(
                 'sub_tid' => $oid, //子订单id
                 'is_part_consign' => $is_part_consign, //子订单是否部分发货,true:部分发货,false:全部发货;
@@ -1162,23 +1172,23 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                 unset($oidList[$oid]['num']);
             }
         }
-        
+
         //包裹子订单信息(去除下标)
         $packageList[$logi_no]['goods'] = array_values($oidList);
-        
+
         //去除数组下标
         if($packageList){
             $packageList = array_values($packageList);
         }
-        
+
         //去除数组下标
         if($consignStatus){
             $consignStatus = array_values($consignStatus);
         }
-        
+
         return array('packageList'=>$packageList, 'consignStatus'=>$consignStatus);
     }
-    
+
     /**
      * 按多包裹发货
      *
@@ -1192,28 +1202,28 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
         if(empty($sdf['delivery_items']) || empty($sdf['delivery_package'])){
             return array();
         }
-        
+
         //order_objects
         $objectList = array();
         foreach ($sdf['order_objects'] as $key => $val)
         {
             $oid = $val['oid'];
-            
+
             $objectList[$oid] = array('quantity'=>intval($val['quantity']));
         }
-        
+
         //多包裹
         $dlyPackages = array();
         foreach ($sdf['delivery_package'] as $key => $val)
         {
             $product_bn = $val['bn'];
             $logi_no = $val['logi_no'];
-            
+
             //check
             if(empty($product_bn) || empty($logi_no)){
                 continue;
             }
-            
+
             //按[货号+物流单号]纬度
             //@todo：天猫平台一个订单有2行SKU一模一样（买一赠一商品有金额多数量）并且有多个不同物流单号的场景；
             if(isset($dlyPackages[$product_bn][$logi_no])){
@@ -1225,7 +1235,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                 );
             }
         }
-        
+
         //按发货单明细获取包裹信息
         $packageList = array();
         $oidList = array();
@@ -1234,57 +1244,58 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
             $product_bn = $itemVal['product_bn'];
             $item_number = $itemVal['number'];
             $oid = $itemVal['oid'];
-            
+
             //check
             if(empty($oid)){
                 continue;
             }
-            
+
             if(empty($dlyPackages[$product_bn])){
                 continue;
             }
-            
+
             //初始化打包数量
             $sdf['delivery_items'][$itemKey]['pack_nums'] = 0;
-            
+
             //oid信息
             $oidList[$oid] = array('nums'=>$itemVal['nums'], 'sendnum'=>$itemVal['sendnum']);
-            
+
             //一个货号有多个物流包裹的场景
             foreach ($dlyPackages[$product_bn] as $logi_no => $packVal)
             {
                 $package_key = $packVal['package_key'];
                 $packageInfo = $sdf['delivery_package'][$package_key];
-                
+
                 //check
                 if($packVal['number'] < 1){
                     continue;
                 }
-                
+
                 if(empty($packageInfo)){
                     continue;
                 }
-                
+
                 //检查已经打包的数量(PKG组合商品没有sendnum字段)
                 if(isset($sdf['delivery_items'][$itemKey]['sendnum'])){
                     if($sdf['delivery_items'][$itemKey]['pack_nums'] >= $sdf['delivery_items'][$itemKey]['sendnum']){
                         continue;
                     }
                 }
-                
+
                 //包裹发货数量
                 if($packVal['number'] >= $item_number){
                     $package_num = $item_number;
-                    
+
                     $dlyPackages[$product_bn][$logi_no]['number'] -= $item_number;
                 }else{
                     $package_num = $packVal['number'];
-                    
+
                     $dlyPackages[$product_bn][$logi_no]['number'] = 0;
                 }
-                
+
                 //已经打包的数量
                 $sdf['delivery_items'][$itemKey]['pack_nums'] += $package_num;
+
                 //data（含 order_obj_id 供 is_part_consign 场景2 使用）
                 $packageList[$logi_no][$oid] = array(
                     'oid' => $oid,
@@ -1300,12 +1311,12 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                 );
             }
         }
-        
+
         //check
         if(empty($packageList)){
             return array();
         }
-        
+
         //组织包裹列表
         $packages = array();
         $consignStatus = array();
@@ -1316,7 +1327,7 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
             {
                 $logi_no = $oidVal['logi_no'];
                 $oid = $oidVal['oid'];
-                
+
                 //包裹主信息
                 if(empty($packages[$logi_no])){
                     $packages[$logi_no] = array(
@@ -1324,19 +1335,20 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                         'company_code' => $oidVal['logi_type'], //物流公司编码
                     );
                 }
-                
+
                 //包裹发货数量
                 //@todo：防止wms回传发货数量大于订单上商品购买数量；
                 $package_num = intval($oidVal['num']);
                 if($objectList[$oid]['quantity'] && $package_num > $objectList[$oid]['quantity']){
                     $package_num = $objectList[$oid]['quantity'];
                 }
-                
+
                 //包裹中商品信息
                 $packages[$logi_no]['goods'][$oid] = array(
                     'sub_tid' => $oid, //子订单id
                     'num' => $package_num, //发货数量
                 );
+
                 //子订单发货情况（is_part_consign=true 仅在这两种部分发货场景出现，见下方注释）
                 $is_part_consign = false;
                 if($oidList[$oid]['sendnum'] < $oidList[$oid]['nums']){
@@ -1349,33 +1361,34 @@ class erpapi_shop_request_delivery extends erpapi_shop_request_abstract
                         $is_part_consign = true;
                     }
                 }
-                
+
                 $consignStatus[$oid] = array(
                     'sub_tid' => $oid, //子订单id
                     'is_part_consign' => $is_part_consign, //子订单是否部分发货,true:部分发货,false:全部发货;
                 );
+
                 if(in_array($shop_type, array('tmall', 'taobao'))){
                     //去除数量字段
                     unset($packages[$logi_no]['goods'][$oid]['num']);
                 }
             }
         }
-        
+
         //去除数组下标
         if($packages){
             foreach ($packages as $logi_no => $packageVal)
             {
                 $packages[$logi_no]['goods'] = array_values($packageVal['goods']);
             }
-            
+
             $packages = array_values($packages);
         }
-        
+
         //去除数组下标
         if($consignStatus){
             $consignStatus = array_values($consignStatus);
         }
-        
+
         return array('packages'=>$packages, 'consignStatus'=>$consignStatus);
     }
 }

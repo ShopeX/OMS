@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
 * 发票
 *
@@ -73,7 +74,9 @@ class erpapi_shop_response_components_order_tax extends erpapi_shop_response_com
         
         $this->_platform->_ordersdf['is_tax'] = ($this->_platform->_ordersdf['is_tax'] === 'true' || $this->_platform->_ordersdf['is_tax'] === true) ? 'true' : 'false';
 
-        if ($this->_platform->_ordersdf['is_tax'] != $this->_platform->_tgOrder['is_tax']) {
+        // 已开票的订单不回退为不开票(兼容消费者通过发票申请接口已更新 is_tax=true 的情况)
+        if ($this->_platform->_ordersdf['is_tax'] != $this->_platform->_tgOrder['is_tax']
+            && !($this->_platform->_tgOrder['is_tax'] === 'true' && $this->_platform->_ordersdf['is_tax'] === 'false')) {
             $this->_platform->_newOrder['is_tax'] = $this->_platform->_ordersdf['is_tax'];
         }
 

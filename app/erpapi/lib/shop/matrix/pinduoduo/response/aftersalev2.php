@@ -148,17 +148,21 @@ class erpapi_shop_matrix_pinduoduo_response_aftersalev2 extends erpapi_shop_resp
      */
     protected function _findMainOrderObjectByGiftTid($objectMdl, $orderMdl, $shopId, $giftTid, $oid = '')
     {
+
+        // 已经弃用
+        return false;
+
         $cols = 'order_id,obj_id,oid,main_oid,ship_status';
         $objs = array();
 
         // 优先：main_oid + oid 精确定位一行
         if ($oid !== '' && $oid !== null && (string) $oid !== '0') {
-            $objs = $objectMdl->getList($cols, array('main_oid' => $giftTid, 'oid' => $oid), 0, 1);
+            $objs = $objectMdl->getList($cols, array('oid' => $oid, 'main_oid' => $giftTid), 0, 1);
         }
         // 回退：仅 main_oid
-        if (empty($objs)) {
-            $objs = $objectMdl->getList($cols, array('main_oid' => $giftTid), 0, 1);
-        }
+        // if (empty($objs)) {
+        //     $objs = $objectMdl->getList($cols, array('main_oid' => $giftTid), 0, 1);
+        // }
         if (empty($objs)) {
             return false;
         }

@@ -33,10 +33,10 @@ class erpapi_invoice_matrix_chinaums_request_invoice extends erpapi_invoice_requ
 
     public function create($sdf)
     {
-
         $order         = $sdf['order'];
         $requestParams = $sdf['params'];
-
+        $primary_bn = ($sdf['invoice_apply_bn'] ? $sdf['invoice_apply_bn'] : $order['invoice_apply_bn']);
+        
         $title = "银联电子发票开蓝票-" . $order['invoice_apply_bn'];
 
         $callback = array (
@@ -58,7 +58,7 @@ class erpapi_invoice_matrix_chinaums_request_invoice extends erpapi_invoice_requ
 
         $tmpCallback = $callback;
         $callback    = [];
-        $rs          = $this->__caller->call(STORE_INVOICE_ISSUE, $params, $callback, $title, 20, $sdf['invoice_apply_bn']);
+        $rs          = $this->__caller->call(STORE_INVOICE_ISSUE, $params, $callback, $title, 20, $primary_bn);
 
         // 同步兼容
         if (!$callback) {

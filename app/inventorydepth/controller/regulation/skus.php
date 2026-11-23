@@ -243,13 +243,13 @@ class inventorydepth_ctl_regulation_skus extends desktop_controller
                     }
 
                 }
-                
+
                 $old_apply_goods = $apply['apply_goods'] ? explode(',',$apply['apply_goods']) : array();
-                
+
                 $tmp = array('_ALL_');
                 $apply_goods = array_merge($goods,$old_apply_goods);
                 $apply_goods = array_diff($apply_goods,$tmp);
-                
+
                 $data = array();
                 $data['apply_goods'] = implode(',',array_unique($apply_goods));
                 if ($data){
@@ -290,6 +290,15 @@ class inventorydepth_ctl_regulation_skus extends desktop_controller
             }
 
             if($ids){
+                // 京东引凤对接：business_mode=brand_self 时，禁止开启回写库存
+                if ($config === 'true' || $config === true) {
+                    $brandSelfSkus = $this->app->model('shop_skus')->getList('id', array('id' => $ids, 'business_mode' => 'brand_self'));
+                    if ($brandSelfSkus) {
+                        $this->splash('error', 'javascript:finderGroup["'.$_GET['finder_id'].'"].refresh.delay(400,finderGroup["'.$_GET['finder_id'].'"]);', $this->app->_('引凤货品（brand_self）不允许开启自动回写库存'));
+                        return;
+                    }
+                }
+
                 $this->app->model('shop_skus')->update(array('request'=>$config), array('id'=>$ids));
 
                 // 记录操作日志
@@ -312,7 +321,7 @@ class inventorydepth_ctl_regulation_skus extends desktop_controller
      **/
     public function releasePage($id = null,$release_stock = null)
     {
-        
+
         $_POST['task_id'] = $_SESSION['task_id'];
         $post = http_build_query($_POST);
 
@@ -325,7 +334,7 @@ class inventorydepth_ctl_regulation_skus extends desktop_controller
      * 发布
      *
      * @return void
-     * @author 
+     * @author
      **/
     public function releaseUpload()
     {
@@ -340,10 +349,10 @@ class inventorydepth_ctl_regulation_skus extends desktop_controller
         );
 
         $filter['shop_id'] = $task_detail['shop_id'];
-        
+
         $shops = app::get('inventorydepth')->model('shop')->getList('shop_id,shop_bn,node_type,name',$filter);
 
-        $offset = 0; $limit = 50; 
+        $offset = 0; $limit = 50;
         do {
             $rows = $taskSkuMdl->getList('product_id', $_POST, $offset, $limit);
 

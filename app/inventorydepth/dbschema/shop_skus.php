@@ -205,6 +205,9 @@ $db['shop_skus'] = array(
             'default' => '0',
             'in_list' => true,
             'default_in_list' => true,
+            'filterdefault' => true,
+            'searchtype' => 'has',
+            'filtertype' => 'yes',
         ),
         'bind' => array(
             'type' => array(
@@ -330,6 +333,15 @@ $db['shop_skus'] = array(
             'in_list' => true,
             // 'order'   => 11,
         ],
+        // 京东引凤对接：business_mode透传，用于判断SKU是否属于品牌自营
+        // brand_self: 引凤品牌自营，request=false，不回写库存
+        'business_mode' => array(
+            'type' => 'varchar(32)',
+            'label' => '业务模式',
+            'default' => '',
+            'in_list' => false,
+            'default_in_list' => false,
+        ),
     ),
     'index' => array(
         'idx_shop_bn_crc32' => array(
@@ -376,6 +388,12 @@ $db['shop_skus'] = array(
             'columns' => array(
                 0 => 'shop_id',
                 1 => 'sales_material_type',
+            ),
+        ),
+        'ind_shop_mapping' => array(
+            'columns' => array(
+                0 => 'shop_id',
+                1 => 'mapping',
             ),
         ),
     ),

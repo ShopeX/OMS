@@ -31,7 +31,10 @@ class erpapi_shop_matrix_360buy_request_invoice extends erpapi_shop_request_invo
     protected function getUploadParams($sdf)
     {
         $params = parent::getUploadParams($sdf);
+        
+        // unset
         unset($params['invoice_code'], $params['blue_invoice_code']);
+        
         $params['invoice_no'] = $params['invoice_no'] ?: 0;
         $params['blue_invoice_no'] = $params['blue_invoice_no'] ?: 0;
         
@@ -45,6 +48,9 @@ class erpapi_shop_matrix_360buy_request_invoice extends erpapi_shop_request_invo
         
         $order_type = $plat[$this->__channelObj->channel['node_type']];
         $params['order_type'] = $order_type ? $order_type : $plat['other'];
+        
+        // 版本号
+        $params['invoice_dto_version'] = 'v2';
         
         return $params;
     }

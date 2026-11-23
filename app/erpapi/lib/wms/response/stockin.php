@@ -25,8 +25,7 @@
 class erpapi_wms_response_stockin extends erpapi_wms_response_abstract
 {
     /**
-     * wms.stockin.status_update
-     *
+     * 入库单业务，method：wms.stockin.status_update
      **/
     public function status_update($params){
         $this->__apilog['title']       = $this->__channelObj->wms['channel_name'].'入库单'.$params['stockin_bn'];
@@ -60,7 +59,9 @@ class erpapi_wms_response_stockin extends erpapi_wms_response_abstract
         if ($params['type']){
             switch($params['type']){
                 case 'CGRK':
+                case 'IN_PURCHASE':
                         $data['io_type'] = 'PURCHASE';
+                        
                         //SAP采购入库逻辑特殊处理
                         $oPo = app::get('purchase')->model("po")->db_dump(['po_bn' => $data['io_bn']], 'po_id,po_bn,po_status,branch_id');
                         if (!$oPo) {
@@ -73,7 +74,7 @@ class erpapi_wms_response_stockin extends erpapi_wms_response_abstract
                 default : $data['io_type']    = 'OTHER';break;     // 其他入库
             }
         }
-    
+        
         if (substr($data['io_bn'], 0, 2) == "DC" && app::get('warehouse')->is_installed()){ //转仓入库
             $data['io_type'] = 'WAREHOUSE';
         }
@@ -135,7 +136,7 @@ class erpapi_wms_response_stockin extends erpapi_wms_response_abstract
         }
 
         $data['items'] = $stockin_items;
-        // $data['shippackages'] = $items;
+        
         return $data;
     }
 
@@ -165,6 +166,7 @@ class erpapi_wms_response_stockin extends erpapi_wms_response_abstract
                 return [true, ['msg'=>'已经存在']];
             }
         }
+        
         $inData = [];
         $inData['stockin_bn'] = $params['stockin_bn'];
         $inData['entry_order_id'] = $params['entry_order_id'];
@@ -179,8 +181,11 @@ class erpapi_wms_response_stockin extends erpapi_wms_response_abstract
         if(!$id) {
             return [false, ['msg'=>'主表写入失败']];
         }
+        
         $this->_dealWMSItems($params, $id);
+        
         app::get('ome')->model('operation_log')->write_log('wms_stockin@console',$id, '接收成功：'.$wmsStatus);
+        
         return [true, ['msg'=>'处理完成']];
     }
 

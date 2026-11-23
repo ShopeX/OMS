@@ -50,6 +50,10 @@ class monitor_event_template
             'pos_o2oundelivery'        => 'POS现货订单未发货报警',
 
             'system_message'           => '系统消息通知',
+            'system_auth_expire'        => '店铺授权到期预警提醒',
+            'system_shop_token_invalid' => '店铺token失效提醒',
+            'system_shop_token_recover' => '店铺token恢复提醒',
+            
             'invoice_result_error'     => '发票处理失败报警',
             'order_360buy_delivery_error' => '【京东】订单挂起不可以发货',
             'store_freeze_abnormal'    => '库存或冻结消费异常报警',
@@ -332,6 +336,21 @@ TPL
             'system_message' => <<<TPL
 系统消息通知
     >消息内容：<font color="warning">{errmsg}</font>
+TPL
+,
+            'system_auth_expire' => <<<TPL
+店铺授权到期预警提醒
+    >店铺名：<font color="warning">{shop_name}</font>，所属平台：<font color="warning">{platform}</font> ，店铺授权到期时间：<font color="warning">{dead_line}</font>，预计剩余天数：<font color="warning">{days_left}</font>
+TPL
+,
+            'system_shop_token_invalid' => <<<TPL
+店铺token失效提醒
+    >店铺名：<font color="warning">{shop_name}</font>，所属平台：<font color="warning">{platform}</font> ，token过期时间：<font color="warning">{dead_line}</font>
+TPL
+,
+            'system_shop_token_recover' => <<<TPL
+店铺token恢复提醒
+    >店铺名：<font color="warning">{shop_name}</font>，所属平台：<font color="warning">{platform}</font> ，token到期时间：<font color="warning">{dead_line}</font>，预计剩余天数：<font color="warning">{days_left}</font>
 TPL
 ,
             'invoice_result_error' => <<<TPL

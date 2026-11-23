@@ -51,9 +51,6 @@ class invoice_finder_order{
             $cancelBtn = '';
         }
         
-        // 默认为空，不允许冲红按钮
-        $cancelBtn = '';
-        
         //开票
         $billingBtn = sprintf('<a href="javascript:if (confirm(\'是否确认进行开票操作？开票信息可在列表查看列展开处进行查看。\')){W.page(\'index.php?app=invoice&ctl=admin_order&act=doBilling&id=%s&order_id=%s&finder_id=%s\', $extend({method: \'get\'}, JSON.decode({})), this);}void(0);" target="">开票</a>', $id, $order_id, $finder_id);
         if (!kernel::single('desktop_user')->has_permission('make_invoice')) {

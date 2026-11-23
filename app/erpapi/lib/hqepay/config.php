@@ -1,26 +1,6 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/**
- * CONFIG
- *
- * @category
- * @package
- * @author chenping<chenping@shopex.cn>
- * @version $Id: Z
+ * CONFIG（物流跟踪 Matrix 参数：快递鸟 / 顺丰）
  */
 class erpapi_hqepay_config extends erpapi_config
 {
@@ -32,11 +12,15 @@ class erpapi_hqepay_config extends erpapi_config
      * @return void
      * @author
      **/
-
     public function get_query_params($method, $params)
     {
         if ($method == SHOP_LOGISTICS_BIND) {
             return array();
+        }
+
+        $node_type = 'kdn';
+        if (!empty($this->__channelObj->channel['node_type'])) {
+            $node_type = $this->__channelObj->channel['node_type'];
         }
 
         $query_params = array(
@@ -47,7 +31,7 @@ class erpapi_hqepay_config extends erpapi_config
             'certi_id'     => base_certificate::certi_id(),
             'v'            => '1',
             'from_node_id' => base_shopnode::node_id('ome'),
-            'node_type'    => 'kdn',
+            'node_type'    => $node_type,
             'to_node_id'   => $this->__channelObj->channel['node_id'],
         );
 
@@ -56,8 +40,6 @@ class erpapi_hqepay_config extends erpapi_config
 
         return $query_params;
     }
-
-    
 
     /**
      * 签名

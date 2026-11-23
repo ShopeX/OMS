@@ -1,20 +1,5 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/**
  * 移动端请求构造类
  *
  * @author xiayuanjun@shopex.cn
@@ -31,12 +16,6 @@ abstract class erpapi_store_wap_request_abstract
 
     public $__apilog;
 
-    /**
-     * 初始化
-     * @param erpapi_channel_abstract $channel channel
-     * @return mixed 返回值
-     */
-
     public function init(erpapi_channel_abstract $channel)
     {
         $this->__channelObj = $channel;
@@ -45,37 +24,33 @@ abstract class erpapi_store_wap_request_abstract
     }
 
     /**
-     * succ
-     * @param mixed $msg msg
-     * @param mixed $msgcode msgcode
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
+     * 成功输出
+     *
+     * @return void
+     * @author 
+     **/
     final public function succ($msg='', $msgcode='', $data=null)
     {
         return array('rsp'=>'success', 'msg'=>$msg, 'msg_code'=>$msgcode, 'data'=>$data);
     }
 
     /**
-     * error
-     * @param mixed $msg msg
-     * @param mixed $msgcode msgcode
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
+     * 失败输出
+     *
+     * @return void
+     * @author 
+     **/
     final public function error($msg, $msgcode, $data=null)
     {
         return array('rsp'=>'fail','msg'=>$msg,'msg_code'=>$msgcode,'data'=>$data);
     }
 
     /**
-     * 保存_api_fail
-     * @param mixed $obj_bn obj_bn
-     * @param mixed $obj_type obj_type
-     * @param mixed $method method
-     * @param mixed $err_msg err_msg
-     * @return mixed 返回操作结果
-     */
+     * 失败日志
+     *
+     * @return void
+     * @author 
+     **/
     final public function save_api_fail($obj_bn,$obj_type,$method,$err_msg)
     {
         $failApiModel = app::get('erpapi')->model('api_fail');
@@ -96,10 +71,10 @@ abstract class erpapi_store_wap_request_abstract
 
     /**
      * undocumented function
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     private function request($wms_class,$wms_method,$wms_params)
     {   
         try {
@@ -148,10 +123,10 @@ abstract class erpapi_store_wap_request_abstract
 
     /**
      * 发货单创建
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function delivery_create($sdf){
 
         $this->title = $this->__channelObj->wms['channel_name'] . '发货单添加';
@@ -185,10 +160,10 @@ abstract class erpapi_store_wap_request_abstract
 
     /**
      * 发货单暂停
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function delivery_pause($sdf){
         $this->title = $this->__channelObj->wms['channel_name'] . '发货单暂停';
         $this->original_bn = $sdf['outer_delivery_bn'];
@@ -198,10 +173,10 @@ abstract class erpapi_store_wap_request_abstract
 
     /**
      * 发货单暂停恢复
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function delivery_renew($sdf){
         $this->title = $this->__channelObj->wms['channel_name'] . '发货单恢复';
         $this->original_bn = $sdf['outer_delivery_bn'];
@@ -211,10 +186,10 @@ abstract class erpapi_store_wap_request_abstract
 
     /**
      * 发货单取消
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function delivery_cancel($sdf){
         $this->title = $this->__channelObj->wms['channel_name'] . '发货单撤销';
         $this->original_bn = $sdf['outer_delivery_bn'];
@@ -237,30 +212,30 @@ abstract class erpapi_store_wap_request_abstract
 
     /**
      * 商品添加
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function goods_add($sdf){
         return $this->error('接口方法不存在','w402');
     }
 
     /**
      * 商品编辑
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function goods_update($sdf){
         return $this->error('接口方法不存在','w402');
     }
 
     /**
      * 退换货单创建
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function reship_create($sdf){
         $this->title = $this->__channelObj->store['name'] . '的退换货单添加';
         $this->original_bn = $sdf['reship_bn'];
@@ -270,10 +245,10 @@ abstract class erpapi_store_wap_request_abstract
 
     /**
      * 退货单创建取消
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function reship_cancel($sdf){
 
 
@@ -288,60 +263,60 @@ abstract class erpapi_store_wap_request_abstract
 
     /**
      * 转储单创建
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function stockdump_create($sdf){
         return $this->error('接口方法不存在','w402');
     } 
 
     /**
      * 转储单取消
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function stockdump_cancel($sdf){
         return $this->error('接口方法不存在','w402');
     } 
 
     /**
      * 入库单创建
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function stockin_create($sdf){
         return $this->error('接口方法不存在','w402');
     }
 
     /**
      * 入库单取消
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function stockin_cancel($sdf){
         return $this->error('接口方法不存在','w402');
     } 
 
     /**
      * 出库单创建
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function stockout_create($sdf){
         return $this->error('接口方法不存在','w402');
     } 
 
     /**
      * 出库单取消
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function stockout_cancel($sdf){
         return $this->error('接口方法不存在','w402');
     } 
@@ -376,11 +351,6 @@ abstract class erpapi_store_wap_request_abstract
         return $this->error('接口方法不存在','w402');
     }
 
-        /**
-     * stockout_search
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function stockout_search($sdf)
     {
         return $this->error('接口方法不存在','w402');

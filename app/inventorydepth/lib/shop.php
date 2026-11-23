@@ -1,20 +1,5 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/**
  * @author chenping<chenping@shopex.cn>
  */
 
@@ -519,6 +504,18 @@ class inventorydepth_shop {
                 } else {
                     $goods_key = $val['num_iid'];
                 }
+
+                // 京东引凤对接：从 features 中提取 busiModel=1 → business_mode=brand_self
+                $business_mode = '';
+                if (!empty($val['features']) && is_array($val['features'])) {
+                    foreach ($val['features'] as $feature) {
+                        if ($feature['featureKey'] === 'busiModel' && $feature['featureValue'] === '1') {
+                            $business_mode = 'brand_self';
+                            break;
+                        }
+                    }
+                }
+
                 if (!isset($data[$goods_key])) {
                     $data[$goods_key] = [
                         'appove_status' => $val['appove_status'],
@@ -529,10 +526,11 @@ class inventorydepth_shop {
                 }
 
                 $data[$goods_key]['skus']['sku'][] = [
-                    'appove_status' => $val['appove_status'],
-                    'sku_id'        => $val['sku_id'],
-                    'outer_id'      => $val['oms_sm_bn']?$val['oms_sm_bn']:$val['sku_bn'],
-                    'num_iid'       => $goods_key,
+                    'appove_status'  => $val['appove_status'],
+                    'sku_id'         => $val['sku_id'],
+                    'outer_id'       => $val['oms_sm_bn'] ? $val['oms_sm_bn'] : $val['sku_bn'],
+                    'num_iid'        => $goods_key,
+                    'business_mode'  => $business_mode,
                 ];
             }
             
