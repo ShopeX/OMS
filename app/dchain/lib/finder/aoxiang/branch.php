@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * OMS仓库推送给翱象系统finder
  *
@@ -36,12 +37,6 @@ class dchain_finder_aoxiang_branch
     public $column_edit = '操作';
     public $column_edit_width = 130;
     public $column_edit_order = 1;
-    /**
-     * column_edit
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
-
     public function column_edit($row)
     {
         $finder_id = $_GET['_finder']['finder_id'];

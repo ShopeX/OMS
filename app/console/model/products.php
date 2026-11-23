@@ -17,11 +17,6 @@
 
 class console_mdl_products extends material_mdl_basic_material{
 
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
     public function table_name($real = false)
     {
         $table_name = 'sdb_material_basic_material';
@@ -29,10 +24,6 @@ class console_mdl_products extends material_mdl_basic_material{
         return $table_name;
 	}
 
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema(){
         return app::get('material')->model('basic_material')->get_schema();
     }

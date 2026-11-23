@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 class base_shell_buildin extends base_shell_prototype{
 
     var $vars;
@@ -243,12 +249,6 @@ EOF;
 		$this->install_app_by_install_queue($applist, $options);		
 		
 		$this->command_install_demodata('demodata');
-
-		try {
-			kernel::single('entermembercenter_stat')->reportInstall();
-		} catch (Throwable $e) {
-			// 安装统计上报失败不阻断 install_product
-		}
 	}
 	
 	var $command_install_demodata = "安装初始化数据";
@@ -285,6 +285,116 @@ EOF;
 			kernel::log('Import demo data');
 			kernel::single('base_demo')->init();
 			kernel::log('Application demodata installed... ok.');
+		}
+	}
+	
+	var $command_active_cetificate = "激活证书";
+	var $command_active_cetificate_options = array(
+	   'reset'=>array('title'=>'重新安装','short'=>'r'),
+		'options'=>array('title'=>'参数','short'=>'o','need_value'=>1),
+	);
+	function command_active_cetificate($app_id='activeceti'){
+		/** 安装完成后获取证书 **/
+		$args = func_get_args();
+		$options = $this->get_options();
+		$config = base_setup_config::deploy_info();
+		
+		if($options['options']){
+            parse_str($options['options'],$this->shell->input);
+        }
+		
+		$install_options = array();
+		$tmp_arr_options = array();		
+		foreach ((array)$config['active_ceti']['active_ceti_info'] as $key=>$active_data){				
+			$install_options[$key] = $active_data;			
+		}
+		
+		if(is_array($install_options) && count($install_options)>0 && !$this->shell->input[$app_id]){
+			$this->shell->input_option($install_options,$app_id);
+		}
+		
+		if ($this->shell->input[$app_id]){			
+			kernel::log('Active cetificate...');
+			$api_data = array(
+				'certi_app'=>'ent.reg',
+				'email'=>$this->shell->input[$app_id]['email'],
+				'password'=>$this->shell->input[$app_id]['password'],
+				'tel'=>$this->shell->input[$app_id]['tel'],
+				'province'=>$this->shell->input[$app_id]['province'],
+				'version'=>'1.0',
+				'format'=>'json',
+			);
+			ksort($api_data);
+			foreach($api_data as $key => $value){
+				$str.=$value;
+			}
+			base_enterprise::set_token();
+			$api_data['certi_ac'] = md5($str.base_enterprise::$token);
+			$http = kernel::single('base_httpclient');
+			$http->timeout = 6;
+			$result = $http->post(
+				SHOP_USER_ENTERPRISE_API,
+				$api_data);
+			$tmp_res = json_decode($result, 1);
+			if ($tmp_res['res'] == 'succ'){ 
+				$arr_enterprise = array(
+					'ent_id'=>$tmp_res['msg']['entid'],
+					'ent_ac'=>$tmp_res['msg']['password'],
+					'ent_email'=>$tmp_res['msg']['email'],
+				);
+				base_enterprise::set_enterprise_info($arr_enterprise);
+				// 申请证书
+				if (base_enterprise::ent_id()&&base_enterprise::ent_ac()&&base_enterprise::ent_email()){
+					base_certificate::register();
+					// 申请应用的节点
+					$this->command_active_node_id('ceti_node_id');
+				}
+				kernel::log('Application active cetificate... ok.');
+			}else{
+				kernel::log('Application active cetificate... failed.');
+			}
+		}
+	}
+	
+	var $command_active_node_id = "激活node_id";
+	var $command_active_node_id_options = array(
+	   'reset'=>array('title'=>'重新安装','short'=>'r'),
+		'options'=>array('title'=>'参数','short'=>'o','need_value'=>1),
+	);
+	function command_active_node_id($app_id='ceti_node_id'){
+		/** 证书获取后激活应用节点 **/
+		$config = base_setup_config::deploy_info();		
+		foreach($config['package']['app'] as $k=>$app){
+            $applist[] = $app['id'];
+        }
+		
+		foreach ($applist as $str_app_id){
+			$app_xml = kernel::single('base_xml')->xml2array(file_get_contents(app::get($str_app_id)->app_dir.'/app.xml'),'base_app');			
+			if (isset($app_xml['node_id'])&&$app_xml['node_id']=="true"&&!base_shopnode::node_id($str_app_id)){
+				// 获取节点.
+				base_shopnode::register($str_app_id);
+			}
+		}
+	}
+	
+	var $command_inactive_node_id = "取消激活node_id";
+	var $command_inactive_node_id_options = array(
+		'reset'=>array('title'=>'重新安装','short'=>'r'),
+		'options'=>array('title'=>'参数','short'=>'o','need_value'=>1),
+	);
+	function command_inactive_node_id($app_id='ceti_node_id'){
+		/** 证书获取后激活应用节点 **/
+		$config = base_setup_config::deploy_info();		
+		foreach($config['package']['app'] as $k=>$app){
+            $applist[] = $app['id'];
+        }
+		
+		foreach ($applist as $str_app_id){
+			$app_xml = kernel::single('base_xml')->xml2array(file_get_contents(app::get($str_app_id)->app_dir.'/app.xml'),'base_app');
+			if (isset($app_xml['node_id'])&&$app_xml['node_id']=="true"&&base_shopnode::node_id($str_app_id)){
+				// 获取节点.
+				base_shopnode::delete_node_id($str_app_id);
+			}
 		}
 	}
 
@@ -372,6 +482,8 @@ EOF;
 
     var $command_update = '升级应用程序';
     var $command_update_options = array(
+            'sync'=>array('title'=>'升级应用程序信息库'),
+            'sync-only'=>array('title'=>'仅升级应用程序信息库'),
             'force-download'=>array('title'=>'强制下载'),
             'download-only'=>array('title'=>'仅下载应用'),
             'ignore-download'=>array('title'=>'忽略下载'),
@@ -382,7 +494,15 @@ EOF;
         );
     function command_update(){
         $options = $this->get_options();
-        kernel::single('base_application_manage')->update_local();
+        if($options['sync'] || $options['sync-only']){
+            kernel::single('base_application_manage')->sync();
+        }else{
+            kernel::single('base_application_manage')->update_local();
+        }
+        
+        if($options['sync-only']){
+            return true;
+        }
         
         $args = func_get_args();
         if(!$args){

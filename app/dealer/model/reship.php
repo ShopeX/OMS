@@ -14,10 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 经销退货单model类
  *
- * @author
+ * @author 
  * @version 2024.04.24
  */
 class dealer_mdl_reship extends ome_mdl_reship
@@ -27,12 +28,6 @@ class dealer_mdl_reship extends ome_mdl_reship
         parent::__construct(app::get('ome'));
     }
     
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
-
     public function table_name($real=false)
     {
         $table_name = 'reship';

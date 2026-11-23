@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @author ykm 2015-12-16
  * @describe 电子面单请求前响应后数据处理
@@ -27,11 +28,6 @@ abstract class brush_electron_abstract {
     public $needRequestId;
     public $deliveryBnKey;
 
-    /**
-     * 初始化
-     * @param mixed $params 参数
-     * @return mixed 返回值
-     */
     final public function init($params){
         $this->requestTime = time();
         $this->channel = $params['channel'];
@@ -48,12 +44,6 @@ abstract class brush_electron_abstract {
         $ret = kernel::single('erpapi_router_request')->set('logistics', $this->channel['channel_id'])->$method($sdf);
         return $ret;
     }
-
-    /**
-     * isExistLogino
-     * @param mixed $delivery delivery
-     * @return mixed 返回值
-     */
 
     public function isExistLogino($delivery) {
         if($delivery['logi_no']) {
@@ -82,10 +72,6 @@ abstract class brush_electron_abstract {
     }
 
     //获取缓存池里的电子面单
-    /**
-     * 获取BufferWaybill
-     * @return mixed 返回结果
-     */
     public function getBufferWaybill() {
         $arrDelivery = array();
         foreach($this->delivery as $delivery) {
@@ -145,19 +131,10 @@ abstract class brush_electron_abstract {
     }
 
     //缓存池方式获取电子面单
-    /**
-     * bufferGetWaybill
-     * @return mixed 返回值
-     */
     public function bufferGetWaybill() {
         return $this->request('bufferRequest', null);
     }
 
-    /**
-     * deliveryToSdf
-     * @param mixed $delivery delivery
-     * @return mixed 返回值
-     */
     public function deliveryToSdf($delivery) {//各自实现
         $sdf = array();
 
@@ -241,11 +218,6 @@ abstract class brush_electron_abstract {
         return true;
     }
 
-    /**
-     * directCallback
-     * @param mixed $result result
-     * @return mixed 返回值
-     */
     public function directCallback($result) {
         $waybillCodeArr = array();
         if($result && is_array($result)) {
@@ -287,11 +259,6 @@ abstract class brush_electron_abstract {
     }
 
     //直连请求获取电子面单
-    /**
-     * directGetWaybill
-     * @param mixed $delivery_id ID
-     * @return mixed 返回值
-     */
     public function directGetWaybill($delivery_id) {
         if(empty($this->delivery)) {
             return array(
@@ -372,11 +339,6 @@ abstract class brush_electron_abstract {
     }
 
     //获取两条发货单明细
-    /**
-     * 获取DeliveryItems
-     * @param mixed $delivery_id ID
-     * @return mixed 返回结果
-     */
     public function getDeliveryItems($delivery_id)
     {
         static $deliveryItems = array(), $electronProductName = '';
@@ -397,11 +359,6 @@ abstract class brush_electron_abstract {
     }
 
     //获取两条订单明细
-    /**
-     * 获取OrderItems
-     * @param mixed $order_id ID
-     * @return mixed 返回结果
-     */
     public function getOrderItems($order_id) {
         static $orderItems = array(), $electronProductName = '';
         if(empty($deliveryItems)) {

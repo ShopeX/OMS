@@ -15,7 +15,12 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
 define('COLUMN_IN_HEAD', 'HEAD');
 define('COLUMN_IN_TAIL', 'TAIL');
 class desktop_finder_builder_prototype
@@ -48,11 +53,6 @@ class desktop_finder_builder_prototype
 
     private $_tab_view_data = null;
 
-    /**
-     * __construct
-     * @param mixed $controller controller
-     * @return mixed 返回值
-     */
     public function __construct($controller)
     {
         $this->controller = $controller;
@@ -71,11 +71,6 @@ class desktop_finder_builder_prototype
         }
     }
 
-    /**
-     * work
-     * @param mixed $full_object_name full_object_name
-     * @return mixed 返回值
-     */
     public function work($full_object_name)
     {
 
@@ -161,10 +156,6 @@ class desktop_finder_builder_prototype
         $this->main();
     }
 
-    /**
-     * 获取Columns
-     * @return mixed 返回结果
-     */
     public function getColumns()
     {
         if (!$this->columns) {
@@ -200,10 +191,6 @@ class desktop_finder_builder_prototype
         return $this->columns;
     }
 
-    /**
-     * 获取OrderBy
-     * @return mixed 返回结果
-     */
     public function getOrderBy()
     {
         if (isset($_POST['_finder']['orderBy']) || isset($_GET['_finder']['orderBy'])) {
@@ -226,10 +213,6 @@ class desktop_finder_builder_prototype
     }
 
     //页码处理
-    /**
-     * 获取PageLimit
-     * @return mixed 返回结果
-     */
     public function getPageLimit()
     {
         $user_id = $this->controller->user->user_id;
@@ -313,11 +296,6 @@ class desktop_finder_builder_prototype
         return $this->func_list;
     }
 
-    /**
-     * 获取_views
-     * @param mixed $source source
-     * @return mixed 返回结果
-     */
     public function get_views($source = '')
     {
 

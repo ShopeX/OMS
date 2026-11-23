@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @Author: xueding@shopex.cn
  * @Datetime: 2022/4/20
@@ -26,7 +27,6 @@ class dchain_branch_product
      * @param array $outer_data 请求优仓返回数据
      * @param array $dchainBranch 优仓信息
      */
-
     public function saveForeignSku($sku_data, $outer_data, $dchainBranch)
     {
         //result：0=全部失败，1=全部成功，2=部分成功
@@ -122,7 +122,7 @@ class dchain_branch_product
     
     /**
      * [回写库存成功]更新商货品关联信息
-     * 
+     *
      * @param int $node_id
      * @param array $bnList
      * @param string $error_msg

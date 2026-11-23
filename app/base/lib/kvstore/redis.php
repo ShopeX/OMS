@@ -15,6 +15,12 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
 
 /*
  * @package base
@@ -188,3 +194,4 @@ class base_kvstore_redis extends base_kvstore_abstract implements base_interface
     }
 
 }//End Class
+

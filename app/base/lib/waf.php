@@ -14,20 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: 2022/1/18 10:25:51
  * @describe: waf
  * ============================
  */
 class base_waf {
-
-    /**
-     * __construct
-     * @return mixed 返回值
-     */
 
     public function __construct()
     {
@@ -36,10 +32,10 @@ class base_waf {
 
     /**
      * 是否已配置MQ
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     protected function __is_config_mq()
     {
         if ($this->__mq_config && defined("MQ_HCHSAFE") && true == constant("MQ_HCHSAFE")) {

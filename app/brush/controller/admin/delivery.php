@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @author ykm 2015-11-19
  * @describe 特殊订单审核通过及发货
@@ -28,11 +29,6 @@ class brush_ctl_admin_delivery extends desktop_controller
         
         parent::__construct($app);
     }
-
-    /**
-     * _views
-     * @return mixed 返回值
-     */
 
     public function _views()
     {
@@ -64,10 +60,6 @@ class brush_ctl_admin_delivery extends desktop_controller
         return $sub_menu;
     }
 
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index()
     {
         $subMenu = $this->_views();
@@ -164,10 +156,6 @@ class brush_ctl_admin_delivery extends desktop_controller
         return $action;
     }
 
-    /**
-     * unDelivery
-     * @return mixed 返回值
-     */
     public function unDelivery()
     {
         $subMenu = $this->_views();
@@ -183,10 +171,6 @@ class brush_ctl_admin_delivery extends desktop_controller
         $this->finder('brush_mdl_undelivery', $params);
     }
     
-    /**
-     * delivery
-     * @return mixed 返回值
-     */
     public function delivery()
     {
         $arrDeliveryId = $this->_getSelectedId();
@@ -271,10 +255,6 @@ class brush_ctl_admin_delivery extends desktop_controller
         echo json_encode($retData);
     }
     
-    /**
-     * doDetail
-     * @return mixed 返回值
-     */
     public function doDetail()
     {
         if (empty($_POST['dly'])) {

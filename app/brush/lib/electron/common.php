@@ -14,18 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @author ykm 2017/7/14
  * @describe 刷单电子面单公用
  */
 class brush_electron_common extends brush_electron_abstract{
     private $batchWaybillChannel = array('taobao', 'pdd');
-    /**
-     * deliveryToSdf
-     * @param mixed $arrDelivery arrDelivery
-     * @return mixed 返回值
-     */
-
     public function deliveryToSdf($arrDelivery) {
         $sdf = parent::deliveryToSdf($arrDelivery);
         $num = $this->bufferGetWaybill();

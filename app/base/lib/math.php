@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 class base_math{
 
     var $operationDecimals = 0;   //运算精度
@@ -79,7 +85,7 @@ class base_math{
     }
 
     /**
-     * get 取得系统设定的 商品 价格进位方式后的数值
+     *get 取得系统设定的 商品 价格进位方式后的数值
      * return 进位后 商品 价格
      */
     function get( $number ){
@@ -87,7 +93,7 @@ class base_math{
     }
 
     /**
-     * getOperationNumber 取得系统设定的 运算 价格进位方式后的数值
+     *getOperationNumber 取得系统设定的 运算 价格进位方式后的数值
      * return 进位后 运算 价格
      */
     function getOperationNumber( $number ){

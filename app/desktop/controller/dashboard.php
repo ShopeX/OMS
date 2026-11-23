@@ -15,16 +15,17 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 class desktop_ctl_dashboard extends desktop_controller{
 
     var $workground = 'desktop_ctl_dashboard';
 
-    /**
-     * __construct
-     * @param mixed $app app
-     * @return mixed 返回值
-     */
     public function __construct($app)
     {
         parent::__construct($app);
@@ -33,6 +34,30 @@ class desktop_ctl_dashboard extends desktop_controller{
     }
     
     function index(){
+        //如果没有请求到证书，可以重新请求
+        if (!base_certificate::certi_id()|| !base_certificate::token()){
+            base_certificate::register();
+        }
+
+        if (!base_shopnode::node_id('ome')&&base_certificate::certi_id()&&base_certificate::token()){
+            $obj_buildin = kernel::single('base_shell_buildin');
+            $obj_buildin->command_active_node_id('ceti_node_id');
+        }
+
+        /* node.update 接口 start */
+        $nodeUpdateKey = 'ome_node_update'.base_shopnode::node_id('ome');
+        $nodeUpdate = app::get('ome')->getConf($nodeUpdateKey);
+        if(!$nodeUpdate || $nodeUpdate != 'true'){
+            $certi_id = base_certificate::certi_id();
+            $token = base_certificate::token();
+            $node_id = base_shopnode::node_id('ome');
+
+            if(!empty($certi_id) && !empty($token) && !empty($node_id)){
+                  base_certificate::update_node();
+            }
+        }
+        /* node.update 接口 end */
+
         $this->pagedata['tip'] = base_application_tips::tip(); 
         $user = kernel::single('desktop_user');
         $is_super = $user->is_super();
@@ -41,7 +66,6 @@ class desktop_ctl_dashboard extends desktop_controller{
         $group = (array)$group;
         
         //桌面挂件排序，用户自定义
-        $arr_dashboard_sort = [];
         //$user->get_conf( 'arr_dashboard_sort',$arr_dashboard_sort );
 
         foreach(kernel::servicelist('desktop.widgets') as $key => $obj){ 
@@ -87,7 +111,6 @@ class desktop_ctl_dashboard extends desktop_controller{
      * 桌面排序
      * 桌面挂件排序，用户自定义
      */
-
     public function dashboard_sort( )
     {
         $desktop_user = kernel::single('desktop_user');
@@ -179,24 +202,12 @@ class desktop_ctl_dashboard extends desktop_controller{
         $account_id = $this->user->get_id();
         $sdf = $users->dump($account_id,'*',array( ':account@pam'=>array('*'),'roles'=>array('*') ));
         $old_password = $sdf['account']['login_password'];
-        
-        $filter = [];
         $filter['account_id'] = $account_id;
         $filter['account_type'] = pam_account::get_account_type($this->app->app_id);
-        
-        // 查询账号是否hash加密
-        $is_hash256 = 1;
-        $accountInfo = app::get('pam')->model('account')->dump($filter, '*');
-        if($accountInfo){
-            $is_hash256 = intval($accountInfo['is_hash256']);
-        }
-        
-        // 查询账号是否存在
-        $filter['login_password'] = pam_encrypt::get_encrypted_password(trim($_POST['old_login_password']),pam_account::get_account_type($this->app->app_id), $is_hash256);
-        $pass_row = app::get('pam')->model('account')->getList('account_id',$filter);
+        $filter['login_password'] = pam_encrypt::get_encrypted_password(trim($_POST['old_login_password']),pam_account::get_account_type($this->app->app_id));
+         $pass_row = app::get('pam')->model('account')->getList('account_id',$filter);
         if($_POST){
             $this->begin();
-            $error_msg = '';
             $loginPassword = pam_encrypt::get_encrypted_password(trim($_POST['new_login_password']),pam_account::get_account_type($this->app->app_id));
             if(!$pass_row){
                 $this->end(false, app::get('desktop')->_('原始密码不正确'));
@@ -215,10 +226,6 @@ class desktop_ctl_dashboard extends desktop_controller{
             }else{
                 $_POST['pam_account']['account_id'] = $account_id;
                 $_POST['pam_account']['login_password'] = $loginPassword;
-                
-                // 是否hash加密(固定为：1)
-                $_POST['pam_account']['is_hash256'] = '1';
-                
                 $users->save($_POST);
                 
                 $desktop_users = app::get('desktop')->model('users');
@@ -270,15 +277,26 @@ class desktop_ctl_dashboard extends desktop_controller{
         }
     }
     
-    /**
-     * 获取_license_html
-     * @return mixed 返回结果
-     */
     public function get_license_html()
     {
         $this->display('license.html');
     }
     
+    public function application(){
+        $certificate = kernel::single('base_certificate');
+        if($certificate->register()===false)
+        {
+            header('Content-Type:text/jcmd; charset=utf-8');
+            echo '{error:"'.app::get('desktop')->_("申请失败").'",_:null}';
+            //$this->end(false,app::get('desktop')->_('申请失败'));
+        }
+        else
+        {
+            header('Content-Type:text/jcmd; charset=utf-8');
+            echo '{success:"'.app::get('desktop')->_("申请成功").'",_:null}';
+            //$this->end(true,app::get('desktop')->_('申请成功'));
+        }
+    }
 
     /**
      * 完善帐号信息

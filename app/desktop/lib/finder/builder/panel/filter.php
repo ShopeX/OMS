@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 class desktop_finder_builder_panel_filter extends desktop_finder_builder_prototype{
     protected $vue_mode = false;
 
@@ -42,36 +48,18 @@ class desktop_finder_builder_panel_filter extends desktop_finder_builder_prototy
         $this->controller->pagedata['panel_html'] = $html;
     }
 
-    /**
-     * 设置Id
-     * @param mixed $id ID
-     * @return mixed 返回操作结果
-     */
     public function setId($id) {
         $this->panelId = $id;
     }
     
-    /**
-     * 获取Id
-     * @return mixed 返回结果
-     */
     public function getId() {
         return $this->panelId;
     }
     
-    /**
-     * 设置File
-     * @param mixed $file file
-     * @return mixed 返回操作结果
-     */
     public function setFile($file) {
         $this->file = $file;
     }
     
-    /**
-     * 获取File
-     * @return mixed 返回结果
-     */
     public function getFile() {
         return $this->file;
     }

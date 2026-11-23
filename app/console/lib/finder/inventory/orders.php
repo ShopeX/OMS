@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 唯品会销售单订单finder
  *
@@ -47,12 +48,6 @@ class console_finder_inventory_orders
 //    }
     
     var $detail_basic = '基本信息';
-    /**
-     * detail_basic
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
-
     public function detail_basic($id)
     {
         $render = app::get($this->_appName)->render();
@@ -89,11 +84,6 @@ class console_finder_inventory_orders
     }
     
     var $detail_items = '销售明细';
-    /**
-     * detail_items
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function detail_items($id)
     {
         $render = app::get('console')->render();
@@ -124,11 +114,6 @@ class console_finder_inventory_orders
     }
     
     var $detail_log = '操作日志';
-    /**
-     * detail_log
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function detail_log($id)
     {
         $render = app::get($this->_appName)->render();

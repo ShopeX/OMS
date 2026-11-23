@@ -17,10 +17,6 @@
 
 #第三方应用中心
 class channel_ctl_admin_logistics_examin extends desktop_controller{
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index(){
     	#检测是否需要上传模板
     	$need_upload_temple = kernel::single('channel_func')->check_need_upload_temple();
@@ -49,10 +45,6 @@ class channel_ctl_admin_logistics_examin extends desktop_controller{
         $this->pagedata['total_warehouse_amount'] = count($all_branch_id);
         $this->page('admin/logistics/setting.html');
     }
-    /**
-     * ajax_get_used_times
-     * @return mixed 返回值
-     */
     public function ajax_get_used_times(){
     	$examin_service_info = kernel::single('ome_addedservice')->get_service('examin');
     	$used_times = $examin_service_info['used_times']?$examin_service_info['used_times']:'0';#总使用次数
@@ -66,10 +58,6 @@ class channel_ctl_admin_logistics_examin extends desktop_controller{
     	echo json_encode(array('used_times'=>$used_times,'available_times'=>$available_times));
     }
     #以发货网店为单位，进行模板上传
-    /**
-     * ajax_warehouse_template_upload
-     * @return mixed 返回值
-     */
     public function ajax_warehouse_template_upload(){
         $warehouse_id = $_POST['warehouse_id'];
         $exrecommend_souce = $_POST['exrecommend_souce']?$exrecommend_souce:'hqepay';
@@ -83,10 +71,6 @@ class channel_ctl_admin_logistics_examin extends desktop_controller{
         }
     }
     #添加体检
-    /**
-     * ajax_start_examin
-     * @return mixed 返回值
-     */
     public function ajax_start_examin(){
         $obj_examin_report = app::get('channel')->model('logistics_examinreport');
         $rs =  $obj_examin_report->getList('*',array('is_first_examin'=>'true'));

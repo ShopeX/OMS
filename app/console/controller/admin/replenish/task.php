@@ -14,19 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 门店自动补货任务
- *
+ * 
  * @author wangbiao<wangbiao@shopex.cn>
  * @version $Id: Z
  */
 class console_ctl_admin_replenish_task extends desktop_controller
 {
-    /**
-     * index
-     * @return mixed 返回值
-     */
-
     public function index()
     {
         $base_filter = array();
@@ -70,10 +66,6 @@ class console_ctl_admin_replenish_task extends desktop_controller
         $this->finder('console_mdl_replenish_task', $params);
     }
     
-    /**
-     * 添加
-     * @return mixed 返回值
-     */
     public function add()
     {
         $reTaskObj = app::get('console')->model('replenish_task');
@@ -125,11 +117,6 @@ class console_ctl_admin_replenish_task extends desktop_controller
         $this->page('admin/replenish/task_add.html');
     }
     
-    /**
-     * edit
-     * @param mixed $task_id ID
-     * @return mixed 返回值
-     */
     public function edit($task_id)
     {
         $reTaskObj = app::get('console')->model('replenish_task');
@@ -198,10 +185,6 @@ EOF;
         $this->page('admin/replenish/task_add.html');
     }
     
-    /**
-     * 保存
-     * @return mixed 返回操作结果
-     */
     public function save()
     {
         $this->begin($this->url.'&act=index');
@@ -464,11 +447,6 @@ EOF;
         $this->page('admin/replenish/task_dispose.html');
     }
     
-    /**
-     * doDispose
-     * @param mixed $sug_id ID
-     * @return mixed 返回值
-     */
     public function doDispose($sug_id)
     {
         $suggestObj = app::get('console')->model('replenish_suggest');

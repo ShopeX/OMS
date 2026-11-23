@@ -30,12 +30,16 @@ class crm_ctl_admin_setting extends desktop_controller{
             $apply['node_idnode_id'] = $this->Node_id;
         $apply['sess_id'] = $sess_id;
         $str = '';
-
-		$apply['certi_ac'] = base_certificate::getCertiAC($apply);
+        ksort($apply);
+        foreach ($apply as $key => $value) {
+            $str.=$value;
+        }
+        $apply['certi_ac'] = md5($str . $token);
         $Ofunc = kernel::single('ome_rpc_func');
         $app_xml = $Ofunc->app_xml();
         $api_v = $app_xml['api_ver'];
         $callback = kernel::base_url(true).kernel::url_prefix().'/openapi/crm.channel/crm_callback/';
+        //$api_url = "http://192.168.132.19/index.php/api";
         $api_url = kernel::base_url(true).kernel::url_prefix()."/api";
 
         $params = array(
@@ -56,10 +60,6 @@ class crm_ctl_admin_setting extends desktop_controller{
         $this->display('admin/system/apply_terminal.html');
     }    
     #crm绑定与配置页面
-    /**
-     * basic
-     * @return mixed 返回值
-     */
     public function basic(){
         $obj_channel = app::get('channel')->model('channel');
         $oLog = app::get('ome')->model('operation_log');
@@ -113,10 +113,6 @@ class crm_ctl_admin_setting extends desktop_controller{
 
 
     #提交基本配置时，路由到此
-    /**
-     * 添加
-     * @return mixed 返回值
-     */
     public function add(){
         $oLog = app::get('ome')->model('operation_log');
         $post = kernel::single('base_component_request')->get_post();
@@ -178,10 +174,6 @@ class crm_ctl_admin_setting extends desktop_controller{
         $oLog->write_log('crm_on@ome',0,"开启CRM赠品应用");
         $this->end(true,'保存成功');
     }
-    /**
-     * options
-     * @return mixed 返回值
-     */
     public function options(){
        return array(
                    'gift'=>array('off','on'),

@@ -17,11 +17,6 @@
 
 class dealer_aftersale
 {
-    /**
-     * 获取PlaOrderObjectsItems
-     * @param mixed $data 数据
-     * @return mixed 返回结果
-     */
     public function getPlaOrderObjectsItems($data) {
         $returnData = array();
         $filter['plat_order_id'] = $data['plat_order_id'];

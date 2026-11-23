@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
 * 出入库发起通知方法
 * 数据组织
@@ -26,7 +27,6 @@ class console_iostockdata{
     * 组织入库详情和明细
     * @iso_id 出入库单号
     */
-
     function get_iostockData($iso_id){
         $oIso = app::get('taoguaniostockorder')->model("iso");
         $iostockObj = kernel::single('siso_receipt_iostock');
@@ -137,9 +137,9 @@ class console_iostockdata{
     }
 
    
-   /**
+    /**
     * 调拔入库
-    * 
+    *
     */
    function allocate_out($iso_id)
    {
@@ -241,21 +241,21 @@ class console_iostockdata{
    }
 
     /**
-     * 根据仓库编号返回仓库名称
-     * 
-     */
+    * 根据仓库编号返回仓库名称
+    *
+    */
     function getBranchBybn($branch_bn){
         $oBranch = app::get('ome')->model('branch');
         $branch = $oBranch->db->selectrow("select branch_id,wms_id,name,type FROM sdb_ome_branch WHERE branch_bn='$branch_bn'");
         return $branch;
     }
     /**
-     * 获取仓库详情
-     * @access public
-     * @param  $branch_id 仓库ID
-     * 
-     * @return Array 
-     */
+    * 获取仓库详情
+    * @access public
+    * @param  $branch_id 仓库ID
+    * 
+    * @return Array 
+    */
     function getBranchByid($branch_id){
         $oBranch = app::get('ome')->model('branch');
         $branch_damaged = $oBranch->getlist('type,branch_id,branch_bn,storage_code,owner_code,wms_id',array('branch_id' => $branch_id),0,1);
@@ -265,12 +265,12 @@ class console_iostockdata{
     }
 
     /**
-     * 获取仓库详情
-     * @access public
-     * @param  $branch_id 仓库ID
-     * 
-     * @return Array 
-     */
+    * 获取仓库详情
+    * @access public
+    * @param  $branch_id 仓库ID
+    * 
+    * @return Array 
+    */
     function getBranchByStorageCode($storage_code){
         $oBranch = app::get('ome')->model('branch');
         $branchInfo = $oBranch->dump(array('storage_code' => $storage_code),'type,branch_id,branch_bn,storage_code');
@@ -279,11 +279,11 @@ class console_iostockdata{
     }
 
     /**
-     * 发起转储单创建
-     * @access public
-     * 
-     * @return 
-     */
+    * 发起转储单创建
+    * @access public
+    *
+    * @return 
+    */
     function notify_stockdump($stockdump_id,$method){
         
         ini_set('memory_limit','512M');
@@ -380,8 +380,8 @@ class console_iostockdata{
  
 
     /**
-     * 获取外部仓库信息
-     */
+    * 获取外部仓库信息
+    */
     function getExtrabranch($extrabranch_id,$iostock_type,$type_id=0){
         if (in_array($type_id,array('4','40'))) {
             $oExtrabranch = app::get('ome')->model('branch');

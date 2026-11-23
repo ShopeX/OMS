@@ -26,10 +26,10 @@ class base_logger
 
     /**
      * 构造器
-     * 
+     *
      * @param string $name 通道名称
      * @return void
-     * */
+     **/
     public function __construct($name = 'default')
     {
         // Create the logger
@@ -49,9 +49,9 @@ class base_logger
 
     /**
      * Adds a log record at the INFO level.
-     * 
+     *
      * This method allows for compatibility with common interfaces.
-     * 
+     *
      * @param  string $message The log message
      * @param  array  $context The log context
      * @return bool   Whether the record has been processed
@@ -63,9 +63,9 @@ class base_logger
 
     /**
      * Adds a log record at the DEBUG level.
-     * 
+     *
      * This method allows for compatibility with common interfaces.
-     * 
+     *
      * @param  string $message The log message
      * @param  array  $context The log context
      * @return bool   Whether the record has been processed
@@ -77,9 +77,9 @@ class base_logger
 
     /**
      * Adds a log record at the NOTICE level.
-     * 
+     *
      * This method allows for compatibility with common interfaces.
-     * 
+     *
      * @param  string $message The log message
      * @param  array  $context The log context
      * @return bool   Whether the record has been processed
@@ -91,9 +91,9 @@ class base_logger
 
     /**
      * Adds a log record at the WARNING level.
-     * 
+     *
      * This method allows for compatibility with common interfaces.
-     * 
+     *
      * @param  string $message The log message
      * @param  array  $context The log context
      * @return bool   Whether the record has been processed
@@ -105,9 +105,9 @@ class base_logger
 
     /**
      * Adds a log record at the ERROR level.
-     * 
+     *
      * This method allows for compatibility with common interfaces.
-     * 
+     *
      * @param  string $message The log message
      * @param  array  $context The log context
      * @return bool   Whether the record has been processed
@@ -119,9 +119,9 @@ class base_logger
 
     /**
      * Adds a log record at the CRITICAL level.
-     * 
+     *
      * This method allows for compatibility with common interfaces.
-     * 
+     *
      * @param  string $message The log message
      * @param  array  $context The log context
      * @return bool   Whether the record has been processed
@@ -133,9 +133,9 @@ class base_logger
 
     /**
      * Adds a log record at the ALERT level.
-     * 
+     *
      * This method allows for compatibility with common interfaces.
-     * 
+     *
      * @param  string $message The log message
      * @param  array  $context The log context
      * @return bool   Whether the record has been processed
@@ -147,9 +147,9 @@ class base_logger
 
     /**
      * Adds a log record at the EMERGENCY level.
-     * 
+     *
      * This method allows for compatibility with common interfaces.
-     * 
+     *
      * @param  string $message The log message
      * @param  array  $context The log context
      * @return bool   Whether the record has been processed

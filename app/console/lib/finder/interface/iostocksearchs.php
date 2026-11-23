@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 class console_finder_interface_iostocksearchs extends eccommon_analysis_abstract implements eccommon_analysis_interface{
     protected $vue_mode = false;
 

@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
  *
@@ -14,6 +13,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ */
+
+/**
+ * ============================
+ * @Author:   yaokangming
+ * @Version:  1.0 
+ * @DateTime: 库存调整单
+ * @describe: 类
+ * ============================
  */
 class console_finder_adjust {
     protected $vue_mode = false;

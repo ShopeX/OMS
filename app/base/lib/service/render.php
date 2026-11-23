@@ -15,14 +15,16 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 class base_service_render 
 {
-    /**
-     * pre_display
-     * @param mixed $content content
-     * @return mixed 返回值
-     */
     public function pre_display(&$content) 
     {
         $content = base_storager::image_storage($content);

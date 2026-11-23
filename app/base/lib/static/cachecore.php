@@ -41,7 +41,6 @@ class cachecore {
      * @access static public
      * @return void
      */
-
     static public function init() 
     {
         if(defined('CACHE_STORAGE') && constant('CACHE_STORAGE')){
@@ -59,10 +58,6 @@ class cachecore {
      * @access static public
      * @return boolean
      */
-    /**
-     * enable
-     * @return mixed 返回值
-     */
     static public function enable() 
     {
         return self::$_enable;
@@ -73,7 +68,6 @@ class cachecore {
      * @access static public
      * @return object
      */
-
     static public function instance() 
     {
     	if(is_null(self::$_instance_name)) {
@@ -93,22 +87,14 @@ class cachecore {
      * @access static public
      * @return string
      */
-    /**
-     * 获取_key
-     * @param mixed $key key
-     * @return mixed 返回结果
-     */
     static public function get_key($key) 
     {
         return md5(sprintf('%s_%s', KV_PREFIX, $key));
     }//End Function
 
     /**
-     * fetch
-     * @param mixed $key key
-     * @return mixed 返回值
+     * 获取缓存
      */
-
     static public function fetch($key) {
 
         if(self::instance()->fetch(self::get_key($key), $data)){
@@ -123,13 +109,8 @@ class cachecore {
     }
     
     /**
-     * store
-     * @param mixed $key key
-     * @param mixed $value value
-     * @param mixed $ttl ttl
-     * @return mixed 返回值
+     * 获取缓存
      */
-
     static public function store($key, $value, $ttl=0) {
 
         $data = array('content' => $value);
@@ -138,11 +119,8 @@ class cachecore {
     } 
 
     /**
-     * 删除
-     * @param mixed $key key
-     * @return mixed 返回值
-     */
-
+    * 删除方法
+    */
     static public function delete($key) {
         $data = array('content' => '');
         $data['expires'] = 1;       //todo: 设置过期时间
@@ -157,13 +135,11 @@ class cachecore {
     }
 
     /**
-     * 设置cr
-     * @param mixed $key key
-     * @param mixed $value value
-     * @param mixed $ttl ttl
-     * @return mixed 返回操作结果
+     * 初始化自增ID值
+     *
+     * @return boolean
+     * @author 
      */
-
     static public function setcr($key, $value, $ttl=0)
     {
         if (method_exists(self::instance(),'setcr')) {
@@ -173,10 +149,6 @@ class cachecore {
         return false;
     }
 
-    /**
-     * supportUUID
-     * @return mixed 返回值
-     */
     static public function supportUUID(){
         
         return self::instance()->supportUUID();
@@ -189,7 +161,6 @@ class cachecore {
      * @access public
      * @return int
      */
-
     static public function increment($key, $offset=1) 
     {
         if (self::supportUUID() && method_exists(self::instance(),'increment')) {
@@ -205,12 +176,6 @@ class cachecore {
      * @var int $offset
      * @access public
      * @return int
-     */
-    /**
-     * decrement
-     * @param mixed $key key
-     * @param mixed $offset offset
-     * @return mixed 返回值
      */
     static public function decrement($key, $offset=1) 
     {

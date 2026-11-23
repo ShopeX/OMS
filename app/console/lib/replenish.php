@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 自动补货任务Lib类
  *
@@ -25,13 +26,12 @@ class console_replenish
     
     /**
      * 确认生成补货单
-     * 
+     *
      * @param int $cursor_id
      * @param array $params
      * @param string $error_msg
      * @return boolean
      */
-
     public function disposeReplenish(&$cursor_id, $params, &$error_msg=null)
     {
         set_time_limit(0);

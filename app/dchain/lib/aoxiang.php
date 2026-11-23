@@ -14,9 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 翱象系统Lib类
- *
+ * 
  * @author wangbiao@shopex.cn
  * @version 2023.01.18
  */
@@ -24,12 +25,11 @@ class dchain_aoxiang extends dchain_abstract
 {
     /**
      * 是否为签约的店铺
-     * 
+     *
      * @param $shop_id 店铺ID
      * @param $shop_type 店铺类型
      * @return bool
      */
-
     public function isSignedShop($shop_id, $shop_type='')
     {
         //支持的店铺类型
@@ -72,7 +72,7 @@ class dchain_aoxiang extends dchain_abstract
     
     /**
      * 仓库新建、更新时触发自动推送给翱象系统
-     * 
+     *
      * @param $branch_id
      * @return void
      */
@@ -154,7 +154,7 @@ class dchain_aoxiang extends dchain_abstract
     
     /**
      * 仓库新建、更新时触发自动推送给翱象系统
-     * 
+     *
      * @param $branch_id
      * @return void
      */
@@ -439,7 +439,7 @@ class dchain_aoxiang extends dchain_abstract
     /**
      * 删除翱象系统里OMS同步的仓库
      * @todo：支持批量删除,每次最多同步50条;
-     * 
+     *
      * @param array $dataList
      * @param string $operation
      * @return array
@@ -598,7 +598,7 @@ class dchain_aoxiang extends dchain_abstract
     
     /**
      * 物流公司新建、更新时触发自动推送给翱象系统
-     * 
+     *
      * @param $branch_id
      * @return void
      */
@@ -667,7 +667,7 @@ class dchain_aoxiang extends dchain_abstract
     
     /**
      * 添加物流公司分配关系
-     * 
+     *
      * @param array $corpIds
      * @param string $shop_id
      * @return bool
@@ -728,7 +728,7 @@ class dchain_aoxiang extends dchain_abstract
     /**
      * 同步物流公司给到翱象系统
      * @todo：支持批量同步,每次最多同步50条;
-     * 
+     *
      * @param array $dataList
      * @param string $operation
      * @return array
@@ -852,7 +852,7 @@ class dchain_aoxiang extends dchain_abstract
     /**
      * 删除翱象系统里OMS同步的物流公司
      * @todo：支持批量删除,每次最多同步50条;
-     * 
+     *
      * @param array $dataList
      * @param string $operation
      * @return array
@@ -981,7 +981,7 @@ class dchain_aoxiang extends dchain_abstract
 
     /**
      * 获取翱象系统绑定的仓库库存
-     * 
+     *
      * @param array $stocks
      * @param array $shopInfo
      * @return array
@@ -1039,7 +1039,7 @@ class dchain_aoxiang extends dchain_abstract
     
     /**
      * 查询黑白名单快递
-     * 
+     *
      * @param $sdf
      * @param $error_msg
      * @return void
@@ -1245,7 +1245,7 @@ class dchain_aoxiang extends dchain_abstract
 
     /**
      * 获取回写给翱象系统的库存数据
-     * 
+     *
      * @param array $stocks
      * @param array $shopInfo
      * @return array
@@ -1303,7 +1303,7 @@ class dchain_aoxiang extends dchain_abstract
 
     /**
      * 获取商品指定仓库的库存
-     * 
+     *
      * @param $product_bn
      * @param $shop_bn
      * @param $shop_id
@@ -1352,7 +1352,7 @@ class dchain_aoxiang extends dchain_abstract
     
     /**
      * 仓库自动分配队列任务
-     * 
+     *
      * @param $cursor_id
      * @param $params
      * @param $error_msg
@@ -1392,7 +1392,7 @@ class dchain_aoxiang extends dchain_abstract
     
     /**
      * 物流公司自动分配队列任务
-     * 
+     *
      * @param $cursor_id
      * @param $params
      * @param $error_msg
@@ -1457,7 +1457,7 @@ class dchain_aoxiang extends dchain_abstract
     
     /**
      * 库存回写队列任务
-     * 
+     *
      * @param $cursor_id
      * @param $params
      * @param $error_msg

@@ -14,18 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @author ykm 2015-12-29
  * @describe 特殊订单未发货导出
  */
+
 class brush_mdl_undelivery extends brush_mdl_delivery {
     public $has_export_cnf = false;
-
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
 
     public function table_name($real=false)
     {
@@ -37,22 +33,11 @@ class brush_mdl_undelivery extends brush_mdl_delivery {
         }
     }
 
-    /**
-     * exportName
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function exportName(&$data)
     {
         $data['name'] = '特殊订单快速发货'.date('Ymd');
     }
 
-    /**
-     * io_title
-     * @param mixed $filter filter
-     * @param mixed $ioType ioType
-     * @return mixed 返回值
-     */
     public function io_title( $filter=null,$ioType='csv'){
         switch( $ioType ){
             case 'csv':
@@ -67,14 +52,6 @@ class brush_mdl_undelivery extends brush_mdl_delivery {
         return $this->ioTitle[$ioType][$filter];
     }
 
-    /**
-     * fgetlist_csv
-     * @param mixed $data 数据
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $exportType exportType
-     * @return mixed 返回值
-     */
     public function fgetlist_csv(&$data,$filter,$offset,$exportType = 1)
     {
         $this->export_flag = true;
@@ -105,24 +82,10 @@ class brush_mdl_undelivery extends brush_mdl_delivery {
         return false;
     }
     
-    /**
-     * prepared_import_csv
-     * @return mixed 返回值
-     */
     public function prepared_import_csv(){
         $this->ioObj->cacheTime = time();
     }
 
-    /**
-     * prepared_import_csv_row
-     * @param mixed $row row
-     * @param mixed $title title
-     * @param mixed $tmpl tmpl
-     * @param mixed $mark mark
-     * @param mixed $newObjFlag newObjFlag
-     * @param mixed $msg msg
-     * @return mixed 返回值
-     */
     public function prepared_import_csv_row($row,&$title,&$tmpl,&$mark,&$newObjFlag,&$msg)
     {
         if(empty($row)) return false;
@@ -219,10 +182,6 @@ class brush_mdl_undelivery extends brush_mdl_delivery {
         return null;
     }
 
-    /**
-     * finish_import_csv
-     * @return mixed 返回值
-     */
     public function finish_import_csv()
     {
         $oQueue = app::get('base')->model('queue');
@@ -240,13 +199,6 @@ class brush_mdl_undelivery extends brush_mdl_delivery {
         $oQueue->flush();
     }
 
-    /**
-     * import_run
-     * @param mixed $cursor_id ID
-     * @param mixed $params 参数
-     * @param mixed $errormsg errormsg
-     * @return mixed 返回值
-     */
     public function import_run($cursor_id,$params,$errormsg)
     {
         $now = time();

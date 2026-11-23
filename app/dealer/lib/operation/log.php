@@ -19,10 +19,6 @@ class dealer_operation_log
 {
 
     //操作日志
-    /**
-     * 获取_operations
-     * @return mixed 返回结果
-     */
     public function get_operations()
     {
         $operations = array(

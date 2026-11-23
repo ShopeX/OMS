@@ -15,7 +15,12 @@
  * limitations under the License.
  */
 
-
+/**
+ * 接口字段映射模型
+ * 
+ * @copyright shopex.cn 2025.01.01
+ * @author system
+ */
 class desktop_mdl_interfacefield_mapper extends dbeav_model
 {
     /**

@@ -17,16 +17,16 @@
 
 class console_store_freezelog{
     /**
-     * 记录库存日志
-     * @access public
-     * @param Int $product_id 货品ID
-     * @param String $shop_id 店铺ID
-     * @param int $branch_id 仓库ID
-     * @param Int $freeze_store 预占库存量
-     * @param int $operator 运算符:0代表减少,1代表增加
-     * @param array $log_data 日志数组array('original_id'=>'单据id','original_type'=>'单据类型'，'memo'=>'备注') 三个字段都必填
-     * @return bool
-     */
+    * 记录库存日志
+    * @access public
+    * @param Int $product_id 货品ID
+    * @param String $shop_id 店铺ID
+    * @param int $branch_id 仓库ID
+    * @param Int $freeze_store 预占库存量
+    * @param int $operator 运算符:0代表减少,1代表增加
+    * @param array $log_data 日志数组array('original_id'=>'单据id','original_type'=>'单据类型'，'memo'=>'备注') 三个字段都必填
+    * @return bool
+    */
     public function add_log($product_id,$shop_id,$branch_id,$freeze_store,$operator,$log_data=array()){
         $logObj = app::get('console')->model('store_freeze_log');
         $log_data['original_type'] = $this->get_original_type($log_data['original_type']);
@@ -50,11 +50,6 @@ class console_store_freezelog{
         return true;
     }
 
-    /**
-     * 获取_original_type
-     * @param mixed $type type
-     * @return mixed 返回结果
-     */
     public function get_original_type($type){
         $data = array(
             'return_product'=>0,#售后
@@ -70,11 +65,6 @@ class console_store_freezelog{
         return $data[$type];
     }
    //第一个参数（reship）是model名称，第二个参数（reship_id）是主键名称，第三个参数（reship_bn）是bn
-    /**
-     * 获取_original_id
-     * @param mixed $type type
-     * @return mixed 返回结果
-     */
     public function get_original_id($type){
         $data = array(
             '0'=>array('return_product','return_id','return_bn'),#退货

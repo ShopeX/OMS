@@ -14,13 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ShopEx licence
  *
  * @IP地址白名单
  * @2016-11-16
  * @liwei@shopex.cn
- *
+ * 
  */
 
 use app\desktop\lib\annotation\RequirePermission;

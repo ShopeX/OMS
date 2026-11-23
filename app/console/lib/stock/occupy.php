@@ -17,11 +17,6 @@
 
 class console_stock_occupy
 {
-    /**
-     * 添加
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function add($data) {
         
         $items = $data['items'];
@@ -115,11 +110,6 @@ class console_stock_occupy
 
     
 
-    /**
-     * 删除OrderOccupy
-     * @param mixed $order_bn order_bn
-     * @return mixed 返回值
-     */
     public function deleteOrderOccupy($order_bn) {
       
         $freezeMdl  = app::get('material')->model('basic_material_stock_artificial_freeze');
@@ -155,22 +145,12 @@ class console_stock_occupy
 
    
 
-    /**
-     * 获取BranchId
-     * @param mixed $warehouseno warehouseno
-     * @return mixed 返回结果
-     */
     public function getBranchId($warehouseno) {
         $branchs = app::get('ome')->model('branch_relation')->dump(array ('relation_branch_bn'=>$warehouseno,'type' => 'jdlvmi'));
         return $branchs;
 
     }
 
-    /**
-     * 获取OrderFreeze
-     * @param mixed $order_bn order_bn
-     * @return mixed 返回结果
-     */
     public function getOrderFreeze($order_bn){
         $freezeObj  = app::get('material')->model('basic_material_stock_artificial_freeze');
         $freeze_list = $freezeObj->db_dump(array('original_bn'=>$order_bn,'original_type'=>'jdlvmiorder','status'=>'1'),'bmsaf_id');

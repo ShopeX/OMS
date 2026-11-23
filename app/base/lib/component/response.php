@@ -15,6 +15,13 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 /*
  * @package component
@@ -74,7 +81,6 @@ class base_component_response
      * @param boolean $replace
      * @return self
      */
-
     public function set_header($name, $value, $replace=false) 
     {
         $val = $this->normalize_header($value);
@@ -101,12 +107,6 @@ class base_component_response
      * @param array &$header
      * @return boolean
      */
-    /**
-     * 获取_header
-     * @param mixed $name name
-     * @param mixed $header header
-     * @return mixed 返回结果
-     */
     public function get_header($name, &$header) 
     {
         foreach($this->_headers AS $row){
@@ -122,7 +122,6 @@ class base_component_response
      * get all headers
      * @return array
      */
-
     public function get_headers() 
     {
         return $this->_headers;
@@ -131,10 +130,6 @@ class base_component_response
     /*
      * clean all headers
      * @return self
-     */
-    /**
-     * clean_headers
-     * @return mixed 返回值
      */
     public function clean_headers() 
     {
@@ -148,7 +143,6 @@ class base_component_response
      * @param string $code
      * @return self
      */
-
     public function set_redirect($url, $code = 302) 
     {
         $this->set_header("Location", $url, true)
@@ -161,11 +155,6 @@ class base_component_response
      * @param string $code
      * @return self
      */
-    /**
-     * 设置_http_response_code
-     * @param mixed $code code
-     * @return mixed 返回操作结果
-     */
     public function set_http_response_code($code) 
     {
         $this->_is_redirect = ($code >=300 && $code <= 307) ? true : false;
@@ -177,7 +166,6 @@ class base_component_response
      * get http response code
      * @return string
      */
-
     public function get_http_response_code() 
     {
         return $this->_http_response_code;
@@ -186,10 +174,6 @@ class base_component_response
     /*
      * is redirect
      * @return boolean
-     */
-    /**
-     * is_redirect
-     * @return mixed 返回值
      */
     public function is_redirect() 
     {
@@ -201,7 +185,6 @@ class base_component_response
      * @param string $value
      * @return self
      */
-
     public function set_raw_header($value) 
     {
         if(substr($value, 0, 8) == 'Location'){
@@ -215,10 +198,6 @@ class base_component_response
      * get raw header
      * @return array
      */
-    /**
-     * 获取_raw_headers
-     * @return mixed 返回结果
-     */
     public function get_raw_headers() 
     {
         return $this->_raw_headers;
@@ -228,7 +207,6 @@ class base_component_response
      * clean raw header
      * @return self
      */
-
     public function clean_raw_headers() 
     {
         $this->_raw_headers = array();
@@ -238,10 +216,6 @@ class base_component_response
     /*
      * claen header & raw header
      * @return self
-     */
-    /**
-     * clean_all_headers
-     * @return mixed 返回值
      */
     public function clean_all_headers() 
     {
@@ -253,7 +227,6 @@ class base_component_response
      * send headers
      * @return self
      */
-
     public function send_headers() 
     {
         if(!count($this->_raw_headers) && !count($this->_headers) && (200 == $this->_http_response_code)){
@@ -288,40 +261,23 @@ class base_component_response
         return $this;
     }//End Function
 
-    /**
-     * 设置_body
-     * @param mixed $body body
-     * @return mixed 返回操作结果
-     */
     public function set_body($body) 
     {
         $this->_bodys[] = $body;
         return $this;
     }//End Function
 
-    /**
-     * 获取_bodys
-     * @return mixed 返回结果
-     */
     public function get_bodys() 
     {
         return $this->_bodys;
     }//End Function
 
-    /**
-     * clean_bodys
-     * @return mixed 返回值
-     */
     public function clean_bodys() 
     {
         $this->_bodys = array();
         return $this;
     }//End Function
 
-    /**
-     * send_bodys
-     * @return mixed 返回值
-     */
     public function send_bodys() 
     {
         echo join('\n', $this->_bodys);

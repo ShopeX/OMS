@@ -18,15 +18,6 @@
 class console_email{
 
     #邮件发送
-    /**
-     * send
-     * @param mixed $receiveMail receiveMail
-     * @param mixed $subject subject
-     * @param mixed $body body
-     * @param mixed $attachment attachment
-     * @param mixed $SMTPDebug SMTPDebug
-     * @return mixed 返回值
-     */
     public function send($receiveMail, $subject, $body, $attachment = [], $SMTPDebug = 0){
         $config = $this->get_config();
         //收件信息
@@ -92,21 +83,12 @@ class console_email{
     }
 
     //获取发送邮件设置
-    /**
-     * 获取_config
-     * @return mixed 返回结果
-     */
     public function get_config(){
         $rs_mail = app::get('console')->getConf('email.config');
         return $rs_mail;
     }
 
     //获取邮件附件全路径
-    /**
-     * 获取_send_email_attachement_path
-     * @param mixed $type type
-     * @return mixed 返回结果
-     */
     public function get_send_email_attachement_path($type){
         //获取邮件附件存放目录
         $file_dir = DATA_DIR.'/email_attachement';

@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 经销商订单管理
  *
@@ -33,12 +34,6 @@ class dealer_ctl_admin_platform_orders extends desktop_controller
     private $_primary_id = null; //主键ID字段名
     private $_primary_bn = null; //单据编号字段名
     
-    /**
-     * __construct
-     * @param mixed $app app
-     * @return mixed 返回值
-     */
-
     public function __construct($app)
     {
         parent::__construct($app);
@@ -55,10 +50,6 @@ class dealer_ctl_admin_platform_orders extends desktop_controller
         $this->_primary_bn = 'plat_order_bn';
     }
     
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index()
     {
         $user = kernel::single('desktop_user');
@@ -128,10 +119,6 @@ class dealer_ctl_admin_platform_orders extends desktop_controller
         $this->finder('dealer_mdl_platform_orders', $params);
     }
     
-    /**
-     * _views
-     * @return mixed 返回值
-     */
     public function _views()
     {
         //filter
@@ -173,7 +160,7 @@ class dealer_ctl_admin_platform_orders extends desktop_controller
     
     /**
      * 公共filter条件
-     * 
+     *
      * @return array
      */
     public function getFilters()
@@ -191,7 +178,7 @@ class dealer_ctl_admin_platform_orders extends desktop_controller
     
     /**
      * 批量转换订单
-     * 
+     *
      * @return void
      */
     public function batchDispose()
@@ -222,10 +209,6 @@ class dealer_ctl_admin_platform_orders extends desktop_controller
         parent::dialog_batch('dealer_mdl_platform_orders', false, 50, 'incr');
     }
     
-    /**
-     * ajaxDispose
-     * @return mixed 返回值
-     */
     public function ajaxDispose()
     {
         $retArr = array(
@@ -318,7 +301,7 @@ class dealer_ctl_admin_platform_orders extends desktop_controller
     
     /**
      * 批量重新更新订单明细发货方式
-     * 
+     *
      * @return void
      */
     public function batchUpdateItems()
@@ -349,10 +332,6 @@ class dealer_ctl_admin_platform_orders extends desktop_controller
         parent::dialog_batch('dealer_mdl_platform_orders', false, 50, 'incr');
     }
     
-    /**
-     * ajaxUpdateItems
-     * @return mixed 返回值
-     */
     public function ajaxUpdateItems()
     {
         $retArr = array(
@@ -444,7 +423,7 @@ class dealer_ctl_admin_platform_orders extends desktop_controller
     
     /**
      * 修正失败订单
-     * 
+     *
      * @return void
      */
     public function batchRepair()
@@ -475,10 +454,6 @@ class dealer_ctl_admin_platform_orders extends desktop_controller
         parent::dialog_batch('dealer_mdl_platform_orders', false, 50, 'incr');
     }
     
-    /**
-     * ajaxRepair
-     * @return mixed 返回值
-     */
     public function ajaxRepair()
     {
         $retArr = array(
@@ -546,7 +521,7 @@ class dealer_ctl_admin_platform_orders extends desktop_controller
     
     /**
      * 新建经销订单
-     * 
+     *
      * @return void
      */
     public function addOrder()
@@ -579,10 +554,6 @@ class dealer_ctl_admin_platform_orders extends desktop_controller
         $this->page("admin/order/add_order.html");
     }
     
-    /**
-     * doAddOrder
-     * @return mixed 返回值
-     */
     public function doAddOrder()
     {
         $this->begin($this->url."&act=addOrder");
@@ -957,10 +928,6 @@ class dealer_ctl_admin_platform_orders extends desktop_controller
         $this->end(true, '创建订单成功', $this->url.'&act=createOrderResult&finder_vid='. $_GET['finder_vid'] .'&plat_order_bn='.$sdf['plat_order_bn']);
     }
     
-    /**
-     * 创建OrderResult
-     * @return mixed 返回值
-     */
     public function createOrderResult()
     {
         $this->pagedata['plat_order_bn'] = $_GET['plat_order_bn'];
@@ -971,7 +938,7 @@ class dealer_ctl_admin_platform_orders extends desktop_controller
     
     /**
      * 弹窗获取：经销销售商品列表
-     * 
+     *
      * @param Void
      * @return String
      */
@@ -1006,10 +973,6 @@ class dealer_ctl_admin_platform_orders extends desktop_controller
         $this->finder('dealer_mdl_sales_material', $params);
     }
     
-    /**
-     * 获取SalesMaterialByAddNormalOrder
-     * @return mixed 返回结果
-     */
     public function getSalesMaterialByAddNormalOrder()
     {
 //        $sm_id = $_POST['sm_id'];
@@ -1086,10 +1049,6 @@ class dealer_ctl_admin_platform_orders extends desktop_controller
         echo "window.autocompleter_json=".json_encode($rows);
     }
     
-    /**
-     * dosave
-     * @return mixed 返回值
-     */
     public function dosave()
     {
         $url      = 'index.php?app=dealer&ctl=admin_platform_orders&act=index&view=4&finder_vid='. $_REQUEST['finder_vid'];
@@ -1205,7 +1164,7 @@ class dealer_ctl_admin_platform_orders extends desktop_controller
     
     /**
      * 订单拦截
-     * 
+     *
      * @param $order_id
      * @return void
      */

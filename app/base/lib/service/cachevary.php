@@ -15,13 +15,16 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 class base_service_cachevary 
 {
-    /**
-     * 获取_varys
-     * @return mixed 返回结果
-     */
     public function get_varys() 
     {
         $varys['HOST'] = kernel::base_url(true);    //host信息

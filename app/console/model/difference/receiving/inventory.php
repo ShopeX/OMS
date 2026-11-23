@@ -28,10 +28,6 @@ class console_mdl_difference_receiving_inventory extends dbeav_model
         $data['name'] = $this->export_name . '-' . date('Y-m-d H:i:s', time());
     }
     
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema()
     {
         $schema['idColumn']   = $schema['pkeys'] = 'diff_id';
@@ -140,11 +136,6 @@ class console_mdl_difference_receiving_inventory extends dbeav_model
     }
     
     
-    /**
-     * 查找er_count
-     * @param mixed $filter filter
-     * @return mixed 返回结果
-     */
     public function finder_count($filter = null)
     {
         $row = $this->db->select("SELECT count(*) as _count FROM sdb_taoguaniostockorder_diff di
@@ -153,13 +144,6 @@ class console_mdl_difference_receiving_inventory extends dbeav_model
         return intval($row[0]['_count']);
     }
     
-    /**
-     * 查找er_filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回结果
-     */
     public function finder_filter($filter, $tableAlias = null, $baseWhere = null)
     {
         $where = [];
@@ -266,13 +250,6 @@ class console_mdl_difference_receiving_inventory extends dbeav_model
         return '';
     }
     
-    /**
-     * modifier_creat_time
-     * @param mixed $creat_time creat_time
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_creat_time($creat_time, $list, $row)
     {
         if ($creat_time) {
@@ -304,13 +281,6 @@ class console_mdl_difference_receiving_inventory extends dbeav_model
         return $branchIdList;
     }
     
-    /**
-     * modifier_packaging_status
-     * @param mixed $packaging_status packaging_status
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_packaging_status($packaging_status, $list, $row)
     {
         return $packaging_status == 'intact' ? '完好' : '有破损';
@@ -504,11 +474,6 @@ class console_mdl_difference_receiving_inventory extends dbeav_model
         return $iso[$bn_iso_bn];
     }
     
-    /**
-     * 获取CustomExportTitle
-     * @param mixed $main_title main_title
-     * @return mixed 返回结果
-     */
     public function getCustomExportTitle($main_title)
     {
         $main_title        = $main_title;
@@ -517,10 +482,6 @@ class console_mdl_difference_receiving_inventory extends dbeav_model
         return mb_convert_encoding(implode(',', $title), 'GBK', 'UTF-8');
     }
     
-    /**
-     * orderItemsExportTitle
-     * @return mixed 返回值
-     */
     public function orderItemsExportTitle()
     {
         $items_title = array(
@@ -540,12 +501,6 @@ class console_mdl_difference_receiving_inventory extends dbeav_model
     }
     
     //根据过滤条件获取导出发货单的主键数据数组
-    /**
-     * 获取PrimaryIdsByCustom
-     * @param mixed $filter filter
-     * @param mixed $op_id ID
-     * @return mixed 返回结果
-     */
     public function getPrimaryIdsByCustom($filter, $op_id)
     {
         $cols = 'di.diff_id';
@@ -558,10 +513,6 @@ class console_mdl_difference_receiving_inventory extends dbeav_model
         return $ids;
     }
     
-    /**
-     * io_title
-     * @return mixed 返回值
-     */
     public function io_title()
     {
         $import_title = [

@@ -14,26 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 2017/11/10 by wangjianjun
  */
 class console_view_input{
 
-    /**
-     * __construct
-     * @param mixed $app app
-     * @return mixed 返回值
-     */
-
     public function __construct(&$app){
         $this->app = $app;
     }
     
-    /**
-     * input_console_object
-     * @param mixed $params 参数
-     * @return mixed 返回值
-     */
     public function input_console_object($params){
         
         $return_url = $params['return_url']?$params['return_url']:'index.php?app=console&ctl=admin_stock_artificial_freeze&act=object_rows';

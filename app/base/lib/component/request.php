@@ -15,6 +15,13 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 /*
  * @package component
@@ -109,7 +116,6 @@ class base_component_request
      * @param string $value
      * @return self
      */
-
     public function set_app_name($value) 
     {
         $this->_app = $value;
@@ -120,11 +126,6 @@ class base_component_request
      * set ctl name
      * @param string $value
      * @return self
-     */
-    /**
-     * 设置_ctl_name
-     * @param mixed $value value
-     * @return mixed 返回操作结果
      */
     public function set_ctl_name($value) 
     {
@@ -137,7 +138,6 @@ class base_component_request
      * @param string $value
      * @return self
      */
-
     public function set_act_name($value) 
     {
         $this->_act = $value;
@@ -148,10 +148,6 @@ class base_component_request
      * get ctl name
      * @return string
      */
-    /**
-     * 获取_app_name
-     * @return mixed 返回结果
-     */
     public function get_app_name() 
     {
         return $this->_app;
@@ -161,7 +157,6 @@ class base_component_request
      * get ctl name
      * @return string
      */
-
     public function get_ctl_name() 
     {
         return $this->_ctl;
@@ -170,10 +165,6 @@ class base_component_request
     /*
      * get act name
      * @return string
-     */
-    /**
-     * 获取_act_name
-     * @return mixed 返回结果
      */
     public function get_act_name() 
     {
@@ -187,7 +178,6 @@ class base_component_request
      * @param string $def
      * @return self
      */
-
     public function get_param($key, $ext=false, $def=null) 
     {
         switch(true)
@@ -220,12 +210,6 @@ class base_component_request
      * @param mixed $val
      * @return self
      */
-    /**
-     * 设置_param
-     * @param mixed $key key
-     * @param mixed $val val
-     * @return mixed 返回操作结果
-     */
     public function set_param($key, $val) 
     {
         if($val==null){
@@ -240,7 +224,6 @@ class base_component_request
      * @param boolean $ext
      * @return array
      */
-
     public function get_params($ext=false) 
     {
         $param = array();
@@ -272,11 +255,6 @@ class base_component_request
      * @param array $arr
      * @return self
      */
-    /**
-     * 设置_params
-     * @param mixed $arr arr
-     * @return mixed 返回操作结果
-     */
     public function set_params( $arr) 
     {
         $this->_params = $this->_params + (array) $arr;
@@ -292,7 +270,6 @@ class base_component_request
      * @param string $key
      * @return self
      */
-
     public function del_param($key) 
     {
         if(isset($this->_params[$key]))
@@ -305,11 +282,6 @@ class base_component_request
      * @param array $arr
      * @return self
      */
-    /**
-     * 设置_ext_param_source
-     * @param mixed $arr arr
-     * @return mixed 返回操作结果
-     */
     public function set_ext_param_source($arr) 
     {
         if(is_array($arr))
@@ -321,7 +293,6 @@ class base_component_request
      * get ext params source
      * @return array
      */
-
     public function get_ext_param_source() 
     {
         return (array) $this->_ext_param_source;
@@ -331,11 +302,6 @@ class base_component_request
      * get param by $key
      * @param string $key
      * @return mixed
-     */
-    /**
-     * 获取
-     * @param mixed $key key
-     * @return mixed 返回结果
      */
     public function get($key) 
     {
@@ -367,7 +333,6 @@ class base_component_request
      * @param string $key
      * @return boolean
      */
-
     public function has($key) 
     {
         switch(true)
@@ -394,11 +359,6 @@ class base_component_request
      * @param string $key
      * @return mixed
      */
-    /**
-     * 获取_get
-     * @param mixed $key key
-     * @return mixed 返回结果
-     */
     public function get_get($key = null) 
     {
         if($key === null)
@@ -411,7 +371,6 @@ class base_component_request
      * @param string $key
      * @return mixed
      */
-
     public function get_post($key = null) 
     {
         if($key === null)
@@ -423,11 +382,6 @@ class base_component_request
      * get $_COOKIE
      * @param string $key
      * @return mixed
-     */
-    /**
-     * 获取_cookie
-     * @param mixed $key key
-     * @return mixed 返回结果
      */
     public function get_cookie($key = null) 
     {
@@ -441,7 +395,6 @@ class base_component_request
      * @param string $key
      * @return mixed
      */
-
     public function get_server($key = null) 
     {
         if($key === null)
@@ -454,11 +407,6 @@ class base_component_request
      * @param string $key
      * @return mixed
      */
-    /**
-     * 获取_env
-     * @param mixed $key key
-     * @return mixed 返回结果
-     */
     public function get_env($key = null) 
     {
         if($key === null)
@@ -470,7 +418,6 @@ class base_component_request
      * get request uri
      * @return string
      */
-
     public function get_request_uri() 
     {
         if(empty($this->_request_uri))
@@ -481,10 +428,6 @@ class base_component_request
     /*
      * get code url
      * @return string
-     */
-    /**
-     * 获取_core_url
-     * @return mixed 返回结果
      */
     public function get_core_url() 
     {
@@ -497,7 +440,6 @@ class base_component_request
      * get path info
      * @return string
      */
-
     public function get_path_info() 
     {
         if(empty($this->_path_info))
@@ -509,11 +451,6 @@ class base_component_request
      * set request uri
      * @param string $request_uri
      * @return self
-     */
-    /**
-     * 设置_request_uri
-     * @param mixed $request_uri request_uri
-     * @return mixed 返回操作结果
      */
     public function set_request_uri($request_uri = null) 
     {
@@ -558,7 +495,6 @@ class base_component_request
      * @param mixed $value
      * @return self
      */
-
     public function set_query($spec, $value=null) 
     {
         if ((null === $value) && is_array($spec)) {
@@ -575,11 +511,6 @@ class base_component_request
      * set core url
      * @param string $core_url
      * @return self
-     */
-    /**
-     * 设置_core_url
-     * @param mixed $core_url core_url
-     * @return mixed 返回操作结果
      */
     public function set_core_url($core_url = null) 
     {
@@ -653,7 +584,6 @@ class base_component_request
      * @param string $path_info
      * @return self
      */
-
     public function set_path_info($path_info = null) 
     {
         if ($path_info === null) {
@@ -686,10 +616,6 @@ class base_component_request
      * get http method
      * @return string
      */
-    /**
-     * 获取_method
-     * @return mixed 返回结果
-     */
     public function get_method() 
     {
         return $this->get_server('REQUEST_METHOD');
@@ -699,7 +625,6 @@ class base_component_request
      * is GET request
      * @return boolean
      */
-
     public function is_get() 
     {
         if('GET' == $this->get_method())
@@ -710,10 +635,6 @@ class base_component_request
     /*
      * is POST request
      * @return boolean
-     */
-    /**
-     * is_post
-     * @return mixed 返回值
      */
     public function is_post() 
     {
@@ -726,7 +647,6 @@ class base_component_request
      * is PUT request
      * @return boolean
      */
-
     public function is_put() 
     {
         if('PUT' == $this->get_method())
@@ -737,10 +657,6 @@ class base_component_request
     /*
      * is DELETE request
      * @return boolean
-     */
-    /**
-     * is_delete
-     * @return mixed 返回值
      */
     public function is_delete() 
     {
@@ -753,7 +669,6 @@ class base_component_request
      * is HEAD request
      * @return boolean
      */
-
     public function is_head() 
     {
         if('HEAD' == $this->get_method())
@@ -764,10 +679,6 @@ class base_component_request
     /*
      * is OPTIONS request
      * @return boolean
-     */
-    /**
-     * is_options
-     * @return mixed 返回值
      */
     public function is_options() 
     {
@@ -780,7 +691,6 @@ class base_component_request
      * is ssl
      * @return boolean
      */
-
     public function is_https() 
     {
         return ($this->get_scheme() === 'HTTPS');
@@ -789,10 +699,6 @@ class base_component_request
     /*
      * is ajax
      * @return boolean
-     */
-    /**
-     * is_xml_httprequest
-     * @return mixed 返回值
      */
     public function is_xml_httprequest() 
     {
@@ -803,7 +709,6 @@ class base_component_request
      * is flase
      * @return boolean
      */
-
     public function is_flash_request() 
     {
         $header = strtolower($this->get_header('USER_AGENT'));
@@ -813,11 +718,6 @@ class base_component_request
     /*
      * get request header info
      * @return mixed
-     */
-    /**
-     * 获取_header
-     * @param mixed $header header
-     * @return mixed 返回结果
      */
     public function get_header($header) 
     {
@@ -840,7 +740,6 @@ class base_component_request
      * get scheme
      * @return string
      */
-
     public function get_scheme() 
     {
         if (defined('WITH_HTTPS_SUPPORT') && strtolower(WITH_HTTPS_SUPPORT) == 'on') {
@@ -853,10 +752,6 @@ class base_component_request
     /*
      * get host
      * @return string
-     */
-    /**
-     * 获取_http_host
-     * @return mixed 返回结果
      */
     public function get_http_host() 
     {
@@ -880,7 +775,6 @@ class base_component_request
      * get full_host
      * @return string
      */
-
     public function get_full_http_host() 
     {
         return sprintf("%s://%s", strtolower($this->get_scheme()), $this->get_http_host());
@@ -889,11 +783,6 @@ class base_component_request
     /*
      * get removeip
      * @return string
-     */
-    /**
-     * 获取_remote_ip
-     * @param mixed $checkProxy checkProxy
-     * @return mixed 返回结果
      */
     public function get_remote_ip($checkProxy = false) 
     {
@@ -915,7 +804,6 @@ class base_component_request
      * get browser
      * @return string
      */
-
     public function get_browser($return_array=true) 
     {
         return get_browser($this->get_server('HTTP_USER_AGENT'), $return_array);

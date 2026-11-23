@@ -35,11 +35,6 @@ class console_finder_vopreturn
     public $column_confirm = "操作";
     public $column_confirm_order = 1;
     public $column_confirm_width = 160;
-    /**
-     * column_confirm
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_confirm($row)
     {
         $itemBtn = <<<HTML
@@ -82,11 +77,6 @@ HTML;
     }
 
     public $detail_items = '明细列表';
-    /**
-     * detail_items
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function detail_items($id)
     {
         $render = app::get('console')->render();
@@ -99,11 +89,6 @@ HTML;
     }
 
     public $detail_oplog = "操作记录";
-    /**
-     * detail_oplog
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function detail_oplog($id){
 
         $render = app::get('console')->render();

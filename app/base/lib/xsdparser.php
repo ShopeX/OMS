@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 define('XSD_PARSER_ATTR',1);
 define('XSD_PARSER_ELE',2);
 define('XSD_PARSER_MULTI_ELE',3);

@@ -14,18 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * ============================
+ * @Author:   yaokangming
+ * @Version:  1.0 
+ * @DateTime: 2020/12/14 16:46:51
+ * @describe: 地图类
+ * ============================
+ */
 abstract class console_map_abstract {
 
     abstract protected function _getAddress($id);
 
     abstract protected function _dealResult($data, $sdf);
 
-    /**
-     * 获取Location
-     * @param mixed $id ID
-     * @param mixed $update update
-     * @return mixed 返回结果
-     */
     public function getLocation($id, $update = true) {
         if (!defined('AMAP_WEB_KEY')) {
             return array(false, '未启用');

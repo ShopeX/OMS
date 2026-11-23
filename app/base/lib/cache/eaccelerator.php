@@ -15,6 +15,13 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 /*
  * @package base
@@ -32,25 +39,12 @@ class base_cache_eaccelerator extends base_cache_abstract implements base_interf
         $this->check_vary_list();
     }//End Function
 
-    /**
-     * fetch
-     * @param mixed $key key
-     * @param mixed $result result
-     * @return mixed 返回值
-     */
     public function fetch($key, &$result) 
     {
         $result = eaccelerator_get($key);
         return !is_null($result);
     }//End Function
 
-    /**
-     * store
-     * @param mixed $key key
-     * @param mixed $value value
-     * @param mixed $ttl ttl
-     * @return mixed 返回值
-     */
     public function store($key, $value, $ttl=0) 
     {
         return eaccelerator_put($key, $value, $ttl);

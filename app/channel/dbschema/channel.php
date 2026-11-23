@@ -62,7 +62,6 @@ $db['channel'] = array(
                 'smart'    => '报价系统',
                 'cloudprint'=> '云打印',
                 'ticket'   => '工单',
-                'qimen'    => '奇门',
                 'sms'      => '短信',
             ),
             'width' => '120',

@@ -15,6 +15,13 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 class dbeav_select_mysql extends dbeav_select_adapter 
 {
@@ -23,10 +30,6 @@ class dbeav_select_mysql extends dbeav_select_adapter
         parent::__contruct();
     }//End Function
 
-    /**
-     * connect
-     * @return mixed 返回值
-     */
     public function connect() 
     {
         if($this->_connect == null){
@@ -34,20 +37,11 @@ class dbeav_select_mysql extends dbeav_select_adapter
         }
     }//End Function
 
-    /**
-     * 设置_obj
-     * @param mixed $selectObj selectObj
-     * @return mixed 返回操作结果
-     */
     public function set_obj($selectObj) 
     {
         $this->selectObj = $selectObj;
     }//End Function
 
-    /**
-     * exec
-     * @return mixed 返回值
-     */
     public function exec() 
     {
         $this->connect();
@@ -56,10 +50,6 @@ class dbeav_select_mysql extends dbeav_select_adapter
         return $res['rs'];
     }//End Function
 
-    /**
-     * select
-     * @return mixed 返回值
-     */
     public function select() 
     {
         $this->connect();
@@ -70,24 +60,11 @@ class dbeav_select_mysql extends dbeav_select_adapter
         return $data;
     }//End Function
     
-    /**
-     * limit
-     * @param mixed $sql sql
-     * @param mixed $count count
-     * @param mixed $offset offset
-     * @return mixed 返回值
-     */
     public function limit($sql, $count, $offset=0) 
     {
         return sprintf('%s LIMIT %s %s', $sql, ($offset>0) ? $offset . ',' : '', intval($count));
     }//End Function
 
-    /**
-     * quote_column_as
-     * @param mixed $column column
-     * @param mixed $alias alias
-     * @return mixed 返回值
-     */
     public function quote_column_as($column, $alias)
     {
         if($column == '*')  return $column;
@@ -97,32 +74,16 @@ class dbeav_select_mysql extends dbeav_select_adapter
             return  $column;
     }//End Function
     
-    /**
-     * quote_identifier
-     * @param mixed $name name
-     * @return mixed 返回值
-     */
     public function quote_identifier($name) 
     {
         return sprintf('`%s`', $name);
     }//End Function
 
-    /**
-     * quote_into
-     * @param mixed $str str
-     * @param mixed $val val
-     * @return mixed 返回值
-     */
     public function quote_into($str, $val) 
     {
         return str_replace('?', $this->quote($val), $str);
     }//End Function
 
-    /**
-     * quote
-     * @param mixed $val val
-     * @return mixed 返回值
-     */
     public function quote($val) 
     {
         if (is_int($val)) {
@@ -133,11 +94,6 @@ class dbeav_select_mysql extends dbeav_select_adapter
         return "'" . addcslashes($val, "\000\n\r\\'\"\032") . "'";
     }//End Function
 
-    /**
-     * fetch
-     * @param mixed $fetchMode fetchMode
-     * @return mixed 返回值
-     */
     public function fetch($fetchMode=null) 
     {
         if($fetchMode == null) $fetchMode = 'all';
@@ -155,29 +111,17 @@ class dbeav_select_mysql extends dbeav_select_adapter
         }
     }//End Function
 
-    /**
-     * fetch_all
-     * @return mixed 返回值
-     */
     public function fetch_all() 
     {
         return $this->select();
     }//End Function
 
-    /**
-     * fetch_row
-     * @return mixed 返回值
-     */
     public function fetch_row() 
     {
         $data = $this->fetch_all();
         return $data[0];
     }//End Function
 
-    /**
-     * fetch_one
-     * @return mixed 返回值
-     */
     public function fetch_one() 
     {
         $data = $this->fetch_row();
@@ -188,10 +132,6 @@ class dbeav_select_mysql extends dbeav_select_adapter
         return false;
     }//End Function
     
-    /**
-     * fetch_col
-     * @return mixed 返回值
-     */
     public function fetch_col() 
     {
         $res = $this->select();

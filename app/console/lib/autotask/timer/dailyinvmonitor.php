@@ -14,19 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 库存差异监控
- *
+ * 
  */
 class console_autotask_timer_dailyinvmonitor
 {
-    /**
-     * 处理
-     * @param mixed $params 参数
-     * @param mixed $error_msg error_msg
-     * @return mixed 返回值
-     */
-
     public function process($params, &$error_msg = '')
     {
         set_time_limit(0);

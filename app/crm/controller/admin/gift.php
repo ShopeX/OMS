@@ -22,11 +22,6 @@ class crm_ctl_admin_gift extends desktop_controller{
     /** @var crm_capability_gift 写链路唯一实现（与 crm_ctl_api_gift 共用） */
     protected $capability;
 
-    /**
-     * __construct
-     * @param mixed $app app
-     * @return mixed 返回值
-     */
     public function __construct($app)
     {
         parent::__construct($app);
@@ -34,10 +29,6 @@ class crm_ctl_admin_gift extends desktop_controller{
         $this->capability = new crm_capability_gift();
     }
 
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index(){
 
         $title = '赠品管理';
@@ -54,18 +45,10 @@ class crm_ctl_admin_gift extends desktop_controller{
     }
     
 
-    /**
-     * 添加Gift
-     * @return mixed 返回值
-     */
     public function addGift(){
         $this->display('admin/gift/add.html');
     }
 
-    /**
-     * 获取CrmInfo
-     * @return mixed 返回结果
-     */
     public function getCrmInfo(){
 
         $channelObj = app::get('channel')->model('channel');
@@ -78,10 +61,6 @@ class crm_ctl_admin_gift extends desktop_controller{
     }
     
     #构造一个商品列表页面
-    /**
-     * 获取ProductInfo
-     * @return mixed 返回结果
-     */
     public function getProductInfo(){
         
             $base_filter['visibility'] = 'true';
@@ -120,10 +99,6 @@ class crm_ctl_admin_gift extends desktop_controller{
         $finder->work($object_name);    
     }
 
-    /**
-     * 保存Gift
-     * @return mixed 返回操作结果
-     */
     public function saveGift(){
         $sm_ids = $this->_request->get_post('sm_id');
     
@@ -143,10 +118,6 @@ class crm_ctl_admin_gift extends desktop_controller{
         $this->splash('success', $this->url.'&act=index', '操作成功');
     }
 
-    /**
-     * delGift
-     * @return mixed 返回值
-     */
     public function delGift(){
        $this->begin('index.php?app=crm&ctl=admin_gift&act=index');
        $isSelectedAll = $this->_request->get_post('isSelectedAll');

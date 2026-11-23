@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 产品线列表
  * @author wangjianjun@shopex.cn
@@ -27,7 +28,6 @@ class dealer_ctl_admin_series_endorse_products extends desktop_controller
      * @param Post
      * @return String
      */
-
     public function index()
     {
         $base_filter = [];
@@ -72,7 +72,7 @@ class dealer_ctl_admin_series_endorse_products extends desktop_controller
 
     /**
      * 销售物料列表分栏菜单
-     * 
+     *
      * @param Null
      * @return Array
      */
@@ -123,10 +123,6 @@ class dealer_ctl_admin_series_endorse_products extends desktop_controller
     }
 
     //批量设置发货方式
-    /**
-     * batchSetShopyjdfType
-     * @return mixed 返回值
-     */
     public function batchSetShopyjdfType()
     {
         $this->_request = kernel::single('base_component_request');
@@ -155,10 +151,6 @@ class dealer_ctl_admin_series_endorse_products extends desktop_controller
     }
 
     //批量设置发货方式
-    /**
-     * doBatchSetShopyjdfType
-     * @return mixed 返回值
-     */
     public function doBatchSetShopyjdfType()
     {
         // Array (

@@ -47,12 +47,6 @@ class console_finder_difference_receiving_inventory
     public $column_branch_bn_width = 100;
     public $column_branch_bn_order = 22;
     
-    /**
-     * column_branch_bn
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_branch_bn($row, $list)
     {
         $branch = $this->_getBranch($row['branch_id'], $list);
@@ -63,12 +57,6 @@ class console_finder_difference_receiving_inventory
     public $column_extrabranch_bn_width = 100;
     public $column_extrabranch_bn_order = 23;
     
-    /**
-     * column_extrabranch_bn
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_extrabranch_bn($row, $list)
     {
         $branch = $this->_getExtrabranch($row['extrabranch_id'], $list);
@@ -109,12 +97,6 @@ class console_finder_difference_receiving_inventory
     public $column_diff_nums_width = 80;
     public $column_diff_nums_order = 24;
     
-    /**
-     * column_diff_nums
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_diff_nums($row, $list)
     {
         $diff = $this->_getDiffItems($row['diff_id'], $list);
@@ -142,12 +124,6 @@ class console_finder_difference_receiving_inventory
     public $column_abs_diff_nums_width = 80;
     public $column_abs_diff_nums_order = 25;
     
-    /**
-     * column_abs_diff_nums
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_abs_diff_nums($row, $list)
     {
         $diff = $this->_getAbsDiffItems($row['diff_id'], $list);

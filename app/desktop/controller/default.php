@@ -15,7 +15,12 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
 class desktop_ctl_default extends desktop_controller {
 
     var $workground = 'desktop_ctl_dashboard';
@@ -51,7 +56,7 @@ class desktop_ctl_default extends desktop_controller {
         if (is_object($obj) && method_exists($obj, 'title_desc')) {
             $title_desc = $obj->title_desc();
         } else {
-            $title_desc = 'Powered By shopeX';
+            $title_desc = 'Powered By ShopEx';
         }
 
         //消息通知
@@ -116,6 +121,66 @@ class desktop_ctl_default extends desktop_controller {
 
         return $confirmkey;
     }
+
+    public function set_open_api() {
+
+        $url = $this->openapi();
+        if (defined('WITH_HTTPS_SUPPORT') && strtolower(WITH_HTTPS_SUPPORT) == 'on') {
+            $url = str_replace('http:', 'https:', $url);
+        }
+        echo $url;
+        exit;
+    }
+
+    private function openapi() {
+        $params['certi_app'] = 'open.login';
+        $this->Certi = base_certificate::get('certificate_id');
+        $this->Token = base_certificate::get('token');
+        $params['certificate_id'] = $this->Certi;
+        $params['format'] = 'image';
+        /** 增加反查参数result和反查基础地址url **/
+        $code = md5(microtime());
+        base_kvstore::instance('ecos')->store('net.login_handshake', $code);
+        $params['result'] = $code;
+        /** 得到框架的总版本号 **/
+        //$app_xml = kernel::single('base_xml')->xml2array(file_get_contents(app::get('base')->app_dir.'/app.xml'),'base_app');
+        $obj_apps = app::get('base')->model('apps');
+        $tmp = $obj_apps->getList('*', array('app_id' => 'base'));
+        $app_xml = $tmp[0];
+        $params['version'] = $app_xml['local_ver'];
+        $params['url'] = kernel::base_url(1);
+        /** end **/
+        $token = $this->Token;
+        $str = '';
+        ksort($params);
+        foreach ($params as $key => $value) {
+            $str .= $value;
+        }
+        $params['certi_ac'] = md5($str . $token);
+        $http = kernel::single('base_httpclient');
+        $http->timeout = 6;
+        $result = $http->post(
+            LICENSE_CENTER_V,
+            $params
+        );
+        //$this->pagedata['open_api_url'] = LICENSE_CENTER_V .'?'. utils::http_build_query( $params );
+        $tmp_res = json_decode($result, 1);
+        if ($tmp_res) {
+            // 存在异常
+            if ($tmp_res['res'] == 'fail') {
+                $this->pagedata['open_api_url'] = $tmp_res['msg'];
+            } else {
+                if ($tmp_res['res'] == 'succ')
+                    $this->pagedata['open_api_url'] = stripslashes($tmp_res['info']);
+                else
+                    $this->pagedata['open_api_url'] = stripslashes($tmp_res);
+            }
+        } else
+            $this->pagedata['open_api_url'] = stripslashes($tmp_res);
+
+        return $this->pagedata['open_api_url'];
+    }
+
 
     function set_main_menu() {
         $desktop_user = new desktop_user();
@@ -544,7 +609,7 @@ class desktop_ctl_default extends desktop_controller {
     /**
      * 京麦评价获取Token
      * @todo：获取京东平台token，每天只获取一次，防止多个操作员登录频繁请求接口；
-     * 
+     *
      * @return string
      */
     public function getJDToken()
@@ -616,7 +681,7 @@ class desktop_ctl_default extends desktop_controller {
     
     /**
      * 获取站点信息
-     * 
+     *
      * @access public
      * @author chenping<chenping@shopex.cn>
      * @time 2024-06-20 11:35:00

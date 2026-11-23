@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 产品线授权到店model类
  * @author maxiaochen@shopex.cn
@@ -27,11 +28,6 @@ class dealer_mdl_series_endorse extends dbeav_model
 
     //列表排序
     public $defaultOrder = array('series_id ASC');
-
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
 
     public function get_schema()
     {
@@ -196,13 +192,6 @@ class dealer_mdl_series_endorse extends dbeav_model
         return $schema;
     }
 
-    /**
-     * 查找er_filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回结果
-     */
     public function finder_filter($filter, $tableAlias = null, $baseWhere = null)
     {
         $baseWhere = (array) $baseWhere;
@@ -272,11 +261,6 @@ class dealer_mdl_series_endorse extends dbeav_model
         return $sqlstr . parent::_filter($filter, $tableAlias, $baseWhere);
     }
 
-    /**
-     * 查找er_count
-     * @param mixed $filter filter
-     * @return mixed 返回结果
-     */
     public function finder_count($filter = null)
     {
         $sql = "SELECT series_id FROM sdb_dealer_series_endorse as e WHERE " . $this->finder_filter($filter) . " GROUP BY series_id, bs_id ";

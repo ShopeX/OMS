@@ -14,22 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: 2021/1/26 16:11:52
  * @describe: 有效期
  * ============================
  */
 class console_useful_life {
-
-    /**
-     * inOutUsefulLife
-     * @param mixed $data 数据
-     * @param mixed $opType opType
-     * @return mixed 返回值
-     */
 
     public function inOutUsefulLife($data, $opType = '+') {
         if(empty($data) || !in_array($opType, array('-','+'))) {

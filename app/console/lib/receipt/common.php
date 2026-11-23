@@ -17,11 +17,6 @@
 
 class console_receipt_common{
 
-    /**
-     * 获取Supplier
-     * @param mixed $supplier_id ID
-     * @return mixed 返回结果
-     */
     public function getSupplier($supplier_id){
         static $supplier;
         if (isset($supplier[$supplier_id])) return $supplier[$supplier_id];
@@ -35,11 +30,6 @@ class console_receipt_common{
         }
     }
 
-    /**
-     * 获取Products
-     * @param mixed $bn bn
-     * @return mixed 返回结果
-     */
     public function getProducts($bn){
         static $products;
         if (isset($products[$bn])) return $products[$bn];

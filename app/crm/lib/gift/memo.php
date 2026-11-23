@@ -14,22 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: 2020/12/29 16:59:59
  * @describe: 类
  * ============================
  */
 class crm_gift_memo {
-
-    /**
-     * 处理
-     * @param mixed $ruleBase ruleBase
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
 
     public function process($ruleBase, $sdf) {
         //指定商家备注

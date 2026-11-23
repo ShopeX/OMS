@@ -21,8 +21,8 @@ class console_event_trigger_purchasereturn extends console_event_trigger_stockou
     protected $_io_type = 'PURCHASE_RETURN';
 
     /**
-     * 
-     */
+    *
+    */
     function getStockOutParam($param){
         $rp_id = $param['rp_id'];
         $returned_purchaseObj = app::get('purchase')->model('returned_purchase');

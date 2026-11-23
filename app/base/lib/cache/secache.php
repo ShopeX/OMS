@@ -15,6 +15,13 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 /*
  * @package base
@@ -33,12 +40,6 @@ class base_cache_secache extends base_cache_secache_model implements base_interf
         $this->check_vary_list();
     }//End Function
 
-    /**
-     * status
-     * @param mixed $curBytes curBytes
-     * @param mixed $totalBytes totalBytes
-     * @return mixed 返回值
-     */
     public function status(&$curBytes,&$totalBytes) 
     {
         $data = parent::status($curBytes, $totalBytes);

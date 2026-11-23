@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 唯品会平台已经成交的销售单列表model类
  * API文档：https://vop.vip.com/home#/api/method/detail/vipapis.inventory.InventoryService-1.0.0/getInventoryOccupiedOrders
@@ -31,10 +32,9 @@ class console_mdl_inventory_orders extends dbeav_model
     
     /**
      * hold单状态列表
-     * 
+     *
      * @return array
      */
-
     public function getHoldStatus()
     {
         $tempList = self::$hold_status;

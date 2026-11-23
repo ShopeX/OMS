@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 经销商订单finder
  *
@@ -39,12 +40,6 @@ class dealer_finder_platform_orders
     static $_businessList = array();
     
     var $detail_basic = '基本信息';
-    /**
-     * detail_basic
-     * @param mixed $plat_order_id ID
-     * @return mixed 返回值
-     */
-
     public function detail_basic($plat_order_id)
     {
         $render = app::get($this->_appName)->render();
@@ -71,11 +66,6 @@ class dealer_finder_platform_orders
     }
     
     var $detail_goods = '订单明细';
-    /**
-     * detail_goods
-     * @param mixed $plat_order_id ID
-     * @return mixed 返回值
-     */
     public function detail_goods($plat_order_id)
     {
         $render = app::get($this->_appName)->render();
@@ -228,11 +218,6 @@ class dealer_finder_platform_orders
 //    }
     
     var $detail_fenxiao = '分销订单信息';
-    /**
-     * detail_fenxiao
-     * @param mixed $plat_order_id ID
-     * @return mixed 返回值
-     */
     public function detail_fenxiao($plat_order_id)
     {
         $render = app::get($this->_appName)->render();
@@ -321,7 +306,7 @@ class dealer_finder_platform_orders
     
     /**
      * [普通]订单操作记录
-     * 
+     *
      * @param int $order_id
      * @return string
      */
@@ -348,11 +333,6 @@ class dealer_finder_platform_orders
     var $column_abnormal_mark = '异常标识';
     var $column_abnormal_mark_width = 130;
     var $column_abnormal_mark_order = 50;
-    /**
-     * column_abnormal_mark
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_abnormal_mark($row)
     {
         return kernel::single('dealer_operation_const')->getAbnormalTag($row[$this->col_prefix.'abnormal_status']);
@@ -362,12 +342,6 @@ class dealer_finder_platform_orders
     var $column_betc_name = '所属贸易公司';
     var $column_betc_name_width = 130;
     var $column_betc_name_order = 52;
-    /**
-     * column_betc_name
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_betc_name($row, $list)
     {
         $this->_getBusiness($list);
@@ -389,7 +363,7 @@ class dealer_finder_platform_orders
     
     /**
      * 批量获取指定经销商列表(包含贸易公司信息)
-     * 
+     *
      * @param $list
      * @return boolean
      */

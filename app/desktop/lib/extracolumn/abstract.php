@@ -14,6 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * 插件接口类
+ *
+ * @author xiayuanjun@shopex.cn
+ * @version 1.0
+ */
+
 abstract class desktop_extracolumn_abstract {
 
     /**

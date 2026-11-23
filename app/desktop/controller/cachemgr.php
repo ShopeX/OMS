@@ -15,14 +15,17 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 class desktop_ctl_cachemgr extends desktop_controller 
 {
     
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index() 
     {
         $this->pagedata['enable'] =
@@ -35,10 +38,6 @@ class desktop_ctl_cachemgr extends desktop_controller
         $this->page('cachemgr/index.html');
     }//End Function
 
-    /**
-     * status
-     * @return mixed 返回值
-     */
     public function status() 
     {  
 		
@@ -52,10 +51,6 @@ class desktop_ctl_cachemgr extends desktop_controller
         }
     }//End Function
 
-    /**
-     * optimize
-     * @return mixed 返回值
-     */
     public function optimize() 
     {
 	
@@ -63,10 +58,6 @@ class desktop_ctl_cachemgr extends desktop_controller
 		$this->end(cachemgr::optimize($msg),$msg);
     }//End Function
     
-    /**
-     * clean
-     * @return mixed 返回值
-     */
     public function clean() 
     {
 	    $this->begin('');

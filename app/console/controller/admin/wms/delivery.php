@@ -14,20 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: 2022/10/18 17:14:52
  * @describe: 控制器
  * ============================
  */
 class console_ctl_admin_wms_delivery extends desktop_controller {
-
-    /**
-     * index
-     * @return mixed 返回值
-     */
 
     public function index() {
         $actions = array();
@@ -51,10 +47,6 @@ class console_ctl_admin_wms_delivery extends desktop_controller {
         $this->finder('console_mdl_wms_delivery', $params);
     }
     
-    /**
-     * batch_sync
-     * @return mixed 返回值
-     */
     public function batch_sync()
     {
         $wdMdl = app::get('console')->model('wms_delivery');

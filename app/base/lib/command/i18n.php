@@ -19,10 +19,6 @@ class base_command_i18n extends base_shell_prototype
 {
     
     var $command_create_convert = '生成替换文件 app_id (etc: base)';
-    /**
-     * command_create_convert
-     * @return mixed 返回值
-     */
     public function command_create_convert() 
     {
         $options = func_get_args();

@@ -14,10 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: 2022/11/21 15:44:49
  * @describe: 类
  * ============================
@@ -33,12 +34,6 @@ class console_finder_difference {
     public $addon_cols = 'status,diff_bn,operate_type,out_status,in_status';
 
     public $detail_item = "详情";
-    /**
-     * detail_item
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
-
     public function detail_item($id){
         $render = app::get('console')->render();
         $itemsObj = app::get('console')->model('difference_items');
@@ -61,11 +56,6 @@ class console_finder_difference {
     }
 
     public $detail_freeze = "冻结详情";
-    /**
-     * detail_freeze
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function detail_freeze($id){
         $render = app::get('console')->render();
         $itemsObj = app::get('console')->model('difference_items_freeze');
@@ -78,11 +68,6 @@ class console_finder_difference {
     }
 
     public $detail_oplog = "操作记录";
-    /**
-     * detail_oplog
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function detail_oplog($id){
         $render = app::get('console')->render();
         $opObj  = app::get('ome')->model('operation_log');
@@ -97,11 +82,6 @@ class console_finder_difference {
     var $column_operation = '操作';
     var $column_operation_width = 120;
     var $column_operation_order = 1;
-    /**
-     * column_operation
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_operation($row){
         $diff_bn = $row[$this->col_prefix.'diff_bn'];
         $btn = [];
@@ -130,11 +110,6 @@ class console_finder_difference {
     }
 
     public $detail_useful = "有效期列表";
-    /**
-     * detail_useful
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function detail_useful($id){
         $render = app::get('console')->render();
         $itemsObj = app::get('console')->model('difference_items');

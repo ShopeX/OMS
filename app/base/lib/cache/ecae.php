@@ -29,34 +29,17 @@ class base_cache_ecae extends base_cache_abstract implements base_interface_cach
         $this->check_vary_list();
     }//End Function
 
-    /**
-     * fetch
-     * @param mixed $key key
-     * @param mixed $result result
-     * @return mixed 返回值
-     */
     public function fetch($key, &$result) 
     {
         $result = ecae_cache_read($key);
         return $result !== false;
     }//End Function
 
-    /**
-     * store
-     * @param mixed $key key
-     * @param mixed $value value
-     * @param mixed $ttl ttl
-     * @return mixed 返回值
-     */
     public function store($key, $value, $ttl=0) 
     {
         return ecae_cache_write($key, $value);
     }//End Function
 
-    /**
-     * status
-     * @return mixed 返回值
-     */
     public function status() 
     {
         $status = ecae_cache_stats();

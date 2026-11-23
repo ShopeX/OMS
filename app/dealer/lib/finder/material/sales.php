@@ -31,11 +31,6 @@ class dealer_finder_material_sales
     public $column_edit       = '操作';
     public $column_edit_width = 45;
     public $column_edit_order = 1;
-    /**
-     * column_edit
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_edit($row)
     {
         // vue 模式下 $_GET['ctl'] 为 api_material_sales ⇒ legacy 的
@@ -79,12 +74,6 @@ class dealer_finder_material_sales
     public $column_betc_name       = "所属贸易公司";
     public $column_betc_name_width = 150;
     public $column_betc_name_order = 30;
-    /**
-     * column_betc_name
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_betc_name($row, $list)
     {
         // vue 模式下 col_prefix 未设置（仅 legacy builder 注入），优先读 _0_cos_id 原始值别名
@@ -131,12 +120,6 @@ class dealer_finder_material_sales
     public $column_associated_material       = '关联基础商品信息';
     public $column_associated_material_width = 260;
     public $column_associated_material_order = 50;
-    /**
-     * column_associated_material
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_associated_material($row, $list)
     {
         static $smWithBmList;
@@ -179,12 +162,6 @@ class dealer_finder_material_sales
     public $column_actual_stock = '可售库存数';
     public $column_actual_stock_order = 89;
     private $initMaterialSale = false;
-    /**
-     * column_actual_stock
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_actual_stock($row, $list)
     {
         if(!$this->initMaterialSale) {
@@ -213,11 +190,6 @@ class dealer_finder_material_sales
      * @return string
      */
     public $detail_basic_material = '基础物料';
-    /**
-     * detail_basic_material
-     * @param mixed $sm_id ID
-     * @return mixed 返回值
-     */
     public function detail_basic_material($sm_id)
     {
         $render = app::get('dealer')->render();
@@ -280,11 +252,6 @@ class dealer_finder_material_sales
      * @return string
      */
     public $detail_show_log = '操作记录';
-    /**
-     * detail_show_log
-     * @param mixed $sm_id ID
-     * @return mixed 返回值
-     */
     public function detail_show_log($sm_id)
     {
         $omeLogMdl = app::get('ome')->model('operation_log');

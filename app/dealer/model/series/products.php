@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 产品线model类
  * @author wangjianjun@shopex.cn
@@ -27,11 +28,6 @@ class dealer_mdl_series_products extends dbeav_model
 
     //列表排序
     public $defaultOrder = array('sp_id DESC');
-
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
 
     public function get_schema()
     {
@@ -167,13 +163,6 @@ class dealer_mdl_series_products extends dbeav_model
         return $schema;
     }
 
-    /**
-     * 查找er_filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回结果
-     */
     public function finder_filter($filter, $tableAlias = null, $baseWhere = null)
     {
         $baseWhere = (array) $baseWhere;
@@ -232,11 +221,6 @@ class dealer_mdl_series_products extends dbeav_model
         return $sqlstr . parent::_filter($filter, $tableAlias, $baseWhere);
     }
 
-    /**
-     * 查找er_count
-     * @param mixed $filter filter
-     * @return mixed 返回结果
-     */
     public function finder_count($filter = null)
     {
         $row = $this->db->select("SELECT count(sp_id) as _count FROM sdb_dealer_series as s RIGHT JOIN sdb_dealer_series_products as p ON s.series_id=p.series_id WHERE " . $this->finder_filter($filter));
@@ -282,11 +266,6 @@ class dealer_mdl_series_products extends dbeav_model
         return $data;
     }
 
-    /**
-     * exportTemplate
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function exportTemplate($filter = 'series_products')
     {
         foreach ($this->io_title($filter) as $v) {
@@ -295,12 +274,6 @@ class dealer_mdl_series_products extends dbeav_model
         return $title;
     }
 
-    /**
-     * io_title
-     * @param mixed $filter filter
-     * @param mixed $ioType ioType
-     * @return mixed 返回值
-     */
     public function io_title($filter = 'series_products', $ioType = 'csv')
     {
         switch ($filter) {
@@ -316,10 +289,6 @@ class dealer_mdl_series_products extends dbeav_model
         return $this->ioTitle[$ioType][$filter];
     }
 
-    /**
-     * finish_import_csv
-     * @return mixed 返回值
-     */
     public function finish_import_csv()
     {
         set_time_limit(0);
@@ -408,16 +377,6 @@ class dealer_mdl_series_products extends dbeav_model
         return true;
     }
 
-    /**
-     * prepared_import_csv_row
-     * @param mixed $row row
-     * @param mixed $title title
-     * @param mixed $tmpl tmpl
-     * @param mixed $mark mark
-     * @param mixed $newObjFlag newObjFlag
-     * @param mixed $msg msg
-     * @return mixed 返回值
-     */
     public function prepared_import_csv_row($row, $title, &$tmpl, &$mark, &$newObjFlag, &$msg)
     {
         $mark = 'contents';
@@ -487,23 +446,11 @@ class dealer_mdl_series_products extends dbeav_model
         return true;
     }
 
-    /**
-     * prepared_import_csv_obj
-     * @param mixed $data 数据
-     * @param mixed $mark mark
-     * @param mixed $tmpl tmpl
-     * @param mixed $msg msg
-     * @return mixed 返回值
-     */
     public function prepared_import_csv_obj($data, $mark, $tmpl, &$msg = '')
     {
         return true;
     }
 
-    /**
-     * import_input
-     * @return mixed 返回值
-     */
     public function import_input()
     {
         $seriesMdl = app::get('dealer')->model('series');

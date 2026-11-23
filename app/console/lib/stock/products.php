@@ -14,10 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
 * 货品库存外部调用类
-*
-*
+* 
+* 
 */
 class console_stock_products extends console_stock_stock{
 
@@ -25,15 +26,14 @@ class console_stock_products extends console_stock_stock{
     private $__db = false;
 
     /**
-     * 销售预占+ 店铺销售预占+
-     * @access public
-     * @param Int $product_id 货品ID
-     * @param Int $nums 数量
-     * @param String $shop_id 店铺ID
-     * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'',)
-     * @return bool
-     */
-
+    * 销售预占+ 店铺销售预占+
+    * @access public
+    * @param Int $product_id 货品ID
+    * @param Int $nums 数量
+    * @param String $shop_id 店铺ID
+    * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'',)
+    * @return bool
+    */
     public function sale_freeze($product_id='',$nums='',$shop_id='',$log_data=array()){
         if (empty($product_id) || empty($nums)) return false;
         
@@ -54,14 +54,14 @@ class console_stock_products extends console_stock_stock{
     }
 
     /**
-     * 销售预占- 店铺销售预占-
-     * @access public
-     * @param Int $product_id 货品ID
-     * @param Int $nums 数量
-     * @param String $shop_id 店铺ID
-     * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'',)
-     * @return bool
-     */
+    * 销售预占- 店铺销售预占-
+    * @access public
+    * @param Int $product_id 货品ID
+    * @param Int $nums 数量
+    * @param String $shop_id 店铺ID
+    * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'',)
+    * @return bool
+    */
     public function sale_unfreeze($product_id='',$nums='',$shop_id='',$log_data=array()){
         if (empty($product_id) || empty($nums)) return false;
         
@@ -82,16 +82,16 @@ class console_stock_products extends console_stock_stock{
     }
 
     /**
-     * 销售预占(-) 店铺销售预占- 仓库冻结(+)
-     * 只针对基础货品
-     * @access public
-     * @param Int $branch_id 仓库ID
-     * @param Int $product_id 基础货品ID
-     * @param Int $nums 数量
-     * @param String $shop_id 店铺ID
-     * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'')
-     * @return bool
-     */
+    * 销售预占(-) 店铺销售预占- 仓库冻结(+)
+    * 只针对基础货品
+    * @access public
+    * @param Int $branch_id 仓库ID
+    * @param Int $product_id 基础货品ID
+    * @param Int $nums 数量
+    * @param String $shop_id 店铺ID
+    * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'')
+    * @return bool
+    */
     public function p2b_freeze($branch_id='',$product_id='',$nums='',$shop_id='',$log_data=array()){
         if (empty($branch_id) || empty($product_id) || empty($nums) || empty($shop_id)) return false;
         
@@ -118,16 +118,16 @@ class console_stock_products extends console_stock_stock{
     }
 
     /**
-     * 销售预占(+) 店铺销售预占+ 仓库冻结(-)
-     * 只针对基础货品
-     * @access public
-     * @param Int $branch_id 仓库ID
-     * @param Int $product_id 基础货品ID
-     * @param Int $nums 数量
-     * @param String $shop_id 店铺ID
-     * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'')
-     * @return bool
-     */
+    * 销售预占(+) 店铺销售预占+ 仓库冻结(-)
+    * 只针对基础货品
+    * @access public
+    * @param Int $branch_id 仓库ID
+    * @param Int $product_id 基础货品ID
+    * @param Int $nums 数量
+    * @param String $shop_id 店铺ID
+    * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'')
+    * @return bool
+    */
     public function p2b_unfreeze($branch_id='',$product_id='',$nums='',$shop_id='',$log_data=array()){
         if (empty($branch_id) || empty($product_id) || empty($nums) || empty($shop_id)) return false;
        
@@ -154,15 +154,15 @@ class console_stock_products extends console_stock_stock{
     }
 
     /**
-     * 仓库冻结+
-     * 只针对基础货品
-     * @access public
-     * @param Int $branch_id 仓库ID
-     * @param Int $product_id 货品ID
-     * @param Int $nums 数量
-     * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'')
-     * @return bool
-     */
+    * 仓库冻结+
+    * 只针对基础货品
+    * @access public
+    * @param Int $branch_id 仓库ID
+    * @param Int $product_id 货品ID
+    * @param Int $nums 数量
+    * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'')
+    * @return bool
+    */
     public function branch_freeze($branch_id='',$product_id='',$nums='',$log_data=array()){
         if (empty($branch_id) || empty($product_id) || empty($nums)) return false;
 
@@ -181,15 +181,15 @@ class console_stock_products extends console_stock_stock{
     }
 
     /**
-     * 仓库冻结-
-     * 只针对基础货品
-     * @access public
-     * @param Int $branch_id 仓库ID
-     * @param Int $product_id 货品ID
-     * @param Int $nums 数量
-     * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'')
-     * @return bool
-     */
+    * 仓库冻结-
+    * 只针对基础货品
+    * @access public
+    * @param Int $branch_id 仓库ID
+    * @param Int $product_id 货品ID
+    * @param Int $nums 数量
+    * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'')
+    * @return bool
+    */
     public function branch_unfreeze($branch_id='',$product_id='',$nums='',$log_data=array()){
         if (empty($branch_id) || empty($product_id) || empty($nums)) return false;
         
@@ -208,16 +208,16 @@ class console_stock_products extends console_stock_stock{
     }
 
     /**
-     * 实际库存+
-     * 非组合，即普通/捆绑明细：仓库实际库存+ 货品实际库存+ 使用事务处理
-     * 组合：组合商品本身实际库存+
-     * @access public
-     * @param Int $branch_id 仓库ID
-     * @param Int $product_id 货品ID
-     * @param Int $nums 数量
-     * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'')
-     * @return bool
-     */
+    * 实际库存+
+    * 非组合，即普通/捆绑明细：仓库实际库存+ 货品实际库存+ 使用事务处理
+    * 组合：组合商品本身实际库存+
+    * @access public
+    * @param Int $branch_id 仓库ID
+    * @param Int $product_id 货品ID
+    * @param Int $nums 数量
+    * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'')
+    * @return bool
+    */
     public function storein($branch_id='',$product_id='',$nums,$log_data=array()){
         if (empty($branch_id) || empty($product_id) || empty($nums)) return false;
         
@@ -248,15 +248,15 @@ class console_stock_products extends console_stock_stock{
     }
 
     /**
-     * 基础货品实际库存- 货品实际库存-
-     * 只针对基础货品并使用事务处理
-     * @access public
-     * @param Int $branch_id 仓库ID
-     * @param Int $product_id 货品ID
-     * @param Int $nums 数量
-     * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'')
-     * @return bool
-     */
+    * 基础货品实际库存- 货品实际库存-
+    * 只针对基础货品并使用事务处理
+    * @access public
+    * @param Int $branch_id 仓库ID
+    * @param Int $product_id 货品ID
+    * @param Int $nums 数量
+    * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'')
+    * @return bool
+    */
     public function storeout($branch_id='',$product_id='',$nums,$log_data=array()){
         if (empty($branch_id) || empty($product_id) || empty($nums)) return false;
         
@@ -278,15 +278,15 @@ class console_stock_products extends console_stock_stock{
     }
 
     /**
-     * 组合商品实际库存- 销售预占- 店铺销售预占-
-     * 只针对组合商品 并使用事务处理
-     * @access public
-     * @param String $shop_id 店铺ID
-     * @param Int $product_id 货品ID
-     * @param Int $nums 数量
-     * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'')
-     * @return bool
-     */
+    * 组合商品实际库存- 销售预占- 店铺销售预占-
+    * 只针对组合商品 并使用事务处理
+    * @access public
+    * @param String $shop_id 店铺ID
+    * @param Int $product_id 货品ID
+    * @param Int $nums 数量
+    * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'')
+    * @return bool
+    */
     public function combine_storeout($shop_id='',$product_id='',$nums,$log_data=array()){
         if (empty($shop_id) || empty($product_id) || empty($nums)) return false;
         
@@ -309,15 +309,15 @@ class console_stock_products extends console_stock_stock{
     }
 
     /**
-     * 组合商品明细销售预占+ 店铺销售预占+,组合预占-
-     * 只针对基础货品
-     * @access public
-     * @param String $shop_id 店铺ID
-     * @param Int $product_id 基础货品ID
-     * @param Int $nums 数量
-     * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'')
-     * @return bool
-     */
+    * 组合商品明细销售预占+ 店铺销售预占+,组合预占-
+    * 只针对基础货品
+    * @access public
+    * @param String $shop_id 店铺ID
+    * @param Int $product_id 基础货品ID
+    * @param Int $nums 数量
+    * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'')
+    * @return bool
+    */
     public function sale2combine_freeze($shop_id,$product_id='',$nums='',$log_data=array()){
         if (empty($product_id) || empty($nums) || empty($shop_id)) return false;
 
@@ -341,15 +341,15 @@ class console_stock_products extends console_stock_stock{
     }
 
     /**
-     * 组合商品明细销售预占- 店铺销售预占-,组合预占+
-     * 只针对基础货品
-     * @access public
-     * @param String $shop_id 店铺ID
-     * @param Int $product_id 基础货品ID
-     * @param Int $nums 数量
-     * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'')
-     * @return bool
-     */
+    * 组合商品明细销售预占- 店铺销售预占-,组合预占+
+    * 只针对基础货品
+    * @access public
+    * @param String $shop_id 店铺ID
+    * @param Int $product_id 基础货品ID
+    * @param Int $nums 数量
+    * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'')
+    * @return bool
+    */
     public function sale2combine_unfreeze($shop_id,$product_id='',$nums='',$log_data=array()){
         if (empty($product_id) || empty($nums) || empty($shop_id)) return false;
 
@@ -407,11 +407,11 @@ class console_stock_products extends console_stock_stock{
     }
 
     /**
-     * 保存组合商品：明细组合预占+/- 本身实际库存+/-
-     * 只针对组合商品,在现有库存基础上做差异变更
-     * @access public
-     * @param Int $product_id 组合商品ID
-     * @param Array $pre_product 修改前组合商品数据，增加时可为空
+    * 保存组合商品：明细组合预占+/- 本身实际库存+/-
+    * 只针对组合商品,在现有库存基础上做差异变更
+    * @access public
+    * @param Int $product_id 组合商品ID
+    * @param Array $pre_product 修改前组合商品数据，增加时可为空
        $old_product = array(
            'nums' => '组合套数',
            'items' => array(
@@ -419,7 +419,7 @@ class console_stock_products extends console_stock_stock{
                 array('item_prouct_id'=>'基础货品ID2','item_nums'=>'数量'),
            );
        );
-     * @param Array $after_product 修改后组合商品数据,增加/编辑都需要提供
+    * @param Array $after_product 修改后组合商品数据,增加/编辑都需要提供
        $old_product = array(
            'nums' => '组合套数',
            'items' => array(
@@ -428,9 +428,9 @@ class console_stock_products extends console_stock_stock{
                 array('item_prouct_id'=>'基础货品ID3','item_nums'=>'数量'),
            );
        );
-     * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'')
-     * @return bool
-     */
+    * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'')
+    * @return bool
+    */
     public function save_combination($product_id,$pre_product='',$after_product='',$log_data=array()){
         if (empty($product_id) || empty($after_product)) return false;
         
@@ -522,13 +522,13 @@ class console_stock_products extends console_stock_stock{
     }
 
     /**
-     * 删除组合商品：明细组合预占- 本身实际库存-
-     * 只针对组合商品
-     * @access public
-     * @param Int $combine_product_id 组合商品ID
-     * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'')
-     * @return bool
-     */
+    * 删除组合商品：明细组合预占- 本身实际库存-
+    * 只针对组合商品
+    * @access public
+    * @param Int $combine_product_id 组合商品ID
+    * @param array $log_data 日志数组array('originale_id'=>'单据id','memo'=>'')
+    * @return bool
+    */
     public function del_combination($combine_product_id,$log_data=array()){
         if (empty($combine_product_id)) return false;
 
@@ -575,15 +575,15 @@ class console_stock_products extends console_stock_stock{
     }
 
     /**
-     * 货品可售库存：线上仓库库存
-     * 普通：线上仓库库存-销售预占-组合预占-线上仓库冻结库存
-     * 捆绑：捆绑最大可售 = min(捆绑商品明细可售库存/捆绑数量,...)
-     * 组合：组合本身库存 - 组合本身销售预占
-     * @access public
-     * @param Int $product_id 货品ID
-     * @param Int $nums 数量
-     * @return Int
-     */
+    * 货品可售库存：线上仓库库存
+    * 普通：线上仓库库存-销售预占-组合预占-线上仓库冻结库存
+    * 捆绑：捆绑最大可售 = min(捆绑商品明细可售库存/捆绑数量,...)
+    * 组合：组合本身库存 - 组合本身销售预占
+    * @access public
+    * @param Int $product_id 货品ID
+    * @param Int $nums 数量
+    * @return Int
+    */
     public function get_usable_sale_store($product_id=''){
         $store = 0;
         if (empty($product_id)) return $store;
@@ -600,14 +600,14 @@ class console_stock_products extends console_stock_stock{
     }
 
     /**
-     * 货品可用库存:线上和线下所有仓库库存
-     * 普通：所有库存-销售预占-组合预占-仓库冻结库存
-     * 捆绑：捆绑最大可售 = min(捆绑商品明细可售库存/捆绑数量,...)
-     * 组合：组合本身库存 - 组合本身销售预占
-     * @access public
-     * @param Int $product_id 货品ID
-     * @return Int
-     */
+    * 货品可用库存:线上和线下所有仓库库存
+    * 普通：所有库存-销售预占-组合预占-仓库冻结库存
+    * 捆绑：捆绑最大可售 = min(捆绑商品明细可售库存/捆绑数量,...)
+    * 组合：组合本身库存 - 组合本身销售预占
+    * @access public
+    * @param Int $product_id 货品ID
+    * @return Int
+    */
     public function get_usable_store($product_id,$attr=''){
         $store = 0;
         if (empty($product_id)) return $store;
@@ -624,12 +624,12 @@ class console_stock_products extends console_stock_stock{
     }
 
     /**
-     * 获取货品所在仓库的可用库存[已弃用,直接用single('ome_branch_product')]
-     * @access public
-     * @param Int $branch_id 仓库ID
-     * @param Int $product_id 货品ID
-     * @return Int
-     */
+    * 获取货品所在仓库的可用库存[已弃用,直接用single('ome_branch_product')]
+    * @access public
+    * @param Int $branch_id 仓库ID
+    * @param Int $product_id 货品ID
+    * @return Int
+    */
     public function get_branch_usable_store($branch_id='',$product_id=''){
         $store = 0;
         if (empty($branch_id) || empty($product_id)) return $store;
@@ -695,22 +695,22 @@ class console_stock_products extends console_stock_stock{
     }
 
     /**
-     * 获取货品类型
-     * @access public 
-     * @param Int $product_id 货品ID
-     * @return string normal/combination/pkg
-     */
+    * 获取货品类型
+    * @access public 
+    * @param Int $product_id 货品ID
+    * @return string normal/combination/pkg
+    */
     public function get_product_type($product_id = ''){
         $product = $this->get_product_data($product_id);
         return $product['type'];
     }
 
     /**
-     * 获取货品基础信息
-     * @access public 
-     * @param Int $product_id 货品ID
-     * @return array
-     */
+    * 获取货品基础信息
+    * @access public 
+    * @param Int $product_id 货品ID
+    * @return array
+    */
     public function get_product_data($product_id = '')
     {
         $basicMaterialObj    = app::get('material')->model('basic_material');

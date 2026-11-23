@@ -18,7 +18,7 @@
 class console_event_receive_transferStockOut extends console_event_response{
 
     /**
-     * 
+     *
      * 调拔单出库事件处理
      * @param array $data
      */

@@ -18,11 +18,6 @@
 class base_errorpage 
 {
 
-    /**
-     * exception_handler
-     * @param mixed $exception exception
-     * @return mixed 返回值
-     */
     static public function exception_handler($exception){
         $message = $exception->getMessage();
         

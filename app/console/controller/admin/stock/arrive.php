@@ -14,20 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: 2021/1/5 16:17:19
  * @describe: 控制器
  * ============================
  */
 class console_ctl_admin_stock_arrive extends desktop_controller {
-
-    /**
-     * index
-     * @return mixed 返回值
-     */
 
     public function index() {
         $actions = array();

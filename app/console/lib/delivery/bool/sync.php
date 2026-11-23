@@ -14,10 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @author ykm 2022/8/25 16:00:48
  * @describe 发货单布尔型同步状态
  */
+
 class console_delivery_bool_sync {
     #发起请求
     const __SEND_CODE         = 0x001;
@@ -33,12 +35,6 @@ class console_delivery_bool_sync {
     const __SEARCH_FAIL       = 0x020;
     #查询成功
     const __SEARCH_SUCC       = 0x040;
-
-    /**
-     * 获取BoolSync
-     * @param mixed $filter filter
-     * @return mixed 返回结果
-     */
 
     public function getBoolSync($filter) {
         $where = array();

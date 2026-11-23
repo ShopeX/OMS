@@ -14,9 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 重置货品冻结库存流水记录
- *
+ * 
  * @access public
  * @author wangbiao<wangbiao@shopex.cn>
  */
@@ -31,7 +32,6 @@ class console_stock_freeze
      * 重置流水记录
      * redis库存高可用，废弃掉直接修改db库存、冻结的方法
      */
-
     function reset_stock_freeze($product_id,$is_local = '')
     {
         if (empty($is_local) || $is_local != 'local') {
@@ -423,7 +423,7 @@ class console_stock_freeze
     
     /**
      * 经销一件代发订单预占流水
-     * 
+     *
      * @param intval $product_id 基础物料ID
      * @return true
      */

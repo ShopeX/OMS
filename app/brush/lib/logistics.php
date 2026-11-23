@@ -14,10 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @author ykm 2016-01-07
  * @describe 特殊订单物流相关处理
  */
+
 class brush_logistics {
 
     /**
@@ -25,7 +27,6 @@ class brush_logistics {
      * @param $delivery require(delivery_id,status,logi_no,ship_area,net_weight)
      * @return array
      */
-
     public function checkChangeLogistics(&$data, $delivery) {
         if(!in_array($delivery['status'], array('ready','progress'))) {
             return array('result' => false, 'msg' => '该单已经完结不能再变更物流公司');

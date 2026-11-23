@@ -42,14 +42,8 @@
  *     'archive_time' => '6',  // 6个月前
  * );
  */
-
 class archive_order{
     protected $db;
-    /**
-     * __construct
-     * @return mixed 返回值
-     */
-
     public function __construct(){
         
         $this->db = kernel::database();
@@ -312,13 +306,13 @@ class archive_order{
 
 
 
-     /**
-      * 冻结库存
-      * @param  
-      * @return  
-      * @access  public
-      * @author sunjng@shopex.cn
-      */
+    /**
+     * 冻结库存
+     * @param  
+     * @return  
+     * @access  public
+     * @author sunjng@shopex.cn
+     */
 
      function _storefreeze_order($order_list)
      {
@@ -400,7 +394,7 @@ class archive_order{
         }
      }
     
-     /**
+    /**
       * 删除订单相关信息
       * @param  
       * @return 
@@ -758,11 +752,6 @@ class archive_order{
     }
 
 
-    /**
-     * _create_refund_apply
-     * @param mixed $order_list order_list
-     * @return mixed 返回值
-     */
     public function _create_refund_apply($order_list){
         $orderIds = array();
 
@@ -801,11 +790,6 @@ class archive_order{
     }
 
 
-    /**
-     * _create_return_product
-     * @param mixed $order_list order_list
-     * @return mixed 返回值
-     */
     public function _create_return_product($order_list){
         $return_ids = $this->_get_returnList($order_list);
        
@@ -848,11 +832,6 @@ class archive_order{
     }
 
 
-    /**
-     * _create_reship
-     * @param mixed $order_list order_list
-     * @return mixed 返回值
-     */
     public function _create_reship($order_list){
         $reship_ids = $this->_get_reshipList($order_list);
       
@@ -903,11 +882,6 @@ class archive_order{
         return true;
     }
 
-    /**
-     * _get_reshipList
-     * @param mixed $order_list order_list
-     * @return mixed 返回值
-     */
     public function _get_reshipList($order_list){
         $orderIds = array();
 
@@ -924,11 +898,6 @@ class archive_order{
     }
 
 
-    /**
-     * _get_returnList
-     * @param mixed $order_list order_list
-     * @return mixed 返回值
-     */
     public function _get_returnList($order_list){
         $orderIds = array();
 
@@ -944,10 +913,6 @@ class archive_order{
         return $return_ids;
     }
 
-    /**
-     * historyArchiveList
-     * @return mixed 返回值
-     */
     public function historyArchiveList(){
         $archivesql = "select order_id from sdb_archive_orders";
 
@@ -960,10 +925,6 @@ class archive_order{
 
     }
 
-    /**
-     * 删除Processlist
-     * @return mixed 返回值
-     */
     public function deleteProcesslist(){
 
         $sql = "SELECT count(reship_id) as _count FROM sdb_archive_reship";

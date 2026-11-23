@@ -198,12 +198,6 @@ class console_iostockorder{
          }
     }
 
-    /**
-     * doCkeck
-     * @param mixed $iso_id ID
-     * @param mixed $io io
-     * @return mixed 返回值
-     */
     public function doCkeck($iso_id, $io) {
 
         #库存状态判断
@@ -349,7 +343,7 @@ class console_iostockorder{
     }
 
     /**
-     * 
+     *
      * 生成各类型出入库单的相关单据
      * @param unknown_type $iso_id
      * @param unknown_type $io
@@ -456,7 +450,7 @@ class console_iostockorder{
     }
 
     /**
-     * 
+     *
      * 是否要生成赊购单
      * @param unknown_type $iso_id
      * @param unknown_type $credit_sheet_instance
@@ -524,9 +518,9 @@ class console_iostockorder{
     }
 
     /**
-     * 检验必填字段是否全部填写
-     * 
-     * */
+     *检验必填字段是否全部填写
+     *
+     **/
     function check_required($data,&$msg){return true;
         $msg = array();
         $arrFrom = array('branch_id','bn','iostockorder_price','nums','operator');
@@ -546,9 +540,9 @@ class console_iostockorder{
     }
 
     /**
-     * 检验字段类型是否符合要求
-     * 
-     * */
+    *检验字段类型是否符合要求
+    *
+    **/
     function check_value($data,&$msg){
         $msg = array();
         $rea = '字段类型不符';
@@ -713,9 +707,9 @@ class console_iostockorder{
     }
 
     /**
-     * 生成出入库单号
-     * $type 类型 如：iostock-1
-     * */
+    * 生成出入库单号
+    * $type 类型 如：iostock-1
+    **/
     function get_iostockorder_bn($type,$num = 0){
         $iostock_instance = kernel::service('ome.iostock');
         $kt = $iostock_instance->iostock_rules($type);
@@ -830,12 +824,6 @@ class console_iostockorder{
         return $sales_data;
     }
 
-    /**
-     * 获取_credit_sheet_data
-     * @param mixed $iso_id ID
-     * @param mixed $gen_id ID
-     * @return mixed 返回结果
-     */
     public function get_credit_sheet_data($iso_id,$gen_id){
           $iso_detail = $this->getIso($iso_id);
           $payable = $iso_detail['product_cost'] + $iso_detail['iso_price'];
@@ -857,11 +845,6 @@ class console_iostockorder{
     }
 
 
-    /**
-     * 获取_refunds_data
-     * @param mixed $iso_id ID
-     * @return mixed 返回结果
-     */
     public function get_refunds_data($iso_id){
         $iso_detail = $this->getIso($iso_id);
 
@@ -1224,13 +1207,7 @@ class console_iostockorder{
     }
 
 
-    /**
-     * cmp_productid
-     * @param mixed $arr1 arr1
-     * @param mixed $arr2 arr2
-     * @return mixed 返回值
-     */
-    public function cmp_productid($arr1, $arr2)
+     public function cmp_productid($arr1, $arr2)
     {
         if ($arr1['product_id'] == $arr2['product_id']) {
             return 0;
@@ -1423,11 +1400,6 @@ class console_iostockorder{
         return $objIoStockOrder->save($data);
     }
 
-    /**
-     * 处理Batch
-     * @param mixed $iostock_data 数据
-     * @return mixed 返回值
-     */
     public function processBatch($iostock_data) {
 
       

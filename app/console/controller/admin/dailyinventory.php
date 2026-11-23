@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
@@ -24,11 +25,6 @@
  */
 class console_ctl_admin_dailyinventory extends desktop_controller
 {
-    /**
-     * wmsIndex
-     * @return mixed 返回值
-     */
-
     public function wmsIndex()
     {
         $actions = array();
@@ -48,11 +44,6 @@ class console_ctl_admin_dailyinventory extends desktop_controller
         $this->finder('console_mdl_dailyinventory', $params);
     }
 
-    /**
-     * wmsItemIndex
-     * @param mixed $dlyinv_id ID
-     * @return mixed 返回值
-     */
     public function wmsItemIndex($dlyinv_id = 0)
     {
         $actions = array(
@@ -76,10 +67,6 @@ class console_ctl_admin_dailyinventory extends desktop_controller
         $this->finder('console_mdl_dailyinventory_items', $params);
     }
 
-    /**
-     * storeIndex
-     * @return mixed 返回值
-     */
     public function storeIndex()
     {
         $actions = array();
@@ -99,11 +86,6 @@ class console_ctl_admin_dailyinventory extends desktop_controller
         $this->finder('console_mdl_dailyinventory', $params);
     }
 
-    /**
-     * storeItemIndex
-     * @param mixed $dlyinv_id ID
-     * @return mixed 返回值
-     */
     public function storeItemIndex($dlyinv_id = 0)
     {
         $dlyinv = app::get('console')->model('dailyinventory')->dump($dlyinv_id);

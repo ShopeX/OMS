@@ -15,6 +15,13 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 /*
  * @package base
@@ -34,13 +41,6 @@ class base_kvstore_dba extends base_kvstore_abstract implements base_interface_k
         }
     }//End Function
 
-    /**
-     * fetch
-     * @param mixed $key key
-     * @param mixed $value value
-     * @param mixed $timeout_version timeout_version
-     * @return mixed 返回值
-     */
     public function fetch($key, &$value, $timeout_version=null) 
     {
         $rs = dba_open(DATA_DIR.'/kvstore/dba.db','r-',$this->handle);
@@ -57,13 +57,6 @@ class base_kvstore_dba extends base_kvstore_abstract implements base_interface_k
         return false;
     }//End Function
 
-    /**
-     * store
-     * @param mixed $key key
-     * @param mixed $value value
-     * @param mixed $ttl ttl
-     * @return mixed 返回值
-     */
     public function store($key, $value, $ttl=0) 
     {
         $store['value'] = $value;
@@ -75,11 +68,6 @@ class base_kvstore_dba extends base_kvstore_abstract implements base_interface_k
         return $ret;
     }//End Function
 
-    /**
-     * 删除
-     * @param mixed $key key
-     * @return mixed 返回值
-     */
     public function delete($key) 
     {
         $rs = dba_open(DATA_DIR.'/kvstore/dba.db','wl',$this->handle);
@@ -88,11 +76,6 @@ class base_kvstore_dba extends base_kvstore_abstract implements base_interface_k
         return $ret;
     }//End Function
 
-    /**
-     * recovery
-     * @param mixed $record record
-     * @return mixed 返回值
-     */
     public function recovery($record) 
     {
         $key = $record['key'];

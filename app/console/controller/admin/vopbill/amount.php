@@ -14,15 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * sunjing@shopex.cn
  */
 class console_ctl_admin_vopbill_amount extends desktop_controller {
-
-    /**
-     * index
-     * @return mixed 返回值
-     */
 
     public function index() {
         $actions = array();

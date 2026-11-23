@@ -98,11 +98,6 @@ class brush_finder_delivery{
     public $column_beartime = "成单时间";
     public $column_beartime_width = '140';
     public $column_beartime_order_field= 'order_createtime';
-    /**
-     * column_beartime
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_beartime($row) {
         return $row[$this->col_prefix . 'order_createtime'] ? date('Y-m-d H:i:s',$row[$this->col_prefix . 'order_createtime']) : '-';
     }
@@ -228,12 +223,6 @@ class brush_finder_delivery{
     }
 
     public $column_order_marktext = "商家备注";
-    /**
-     * column_order_marktext
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_order_marktext($row,$list) {
         $orders = $this->_getOrders($row['delivery_id'],$list);
 
@@ -246,12 +235,6 @@ class brush_finder_delivery{
     }
 
     public $column_order_custommark = "客户备注";
-    /**
-     * column_order_custommark
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_order_custommark($row,$list) {
         $orders = $this->_getOrders($row['delivery_id'],$list);
 
@@ -264,12 +247,6 @@ class brush_finder_delivery{
     }
 
     public $column_order_bn = "订单号";
-    /**
-     * column_order_bn
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_order_bn($row,$list) {
         $orders = $this->_getOrders($row['delivery_id'],$list);
 
@@ -283,7 +260,7 @@ class brush_finder_delivery{
 
     /**
      * summary
-     * 
+     *
      * @return void
      * @author 
      */

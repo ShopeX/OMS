@@ -14,21 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: 2022/11/21 11:37:57
  * @describe: 差异单
  * ============================
  */
 class console_difference {
-
-    /**
-     * insertBill
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
 
     public function insertBill($data) {
         $differenceObj = app::get('console')->model('difference');
@@ -90,11 +85,6 @@ class console_difference {
         return [true, ['msg'=>'操作完成', 'diff_id'=>$inData['id']]];
     }
 
-    /**
-     * dealFreeze
-     * @param mixed $inData 数据
-     * @return mixed 返回值
-     */
     public function dealFreeze($inData) {
         $diffItemObj = app::get('console')->model('difference_items');
         $freezeItems = $diffItemObj->getList('id, bm_id, material_bn, number', ['diff_id'=>$inData['id'], 'number|lthan'=>0]);
@@ -154,11 +144,6 @@ class console_difference {
         return [true, ['msg'=>'操作成功']];
     }
 
-    /**
-     * retryFreeze
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function retryFreeze($id) {
         $differenceMdl = app::get('console')->model('difference');
         $diff = $differenceMdl->db_dump($id);
@@ -183,11 +168,6 @@ class console_difference {
         return $this->dealFreeze($diff);
     }
 
-    /**
-     * confirm
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function confirm($id) {
         $dfObj = app::get('console')->model('difference');
         $dfRow = $dfObj->db_dump(['id'=>$id]);
@@ -266,11 +246,6 @@ class console_difference {
         return [true, ['msg'=>'操作成功']];
     }
 
-    /**
-     * retryInAndOut
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function retryInAndOut($id) {
         $dfObj = app::get('console')->model('difference');
         $dfRow = $dfObj->db_dump(['id'=>$id]);
@@ -293,11 +268,6 @@ class console_difference {
         return [true, ['msg'=>'操作成功']];
     }
 
-    /**
-     * retryOut
-     * @param mixed $dfRow dfRow
-     * @return mixed 返回值
-     */
     public function retryOut($dfRow) {
         $id = $dfRow['id'];
         $dfObj = app::get('console')->model('difference');
@@ -321,11 +291,6 @@ class console_difference {
         return [true, $rsData];
     }
 
-    /**
-     * retryIn
-     * @param mixed $dfRow dfRow
-     * @return mixed 返回值
-     */
     public function retryIn($dfRow) {
         $id = $dfRow['id'];
         $dfObj = app::get('console')->model('difference');

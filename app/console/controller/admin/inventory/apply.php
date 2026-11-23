@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 class console_ctl_admin_inventory_apply extends desktop_controller{
     var $workground = "console_center";
     function index(){

@@ -15,6 +15,13 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 /*
  * @package base
@@ -32,10 +39,6 @@ class base_kvstore_memcache extends base_kvstore_abstract implements base_interf
         $this->prefix = $prefix;
     }//End Function
 
-    /**
-     * connect
-     * @return mixed 返回值
-     */
     public function connect() 
     {
         if(!isset(self::$_cacheObj)){
@@ -57,13 +60,6 @@ class base_kvstore_memcache extends base_kvstore_abstract implements base_interf
         }
     }//End Function
 
-    /**
-     * fetch
-     * @param mixed $key key
-     * @param mixed $value value
-     * @param mixed $timeout_version timeout_version
-     * @return mixed 返回值
-     */
     public function fetch($key, &$value, $timeout_version=null) 
     {
         $store = self::$_cacheObj->get($this->create_key($key));
@@ -79,13 +75,6 @@ class base_kvstore_memcache extends base_kvstore_abstract implements base_interf
         return false;
     }//End Function
 
-    /**
-     * store
-     * @param mixed $key key
-     * @param mixed $value value
-     * @param mixed $ttl ttl
-     * @return mixed 返回值
-     */
     public function store($key, $value, $ttl=0) 
     {
         $store['value'] = $value;
@@ -94,21 +83,11 @@ class base_kvstore_memcache extends base_kvstore_abstract implements base_interf
         return self::$_cacheObj->set($this->create_key($key), $store, MEMCACHE_COMPRESSED, 0);
     }//End Function
 
-    /**
-     * 删除
-     * @param mixed $key key
-     * @return mixed 返回值
-     */
     public function delete($key) 
     {
         return self::$_cacheObj->delete($this->create_key($key));
     }//End Function
 
-    /**
-     * recovery
-     * @param mixed $record record
-     * @return mixed 返回值
-     */
     public function recovery($record) 
     {
         $key = $record['key'];
@@ -118,7 +97,7 @@ class base_kvstore_memcache extends base_kvstore_abstract implements base_interf
         return self::$_cacheObj->set($this->create_key($key), $store, MEMCACHE_COMPRESSED, 0);
     }//End Function
 
-    /**
+       /**
      * 是否支持同步的自增单号处理
      */
     public function supportUUID() {
@@ -169,7 +148,7 @@ class base_kvstore_memcache extends base_kvstore_abstract implements base_interf
 
     /**
      * 初始化自增ID值
-     * 
+     *
      * @return void
      * @author 
      */

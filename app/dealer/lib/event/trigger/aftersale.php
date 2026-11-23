@@ -19,11 +19,6 @@ class dealer_event_trigger_aftersale {
 
     
 
-    /**
-     * push
-     * @param mixed $plat_aftersale_id ID
-     * @return mixed 返回值
-     */
     public function push($plat_aftersale_id){
 
         $modelAftersale = app::get('dealer')->model('platform_aftersale');

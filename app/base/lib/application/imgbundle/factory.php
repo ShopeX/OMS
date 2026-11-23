@@ -30,11 +30,6 @@ class base_application_imgbundle_factory
         $this->reset();
     }//End Function
     
-    /**
-     * 设置_app
-     * @param mixed $app_id ID
-     * @return mixed 返回操作结果
-     */
     public function set_app($app_id) 
     {
         $this->app_id = $app_id;
@@ -45,11 +40,6 @@ class base_application_imgbundle_factory
         }
     }//End Function
 
-    /**
-     * 设置_directory
-     * @param mixed $directory directory
-     * @return mixed 返回操作结果
-     */
     public function set_directory($directory) 
     {
         $this->directory = $directory;
@@ -60,43 +50,24 @@ class base_application_imgbundle_factory
         }
     }//End Function
 
-    /**
-     * 设置_output
-     * @param mixed $output output
-     * @return mixed 返回操作结果
-     */
     public function set_output($output) 
     {
         $this->output = $output;
         return $this;
     }//End Function
 
-    /**
-     * 设置_file
-     * @param mixed $file file
-     * @return mixed 返回操作结果
-     */
     public function set_file($file) 
     {
         $this->files[] = $file;
         return $this;
     }//End Function
 
-    /**
-     * 设置_files
-     * @param array $files files
-     * @return mixed 返回操作结果
-     */
     public function set_files(array $files) 
     {
         $this->files = $files;
         return $this;
     }//End Function
 
-    /**
-     * 重置
-     * @return mixed 返回值
-     */
     public function reset() 
     {
         $this->app_id = null;
@@ -126,10 +97,6 @@ class base_application_imgbundle_factory
         return true;
     }//End Function
 
-    /**
-     * 创建
-     * @return mixed 返回值
-     */
     public function create() 
     {
         if(!is_callable('imagecreatefromjpeg') || !is_callable('imagecreatefrompng') || !is_callable('imagecreatefromgif')){

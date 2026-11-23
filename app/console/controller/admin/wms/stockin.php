@@ -14,20 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: 2022/10/21 15:14:06
  * @describe: 控制器
  * ============================
  */
 class console_ctl_admin_wms_stockin extends desktop_controller {
-
-    /**
-     * index
-     * @return mixed 返回值
-     */
 
     public function index() {
         $actions = array();

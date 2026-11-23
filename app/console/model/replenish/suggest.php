@@ -17,13 +17,6 @@
 
 class console_mdl_replenish_suggest extends dbeav_model{
 
-    /**
-     * modifier_task_bn
-     * @param mixed $task_bn task_bn
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_task_bn($task_bn,$list,$row)
     {
         $page = 1;
@@ -45,44 +38,21 @@ class console_mdl_replenish_suggest extends dbeav_model{
     );
 
 
-    /**
-     * 获取Items
-     * @param mixed $sug_id ID
-     * @return mixed 返回结果
-     */
     public function getItems($sug_id){
         $itemsMdl = app::get('console')->model('replenish_suggest_items');
         $items = $itemsMdl->getlist('material_bn,reple_nums',array('sug_id'=>$sug_id));
 
         return $items;
     }
-    /**
-     * 获取TemplateColumn
-     * @return mixed 返回结果
-     */
     public function getTemplateColumn() {
         return array_keys($this->templateColumn);
     }
-    /**
-     * prepared_import_csv
-     * @return mixed 返回值
-     */
     public function prepared_import_csv(){
         $this->import_data =[];
         $this->import_data_bm_bn =[];
         $this->ioObj->cacheTime = time();
     }
 
-    /**
-     * prepared_import_csv_row
-     * @param mixed $row row
-     * @param mixed $title title
-     * @param mixed $tmpl tmpl
-     * @param mixed $mark mark
-     * @param mixed $newObjFlag newObjFlag
-     * @param mixed $msg msg
-     * @return mixed 返回值
-     */
     public function prepared_import_csv_row($row,&$title,&$tmpl,&$mark,&$newObjFlag,&$msg)
     {
        
@@ -164,10 +134,6 @@ class console_mdl_replenish_suggest extends dbeav_model{
         return null;
     }
 
-    /**
-     * finish_import_csv
-     * @return mixed 返回值
-     */
     public function finish_import_csv(){
         if(empty($this->import_data)) {
             return null;
@@ -184,12 +150,6 @@ class console_mdl_replenish_suggest extends dbeav_model{
     }
 
     
-    /**
-     * 更新DataItems
-     * @param mixed $data 数据
-     * @param mixed $items items
-     * @return mixed 返回值
-     */
     public function updateDataItems($data, $items) {
        
         if(empty($data) || empty($items)) {

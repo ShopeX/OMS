@@ -14,9 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 翱象订单Lib类
- *
+ * 
  * @author wangbiao@shopex.cn
  * @version 2023.07.19
  */
@@ -29,7 +30,6 @@ class dchain_order extends dchain_abstract
      * @param $corpInfo
      * @return bool
      */
-
     public function combineOrder($orderInfo, $branchInfo, $corpInfo, $orderIds=array())
     {
         $orderExtendObj = app::get('ome')->model('order_extend');
@@ -64,7 +64,7 @@ class dchain_order extends dchain_abstract
     
     /**
      * 检查审单时的建议配
-     * 
+     *
      * @param $extendInfo
      * @param $corpInfo
      * @param $orderIds
@@ -198,7 +198,7 @@ class dchain_order extends dchain_abstract
     
     /**
      * 检查审单时的建议仓
-     * 
+     *
      * @param $extendInfo
      * @param $branchInfo
      * @param $orderIds
@@ -246,7 +246,7 @@ class dchain_order extends dchain_abstract
     
     /**
      * 获取审核订单的指定快递
-     * 
+     *
      * @param $orderInfo
      * @param $orderIds
      * @param $branch_id 审核订单选择的仓库ID
@@ -422,7 +422,7 @@ class dchain_order extends dchain_abstract
     
     /**
      * 合并订单时,检查快递是否允许合单
-     * 
+     *
      * @param $comExtendInfo
      * @param $orderExtendInfo
      * @return bool
@@ -530,7 +530,7 @@ class dchain_order extends dchain_abstract
     
     /**
      * 物流服务标签列表
-     * 
+     *
      * @return void
      */
     public function getPromiseServiceList()
@@ -550,7 +550,7 @@ class dchain_order extends dchain_abstract
     
     /**
      * 获取审核订单使用的物流公司
-     * 
+     *
      * @param $biz_delivery_codes
      * @param $shop_id
      * @return void
@@ -575,7 +575,7 @@ class dchain_order extends dchain_abstract
     
     /**
      * 获取多个订单推送快递物流的交集
-     * 
+     *
      * @param $orderIds
      * @return array
      */
@@ -658,7 +658,7 @@ class dchain_order extends dchain_abstract
     
     /**
      * [合单时]检查多个订单,建议仓编码不同时,需要提醒
-     * 
+     *
      * @param $orderIds
      * @return array
      */
@@ -709,7 +709,7 @@ class dchain_order extends dchain_abstract
     
     /**
      * 获取平台推荐与黑名单物流列表
-     * 
+     *
      * @param $order_id
      * @param $error_msg
      * @return array|null

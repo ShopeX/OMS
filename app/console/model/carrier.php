@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 唯品会承运商mdl类
  *
@@ -22,12 +23,6 @@
  */
 class console_mdl_carrier extends dbeav_model{
     
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
-
     public function table_name($real = false)
     {
         if($real){
@@ -39,10 +34,6 @@ class console_mdl_carrier extends dbeav_model{
         return $table_name;
     }
     
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema(){
         return app::get('purchase')->model('carrier')->get_schema();
     }

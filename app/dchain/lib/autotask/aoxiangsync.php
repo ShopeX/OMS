@@ -15,7 +15,12 @@
  * limitations under the License.
  */
 
-
+/**
+ * 拆分翱象同步商品任务Lib类
+ *
+ * @author wangbiao@shopex.cn
+ * @version 2023.03.15
+ */
 class dchain_autotask_aoxiangsync
 {
     /**

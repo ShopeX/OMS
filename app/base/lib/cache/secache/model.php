@@ -14,6 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 /**
  * fcache
  * 最大bs 16m
@@ -171,12 +179,11 @@ class base_cache_secache_model extends base_cache_abstract
     /**
      * lock
      * 如果flock不管用，请继承本类，并重载此方法
-     * 
+     *
      * @param mixed $is_block 是否阻塞
      * @access public
      * @return void
      */
-
     function lock($is_block,$whatever=false){
         ignore_user_abort(true);
         return flock($this->_rs, $is_block?LOCK_EX:LOCK_EX+LOCK_NB);
@@ -185,7 +192,7 @@ class base_cache_secache_model extends base_cache_abstract
     /**
      * unlock
      * 如果flock不管用，请继承本类，并重载此方法
-     * 
+     *
      * @access public
      * @return void
      */
@@ -294,7 +301,7 @@ class base_cache_secache_model extends base_cache_abstract
      * 查找指定的key
      * 如果找到节点则$pos=节点本身 返回true
      * 否则 $pos=树的末端 返回false
-     * 
+     *
      * @param mixed $key
      * @access public
      * @return void

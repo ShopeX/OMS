@@ -14,19 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 补货差异单任务
- *
+ * 
  * @author wangbiao<wangbiao@shopex.cn>
  * @version $Id: Z
  */
 class console_ctl_admin_replenish_diff extends desktop_controller
 {
-    /**
-     * index
-     * @return mixed 返回值
-     */
-
     public function index()
     {
         $base_filter = array();

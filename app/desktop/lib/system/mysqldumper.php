@@ -15,16 +15,19 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 class desktop_system_mysqldumper {
     public $_isDroptables;
     public $tableid;    //数据表ID
     public $startid;
 
-    /**
-     * __construct
-     * @return mixed 返回值
-     */
     public function __construct() {
         $this->_db = kernel::database();
     }
@@ -34,7 +37,6 @@ class desktop_system_mysqldumper {
      * @params $app 所属app
      * @params $bakdir 备份临时文件夹
      */
-
     public function multi_dump_sdf( $app,$bakdir ) {
         $dirname = $bakdir .'/sdf';
         $dbschema_dirname = $bakdir .'/dbschema';
@@ -184,11 +186,6 @@ class desktop_system_mysqldumper {
 
 
     //截最后一个是否是半个UTF-8中文
-    /**
-     * utftrim
-     * @param mixed $str str
-     * @return mixed 返回值
-     */
     public function utftrim($str)
     {
         $found = false;

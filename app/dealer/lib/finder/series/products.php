@@ -30,12 +30,6 @@ class dealer_finder_series_products
     public $column_status       = '状态';
     public $column_status_width = 60;
     public $column_status_order = 40;
-    /**
-     * column_status
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_status($row, $list)
     {
         switch ($row['status']) {
@@ -55,12 +49,6 @@ class dealer_finder_series_products
     public $column_endorse       = '关联经销商店铺';
     public $column_endorse_width = 110;
     public $column_endorse_order = 65;
-    /**
-     * column_endorse
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_endorse($row, $list)
     {
         if (!$this->endorseList) {

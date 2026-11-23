@@ -18,7 +18,7 @@
 class console_event_receive_otherStockout extends console_event_response{
 
     /**
-     * 
+     *
      * 其它出库事件处理
      * @param array $data
      */

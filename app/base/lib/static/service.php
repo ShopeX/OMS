@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 class service implements Iterator{
     
     function __construct($service_define,$filter=null){
@@ -29,34 +35,18 @@ class service implements Iterator{
         return $this->current_object;
     }
     
-    /**
-     * rewind
-     * @return mixed 返回值
-     */
     public function rewind() {
         $this->iterator->rewind();
     }
 
-    /**
-     * key
-     * @return mixed 返回值
-     */
     public function key() {
         return $this->iterator->current();
     }
 
-    /**
-     * next
-     * @return mixed 返回值
-     */
     public function next() {
         return $this->iterator->next();
     }
 
-    /**
-     * valid
-     * @return mixed 返回值
-     */
     public function valid() {
         while($this->iterator->valid()){
             if($this->filter()){

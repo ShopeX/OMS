@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 物流包裹明细列表Model类
  *
@@ -33,12 +34,6 @@ class console_mdl_delivery_package extends dbeav_model
     var $ioTitle = array();
     var $export_flag = false;
     
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
-
     public function table_name($real = false)
     {
         if($real){
@@ -50,21 +45,10 @@ class console_mdl_delivery_package extends dbeav_model
         return $table_name;
     }
     
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema(){
         return app::get('ome')->model('delivery_package')->get_schema();
     }
     
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter,$tableAlias=null,$baseWhere=null)
     {
         $where = '';
@@ -229,7 +213,7 @@ class console_mdl_delivery_package extends dbeav_model
     
     /**
      * 导入导出的标题
-     * 
+     *
      * @param Null
      * @return Array
      */
@@ -265,7 +249,7 @@ class console_mdl_delivery_package extends dbeav_model
     
     /**
      * 导出模板的标题
-     * 
+     *
      * @param Null
      * @return array
      */

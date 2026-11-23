@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 加工单处理类
  *
@@ -29,7 +30,6 @@ class console_material_package
      * @author chenping@shopex.cn
      * @version Thu May  4 11:12:53 2023
      **/
-
     public function cancel($id, $isLocal)
     {
         $id = (int) $id;

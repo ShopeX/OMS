@@ -18,10 +18,6 @@
 class dealer_ctl_admin_betc extends desktop_controller
 {
 
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index()
     {
         $actions = array(
@@ -50,10 +46,6 @@ class dealer_ctl_admin_betc extends desktop_controller
         $this->finder('dealer_mdl_betc', $params);
     }
 
-    /**
-     * 创建
-     * @return mixed 返回值
-     */
     public function create()
     {
         $bbuMdl                     = app::get('dealer')->model('bbu');
@@ -62,11 +54,6 @@ class dealer_ctl_admin_betc extends desktop_controller
         $this->display('admin/betc.html');
     }
 
-    /**
-     * edit
-     * @param mixed $betcId ID
-     * @return mixed 返回值
-     */
     public function edit($betcId)
     {
         $row     = app::get('dealer')->model('betc')->db_dump(array('betc_id' => $betcId));
@@ -78,10 +65,6 @@ class dealer_ctl_admin_betc extends desktop_controller
         $this->display('admin/betc.html');
     }
 
-    /**
-     * 保存
-     * @return mixed 返回操作结果
-     */
     public function save()
     {
         $betcId         = $_POST['betc_id'];
@@ -185,7 +168,6 @@ class dealer_ctl_admin_betc extends desktop_controller
     /*
      * 导出模板
      */
-
     public function exportTemplate()
     {
         header("Content-Type: text/csv");

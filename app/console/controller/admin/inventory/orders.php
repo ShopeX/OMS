@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 唯品会平台已经成交的销售单列表(只包括状态正常的销售单)
  *
@@ -32,12 +33,6 @@ class console_ctl_admin_inventory_orders extends desktop_controller
     private $_primary_id = null; //主键ID字段名
     private $_primary_bn = null; //单据编号字段名
     
-    /**
-     * __construct
-     * @param mixed $app app
-     * @return mixed 返回值
-     */
-
     public function __construct($app)
     {
         parent::__construct($app);
@@ -53,10 +48,6 @@ class console_ctl_admin_inventory_orders extends desktop_controller
         $this->_primary_bn = 'order_sn';
     }
     
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index()
     {
         $actions = array();
@@ -127,10 +118,6 @@ class console_ctl_admin_inventory_orders extends desktop_controller
         $this->finder('console_mdl_inventory_orders', $params);
     }
     
-    /**
-     * _views
-     * @return mixed 返回值
-     */
     public function _views()
     {
         //filter
@@ -425,7 +412,7 @@ class console_ctl_admin_inventory_orders extends desktop_controller
     
     /**
      * 批量处理订单
-     * 
+     *
      * @return void
      */
     public function batchDispose()
@@ -463,10 +450,6 @@ class console_ctl_admin_inventory_orders extends desktop_controller
         parent::dialog_batch($this->_appName . '_mdl_inventory_orders', false, 50, 'incr');
     }
     
-    /**
-     * ajaxDispose
-     * @return mixed 返回值
-     */
     public function ajaxDispose()
     {
         $orderMdl = app::get('ome')->model('orders');

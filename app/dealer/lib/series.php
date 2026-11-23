@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 产品线通用Lib方法类
  * @author wangjianjun@shopex.cn
@@ -27,7 +28,6 @@ class dealer_series{
      * @param $error_msg 报错信息（引用方式）
      * @return boolean
      */
-
     public function check_series_data($post,&$error_msg){
         if(!$post["series_code"] || !$post["series_name"] || !$post["description"] || !$post["cat_name"]){
             $error_msg = "产品线编码、名称、描述、分类不能为空。";

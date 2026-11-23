@@ -28,12 +28,6 @@ class console_finder_dailyinventory_items
     public $column_material_name       = '物料名称';
     public $column_material_name_width = 200;
     public $column_material_name_order = 30;
-    /**
-     * column_material_name
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_material_name($row,$list)
     {
         $material = $this->_getMaterial($row['material_bn'], $list);

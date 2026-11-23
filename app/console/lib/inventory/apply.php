@@ -17,12 +17,6 @@
 
 class console_inventory_apply {
 
-    /**
-     * confirm
-     * @param mixed $apply_id ID
-     * @param mixed $diff_confirm diff_confirm
-     * @return mixed 返回值
-     */
     public function confirm($apply_id, $diff_confirm = false) {
         $objInAp = app::get('console')->model('inventory_apply');
         $main = $objInAp->db_dump(['inventory_apply_id'=>$apply_id], '*');
@@ -57,11 +51,6 @@ class console_inventory_apply {
         return [false, ['msg'=>'确认失败']];
     }
 
-    /**
-     * confirmZP
-     * @param mixed $main main
-     * @return mixed 返回值
-     */
     public function confirmZP($main) {
         $negative_branch_id = json_decode($main['negative_branch_id'], 1);
         if(empty($negative_branch_id)) {
@@ -100,11 +89,6 @@ class console_inventory_apply {
         return [true, $rsData];
     }
 
-    /**
-     * confirmCC
-     * @param mixed $main main
-     * @return mixed 返回值
-     */
     public function confirmCC($main) {
         $negative_cc_branch_id = json_decode($main['negative_cc_branch_id'], 1);
         if(empty($negative_cc_branch_id)) {

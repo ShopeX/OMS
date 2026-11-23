@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 门店自动补货finder类
  *
@@ -34,12 +35,6 @@ class console_finder_replenish_task
     var $column_edit = '操作';
     var $column_edit_width = 180;
     var $column_edit_order = 1;
-    /**
-     * column_edit
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
-
     public function column_edit($row)
     {
         $finder_id = $_GET['_finder']['finder_id'];
@@ -76,11 +71,6 @@ class console_finder_replenish_task
     }
     
     var $detail_basic = '补货任务详情';
-    /**
-     * detail_basic
-     * @param mixed $task_id ID
-     * @return mixed 返回值
-     */
     public function detail_basic($task_id)
     {
         $render = app::get('console')->render();
@@ -115,11 +105,6 @@ class console_finder_replenish_task
     }
     
     var $detail_item = '补货建议单明细';
-    /**
-     * detail_item
-     * @param mixed $task_id ID
-     * @return mixed 返回值
-     */
     public function detail_item($task_id)
     {
         $render = app::get('console')->render();
@@ -136,11 +121,6 @@ class console_finder_replenish_task
     var $column_store = '店铺范围';
     var $column_store_width = 120;
     var $column_store_order = 30;
-    /**
-     * column_store
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_store($row)
     {
         $store_ids = $row[$this->col_prefix.'store_ids'];
@@ -156,11 +136,6 @@ class console_finder_replenish_task
     var $column_product = '商品范围';
     var $column_product_width = 120;
     var $column_product_order = 31;
-    /**
-     * column_product
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_product($row)
     {
         $bm_ids = $row[$this->col_prefix.'bm_ids'];

@@ -78,7 +78,7 @@ class console_email_smtp
      * * self::DEBUG_SERVER (`2`) Client commands and server responses
      * * self::DEBUG_CONNECTION (`3`) As DEBUG_SERVER plus connection status
      * * self::DEBUG_LOWLEVEL (`4`) Low-level data output, all messages.
-     * 
+     *
      * @var int
      */
     public $do_debug = self::DEBUG_OFF;
@@ -90,28 +90,28 @@ class console_email_smtp
      * * `html` Output escaped, line breaks converted to `<br>`, appropriate for browser output
      * * `error_log` Output to error log as configured in php.ini
      * Alternatively, you can provide a callable expecting two params: a message string and the debug level:
-     * 
+     *
      * ```php
      * $smtp->Debugoutput = function($str, $level) {echo "debug level $level; message: $str";};
      * ```
-     * 
+     *
      * Alternatively, you can pass in an instance of a PSR-3 compatible logger, though only `debug`
      * level output is used:
-     * 
+     *
      * ```php
      * $mail->Debugoutput = new myPsr3Logger;
      * ```
-     * 
+     *
      * @var string|callable|\Psr\Log\LoggerInterface
      */
     public $Debugoutput = 'echo';
 
     /**
      * Whether to use VERP.
-     * 
+     *
      * @see http://en.wikipedia.org/wiki/Variable_envelope_return_path
      * @see http://www.postfix.org/VERP_README.html Info on VERP
-     * 
+     *
      * @var bool
      */
     public $do_verp = false;
@@ -120,9 +120,9 @@ class console_email_smtp
      * The timeout value for connection, in seconds.
      * Default of 5 minutes (300sec) is from RFC2821 section 4.5.3.2.
      * This needs to be quite high to function correctly with hosts using greetdelay as an anti-spam measure.
-     * 
+     *
      * @see http://tools.ietf.org/html/rfc2821#section-4.5.3.2
-     * 
+     *
      * @var int
      */
     public $Timeout = 300;
@@ -130,7 +130,7 @@ class console_email_smtp
     /**
      * How long to wait for commands to complete, in seconds.
      * Default of 5 minutes (300sec) is from RFC2821 section 4.5.3.2.
-     * 
+     *
      * @var int
      */
     public $Timelimit = 300;
@@ -139,7 +139,7 @@ class console_email_smtp
      * Patterns to extract an SMTP transaction id from reply to a DATA command.
      * The first capture group in each regex will be used as the ID.
      * MS ESMTP returns the message ID, which may not be correct for internal tracking.
-     * 
+     *
      * @var string[]
      */
     protected $smtp_transaction_id_patterns = [
@@ -155,21 +155,21 @@ class console_email_smtp
     /**
      * The last transaction ID issued in response to a DATA command,
      * if one was detected.
-     * 
+     *
      * @var string|bool|null
      */
     protected $last_smtp_transaction_id;
 
     /**
      * The socket for the server connection.
-     * 
+     *
      * @var ?resource
      */
     protected $smtp_conn;
 
     /**
      * Error information, if any, for the last SMTP command.
-     * 
+     *
      * @var array
      */
     protected $error = [
@@ -182,7 +182,7 @@ class console_email_smtp
     /**
      * The reply the server sent to us for HELO.
      * If null, no HELO string has yet been received.
-     * 
+     *
      * @var string|null
      */
     protected $helo_rply = null;
@@ -194,24 +194,24 @@ class console_email_smtp
      * represents the server name. In case of HELO it is the only element of the array.
      * Other values can be boolean TRUE or an array containing extension options.
      * If null, no HELO/EHLO string has yet been received.
-     * 
+     *
      * @var array|null
      */
     protected $server_caps = null;
 
     /**
      * The most recent reply received from the server.
-     * 
+     *
      * @var string
      */
     protected $last_reply = '';
 
     /**
      * Output debugging info via a user-selected method.
-     * 
+     *
      * @param string $str   Debug string to output
      * @param int    $level The debug level of this message; see DEBUG_* constants
-     * 
+     *
      * @see SMTP::$Debugoutput
      * @see SMTP::$do_debug
      */
@@ -266,12 +266,12 @@ class console_email_smtp
 
     /**
      * Connect to an SMTP server.
-     * 
+     *
      * @param string $host    SMTP server IP or host name
      * @param int    $port    The port number to connect to
      * @param int    $timeout How long to wait for the connection to open
      * @param array  $options An array of options for stream_context_create()
-     * 
+     *
      * @return bool
      */
     public function connect($host, $port = null, $timeout = 30, $options = [])
@@ -366,7 +366,7 @@ class console_email_smtp
 
     /**
      * Initiate a TLS (encrypted) session.
-     * 
+     *
      * @return bool
      */
     public function startTLS()
@@ -400,14 +400,14 @@ class console_email_smtp
     /**
      * Perform SMTP authentication.
      * Must be run after hello().
-     * 
+     *
      * @see    hello()
-     * 
+     *
      * @param string $username The user name
      * @param string $password The password
      * @param string $authtype The auth type (CRAM-MD5, PLAIN, LOGIN, XOAUTH2)
      * @param OAuth  $OAuth    An optional OAuth instance for XOAUTH2 authentication
-     * 
+     *
      * @return bool True if successfully authenticated
      */
     public function authenticate(
@@ -535,10 +535,10 @@ class console_email_smtp
      * Calculate an MD5 HMAC hash.
      * Works like hash_hmac('md5', $data, $key)
      * in case that function is not available.
-     * 
+     *
      * @param string $data The data to hash
      * @param string $key  The key to hash with
-     * 
+     *
      * @return string
      */
     protected function hmac($data, $key)
@@ -570,7 +570,7 @@ class console_email_smtp
 
     /**
      * Check connection state.
-     * 
+     *
      * @return bool True if connected
      */
     public function connected()
@@ -597,7 +597,7 @@ class console_email_smtp
     /**
      * Close the socket and clean up the state of the class.
      * Don't use this function without first trying to use QUIT.
-     * 
+     *
      * @see quit()
      */
     public function close()
@@ -621,9 +621,9 @@ class console_email_smtp
      * on a single line followed by a <CRLF> with the message headers
      * and the message body being separated by an additional <CRLF>.
      * Implements RFC 821: DATA <CRLF>.
-     * 
+     *
      * @param string $msg_data Message data to send
-     * 
+     *
      * @return bool
      */
     public function data($msg_data)
@@ -713,9 +713,9 @@ class console_email_smtp
      * This makes sure that client and server are in a known state.
      * Implements RFC 821: HELO <SP> <domain> <CRLF>
      * and RFC 2821 EHLO.
-     * 
+     *
      * @param string $host The host name or IP to connect to
-     * 
+     *
      * @return bool
      */
     public function hello($host = '')
@@ -727,12 +727,12 @@ class console_email_smtp
     /**
      * Send an SMTP HELO or EHLO command.
      * Low-level implementation used by hello().
-     * 
+     *
      * @param string $hello The HELO string
      * @param string $host  The hostname to say we are
-     * 
+     *
      * @return bool
-     * 
+     *
      * @see    hello()
      */
     protected function sendHello($hello, $host)
@@ -751,7 +751,7 @@ class console_email_smtp
     /**
      * Parse a reply to HELO/EHLO command to discover server extensions.
      * In case of HELO, the only parameter that can be discovered is a server name.
-     * 
+     *
      * @param string $type `HELO` or `EHLO`
      */
     protected function parseHelloFields($type)
@@ -797,9 +797,9 @@ class console_email_smtp
      * the mail transaction is started and then one or more recipient
      * commands may be called followed by a data command.
      * Implements RFC 821: MAIL <SP> FROM:<reverse-path> <CRLF>.
-     * 
+     *
      * @param string $from Source address of this message
-     * 
+     *
      * @return bool
      */
     public function mail($from)
@@ -817,9 +817,9 @@ class console_email_smtp
      * Send an SMTP QUIT command.
      * Closes the socket if there is no error or the $close_on_error argument is true.
      * Implements from RFC 821: QUIT <CRLF>.
-     * 
+     *
      * @param bool $close_on_error Should the connection close if an error occurs?
-     * 
+     *
      * @return bool
      */
     public function quit($close_on_error = true)
@@ -839,9 +839,9 @@ class console_email_smtp
      * Sets the TO argument to $toaddr.
      * Returns true if the recipient was accepted false if it was rejected.
      * Implements from RFC 821: RCPT <SP> TO:<forward-path> <CRLF>.
-     * 
+     *
      * @param string $address The address the message is being sent to
-     * 
+     *
      * @return bool
      */
     public function recipient($address)
@@ -857,7 +857,7 @@ class console_email_smtp
      * Send an SMTP RSET command.
      * Abort any transaction that is currently in progress.
      * Implements RFC 821: RSET <CRLF>.
-     * 
+     *
      * @return bool True on success
      */
     public function reset()
@@ -867,11 +867,11 @@ class console_email_smtp
 
     /**
      * Send a command to an SMTP server and check its return code.
-     * 
+     *
      * @param string    $command       The command name - not sent to the server
      * @param string    $commandstring The actual command to send
      * @param int|array $expect        One or more expected integer success codes
-     * 
+     *
      * @return bool True on success
      */
     protected function sendCommand($command, $commandstring, $expect)
@@ -940,9 +940,9 @@ class console_email_smtp
      * will send the message to the users terminal if they are logged
      * in and send them an email.
      * Implements RFC 821: SAML <SP> FROM:<reverse-path> <CRLF>.
-     * 
+     *
      * @param string $from The address the message is from
-     * 
+     *
      * @return bool
      */
     public function sendAndMail($from)
@@ -952,9 +952,9 @@ class console_email_smtp
 
     /**
      * Send an SMTP VRFY command.
-     * 
+     *
      * @param string $name The name to verify
-     * 
+     *
      * @return bool
      */
     public function verify($name)
@@ -965,7 +965,7 @@ class console_email_smtp
     /**
      * Send an SMTP NOOP command.
      * Used to keep keep-alives alive, doesn't actually do anything.
-     * 
+     *
      * @return bool
      */
     public function noop()
@@ -979,7 +979,7 @@ class console_email_smtp
      * This method is here to make the RFC821 Definition complete for this class
      * and _may_ be implemented in future.
      * Implements from RFC 821: TURN <CRLF>.
-     * 
+     *
      * @return bool
      */
     public function turn()
@@ -992,10 +992,10 @@ class console_email_smtp
 
     /**
      * Send raw data to the server.
-     * 
+     *
      * @param string $data    The data to send
      * @param string $command Optionally, the command this is part of, used only for controlling debug output
-     * 
+     *
      * @return int|bool The number of bytes sent to the server or false on error
      */
     public function client_send($data, $command = '')
@@ -1017,7 +1017,7 @@ class console_email_smtp
 
     /**
      * Get the latest error.
-     * 
+     *
      * @return array
      */
     public function getError()
@@ -1027,7 +1027,7 @@ class console_email_smtp
 
     /**
      * Get SMTP extensions available on the server.
-     * 
+     *
      * @return array|null
      */
     public function getServerExtList()
@@ -1052,7 +1052,6 @@ class console_email_smtp
      *
      * @return mixed
      */
-
     public function getServerExt($name)
     {
         if (!$this->server_caps) {
@@ -1078,7 +1077,7 @@ class console_email_smtp
 
     /**
      * Get the last reply from the server.
-     * 
+     *
      * @return string
      */
     public function getLastReply()
@@ -1092,7 +1091,7 @@ class console_email_smtp
      * With SMTP we can tell if we have more lines to read if the
      * 4th character is '-' symbol. If it is a space then we don't
      * need to read anything else.
-     * 
+     *
      * @return string
      */
     protected function get_lines()
@@ -1153,7 +1152,7 @@ class console_email_smtp
 
     /**
      * Enable or disable VERP address generation.
-     * 
+     *
      * @param bool $enabled
      */
     public function setVerp($enabled = false)
@@ -1163,7 +1162,7 @@ class console_email_smtp
 
     /**
      * Get VERP address generation mode.
-     * 
+     *
      * @return bool
      */
     public function getVerp()
@@ -1173,7 +1172,7 @@ class console_email_smtp
 
     /**
      * Set error messages and codes.
-     * 
+     *
      * @param string $message      The error message
      * @param string $detail       Further detail on the error
      * @param string $smtp_code    An associated SMTP error code
@@ -1191,7 +1190,7 @@ class console_email_smtp
 
     /**
      * Set debug output method.
-     * 
+     *
      * @param string|callable $method The name of the mechanism to use for debugging output, or a callable to handle it
      */
     public function setDebugOutput($method = 'echo')
@@ -1201,7 +1200,7 @@ class console_email_smtp
 
     /**
      * Get debug output method.
-     * 
+     *
      * @return string
      */
     public function getDebugOutput()
@@ -1211,7 +1210,7 @@ class console_email_smtp
 
     /**
      * Set debug output level.
-     * 
+     *
      * @param int $level
      */
     public function setDebugLevel($level = 0)
@@ -1221,7 +1220,7 @@ class console_email_smtp
 
     /**
      * Get debug output level.
-     * 
+     *
      * @return int
      */
     public function getDebugLevel()
@@ -1231,7 +1230,7 @@ class console_email_smtp
 
     /**
      * Set SMTP timeout.
-     * 
+     *
      * @param int $timeout The timeout duration in seconds
      */
     public function setTimeout($timeout = 0)
@@ -1241,7 +1240,7 @@ class console_email_smtp
 
     /**
      * Get SMTP timeout.
-     * 
+     *
      * @return int
      */
     public function getTimeout()
@@ -1251,7 +1250,7 @@ class console_email_smtp
 
     /**
      * Reports an error number and string.
-     * 
+     *
      * @param int    $errno   The error number returned by PHP
      * @param string $errmsg  The error message returned by PHP
      * @param string $errfile The file the error occurred in
@@ -1277,7 +1276,7 @@ class console_email_smtp
      * Relies on the host providing the ID in response to a DATA command.
      * If no reply has been received yet, it will return null.
      * If no pattern was matched, it will return false.
-     * 
+     *
      * @return bool|null|string
      */
     protected function recordLastTransactionID()
@@ -1303,9 +1302,9 @@ class console_email_smtp
      * Get the queue/transaction ID of the last SMTP transaction
      * If no reply has been received yet, it will return null.
      * If no pattern was matched, it will return false.
-     * 
+     *
      * @return bool|null|string
-     * 
+     *
      * @see recordLastTransactionID()
      */
     public function getLastTransactionID()

@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 class base_package implements Iterator{
     
     static function walk($file){
@@ -25,28 +31,15 @@ class base_package implements Iterator{
         return $obj;
     }
     
-    /**
-     * open
-     * @param mixed $file file
-     * @return mixed 返回值
-     */
     public function open($file){
         $this->rs = fopen($file,'rb');
         $this->maxsize = filesize($file);
     }
     
-    /**
-     * rewind
-     * @return mixed 返回值
-     */
     public function rewind() {
         $this->offset = 0;
     }
 
-    /**
-     * valid
-     * @return mixed 返回值
-     */
     public function valid() {
         if($this->offset > $this->maxsize){
             return false;
@@ -63,10 +56,6 @@ class base_package implements Iterator{
         return true;
     }
 
-    /**
-     * current
-     * @return mixed 返回值
-     */
     public function current() {
         $data = unpack('a100filename/a8mode/a8uid/a8gid/a12size/a12mtime/a8checksum/a1typeflag/a100link/a6magic/a2version/a32uname/a32gname/a8devmajor/a8devminor', $this->block);
         $file = array();
@@ -90,18 +79,10 @@ class base_package implements Iterator{
         return $this->item;
     }
 
-    /**
-     * key
-     * @return mixed 返回值
-     */
     public function key() {
         return $this->item['name'];
     }
 
-    /**
-     * next
-     * @return mixed 返回值
-     */
     public function next() {
         $this->offset += 512 + (ceil($this->item['size'] / 512 ) * 512);
         return 1;

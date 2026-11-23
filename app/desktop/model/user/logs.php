@@ -14,19 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @2016-12-23
  * @mdl_user_logs
  */
+ 
 class desktop_mdl_user_logs extends dbeav_model{
     
     //1-添加用户
-    /**
-     * 添加User
-     * @param mixed $user user
-     * @return mixed 返回值
-     */
-
     public function addUser($user){
         unset($user['re_password']);
 
@@ -47,11 +43,6 @@ class desktop_mdl_user_logs extends dbeav_model{
     }
     
     //2-信息编辑
-    /**
-     * userEdit
-     * @param mixed $user user
-     * @return mixed 返回值
-     */
     public function userEdit($user){
         $op_id = kernel::single('desktop_user')->get_id();
         $op_name = kernel::single('desktop_user')->get_name();
@@ -70,11 +61,6 @@ class desktop_mdl_user_logs extends dbeav_model{
     }
     
     //3-删除用户
-    /**
-     * 删除User
-     * @param mixed $users users
-     * @return mixed 返回值
-     */
     public function deleteUser($users){
         $strFields = array('obj_name','obj_id','op_id','op_name','operation_time','operation_type','ip');
         $strValues = array();
@@ -103,11 +89,6 @@ class desktop_mdl_user_logs extends dbeav_model{
     }
     
     //4-修改密码
-    /**
-     * changePwd
-     * @param mixed $user_id ID
-     * @return mixed 返回值
-     */
     public function changePwd($user_id){
         $user = $this->app->model('users')->dump($user_id,'name,user_id');
 

@@ -14,9 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 经销商商品
  */
+
 class dealer_mdl_goods extends dbeav_model{
     private $import_data = [];
     private $templateColumn = array(
@@ -24,11 +26,6 @@ class dealer_mdl_goods extends dbeav_model{
                 '*:基础物料编码' => 'material_bn',
                 '*:成本' => 'cost',
             );
-
-    /**
-     * 搜索Options
-     * @return mixed 返回值
-     */
 
     public function searchOptions()
     {
@@ -38,13 +35,6 @@ class dealer_mdl_goods extends dbeav_model{
         );
     }
     
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter,$tableAlias=null,$baseWhere=null)
     {
         $where = ' 1 ';
@@ -219,12 +209,6 @@ class dealer_mdl_goods extends dbeav_model{
         return null;
     }
 
-    /**
-     * import_run
-     * @param mixed $cursor_id ID
-     * @param mixed $params 参数
-     * @return mixed 返回值
-     */
     public function import_run(&$cursor_id, $params) {
         $sdfdata    = $params['sdfdata'];
         foreach ($sdfdata as $v) {

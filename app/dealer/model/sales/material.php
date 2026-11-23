@@ -14,17 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 销售物料
  */
+
 class dealer_mdl_sales_material extends dbeav_model
 {
-
-    /**
-     * 搜索Options
-     * @param mixed $value value
-     * @return mixed 返回值
-     */
 
     public function searchOptions($value = '')
     {
@@ -34,13 +30,6 @@ class dealer_mdl_sales_material extends dbeav_model
         ));
     }
 
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter, $tableAlias = null, $baseWhere = null)
     {
         $where = ' 1 ';
@@ -79,13 +68,6 @@ class dealer_mdl_sales_material extends dbeav_model
         return parent::_filter($filter, $tableAlias, $baseWhere) . " AND " . $where;
     }
 
-    /**
-     * modifier_shop_id
-     * @param mixed $shop_id ID
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_shop_id($shop_id, $list, $row)
     {
         // if ($this->is_export_data) {
@@ -101,11 +83,6 @@ class dealer_mdl_sales_material extends dbeav_model
         return $shopList[$shop_id]['name'];
     }
 
-    /**
-     * modifier_sales_material_type
-     * @param mixed $sales_material_type sales_material_type
-     * @return mixed 返回值
-     */
     public function modifier_sales_material_type($sales_material_type)
     {
         switch ($sales_material_type) {

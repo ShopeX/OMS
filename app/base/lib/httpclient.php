@@ -15,7 +15,14 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ * 本类使用推荐new class，不应使用kernel:single方法
+ */
+ 
 class base_httpclient extends base_http{
 
     function get($url,$headers=null,$callback=null,$ping_only=false){

@@ -14,22 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * Created by PhpStorm.
  * User: yaokangming
  * Date: 2019/3/19
  * Time: 18:04
  */
+
 class crm_gift_buygoods
 {
-
-    /**
-     * 处理
-     * @param mixed $ruleBase ruleBase
-     * @param mixed $sdf sdf
-     * @param mixed $suite suite
-     * @return mixed 返回值
-     */
 
     public function process($ruleBase, $sdf, &$suite) {
         #限量赠送

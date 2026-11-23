@@ -17,12 +17,7 @@
 
 class crm_mdl_gift_rule extends dbeav_model{
     
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
-    public function table_name($real = false){
+   public function table_name($real = false){
         if($real){
            $table_name = 'sdb_ome_gift_rule';
         }else{
@@ -31,20 +26,10 @@ class crm_mdl_gift_rule extends dbeav_model{
         return $table_name;
     }
 
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema(){
         return app::get('ome')->model('gift_rule')->get_schema();
     }
 
-    /**
-     * modifier_shop_ids
-     * @param mixed $col col
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function modifier_shop_ids($col, $list) {
         if($col == '_ALL_') {
             return '所有店铺';

@@ -14,9 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 平台店铺商品处理Lib抽象类
- *
+ * 
  * @author wangbiao@shopex.cn
  * @version 2023.08.25
  */
@@ -24,11 +25,10 @@ class dchain_inventorydepth extends dchain_abstract
 {
     /**
      * 通过商品编码获取销售物料列表(包含关联的基础物料条形码)
-     * 
+     *
      * @param $productBns
      * @return array
      */
-
     public function getSlateMaterialList($productBns)
     {
         $salesMaterialObj = app::get('material')->model('sales_material');
@@ -245,7 +245,7 @@ class dchain_inventorydepth extends dchain_abstract
     /**
      * [初始化]所有商品自动初始化任务
      * 入口：店铺签约后，自动执行初始化任务；
-     * 
+     *
      * @param $cursor_id
      * @param $params
      * @param $error_msg
@@ -429,7 +429,7 @@ class dchain_inventorydepth extends dchain_abstract
 
     /**
      * [普通商品]自动分配队列任务
-     * 
+     *
      * @param $cursor_id
      * @param $params
      * @param $error_msg
@@ -596,7 +596,7 @@ class dchain_inventorydepth extends dchain_abstract
 
     /**
      * [组合商品]自动分配队列任务
-     * 
+     *
      * @param $cursor_id
      * @param $params
      * @param $error_msg
@@ -772,7 +772,7 @@ class dchain_inventorydepth extends dchain_abstract
 
     /**
      * [task任务]指定普通商品同步任务
-     * 
+     *
      * @param $params
      * @return array
      */
@@ -853,7 +853,7 @@ class dchain_inventorydepth extends dchain_abstract
 
     /**
      * [task任务]指定组合商品同步任务
-     * 
+     *
      * @param $params
      * @return array
      */
@@ -989,7 +989,7 @@ class dchain_inventorydepth extends dchain_abstract
 
     /**
      * 指定商品同步关系
-     * 
+     *
      * @param $params
      * @param $error_msg
      * @return false

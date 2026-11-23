@@ -18,10 +18,6 @@
 class console_ctl_admin_email extends desktop_controller {
 
     var $workground = 'setting_tools';
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index(){
         $rs_mail = app::get('console')->getConf('email.config');
         $this->pagedata['data'] = $rs_mail;

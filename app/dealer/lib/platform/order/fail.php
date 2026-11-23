@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 修正失败的经销商订单Lib方法类
  *
@@ -23,14 +24,6 @@
 class dealer_platform_order_fail extends dealer_abstract
 {
     //批量修复失败订单
-    /**
-     * batchModifyOrder
-     * @param mixed $cursor_id ID
-     * @param mixed $params 参数
-     * @param mixed $error_msg error_msg
-     * @return mixed 返回值
-     */
-
     public function batchModifyOrder(&$cursor_id, $params, &$error_msg=null)
     {
         $orderIds = $params['sdfdata']['orderIds'];
@@ -61,7 +54,7 @@ class dealer_platform_order_fail extends dealer_abstract
     
     /**
      * 指定单个订单进行修复
-     * 
+     *
      * @param $plat_order_id
      * @param $oldProductBns  失败的货号
      * @param $newProductBns 替换的新货号
@@ -465,7 +458,7 @@ class dealer_platform_order_fail extends dealer_abstract
     
     /**
      * 修正为正常订单
-     * 
+     *
      * @param $plat_order_id
      * @return bool
      */

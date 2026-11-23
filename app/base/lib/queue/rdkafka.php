@@ -14,11 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * rdkafka对象
  *
- * @category
- * @package
+ * @category 
+ * @package 
  * @author chenping<chenping@shopex.cn>
  * @version $Id: Z
  */
@@ -26,37 +27,31 @@ class base_queue_rdkafka {
 
     /**
      * rakafka生产者连接
-     * 
+     *
      * @var OBJECT
-     * */
+     **/
     private $__rakafka_producer_connect;
 
     /**
      * 消费者连接
-     * 
+     *
      * @var string
-     * */
+     **/
     private $__rakafka_consumer_connect;
 
     /**
      * 主题
-     * 
+     *
      * @var ARRAY
-     * */
+     **/
     private $__rakafka_topic;
 
     /**
      * 服务地址
-     * 
+     *
      * @var ARRAY
-     * */
+     **/
     private $_rakafka_server;
-
-        /**
-     * 设置_server
-     * @param mixed $server server
-     * @return mixed 返回操作结果
-     */
 
     public function set_server($server)
     {
@@ -72,10 +67,10 @@ class base_queue_rdkafka {
 
     /**
      * 配置参数验证
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     private function __configValid()
     {
         if (!$this->_rakafka_server) {
@@ -88,7 +83,7 @@ class base_queue_rdkafka {
     /**
      * 连接 rdkafka 生产者 
      * KAFKA集群服务器
-     * 
+     *
      * @param $config Array 连接参数 
      */
     private function __connectProducer() {
@@ -113,10 +108,10 @@ class base_queue_rdkafka {
     /**
      * 连接 rdkafka 消费者
      * KAFKA集群服务器
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     private function __connectConsumer()
     {
         if ($this->__configValid()) {
@@ -135,10 +130,10 @@ class base_queue_rdkafka {
 
     /**
      * 生产主题
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     private function __createProducerTopic($topic)
     {
         if ($this->__connectProducer()) {
@@ -160,10 +155,10 @@ class base_queue_rdkafka {
 
     /**
      * 消费主题
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     private function __createConsumerTopic($topic)
     {
         if ($this->__connectConsumer()) {

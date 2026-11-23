@@ -186,11 +186,6 @@ EOF;
     }
     
     var $detail_base = '基础信息';
-    /**
-     * detail_base
-     * @param mixed $stockout_id ID
-     * @return mixed 返回值
-     */
     public function detail_base($stockout_id)
     {
         $render = app::get('console')->render();
@@ -253,11 +248,6 @@ EOF;
     }
     
     var $detail_items = '出库单明细';
-    /**
-     * detail_items
-     * @param mixed $stockout_id ID
-     * @return mixed 返回值
-     */
     public function detail_items($stockout_id)
     {
         $render = app::get('console')->render();
@@ -318,11 +308,6 @@ EOF;
     }
     
     var $detail_pack = '装箱信息';
-    /**
-     * detail_pack
-     * @param mixed $stockout_id ID
-     * @return mixed 返回值
-     */
     public function detail_pack($stockout_id)
     {
         $render = app::get('console')->render();
@@ -332,11 +317,6 @@ EOF;
     }
     
     var $detail_logs = '操作日志';
-    /**
-     * detail_logs
-     * @param mixed $stockout_id ID
-     * @return mixed 返回值
-     */
     public function detail_logs($stockout_id)
     {
         $render = app::get('console')->render();
@@ -360,12 +340,6 @@ EOF;
     public $column_order_label = '标记';
     public $column_order_label_width = 110;
     public $column_order_label_order = 30;
-    /**
-     * column_order_label
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_order_label($row, $list)
     {
         $stockout_id = $row['stockout_id'];

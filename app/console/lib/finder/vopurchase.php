@@ -66,11 +66,6 @@ EOF;
     }
     
     var $detail_logs = '操作日志';
-    /**
-     * detail_logs
-     * @param mixed $po_id ID
-     * @return mixed 返回值
-     */
     public function detail_logs($po_id)
     {
         $render = app::get('console')->render();

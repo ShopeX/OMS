@@ -23,11 +23,6 @@ class dealer_ctl_admin_aftersale extends desktop_controller
 
     private $_businessLib = null;
     
-    /**
-     * __construct
-     * @param mixed $app app
-     * @return mixed 返回值
-     */
     public function __construct($app)
     {
         parent::__construct($app);
@@ -36,10 +31,6 @@ class dealer_ctl_admin_aftersale extends desktop_controller
         $this->_businessLib = kernel::single('dealer_business');
     }
 
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index()
     {
         $this->title = '代发售后单';
@@ -62,11 +53,6 @@ class dealer_ctl_admin_aftersale extends desktop_controller
         $this->finder('dealer_mdl_aftersale', $params);
     }
 
-    /**
-     * _views
-     * @param mixed $base_filter base_filter
-     * @return mixed 返回值
-     */
     public function _views($base_filter)
     {
         $mdl_aftersale = app::get('dealer')->model('aftersale');
@@ -96,7 +82,7 @@ class dealer_ctl_admin_aftersale extends desktop_controller
 
     /**
      * 公共filter条件
-     * 
+     *
      * @return array
      */
     public function getFilters()

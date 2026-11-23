@@ -18,8 +18,8 @@
 /**
  * 淘宝御城河
  *
- * @category
- * @package
+ * @category 
+ * @package 
  * @author chenping<chenping@shopex.cn>
  * @version $Id: Z
  */
@@ -32,7 +32,6 @@ class base_hchsafe
      * @return void
      * @author 
      **/
-
     public function login_log($params)
     {
         if (defined('DEV_ENV')) {

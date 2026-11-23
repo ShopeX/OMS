@@ -21,11 +21,6 @@ abstract class archive_transformocs_abstract
         
     static $productocs = array();
     static $memberocs = array();
-    /**
-     * __construct
-     * @param mixed $config 配置
-     * @return mixed 返回值
-     */
     public function __construct($config){
                                                          
         $this->db = kernel::database();
@@ -110,8 +105,8 @@ abstract class archive_transformocs_abstract
             
         }
 
-        /**
-         * 根据货号获取ID.
+         /**
+         *根据货号获取ID.
          * @param  
          * @return  
          * @access  public
@@ -170,11 +165,6 @@ abstract class archive_transformocs_abstract
 
         
         
-    /**
-     * 获取Memberid
-     * @param mixed $member_id ID
-     * @return mixed 返回结果
-     */
     public function getMemberid($member_id)
     {
         

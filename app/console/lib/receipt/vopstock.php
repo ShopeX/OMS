@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
 * 出入库单据相关处理
 */
@@ -51,7 +52,6 @@ class console_receipt_vopstock
      * 
      * @return boolean
      */
-
     public function do_save($data, $io, &$msg)
     {
         $thx = kernel::database()->beginTransaction();

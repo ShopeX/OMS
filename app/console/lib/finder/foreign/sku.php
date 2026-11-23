@@ -91,12 +91,6 @@ class console_finder_foreign_sku{
     }
 
 
-    /**
-     * 获取_material_detail
-     * @param mixed $inner_type inner_type
-     * @param mixed $bm_id ID
-     * @return mixed 返回结果
-     */
     public function get_material_detail($inner_type,$bm_id){
         static $material_detail;
         if ($material_detail[$inner_type][$bm_id]) return $material_detail[$inner_type][$bm_id];

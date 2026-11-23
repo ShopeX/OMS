@@ -15,6 +15,12 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
 
 class base_view_helper{
 
@@ -644,16 +650,6 @@ EOF;
     }
     
     
-    /**
-     * str_mosaic
-     * @param mixed $str str
-     * @param mixed $replace_str replace_str
-     * @param mixed $is_repeat is_repeat
-     * @param mixed $repeat_num repeat_num
-     * @param mixed $start start
-     * @param mixed $end end
-     * @return mixed 返回值
-     */
     public function str_mosaic($str,$replace_str = '*',$is_repeat = false,$repeat_num = 0,$start = 0,$end = '')
     {
         if (strpos($str,'>>')) {

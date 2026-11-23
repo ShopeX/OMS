@@ -14,10 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: 2022/11/24 11:45:33
  * @describe: 类
  * ============================
@@ -35,12 +36,6 @@ class console_finder_material_package {
     public $column_edit = "操作";
     public $column_edit_width = "180";
     public $column_edit_order = "-1";
-    /**
-     * column_edit
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
-
     public function column_edit($row) {
         $btn = [];
         $mp_bn = $row[$this->col_prefix . 'mp_bn'];
@@ -75,11 +70,6 @@ class console_finder_material_package {
     }
 
     public $detail_oplog = "操作记录";
-    /**
-     * detail_oplog
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function detail_oplog($id){
         $render = app::get('console')->render();
         $opObj  = app::get('ome')->model('operation_log');
@@ -93,11 +83,6 @@ class console_finder_material_package {
     }
 
     public $detail_useful = "有效期记录";
-    /**
-     * detail_useful
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function detail_useful($id){
        
         $packageMdl = app::get('console')->model('material_package');

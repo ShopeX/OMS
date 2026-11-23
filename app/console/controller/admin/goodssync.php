@@ -357,11 +357,11 @@ JS
         echo '"'.implode('","',$title).'"';
     }
 
-    /**
-     * 追加导出模板内容
-     * 
-     * @param Array $filter
-     */
+   /**
+    * 追加导出模板内容
+    *
+    * @param Array $filter
+    */
     public function importTemplate(){
        $wms_id = $_GET['wms_id'];
        if ($wms_id){
@@ -448,10 +448,10 @@ JS
 
     /**
      * 奇门同步物料
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     public function batchSyncDialog($wms_id)
     {
         // 根据WMS获取仓库
@@ -476,10 +476,6 @@ JS
         parent::dialog_batch('console_mdl_foreign_sku');
     }
 
-        /**
-     * ajaxBatchSync
-     * @return mixed 返回值
-     */
     public function ajaxBatchSync()
     {
         parse_str($_POST['primary_id'], $postdata);
@@ -510,10 +506,6 @@ JS
         echo json_encode($retArr),'ok.';exit;
     }
     
-    /**
-     * handwork_allot
-     * @return mixed 返回值
-     */
     public function handwork_allot()
     {
         $product_id = $_POST['product_id'];
@@ -554,10 +546,6 @@ JS
         $this->splash();
     }
 
-    /**
-     * sync_combination
-     * @return mixed 返回值
-     */
     public function sync_combination()
     {
         $filter = $_REQUEST;
@@ -570,10 +558,6 @@ JS
         $this->display('admin/material/sync_combination.html');
     }
 
-    /**
-     * doSyncCombination
-     * @return mixed 返回值
-     */
     public function doSyncCombination() {
         $branchId = (int) $_POST['branch_id'];
         $id = (int) $_POST['id'];
@@ -585,7 +569,7 @@ JS
 
     /**
      * 同步仓储库存进度条页
-     * 
+     *
      * @return void
      * @author 
      */
@@ -603,10 +587,10 @@ JS
 
     /**
      * 同步仓储库存处理逻辑
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function ajaxSyncStore()
     {
         parse_str($_POST['primary_id'], $postdata);
@@ -646,7 +630,7 @@ JS
 
     /**
      * 同步商品进度条页
-     * 
+     *
      * @return void
      * @author 
      */
@@ -662,10 +646,10 @@ JS
 
     /**
      * 同步商品处理逻辑
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function ajaxGoodsGet()
     {
         if (!$_POST['branchId']) { echo json_encode(array('err_msg'=>'请先选择仓库'));exit;}
@@ -695,7 +679,7 @@ JS
     }
     /**
      * 同步价格进度条页
-     * 
+     *
      * @return void
      * @author 
      */
@@ -713,10 +697,10 @@ JS
 
     /**
      * 同步价格处理逻辑
-     * 
+     *
      * @return void
      * @author 
-     * */
+     **/
     public function ajaxSyncPrice()
     {
         parse_str($_POST['primary_id'], $postdata);
@@ -746,10 +730,6 @@ JS
         echo json_encode($retArr),'ok.';exit;
     }
 
-        /**
-     * 查找Material
-     * @return mixed 返回结果
-     */
     public function findMaterial() {
         $this->view_source = 'dialog';
 

@@ -15,6 +15,13 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 class base_session{
     
@@ -31,29 +38,15 @@ class base_session{
         if(defined('SESS_CACHE_EXPIRE') && constant('SESS_CACHE_EXPIRE'))   $this->_sess_expires = constant('SESS_CACHE_EXPIRE');
     }//End Function
     
-    /**
-     * sess_id
-     * @return mixed 返回值
-     */
     public function sess_id(){
         return $this->_sess_id;
     }
 
-    /**
-     * 设置_sess_expires
-     * @param mixed $minute minute
-     * @return mixed 返回操作结果
-     */
     public function set_sess_expires($minute) 
     {
         $this->_sess_expires = $minute;
     }//End Function
 
-    /**
-     * 设置_cookie_expires
-     * @param mixed $minute minute
-     * @return mixed 返回操作结果
-     */
     public function set_cookie_expires($minute) 
     {
         $this->_cookie_expires = ($minute > 0) ? $minute : 0;
@@ -64,11 +57,6 @@ class base_session{
         }
     }//End Function
 
-    /**
-     * start
-     * @param mixed $sence sence
-     * @return mixed 返回值
-     */
     public function start($sence = ''){
         if($this->_session_started !== true){
 
@@ -103,11 +91,6 @@ class base_session{
         return true;
     }
 
-    /**
-     * close
-     * @param mixed $writeBack writeBack
-     * @return mixed 返回值
-     */
     public function close($writeBack = true){
         if(strlen($this->_sess_id) != 32){
             return false;
@@ -126,10 +109,6 @@ class base_session{
         }
     }
     
-    /**
-     * destory
-     * @return mixed 返回值
-     */
     public function destory(){
         if(!$this->_session_started){
             return false;
@@ -151,7 +130,7 @@ class base_session{
 
 	/**
 	 * 通过对常量　MEMCACHE 的识别返回不同的存储对像
-	 * 
+	 *
 	 * @author hzjsq
 	 × @param void
 	 * @return Object
@@ -169,7 +148,7 @@ class base_session{
 
 	/**
 	 * 通过对常量对缓存key进行适配
-	 * 
+	 *
 	 * @author hzjsq
 	 × @param $key String
 	 * @return String
@@ -186,7 +165,7 @@ class base_session{
 
 	/**
 	 * 确定是否使用 MEMCACHE 缓存SESSION
-	 * 
+	 *
 	 * @author hzjsq
 	 * @praram void
 	 * @return Boolean
@@ -215,10 +194,6 @@ class base_session{
         return true;
     }
 
-    /**
-     * 检查MobileVerifyCode
-     * @return mixed 返回验证结果
-     */
     public function checkMobileVerifyCode() {
         $key = $this->getKey($this->_sess_id.'mobileverifycode');
         $this->getStore()->fetch($key, $verifyCode);

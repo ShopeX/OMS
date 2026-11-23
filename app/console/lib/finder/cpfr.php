@@ -29,11 +29,6 @@ class console_finder_cpfr
     public $column_edit = "操作";
     public $column_edit_width = "80";
     public $column_edit_order = "-1";
-    /**
-     * column_edit
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_edit($row) {
         $finder_id = $_GET['_finder']['finder_id'];
         $adjust_type = $row[$this->col_prefix.'adjust_type'];
@@ -48,11 +43,6 @@ class console_finder_cpfr
     }
 
     public $detail_items = '配货明细';
-    /**
-     * detail_items
-     * @param mixed $cpfr_id ID
-     * @return mixed 返回值
-     */
     public function detail_items($cpfr_id)
     {
         $render = app::get('console')->render();

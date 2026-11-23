@@ -17,10 +17,6 @@
 
 #第三方应用中心
 class channel_ctl_admin_logistics_report extends desktop_controller{
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index(){
          #检测是不是第一次
          $first_examin_record = $this->app->model('logistics_examinreport')->getList('*',array('is_first_examin'=>'true'));
@@ -55,10 +51,6 @@ class channel_ctl_admin_logistics_report extends desktop_controller{
        $this->page('admin/logistics/reexamin.html');
     }  
     #添加体检
-    /**
-     * 添加_examin_task
-     * @return mixed 返回值
-     */
     public function add_examin_task(){
     	$obj_examin_report = app::get('channel')->model('logistics_examinreport');
     	$rs =  $obj_examin_report->getList('*',array('is_first_examin'=>'true'));

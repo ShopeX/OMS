@@ -14,12 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 销售物料控制层
  *
  * @author kamisama.xia@gmail.com
  * @version 0.1
  */
+
 class dealer_ctl_admin_material_sales extends desktop_controller
 {
 
@@ -27,11 +29,10 @@ class dealer_ctl_admin_material_sales extends desktop_controller
 
     /**
      * 销售物料列表分栏菜单
-     * 
+     *
      * @param Null
      * @return Array
      */
-
     public function _views()
     {
 
@@ -70,7 +71,7 @@ class dealer_ctl_admin_material_sales extends desktop_controller
 
     /**
      * 销售物料列表项方法
-     * 
+     *
      * @param Post
      * @return String
      */
@@ -112,7 +113,7 @@ class dealer_ctl_admin_material_sales extends desktop_controller
 
     /**
      * 销售物料新增的展示页面方法
-     * 
+     *
      * @param void
      * @return void
      */
@@ -185,7 +186,7 @@ class dealer_ctl_admin_material_sales extends desktop_controller
 
     /**
      * 基础物料新增提交方法
-     * 
+     *
      * @param Post
      * @return Boolean
      */
@@ -337,7 +338,7 @@ EOF;
     }
     /**
      * 销售物料编辑的展示页面方法
-     * 
+     *
      * @param Int $bm_id
      * @return Boolean
      */
@@ -411,7 +412,7 @@ EOF;
 
     /**
      * 销售物料编辑提交方法
-     * 
+     *
      * @param Int $sm_id
      * @return Boolean
      */

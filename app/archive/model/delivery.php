@@ -22,10 +22,10 @@ class archive_mdl_delivery extends dbeav_model{
 
     );
     /**
-     * 须加密字段
-     * 
+     * ������ֶ�
+     *
      * @var string
-     * */
+     **/
     private $__encrypt_cols = array(
         'ship_name'   => 'simple',
         'ship_tel'    => 'phone',
@@ -34,7 +34,7 @@ class archive_mdl_delivery extends dbeav_model{
     );
 
     /**
-     * 根据订单ID获取发货单.
+     * ���ݶ���ID��ȡ������.
      * @param   
      * @return 
      * @access  public
@@ -63,7 +63,7 @@ class archive_mdl_delivery extends dbeav_model{
 
     
     /**
-     * 根据order_id
+     * ����order_id
      * @param  
      * @return  
      * @access  public
@@ -81,7 +81,7 @@ class archive_mdl_delivery extends dbeav_model{
 
     
     /**
-     * 发货单明细
+     * ��������ϸ
      * @param  
      * @return  
      * @access  public
@@ -100,7 +100,7 @@ class archive_mdl_delivery extends dbeav_model{
 
     
     /**
-     * 获取发货单物流单号
+     * ��ȡ��������������
      * @param  
      * @return  
      * @access  public
@@ -118,12 +118,12 @@ class archive_mdl_delivery extends dbeav_model{
     }
 
     /*
-     * 根据订单id获取发货单信息
+     * ���ݶ���id��ȡ��������Ϣ
      *
      * @param string $cols
-     * @param bigint $order_id 订单id
+     * @param bigint $order_id ����id
      *
-     * @return array $delivery 发货单数组
+     * @return array $delivery ����������
      */
 
     function getDeliveryByOrder($cols="*",$order_id){
@@ -146,11 +146,6 @@ class archive_mdl_delivery extends dbeav_model{
         }
     }
 
-    /**
-     * insert
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function insert(&$data)
     {
         foreach ($this->__encrypt_cols as $field => $type) {

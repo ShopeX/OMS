@@ -17,11 +17,6 @@
 
 class console_mdl_interface_iostocksearchs extends dbeav_model{
 
-    /**
-     * count
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function count($filter = null)
     {
         $prefix = kernel::database()->prefix;
@@ -130,7 +125,7 @@ class console_mdl_interface_iostocksearchs extends dbeav_model{
 
     /**
      * 获取库存列表
-     * 
+     *
      * @return          array
      */
     public function get_branch_list()
@@ -146,7 +141,7 @@ class console_mdl_interface_iostocksearchs extends dbeav_model{
 
     /**
      * 获取库存列表
-     * 
+     *
      * @return          array
      */
     public function get_branch_types()
@@ -195,10 +190,10 @@ class console_mdl_interface_iostocksearchs extends dbeav_model{
         return implode(' AND ', $where);
      }
 
-    /**
-     * 解析搜索类型
-     * 
-     * */
+     /**
+     *解析搜索类型
+     *
+     **/
     function getMultiFilter($col,$type,$var){
         $FilterArray= array('than'=>' > '.$var,
                             'lthan'=>' < '.$var,
@@ -219,17 +214,6 @@ class console_mdl_interface_iostocksearchs extends dbeav_model{
 
     }
 
-        /**
-     * 获取ExportDataByCustom
-     * @param mixed $fields fields
-     * @param mixed $filter filter
-     * @param mixed $has_detail has_detail
-     * @param mixed $curr_sheet curr_sheet
-     * @param mixed $start start
-     * @param mixed $end end
-     * @param mixed $op_id ID
-     * @return mixed 返回结果
-     */
     public function getExportDataByCustom($fields, $filter, $has_detail, $curr_sheet, $start, $end, $op_id){
         $cols = $this->_columns();
         $colTitle = $this->getTitle($cols);
@@ -281,11 +265,7 @@ class console_mdl_interface_iostocksearchs extends dbeav_model{
             return $rs;
         }
 
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
-    public function get_schema(){
+        public function get_schema(){
             $schema = array (
             'columns' => array (
                 'bn' => array (

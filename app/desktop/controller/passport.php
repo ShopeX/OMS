@@ -15,6 +15,12 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
 
 class desktop_ctl_passport extends desktop_controller
 {
@@ -22,21 +28,12 @@ class desktop_ctl_passport extends desktop_controller
 
     public $login_times_error = 3;
 
-    /**
-     * __construct
-     * @param mixed $app app
-     * @return mixed 返回值
-     */
     public function __construct($app)
     {
         parent::__construct($app);
         header("cache-control: no-store, no-cache, must-revalidate");
     }
 
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index()
     {
         $params = json_decode(urldecode($_GET['params']), true);
@@ -161,10 +158,6 @@ class desktop_ctl_passport extends desktop_controller
         $this->display('login.html');
     }
 
-    /**
-     * gen_vcode
-     * @return mixed 返回值
-     */
     public function gen_vcode()
     {
         $vcode = kernel::single('base_vcode');
@@ -173,21 +166,12 @@ class desktop_ctl_passport extends desktop_controller
         $vcode->display();
     }
 
-    /**
-     * cross_call
-     * @return mixed 返回值
-     */
     public function cross_call()
     {
         header('Content-Type: text/html;charset=utf-8');
         echo '<script>' . base64_decode($_REQUEST['script']) . '</script>';
     }
 
-    /**
-     * logout
-     * @param mixed $backurl backurl
-     * @return mixed 返回值
-     */
     public function logout($backurl = 'index.php')
     {
 
@@ -233,10 +217,6 @@ class desktop_ctl_passport extends desktop_controller
 
     }
     #套件的oauth认证
-    /**
-     * login_verify
-     * @return mixed 返回值
-     */
     public function login_verify()
     {
         $toUrl = app::get('desktop')->base_url(true);

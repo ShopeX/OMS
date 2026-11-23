@@ -14,22 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * Created by PhpStorm.
  * User: yaokangming
  * Date: 2019/4/30
  * Time: 15:57
  */
+
 class console_mdl_useful_life extends dbeav_model
 {
-    /**
-     * 更新Num
-     * @param mixed $id ID
-     * @param mixed $num num
-     * @param mixed $op op
-     * @return mixed 返回值
-     */
-
     public function updateNum($id, $num, $op='-') {
         if(!$id || !$num || !in_array($op, array('-','+'))) {
             return false;

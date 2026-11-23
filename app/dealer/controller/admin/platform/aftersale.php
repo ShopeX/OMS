@@ -17,10 +17,6 @@
 
 class dealer_ctl_admin_platform_aftersale extends desktop_controller {
 
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index() {
        
         $actions = array();
@@ -50,10 +46,6 @@ class dealer_ctl_admin_platform_aftersale extends desktop_controller {
     }
 
 
-    /**
-     * _views
-     * @return mixed 返回值
-     */
     public function _views() {
 
         $modelAftersale = app::get('dealer')->model('platform_aftersale');
@@ -74,11 +66,7 @@ class dealer_ctl_admin_platform_aftersale extends desktop_controller {
     }
 
    
-    /**
-     * syncpush
-     * @return mixed 返回值
-     */
-    public function syncpush()
+   public function syncpush()
      {
 
          $this->pagedata['request_url'] = 'index.php?app=dealer&ctl=admin_platform_aftersale&act=ajaxsyncpush';
@@ -92,10 +80,6 @@ class dealer_ctl_admin_platform_aftersale extends desktop_controller {
          parent::dialog_batch('dealer_mdl_platform_aftersale',true,100,'inc');
      }
 
-    /**
-     * ajaxsyncpush
-     * @return mixed 返回值
-     */
     public function ajaxsyncpush()
      {
          parse_str($_POST['primary_id'], $primary_id);

@@ -15,6 +15,13 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 //todo： 分离列表和实体
 //利用实体的 class::instance() 创建对象，来验证是否有效
@@ -32,12 +39,6 @@ class base_application_prototype_content implements Iterator{
         }
     }
 
-    /**
-     * detect
-     * @param mixed $app app
-     * @param mixed $current current
-     * @return mixed 返回值
-     */
     public function detect($app,$current=null){
         $this->iterator = null;
         $this->target_app = is_string($app)?app::get($app):$app;
@@ -54,42 +55,22 @@ class base_application_prototype_content implements Iterator{
         return $this->iterator;
     }
 
-    /**
-     * rewind
-     * @return mixed 返回值
-     */
     public function rewind() {
         $this->iterator()->rewind();
     }
 
-    /**
-     * current
-     * @return mixed 返回值
-     */
     public function current() {
         return $this;
     }
 
-    /**
-     * key
-     * @return mixed 返回值
-     */
     public function key() {
         return $this->key;
     }
 
-    /**
-     * next
-     * @return mixed 返回值
-     */
     public function next() {
         return $this->iterator()->next();
     }
 
-    /**
-     * valid
-     * @return mixed 返回值
-     */
     public function valid() {
         while($this->iterator()->valid()){
             if($this->prototype_filter()){

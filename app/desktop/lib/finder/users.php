@@ -15,6 +15,13 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 /* TODO: Add code here */
 class desktop_finder_users{
@@ -88,12 +95,6 @@ class desktop_finder_users{
     public $column_roles_width = 260;
     public $column_roles_order = 300;
     private $_roles = null;
-    /**
-     * column_roles
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_roles($row, $list)
     {
         if (!isset($this->_roles)) {

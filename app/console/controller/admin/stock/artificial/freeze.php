@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 人工库存预占
  * by wangjianjun 20171023
@@ -232,11 +233,6 @@ class console_ctl_admin_stock_artificial_freeze extends desktop_controller{
     }
     
     //显示已选基础物料
-    /**
-     * show_selected_products
-     * @return mixed 返回值
-     */
-
     public function show_selected_products(){
         $mdl_ma_ba_ma = app::get('material')->model('basic_material');
         $bm_ids = kernel::single('base_component_request')->get_post('bm_id');
@@ -253,10 +249,6 @@ class console_ctl_admin_stock_artificial_freeze extends desktop_controller{
     }
     
     //删除
-    /**
-     * 删除_rows
-     * @return mixed 返回值
-     */
     public function delete_rows(){
         $this->begin('');
         if($_GET["view"] == "1"){ //已释放的页面 能做删除操作

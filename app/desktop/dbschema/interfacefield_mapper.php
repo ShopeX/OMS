@@ -15,7 +15,12 @@
  * limitations under the License.
  */
 
-
+/**
+ * 接口字段映射表
+ * 
+ * @copyright shopex.cn 2025.01.01
+ * @author system
+ */
 $db['interfacefield_mapper'] = array(
     'columns' => array(
         'id' => array(

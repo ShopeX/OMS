@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
  *
@@ -15,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 class console_mdl_delivery extends dbeav_model{
     var $defaultOrder = array('delivery_id',' DESC');
     /**

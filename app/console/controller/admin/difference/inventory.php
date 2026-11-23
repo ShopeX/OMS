@@ -14,16 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * Class console_ctl_admin_difference_inventory
  */
 class console_ctl_admin_difference_inventory extends desktop_controller
 {
-    /**
-     * index
-     * @return mixed 返回值
-     */
-
     public function index()
     {
         $actions     = array();
@@ -53,11 +49,6 @@ class console_ctl_admin_difference_inventory extends desktop_controller
         $this->finder('console_mdl_difference_receiving_inventory', $params);
     }
     
-    /**
-     * shopReceivingItemsDetailIndex
-     * @param mixed $diff_id ID
-     * @return mixed 返回值
-     */
     public function shopReceivingItemsDetailIndex($diff_id)
     {
         $page = $_GET['page'] ? $_GET['page'] : 1;
@@ -77,12 +68,6 @@ class console_ctl_admin_difference_inventory extends desktop_controller
         $this->page('admin/difference/diff_detail.html');
     }
     
-    /**
-     * 获取DIffData
-     * @param mixed $diff_id ID
-     * @param mixed $view view
-     * @return mixed 返回结果
-     */
     public function getDIffData($diff_id, $view = 2)
     {
         $diff_obj       = app::get('taoguaniostockorder')->model("diff");

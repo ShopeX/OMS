@@ -14,21 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: 2022/11/25 17:12:12
  * @describe: 类
  * ============================
  */
 class console_event_trigger_material_package {
-
-    /**
-     * 创建
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
 
     public function create($id) {
         $main = app::get('console')->model('material_package')->db_dump(['id'=>$id], '*');
@@ -65,11 +60,6 @@ class console_event_trigger_material_package {
         return [($result['rsp'] == 'fail' ? false : true), ['msg'=>$result['msg']]];
     }
 
-    /**
-     * cancel
-     * @param mixed $main main
-     * @return mixed 返回值
-     */
     public function cancel($main) {
         $store_id = kernel::single('ome_branch')->isStoreBranch($main['branch_id']);
         if($store_id){

@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 赠品规则记录
  *
@@ -22,11 +23,6 @@
  */
 class crm_ctl_admin_gift_rule_logs extends desktop_controller
 {
-    /**
-     * index
-     * @return mixed 返回值
-     */
-
     public function index()
     {
         $base_filter = array();

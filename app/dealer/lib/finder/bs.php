@@ -37,11 +37,6 @@ class dealer_finder_bs
     public $column_edit       = "操作";
     public $column_edit_width = 60;
     public $column_edit_order = 1;
-    /**
-     * column_edit
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_edit($row)
     {
         $finder_id = $_GET['_finder']['finder_id'];
@@ -54,11 +49,6 @@ class dealer_finder_bs
     public $column_status       = "状态";
     public $column_status_width = 60;
     public $column_status_order = 40;
-    /**
-     * column_status
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_status($row)
     {
         $status = $row[$this->col_prefix . 'status'];
@@ -78,11 +68,6 @@ class dealer_finder_bs
     public $column_betc_name       = "所属贸易公司";
     public $column_betc_name_width = 160;
     public $column_betc_name_order = 30;
-    /**
-     * column_betc_name
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_betc_name($row)
     {
         if (!self::$betcList) {
@@ -112,11 +97,6 @@ class dealer_finder_bs
      * @return string
      */
     public $detail_show_log = '操作记录';
-    /**
-     * detail_show_log
-     * @param mixed $bs_id ID
-     * @return mixed 返回值
-     */
     public function detail_show_log($bs_id)
     {
         $omeLogMdl = app::get('ome')->model('operation_log');

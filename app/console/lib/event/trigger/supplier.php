@@ -20,8 +20,8 @@ class console_event_trigger_supplier {
     
     
     /**
-     * 供应商同步
-     */
+    *供应商同步
+    */
     public function create($wms_id, &$data, $sync = false){
         
         // $result = kernel::single('middleware_wms_request', $wms_id)->supplier_create($data, $sync);

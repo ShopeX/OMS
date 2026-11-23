@@ -19,7 +19,7 @@ class console_event_trigger_goodssync{
 
     
     /**
-     * 
+     *
      * 商品同步通知创建发起方法
      * @param string $wms_id 仓库类型ID
      * @param array $data 商品同步数据信息
@@ -68,7 +68,7 @@ class console_event_trigger_goodssync{
     }
 
     /**
-     * 
+     *
      * 采购通知创建发起的响应接收方法
      * @param array $data
      */
@@ -77,7 +77,7 @@ class console_event_trigger_goodssync{
     }
 
     /**
-     * 
+     *
      * 商品同步通知更新发起方法
      * @param string $wms_id 仓库类型ID
      * @param array $data 商品同步数据信息
@@ -122,7 +122,7 @@ class console_event_trigger_goodssync{
     }
 
     /**
-     * 
+     *
      * 商品通知更新发起的响应接收方法
      * @param array $data
      */
@@ -255,13 +255,6 @@ class console_event_trigger_goodssync{
         return kernel::single('erpapi_router_request')->set('wms',$material['wms_id'])->goods_addCombination($sdf);
     }
 
-    /**
-     * syncMap
-     * @param mixed $id ID
-     * @param mixed $wmsId ID
-     * @param mixed $operateType operateType
-     * @return mixed 返回值
-     */
     public function syncMap($id, $wmsId, $operateType) {
         $mapGoods = app::get('console')->model('map_goods')->db_dump(array('id'=>$id));
         $material = app::get('console')->model('foreign_sku')->db_dump(array('inner_sku'=>$mapGoods['shop_product_bn'], 'wms_id'=>$wmsId));
@@ -282,11 +275,6 @@ class console_event_trigger_goodssync{
         return kernel::single('erpapi_router_request')->set('wms',$material['wms_id'])->goods_syncMap($sdf);
     }
 
-    /**
-     * syncGet
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function syncGet($data) {
         $branch = app::get('ome')->model('branch')->dump($data['branch_id']);
         if(empty($branch)) {
@@ -333,12 +321,6 @@ class console_event_trigger_goodssync{
         return $rs;
     }
 
-    /**
-     * syncPrice
-     * @param mixed $data 数据
-     * @param mixed $branchId ID
-     * @return mixed 返回值
-     */
     public function syncPrice($data, $branchId) {
         $branch = app::get('ome')->model('branch')->dump($branchId);
         if(empty($branch)) {
@@ -375,12 +357,6 @@ class console_event_trigger_goodssync{
         return $rs;
     }
 
-    /**
-     * 检查SynCombine
-     * @param mixed $id ID
-     * @param mixed $branchs branchs
-     * @return mixed 返回验证结果
-     */
     public function checkSynCombine($id,$branchs){
        
         $wms_id = $branchs['wms_id'];

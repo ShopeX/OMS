@@ -26,11 +26,6 @@ class console_finder_inventory_snapshot
 
     public $column_opt       = '操作';
     public $column_opt_order = 1;
-    /**
-     * column_opt
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_opt($row)
     {
         $buttons = [];

@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @Author: xueding@shopex.cn
  * @Datetime: 2022/4/24
@@ -23,13 +24,6 @@ class dchain_event_trigger_dchain_data_product_common
 {
     protected $__sdf = array();
     
-    /**
-     * 初始化
-     * @param mixed $data 数据
-     * @param mixed $bnList bnList
-     * @param mixed $shop shop
-     * @return mixed 返回值
-     */
     final public function init($data, $bnList, $shop)
     {
         $this->__sdf['data']   = $data;
@@ -41,11 +35,10 @@ class dchain_event_trigger_dchain_data_product_common
     
     /**
      * @param Int $delivery_id 如果是合并发货单，取的是子单
-     * 
+     *
      * @return void
      * @author
-     * */
-
+     **/
     public function get_sdf()
     {
         // 获取优仓信息
@@ -60,10 +53,10 @@ class dchain_event_trigger_dchain_data_product_common
     
     /**
      * 获取发货单
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     final protected function _get_dchain_branch()
     {
         $dchainBranch = app::get('channel')->model('channel')->db_dump(array(
@@ -74,10 +67,6 @@ class dchain_event_trigger_dchain_data_product_common
         $this->__sdf['dchain_branch'] = $dchainBranch;
     }
     
-        /**
-     * _format_product_data
-     * @return mixed 返回值
-     */
     public function _format_product_data()
     {
         $foreignSkuMdl    = app::get('dchain')->model('foreign_sku');

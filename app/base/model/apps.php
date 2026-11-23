@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 class base_mdl_apps extends base_db_model{
 
     function filter($filter){
@@ -52,20 +58,12 @@ class base_mdl_apps extends base_db_model{
         return $addons.parent::filter($filter);
     }
 
-    /**
-     * fetch_deploy_package
-     * @return mixed 返回值
-     */
     public function fetch_deploy_package() 
     {
         $deploy = kernel::single('base_xml')->xml2array(file_get_contents(ROOT_DIR.'/config/deploy.xml'),'base_deploy');
         return (is_array($deploy['package']['app'])) ? $deploy['package']['app'] : array();
     }//End Function
 
-    /**
-     * 检查_deploy_depends
-     * @return mixed 返回验证结果
-     */
     public function check_deploy_depends() 
     {
         $depends_apps = array();
@@ -76,12 +74,6 @@ class base_mdl_apps extends base_db_model{
         return $depends_apps;
     }//End Function
 
-    /**
-     * 检查_depends_install
-     * @param mixed $app_id ID
-     * @param mixed $queue queue
-     * @return mixed 返回验证结果
-     */
     public function check_depends_install($app_id, &$queue){
         $depends_app = app::get($app_id)->define('depends/app');
         foreach((array)$depends_app as $depend_app_id){

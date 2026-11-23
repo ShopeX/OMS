@@ -14,16 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @author ykm 2016-01-04
  * @describe 特殊订单状态回写
  */
-class brush_ctl_admin_statusback extends desktop_controller {
 
-    /**
-     * _views
-     * @return mixed 返回值
-     */
+class brush_ctl_admin_statusback extends desktop_controller {
 
     public function _views() {
         $base_filter = array(
@@ -46,10 +43,6 @@ class brush_ctl_admin_statusback extends desktop_controller {
         return $sub_menu;
     }
 
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index() {
         $this->app->app_id = 'ome';
         $_GET['view'] = intval($_GET['view']);
@@ -86,10 +79,6 @@ class brush_ctl_admin_statusback extends desktop_controller {
         $this->finder('ome_mdl_orders', $params);
     }
 
-    /**
-     * batch_sync
-     * @return mixed 返回值
-     */
     public function batch_sync() {
         $orderIds = $this->_getSelectedId();
         kernel::single('brush_delivery_back')->backRequest($orderIds);

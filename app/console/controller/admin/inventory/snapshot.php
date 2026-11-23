@@ -18,10 +18,6 @@
 class console_ctl_admin_inventory_snapshot extends desktop_controller
 {
 
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index()
     {
         $params = [
@@ -45,11 +41,6 @@ class console_ctl_admin_inventory_snapshot extends desktop_controller
         $this->finder('console_mdl_inventory_snapshot', $params);
     }
 
-    /**
-     * itemIndex
-     * @param mixed $invs_id ID
-     * @return mixed 返回值
-     */
     public function itemIndex($invs_id = 0)
     {
         $params = [

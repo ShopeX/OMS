@@ -15,14 +15,17 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 class base_demo
 {
 
-    /**
-     * 初始化
-     * @return mixed 返回值
-     */
     public function init() 
     {
         $demo_dir = ROOT_DIR . '/demo';
@@ -44,12 +47,6 @@ class base_demo
         }
     }//End Function
 
-    /**
-     * 初始化_setting
-     * @param mixed $app_id ID
-     * @param mixed $setting setting
-     * @return mixed 返回值
-     */
     public function init_setting($app_id, $setting) 
     {
         $app = app::get($app_id);
@@ -60,13 +57,6 @@ class base_demo
         }
     }//End Function
 
-    /**
-     * 初始化_sdf
-     * @param mixed $app_id ID
-     * @param mixed $model model
-     * @param mixed $file file
-     * @return mixed 返回值
-     */
     public function init_sdf($app_id, $model, $file) 
     {
         $handle = fopen($file, 'r');

@@ -14,34 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @author ykm 2015-12-28
  * @describe 处理打印模板页面所需要的数据
  */
+
 class brush_pagedata {
     private $objPrint;
     private $objElectron;
     private $objExpress;
     
-    /**
-     * 初始化
-     * @param mixed $objPrint objPrint
-     * @param mixed $objElectron objElectron
-     * @param mixed $objExpress objExpress
-     * @return mixed 返回值
-     */
-
     public function init($objPrint, $objElectron, $objExpress) {
         $this->objPrint = $objPrint;
         $this->objElectron = $objElectron;
         $this->objExpress = $objExpress;
     }
     
-    /**
-     * 获取PageData
-     * @param mixed $printData 数据
-     * @return mixed 返回结果
-     */
     public function getPageData($printData) {
         $pageData = $this->_getDeliveryAttr($this->objPrint->delivery);
         $pageData['dpi'] = 96;

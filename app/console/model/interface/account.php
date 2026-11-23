@@ -17,11 +17,6 @@
 
 class console_mdl_interface_account extends dbeav_model{
 
-    /**
-     * count
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function count($filter = null){
         $prefix = kernel::database()->prefix;
         $app_ome = app::get('console');
@@ -32,13 +27,6 @@ class console_mdl_interface_account extends dbeav_model{
         return intval($row[0]['_count']);
     }
 
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter,$tableAlias=null,$baseWhere=null){
         $_SESSION['fil'] = $filter;
         $where = array('1=1');
@@ -85,10 +73,10 @@ class console_mdl_interface_account extends dbeav_model{
         return $list;
 
     }
-    /**
-     * 解析搜索类型
-     * 
-     * */
+     /**
+     *解析搜索类型
+     *
+     **/
     function getMultiFilter($col,$type,$var){
         $FilterArray= array('than'=>' > '.$var,
                             'lthan'=>' < '.$var,
@@ -164,11 +152,7 @@ class console_mdl_interface_account extends dbeav_model{
             return $rs;
         }
 
-            /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
-    public function get_schema(){
+        public function get_schema(){
             $schema = array (
             'columns' => 
                   array (
@@ -330,20 +314,10 @@ class console_mdl_interface_account extends dbeav_model{
         return $schema;
     }
 
-    /**
-     * modifier_account_time
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_account_time($row){
 		return date('Y-m-d',$row);
 	}
 
-    /**
-     * modifier_wms_id
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_wms_id($row){
 		      
         return kernel::single('channel_func')->getChannelNameById($row);

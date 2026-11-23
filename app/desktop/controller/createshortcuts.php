@@ -27,7 +27,7 @@ class desktop_ctl_createshortcuts extends base_controller{
         header("Content-type: charset=utf-8");
         header("Content-type: application/octet-stream");
         
-        /** 兼容各个浏览器 **/
+        /** ���ݸ�������� **/
         $filename = app::get('desktop')->getConf('background.title').".url";
         $encoded_filename = urlencode($filename);
         $encoded_filename = str_replace("+", "%20", $encoded_filename);

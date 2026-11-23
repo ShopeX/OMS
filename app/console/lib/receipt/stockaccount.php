@@ -14,18 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 库存对账数据处理
- *
- *
+ * 
+ * 
  */
 class console_receipt_stockaccount{
-
-    /**
-     * 检查ing
-     * @param mixed $data 数据
-     * @return mixed 返回验证结果
-     */
 
     public function checking($data){
         

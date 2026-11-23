@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 门店店铺商品mdl类
  *
@@ -21,12 +22,6 @@
  */
 class console_mdl_product_store extends dbeav_model
 {
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
-
     public function table_name($real = false)
     {
         if($real){
@@ -38,21 +33,10 @@ class console_mdl_product_store extends dbeav_model
         return $table_name;
     }
     
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema(){
         return app::get('o2o')->model('product_store')->get_schema();
     }
     
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter, $tableAlias=null, $baseWhere=null)
     {
         $where = array(1);

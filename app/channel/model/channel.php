@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 class channel_mdl_channel extends dbeav_model{
     
 /* 	public function table_name($real = false){

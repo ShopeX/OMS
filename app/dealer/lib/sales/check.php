@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 销售物料数据验证Lib类
  *
@@ -25,12 +26,11 @@ class dealer_sales_check
 {
     /**
      * 数据检验有效性
-     * 
+     *
      * @param  Array   $params
      * @param  String  $err_msg
      * @return Boolean
      */
-
     public function checkParams(&$params, &$err_msg)
     {
         $salesMaterialObj = app::get('dealer')->model('sales_material');

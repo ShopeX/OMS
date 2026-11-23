@@ -15,6 +15,14 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ * Aliyun OSS存储
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ * @aliyunossdoc https://help.aliyun.com/zh/oss/developer-reference/php-1/?spm=a2c4g.11186623.0.0.e7836ac8ARwmzc
+ */
 
 require_once ROOT_DIR . '/vendor/autoload.php';
 use OSS\Core\OssException;
@@ -24,17 +32,12 @@ class base_storage_aliyunosssystem implements base_interface_storager
 {
     /**
      * 文件前缀
-     * 
+     *
      * @var string
-     * */
+     **/
     private $_prefix = '';
     private $bucket  = '';
 
-        /**
-     * __construct
-     * @param mixed $prefix prefix
-     * @return mixed 返回值
-     */
     public function __construct($prefix = '')
     {
         is_object($prefix) && $prefix = '';
@@ -51,10 +54,10 @@ class base_storage_aliyunosssystem implements base_interface_storager
 
     /**
      * 连接OSS
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     private function _connect()
     {
         try {
@@ -76,10 +79,10 @@ class base_storage_aliyunosssystem implements base_interface_storager
 
     /**
      * 创建存储空间
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     public function createBucket()
     {
         if (!$this->ossClient) {
@@ -116,12 +119,6 @@ class base_storage_aliyunosssystem implements base_interface_storager
         return $id;
     }
 
-        /**
-     * replace
-     * @param mixed $file file
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function replace($file, $id)
     {
         if (!$this->ossClient) {
@@ -141,16 +138,6 @@ class base_storage_aliyunosssystem implements base_interface_storager
         return $id;
     }
 
-    /**
-     * _get_ident
-     * @param mixed $file file
-     * @param mixed $type type
-     * @param mixed $addons addons
-     * @param mixed $url url
-     * @param mixed $path path
-     * @param mixed $ext_name ext_name
-     * @return mixed 返回值
-     */
     public function _get_ident($file, $type, $addons, &$url, &$path, $ext_name)
     {
         $blobName = [
@@ -169,11 +156,6 @@ class base_storage_aliyunosssystem implements base_interface_storager
         return $path;
     }
 
-    /**
-     * remove
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function remove($id)
     {
         if (!$this->ossClient) {
@@ -189,12 +171,6 @@ class base_storage_aliyunosssystem implements base_interface_storager
         return true;
     }
 
-    /**
-     * 获取File
-     * @param mixed $id ID
-     * @param mixed $type type
-     * @return mixed 返回结果
-     */
     public function getFile($id, $type)
     {
         if (!$this->ossClient) {

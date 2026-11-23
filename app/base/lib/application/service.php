@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 class base_application_service extends base_application_prototype_xml{
 
     /**
@@ -31,20 +37,12 @@ class base_application_service extends base_application_prototype_xml{
         $this->current = $current;
     }
 
-    /**
-     * current
-     * @return mixed 返回值
-     */
     public function current() {
         $this->current = $this->iterator()->current();
         $this->key = $this->current['id'];
         return $this;
     }
 
-    /**
-     * install
-     * @return mixed 返回值
-     */
     public function install(){
         kernel::log('Installing '.$this->content_typename().' '.$this->key());
         

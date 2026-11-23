@@ -104,11 +104,6 @@ class brush_ctl_admin_condition extends desktop_controller{
         }
     }
 
-    /**
-     * show_history
-     * @param mixed $log_id ID
-     * @return mixed 返回值
-     */
     public function show_history($log_id) {
         $logObj = app::get('ome')->model('operation_log');
         $log = $logObj->dump($log_id,'memo');

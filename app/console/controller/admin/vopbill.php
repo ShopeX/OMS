@@ -14,10 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: alt+t
  * @describe: 控制器
  * ============================
@@ -53,11 +54,6 @@ class console_ctl_admin_vopbill extends desktop_controller {
         return $sub_menu;
     }
 
-    /**
-     * index
-     * @return mixed 返回值
-     */
-
     public function index() {
         $actions = array();
         /*
@@ -81,10 +77,6 @@ class console_ctl_admin_vopbill extends desktop_controller {
         $this->finder('console_mdl_vopbill', $params);
     }
 
-    /**
-     * exportTemplate
-     * @return mixed 返回值
-     */
     public function exportTemplate()
     {
         $row = [
@@ -96,11 +88,6 @@ class console_ctl_admin_vopbill extends desktop_controller {
         $lib->newExportExcel($data, '帐单模板', 'xls', $row);
     }
 
-    /**
-     * confirm
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function confirm($id) {
         $vopModel = app::get('console')->model('vopbill');
         $bills = $vopModel->db_dump(['id'=>$id],'*');
@@ -136,10 +123,6 @@ class console_ctl_admin_vopbill extends desktop_controller {
         $this->singlepage('admin/vop/bill_confirm.html');
     }
 
-    /**
-     * doConfirm
-     * @return mixed 返回值
-     */
     public function doConfirm() {
         $this->begin($this->url);
         $bill_id = (int) $_POST['bill_id'];
@@ -162,12 +145,6 @@ class console_ctl_admin_vopbill extends desktop_controller {
 
    
 
-    /**
-     * sync
-     * @param mixed $downloadType downloadType
-     * @param mixed $shop_id ID
-     * @return mixed 返回值
-     */
     public function sync($downloadType = '', $shop_id = '')
     {
         
@@ -188,10 +165,6 @@ class console_ctl_admin_vopbill extends desktop_controller {
     }
 
 
-    /**
-     * do_sync
-     * @return mixed 返回值
-     */
     public function do_sync() {
         $shop_id = $_POST['shop_id'];
         $bill_type = $_POST['bill_type'];

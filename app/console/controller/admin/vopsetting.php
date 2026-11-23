@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 唯品会JIT审核配置
  *
@@ -291,7 +292,6 @@ class console_ctl_admin_vopsetting extends desktop_controller{
     /**
      * Ajax加载承运商
      */
-
     function ajax_carrier_code()
     {
         $ids        = $_POST['shop_ids'];

@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+
 $db['goods'] = array(
     'columns' => array(
         'id' => array(

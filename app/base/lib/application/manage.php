@@ -15,6 +15,12 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
 
 class base_application_manage{
 
@@ -44,11 +50,6 @@ class base_application_manage{
         return new service($content_detectors);
     }
 
-    /**
-     * uninstall_queue
-     * @param mixed $apps apps
-     * @return mixed 返回值
-     */
     public function uninstall_queue($apps){
         if(is_string($apps)){
             $apps = array($apps);
@@ -73,11 +74,6 @@ class base_application_manage{
         return $queue;
     }
 
-    /**
-     * active_queue
-     * @param mixed $apps apps
-     * @return mixed 返回值
-     */
     public function active_queue($apps) 
     {
         if(is_string($apps)){
@@ -100,11 +96,6 @@ class base_application_manage{
         }
     }
 
-    /**
-     * pause_queue
-     * @param mixed $apps apps
-     * @return mixed 返回值
-     */
     public function pause_queue($apps) 
     {
         if(is_string($apps)){
@@ -139,12 +130,6 @@ class base_application_manage{
         }
     }
 
-    /**
-     * install_queue
-     * @param mixed $apps apps
-     * @param mixed $force_install force_install
-     * @return mixed 返回值
-     */
     public function install_queue($apps,$force_install=false){
         if(is_string($apps)){
             $apps = array($apps);
@@ -158,12 +143,6 @@ class base_application_manage{
         return $queue;
     }
 
-    /**
-     * has_conflict_apps
-     * @param mixed $apps apps
-     * @param mixed $conflict_apps conflict_apps
-     * @return mixed 返回值
-     */
     public function has_conflict_apps($apps, &$conflict_apps) 
     {
         if(!kernel::is_online())    return false;
@@ -214,18 +193,13 @@ class base_application_manage{
         }
     }
 
-    /**
-     * install
-     * @param mixed $app_id ID
-     * @param mixed $options 选项
-     * @param mixed $auto_enable auto_enable
-     * @return mixed 返回值
-     */
     public function install($app_id,$options=null,$auto_enable=1){
         $app = app::get($app_id);
         if(!file_exists(APP_DIR.'/'.$app_id.'/app.xml')){
-            kernel::log('Application package not found: '.$app_id);
-            return false;
+            if(!$this->download($app_id)){
+                kernel::log('Application package can not be download.');
+                return false;
+            }
         }
 
         $app_info = $app->define('main_app');
@@ -299,11 +273,6 @@ class base_application_manage{
         kernel::log('Application '.$app_id.' installed... ok.');
     }
 
-    /**
-     * uninstall
-     * @param mixed $app_id ID
-     * @return mixed 返回值
-     */
     public function uninstall($app_id){
         $this->disable($app_id);
 
@@ -338,11 +307,6 @@ class base_application_manage{
         kernel::log('Application '.$app_id.' removed');
     }
 
-    /**
-     * pause
-     * @param mixed $app_id ID
-     * @return mixed 返回值
-     */
     public function pause($app_id) 
     {   
         if($app_id == 'base'){
@@ -370,11 +334,6 @@ class base_application_manage{
         }
     }//End Function
 
-    /**
-     * active
-     * @param mixed $app_id ID
-     * @return mixed 返回值
-     */
     public function active($app_id) 
     {   
         $row = kernel::database()->selectrow('select status from sdb_base_apps where app_id = "'.$app_id.'" AND status IN ("uninstalled", "paused") ');
@@ -412,11 +371,6 @@ class base_application_manage{
         }
     }//End Function
 
-    /**
-     * enable
-     * @param mixed $app_id ID
-     * @return mixed 返回值
-     */
     public function enable($app_id){
         $app = app::get($app_id);
         $app->runtask('pre_enable');
@@ -433,11 +387,6 @@ class base_application_manage{
         $app->runtask('post_enable');
     }
 
-    /**
-     * disable
-     * @param mixed $app_id ID
-     * @return mixed 返回值
-     */
     public function disable($app_id){
         $app = app::get($app_id);
         $app->runtask('pre_disable');
@@ -454,12 +403,57 @@ class base_application_manage{
         $app->runtask('post_disable');
     }
 
-    /**
-     * 更新_app_content
-     * @param mixed $app_id ID
-     * @param mixed $autofix autofix
-     * @return mixed 返回值
-     */
+    public function download($app_id,$force = false){
+
+        $download_able = $force;
+        if(!$download_able){
+            $download_able = !file_exists(APP_DIR.'/'.$app_id.'/app.xml');
+            if(!$download_able){
+                $rows = app::get('base')->model('apps')->getList('app_id,local_ver,remote_ver',array('app_id'=>$app_id),0,1);
+                $download_able = $rows[0]['local_ver']?version_compare($rows[0]['remote_ver'],$rows[0]['local_ver'],'>'):true;
+            }
+        }
+
+        if($download_able){
+            $tmpfile = tempnam(false,'app_');
+            $download_result = kernel::single('base_pget')->dl(sprintf(URL_APP_FETCH,$app_id),$tmpfile);
+            if(!$download_result){
+                kernel::log('Appliction ['.$app_id.'] download failed.');
+                exit;
+            }
+            $tmpdir = DATA_DIR.'/tmp/'.basename($tmpfile);
+            $broken = false;
+            kernel::log("\nExtra from package.");
+            foreach(base_package::walk($tmpfile) as $file){
+                if(!$file){
+                    $broken = true;
+                    break;
+                }
+                kernel::log($file['name']);
+                base_package::extra($file,$tmpdir);
+            }
+            @unlink($tmpfile);
+
+            if(!$broken && file_exists($tmpdir.'/app.xml')){
+                if(!is_dir(DATA_DIR.'/backup')){
+                    utils::mkdir_p(DATA_DIR.'/backup');
+                }
+                utils::cp(APP_DIR.'/'.$app_id , DATA_DIR.'/backup/app.'.$app_id.'.'.time());
+                utils::remove_p(APP_DIR.'/'.$app_id);
+                utils::cp($tmpdir , APP_DIR.'/'.$app_id);
+                utils::remove_p($tmpdir);
+
+                $this->update_local_app_info($app_id);
+
+                return true;
+            }else{
+                utils::remove_p($tmpdir);
+                return false;
+            }
+
+        }
+    }
+
     public function update_app_content($app_id,$autofix=true){
         foreach($this->content_detector($app_id) as $k=>$detector){
             $last_modified = $detector->last_modified($app_id);
@@ -477,6 +471,40 @@ class base_application_manage{
         }
     }
 
+    public function sync(){
+
+        kernel::log('Updating Application library..');
+        $xmlfile = tempnam(false,'appdb_');
+        kernel::single('base_pget')->dl(URL_APP_FETCH_INDEX,$xmlfile);
+
+        $appdb = kernel::single('base_xml')->xml2array(
+		file_get_contents($xmlfile),'base_app');
+        @unlink($xmlfile);
+        app::get('base')->model('apps')->update(array('remote_ver'=>''));
+        if($appdb['app']){
+            app::get('base')->model('apps')->delete(array('installed'=>false));
+        }
+
+        foreach((array)$appdb['app'] as $app){
+            $data = array(
+                'app_id'=>$app['id'],
+                'app_name'=>$app['name'],
+                'remote_ver'=>$app['version'],
+                'description'=>$app['description'],
+                'author_name'=>$app['author']['name'],
+                'author_url'=>$app['author']['url'],
+                'author_email'=>$app['author']['email'],
+                'remote_config'=>$app,
+            );
+
+            app::get('base')->model('apps')->replace($data,array('app_id'=>$app['id']));
+        }
+
+        $this->update_local();
+
+        kernel::log('Application libaray is updated, ok.');
+    }
+
     private function update_local_app_info($app_id){
         $app = app::get($app_id)->define();
         $data = array(
@@ -491,10 +519,6 @@ class base_application_manage{
         app::get('base')->model('apps')->replace($data,array('app_id'=>$app_id));
     }
 
-    /**
-     * 更新_local
-     * @return mixed 返回值
-     */
     public function update_local(){
         kernel::log('Scanning local Applications... ',1);
         if ($handle = opendir(APP_DIR)) {

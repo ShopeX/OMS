@@ -17,11 +17,6 @@
 
 class dealer_ctl_admin_shop_stocksku extends inventorydepth_ctl_shop_adjustment {
 
-    /**
-     * index
-     * @param mixed $source source
-     * @return mixed 返回值
-     */
     public function index($source = '')
     {
         $base_filter = array();

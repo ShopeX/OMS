@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 唯品会JIT出库事件处理
  *
@@ -27,7 +28,6 @@ class console_event_receive_vopstockout extends console_event_response
      * 出库事件处理
      * @param array $data
      */
-
     public function outStorage($data)
     {
         $io        = '0';

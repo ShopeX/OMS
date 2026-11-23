@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+
 $db['difference_items'] = array(
     'columns' => array(
         'id'     => array(

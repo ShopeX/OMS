@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 销售物料Lib方法类
  *
@@ -24,11 +25,6 @@ class dealer_material extends dealer_abstract
 {
     public $_salesMaterialMdl = null;
     
-    /**
-     * __construct
-     * @return mixed 返回值
-     */
-
     public function __construct()
     {
         $this->_salesMatMdl = app::get('dealer')->model('sales_material');
@@ -40,7 +36,7 @@ class dealer_material extends dealer_abstract
     
     /**
      * 据来源店铺及销售物料货号获取销售物料信息
-     * 
+     *
      * @param $shop_id
      * @param $sales_material_bn
      * @return array
@@ -60,7 +56,7 @@ class dealer_material extends dealer_abstract
     
     /**
      * 据来源店铺及销售物料ID获取销售物料信息
-     * 
+     *
      * @param $shop_id
      * @param $sales_material_bn
      * @return array
@@ -80,7 +76,7 @@ class dealer_material extends dealer_abstract
     
     /**
      * 根据来源店铺及货号获取销售物料信息
-     * 
+     *
      * @param $sm_id
      * @return array
      */
@@ -119,7 +115,7 @@ class dealer_material extends dealer_abstract
     
     /**
      * 根据促销总价格计算每个物料的贡献金额值
-     * 
+     *
      * @param $sale_price
      * @param $bm_bns
      * @return true
@@ -156,7 +152,7 @@ class dealer_material extends dealer_abstract
     
     /**
      * 根据优惠价格计算每个物料的贡献金额值
-     * 
+     *
      * @param $pmt_price
      * @param $bm_bns
      * @return array|true
@@ -196,7 +192,7 @@ class dealer_material extends dealer_abstract
     
     /**
      * 根据促销总价格计算每个物料的贡献金额值
-     * 
+     *
      * @param $price
      * @param $bm_bns
      * @return array|true

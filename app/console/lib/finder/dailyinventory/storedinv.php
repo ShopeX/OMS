@@ -28,11 +28,6 @@ class console_finder_dailyinventory_storedinv
 
     public $column_opt       = '操作';
     public $column_opt_order = 1;
-    /**
-     * column_opt
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_opt($row)
     {
         $buttons = [];
@@ -46,11 +41,6 @@ class console_finder_dailyinventory_storedinv
 
     public $column_outer_stock       = '门店库存';
     public $column_outer_stock_order = 50;
-    /**
-     * column_outer_stock
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_outer_stock($row)
     {
         return $row[$this->col_prefix . 'outer_stock'];
@@ -58,11 +48,6 @@ class console_finder_dailyinventory_storedinv
 
     public $column_store_bn       = '门店编码';
     public $column_store_bn_order = 30;
-    /**
-     * column_store_bn
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_store_bn($row)
     {
         return $this->_getStore($row[$this->col_prefix . 'channel_id'], $list)['store_bn'];
@@ -70,12 +55,6 @@ class console_finder_dailyinventory_storedinv
 
     public $column_store_name       = '门店名称';
     public $column_store_name_order = 30;
-    /**
-     * column_store_name
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_store_name($row, $list)
     {
         return $this->_getStore($row[$this->col_prefix . 'channel_id'], $list)['name'];

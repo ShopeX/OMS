@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
@@ -24,11 +25,6 @@
  */
 class console_ctl_admin_material_package extends desktop_controller
 {
-
-    /**
-     * _views
-     * @return mixed 返回值
-     */
 
     public function _views()
     {
@@ -47,10 +43,6 @@ class console_ctl_admin_material_package extends desktop_controller
         return $sub_menu;
     }
 
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index()
     {
         $actions   = array();
@@ -84,10 +76,6 @@ class console_ctl_admin_material_package extends desktop_controller
         $this->finder('console_mdl_material_package', $params);
     }
 
-    /**
-     * exportTemplate
-     * @return mixed 返回值
-     */
     public function exportTemplate()
     {
         $row = app::get('console')->model('material_package')->getTemplateColumn();
@@ -95,19 +83,11 @@ class console_ctl_admin_material_package extends desktop_controller
         $lib->newExportExcel(null, '加工单导入模板', 'xls', $row);
     }
 
-    /**
-     * 添加
-     * @return mixed 返回值
-     */
     public function add()
     {
         $this->singlepage('admin/material/package/add.html');
     }
 
-    /**
-     * edit
-     * @return mixed 返回值
-     */
     public function edit()
     {
         $id      = (int) $_GET['id'];
@@ -126,10 +106,6 @@ class console_ctl_admin_material_package extends desktop_controller
         $this->singlepage('admin/material/package/add.html');
     }
 
-    /**
-     * 获取ProductsByBn
-     * @return mixed 返回结果
-     */
     public function getProductsByBn() {
         $pro_bn= $_GET['material_bn'];
         $pro_name= $_GET['material_name'];
@@ -164,10 +140,6 @@ class console_ctl_admin_material_package extends desktop_controller
         echo "window.autocompleter_json=".json_encode(array_values($bmRows));exit;
     }
 
-    /**
-     * 获取Products
-     * @return mixed 返回结果
-     */
     public function getProducts()
     {
         $arrProductId = $_POST['bm_id'];
@@ -181,10 +153,6 @@ class console_ctl_admin_material_package extends desktop_controller
         echo json_encode($bmRows);
     }
 
-    /**
-     * 保存
-     * @return mixed 返回操作结果
-     */
     public function save()
     {
         if (empty($_POST['mp_name'])) {
@@ -229,11 +197,6 @@ class console_ctl_admin_material_package extends desktop_controller
         $this->splash('error', $this->url, '操作失败：' . $rsData['msg']);
     }
 
-    /**
-     * singleConfirm
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function singleConfirm($id)
     {
         $this->begin($this->url);
@@ -279,12 +242,6 @@ class console_ctl_admin_material_package extends desktop_controller
         $this->end(true, '操作成功');
     }
 
-    /**
-     * cancel
-     * @param mixed $id ID
-     * @param mixed $isLocal isLocal
-     * @return mixed 返回值
-     */
     public function cancel($id, $isLocal = false)
     {
         $this->begin($this->url);
@@ -294,11 +251,6 @@ class console_ctl_admin_material_package extends desktop_controller
         $this->end($rs, $msg);
     }
 
-    /**
-     * sync
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function sync($id)
     {
         kernel::single('console_event_trigger_material_package')->create($id);

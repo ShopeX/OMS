@@ -14,10 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @author ykm 2015-12-02
  * @describe 特殊订单打印
  */
+
 class brush_ctl_admin_print extends desktop_controller
 {
     function __construct($app)
@@ -29,11 +31,6 @@ class brush_ctl_admin_print extends desktop_controller
         parent::__construct($app);
     }
     
-    /**
-     * toPrintShip
-     * @return mixed 返回值
-     */
-
     public function toPrintShip()
     {
         $this->toPrintExpre();//仅使用安装logisticsmanager后的打印方式
@@ -137,11 +134,6 @@ class brush_ctl_admin_print extends desktop_controller
     }
 
     //直连获取电子面单运单号
-    /**
-     * 获取ElectronLogiNo
-     * @param mixed $directParam directParam
-     * @return mixed 返回结果
-     */
     public function getElectronLogiNo($directParam)
     {
         $urlParams = json_encode($directParam['get']);
@@ -157,10 +149,6 @@ class brush_ctl_admin_print extends desktop_controller
     }
 
     //逐批获取电子面单(进度条)
-    /**
-     * asyncLoginoPage
-     * @return mixed 返回值
-     */
     public function asyncLoginoPage() {
         $channel_id = $_GET['channel_id'];
         $request_uri = base64_decode($_GET['request_uri']) . '&isdown=1';
@@ -174,10 +162,6 @@ class brush_ctl_admin_print extends desktop_controller
         $this->display('admin/delivery/asyncLoginoPage.html');
     }
 
-    /**
-     * 获取WaybillLogiNo
-     * @return mixed 返回结果
-     */
     public function getWaybillLogiNo() {
         $channel_id = $_POST['channel_id'];
         $delivery_id = explode(';',$_POST['id']);
@@ -201,10 +185,6 @@ class brush_ctl_admin_print extends desktop_controller
         exit();
     }
 
-    /**
-     * insertExpress
-     * @return mixed 返回值
-     */
     public function insertExpress() {
         if (empty($_POST['id'])) {
             exit("请录入快递单号");
@@ -264,10 +244,6 @@ class brush_ctl_admin_print extends desktop_controller
         echo "SUCC";
     }
 
-    /**
-     * 设置PrintStatus
-     * @return mixed 返回操作结果
-     */
     public function setPrintStatus() {
         set_time_limit(0);
         $type   = $_POST['type'];
@@ -338,10 +314,6 @@ class brush_ctl_admin_print extends desktop_controller
         return true;
     }
 
-    /**
-     * 设置PrintMode
-     * @return mixed 返回操作结果
-     */
     public function setPrintMode() {
 
     }

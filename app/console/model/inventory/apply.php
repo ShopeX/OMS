@@ -27,13 +27,6 @@ class console_mdl_inventory_apply extends dbeav_model{
         return 'S'.date("mdHis").rand(0,9).rand(0,9);
     }
     
-    /**
-     * modifier_negative_branch_id
-     * @param mixed $c c
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_negative_branch_id($c,$list,$row){
         $bid = json_decode($c, 1);
         $branchList = app::get('ome')->model('branch')->getList('branch_bn', ['branch_id'=>$bid,'check_permission'=>'false']);
@@ -540,15 +533,6 @@ class console_mdl_inventory_apply extends dbeav_model{
         return null;
     }
 
-    /**
-     * 获取exportdetail
-     * @param mixed $fields fields
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $limit limit
-     * @param mixed $has_title has_title
-     * @return mixed 返回结果
-     */
     public function getexportdetail($fields,$filter,$offset=0,$limit=1,$has_title=false){
         $applyData = $this->getlist('inventory_apply_id,inventory_apply_bn', array('inventory_apply_id|in' => $filter['inventory_apply_id']));
         $data = array();

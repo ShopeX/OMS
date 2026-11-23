@@ -14,11 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @Author: xueding@shopex.cn
  * @Datetime: 2022/4/24
  * @Describe: 外部优仓商品请求类
  */
+
 class dchain_event_trigger_dchain_product
 {
     
@@ -28,7 +30,6 @@ class dchain_event_trigger_dchain_product
      * @param array $shop 店铺信息
      * @return bool
      */
-
     public function addProduct($data, $bnList, $shop)
     {
         if (empty($shop) || empty($data)) {

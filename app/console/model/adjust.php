@@ -14,10 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: 2022/8/1 15:34:58
  * @describe: model层
  * ============================
@@ -26,27 +27,12 @@ class console_mdl_adjust extends dbeav_model {
     public $has_export_cnf = true;
     public $export_name = '库存调整单';
 
-    /**
-     * modifier_negative_branch_id
-     * @param mixed $c c
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
-
     public function modifier_negative_branch_id($c,$list,$row){
         $bid = json_decode($c, 1);
         $branchList = app::get('ome')->model('branch')->getList('branch_bn', ['branch_id'=>$bid,'check_permission'=>'false']);
         return implode(' | ', array_column($branchList, 'branch_bn'));
     }
 
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter,$tableAlias=null,$baseWhere=null){
         if ($filter['material_bn']){
             $material_bn = $filter['material_bn'];
@@ -71,11 +57,6 @@ class console_mdl_adjust extends dbeav_model {
         return parent::_filter($filter,$tableAlias,$baseWhere);
     }
 
-    /**
-     * gen_id
-     * @param mixed $branch_bn branch_bn
-     * @return mixed 返回值
-     */
     public function gen_id($branch_bn) {
         $prefix = 'TZ'.date("ymd");
         $sign   = kernel::single('eccommon_guid')->incId('adjust', $prefix, 8);
@@ -95,17 +76,9 @@ class console_mdl_adjust extends dbeav_model {
         '数量' => 'number',
     );
 
-    /**
-     * 获取TemplateColumn
-     * @return mixed 返回结果
-     */
     public function getTemplateColumn() {
         return array_keys($this->templateColumn);
     }
-    /**
-     * prepared_import_csv
-     * @return mixed 返回值
-     */
     public function prepared_import_csv(){
         $this->import_data =[];
         $this->import_data_bm_bn =[];
@@ -113,16 +86,6 @@ class console_mdl_adjust extends dbeav_model {
         $this->ioObj->cacheTime = time();
     }
 
-    /**
-     * prepared_import_csv_row
-     * @param mixed $row row
-     * @param mixed $title title
-     * @param mixed $tmpl tmpl
-     * @param mixed $mark mark
-     * @param mixed $newObjFlag newObjFlag
-     * @param mixed $msg msg
-     * @return mixed 返回值
-     */
     public function prepared_import_csv_row($row,&$title,&$tmpl,&$mark,&$newObjFlag,&$msg)
     {
         if(empty($row) || empty(array_filter($row))) return false;
@@ -240,10 +203,6 @@ class console_mdl_adjust extends dbeav_model {
     }
 
 
-    /**
-     * finish_import_csv
-     * @return mixed 返回值
-     */
     public function finish_import_csv(){
         if(empty($this->import_data)) {
             return null;
@@ -270,15 +229,6 @@ class console_mdl_adjust extends dbeav_model {
         return null;
     }
 
-    /**
-     * 获取exportdetail
-     * @param mixed $field field
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $limit limit
-     * @param mixed $first_sheet first_sheet
-     * @return mixed 返回结果
-     */
     public function getexportdetail($field, $filter, $offset=0, $limit=-1, $first_sheet=false) {
         $adjust_arr = $this->getList('id,adjust_bn', array('id' => $filter['id']), 0, -1);
         $adjust_bn = [];

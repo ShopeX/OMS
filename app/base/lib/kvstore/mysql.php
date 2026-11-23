@@ -15,6 +15,13 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 /*
  * @package base
@@ -30,13 +37,6 @@ class base_kvstore_mysql extends base_kvstore_abstract implements base_interface
         $this->prefix = $prefix;
     }//End Function
 
-    /**
-     * store
-     * @param mixed $key key
-     * @param mixed $value value
-     * @param mixed $ttl ttl
-     * @return mixed 返回值
-     */
     public function store($key, $value, $ttl=0) 
     {
         $rows = app::get('base')->model('kvstore')->getList('id', array('prefix'=>$this->prefix, 'key'=>$key));
@@ -48,13 +48,6 @@ class base_kvstore_mysql extends base_kvstore_abstract implements base_interface
         }
     }//End Function
 
-    /**
-     * fetch
-     * @param mixed $key key
-     * @param mixed $value value
-     * @param mixed $timeout_version timeout_version
-     * @return mixed 返回值
-     */
     public function fetch($key, &$value, $timeout_version=null) 
     {
         $rows = kernel::database()->select(
@@ -71,21 +64,11 @@ class base_kvstore_mysql extends base_kvstore_abstract implements base_interface
         return false;
     }//End Function
 
-    /**
-     * 删除
-     * @param mixed $key key
-     * @return mixed 返回值
-     */
     public function delete($key) 
     {
         return app::get('base')->model('kvstore')->delete(array('prefix'=>$this->prefix, 'key'=>$key));
     }//End Function
 
-    /**
-     * recovery
-     * @param mixed $record record
-     * @return mixed 返回值
-     */
     public function recovery($record) 
     {
         return false;

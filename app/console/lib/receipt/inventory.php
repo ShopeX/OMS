@@ -17,12 +17,6 @@
 
 class console_receipt_inventory{
 
-    /**
-     * do_inventory
-     * @param mixed $data 数据
-     * @param mixed $msg msg
-     * @return mixed 返回值
-     */
     public function do_inventory($data,&$msg)
     {
         $basicMaterialObj    = app::get('material')->model('basic_material');

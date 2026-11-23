@@ -14,23 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * CONFIG
  *
- * @category
- * @package
+ * @category 
+ * @package 
  * @author chenping<chenping@shopex.cn>
  * @version $Id: Z
  */
 class channel_ticket_config 
 {
-    /**
-     * formatConfig
-     * @param mixed $config 配置
-     * @param mixed $channel channel
-     * @return mixed 返回值
-     */
-
     public function formatConfig($config, $channel)
     {
 

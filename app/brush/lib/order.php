@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @author ykm 2015-11-16
  * @describe 订单刷单公用类
@@ -26,7 +27,6 @@ class brush_order
      * @param array $sdf
      * @return bool
      */
-
     public function brush_confirm(&$sdf)
     {
         $farm_model = app::get('brush')->model('farm');

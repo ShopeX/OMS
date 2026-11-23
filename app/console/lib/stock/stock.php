@@ -14,10 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
 * 库存基类
-*
-*
+* 
+* 
 */
 class console_stock_stock{
 
@@ -31,13 +32,12 @@ class console_stock_stock{
    
 
     /**
-     * 组合预占+
-     * @access public
-     * @param Int $product_id 普通货品ID
-     * @param Int $nums 预占数量
-     * @return bool
-     */
-
+    * 组合预占+
+    * @access public
+    * @param Int $product_id 普通货品ID
+    * @param Int $nums 预占数量
+    * @return bool
+    */
     public function chg_combine_freeze($product_id,$nums){
         if (empty($product_id) || empty($nums)) return false;
         
@@ -45,12 +45,12 @@ class console_stock_stock{
     }
 
     /**
-     * 组合预占-
-     * @access public
-     * @param Int $product_id 基础货品ID
-     * @param Int $nums 预占数量
-     * @return bool
-     */
+    * 组合预占-
+    * @access public
+    * @param Int $product_id 基础货品ID
+    * @param Int $nums 预占数量
+    * @return bool
+    */
     public function chg_combine_unfreeze($product_id,$nums)
     {
         if (empty($product_id) || empty($nums)) return false;
@@ -60,12 +60,12 @@ class console_stock_stock{
     }
 
     /**
-     * 货品实际库存+
-     * @access public
-     * @param Int $product_id 货品ID
-     * @param Int $nums 数量
-     * @return bool
-     */
+    * 货品实际库存+
+    * @access public
+    * @param Int $product_id 货品ID
+    * @param Int $nums 数量
+    * @return bool
+    */
     public function chg_storein($product_id,$nums='')
     {
         if (empty($product_id) || empty($nums)) return false;
@@ -74,12 +74,12 @@ class console_stock_stock{
     }
 
     /**
-     * 货品实际库存-
-     * @access public
-     * @param Int $product_id 货品ID
-     * @param Int $nums 数量
-     * @return bool
-     */
+    * 货品实际库存-
+    * @access public
+    * @param Int $product_id 货品ID
+    * @param Int $nums 数量
+    * @return bool
+    */
     public function chg_storeout($product_id,$nums=''){
         if (empty($product_id) || empty($nums)) return false;
         
@@ -87,13 +87,13 @@ class console_stock_stock{
     }
 
     /**
-     * 仓库冻结+
-     * @access public
-     * @param Int $branch_id 仓库ID
-     * @param Int $product_id 货品ID
-     * @param Int $nums 数量
-     * @return bool
-     */
+    * 仓库冻结+
+    * @access public
+    * @param Int $branch_id 仓库ID
+    * @param Int $product_id 货品ID
+    * @param Int $nums 数量
+    * @return bool
+    */
     public function chg_branch_freeze($branch_id,$product_id,$nums)
     {
         $libBranchProduct    = kernel::single('ome_branch_product');
@@ -108,13 +108,13 @@ class console_stock_stock{
     }
 
     /**
-     * 仓库冻结-
-     * @access public
-     * @param Int $branch_id 仓库ID
-     * @param Int $product_id 货品ID
-     * @param Int $nums 数量
-     * @return bool
-     */
+    * 仓库冻结-
+    * @access public
+    * @param Int $branch_id 仓库ID
+    * @param Int $product_id 货品ID
+    * @param Int $nums 数量
+    * @return bool
+    */
     public function chg_branch_unfreeze($branch_id,$product_id,$nums)
     {
         $libBranchProduct    = kernel::single('ome_branch_product');
@@ -129,13 +129,13 @@ class console_stock_stock{
     }
 
     /**
-     * 仓库实际库存+
-     * @access public
-     * @param Int $branch_id 仓库ID
-     * @param Int $product_id 货品ID
-     * @param Int $nums 数量
-     * @return bool
-     */
+    * 仓库实际库存+
+    * @access public
+    * @param Int $branch_id 仓库ID
+    * @param Int $product_id 货品ID
+    * @param Int $nums 数量
+    * @return bool
+    */
     public function chg_branch_storein($branch_id,$product_id,$nums=''){
         if (empty($branch_id) || empty($product_id) || empty($nums)) return false;
         
@@ -143,13 +143,13 @@ class console_stock_stock{
     }
 
     /**
-     * 仓库实际库存-
-     * @access public
-     * @param Int $branch_id 仓库ID
-     * @param Int $product_id 货品ID
-     * @param Int $nums 数量
-     * @return bool
-     */
+    * 仓库实际库存-
+    * @access public
+    * @param Int $branch_id 仓库ID
+    * @param Int $product_id 货品ID
+    * @param Int $nums 数量
+    * @return bool
+    */
     public function chg_branch_storeout($branch_id,$product_id,$nums=''){
         if (empty($branch_id) || empty($product_id) || empty($nums)) return false;
         
@@ -157,11 +157,11 @@ class console_stock_stock{
     }
 
     /**
-     * 可售库存=线上仓库的库存-销售预占-组合预占-线上仓库的仓库冻结
-     * @access public
-     * @param Int $product_id 货品ID
-     * @return bool
-     */
+    * 可售库存=线上仓库的库存-销售预占-组合预占-线上仓库的仓库冻结
+    * @access public
+    * @param Int $product_id 货品ID
+    * @return bool
+    */
     public function usable_sale_store($product_id){
         if (empty($product_id)) return 0;
         
@@ -176,11 +176,11 @@ class console_stock_stock{
     }
 
     /**
-     * 可用库存=货品实际库存 - 销售预占 - 组合预占 - 仓库冻结
-     * @access public
-     * @param Int $product_id 货品ID
-     * @return bool
-     */
+    * 可用库存=货品实际库存 - 销售预占 - 组合预占 - 仓库冻结
+    * @access public
+    * @param Int $product_id 货品ID
+    * @return bool
+    */
     public function usable_store($product_id){
         if (empty($product_id)) return 0;
         
@@ -188,11 +188,11 @@ class console_stock_stock{
     }
 
     /**
-     * 获取组合可售库存=组合库存-组合销售预占
-     * @access public
-     * @param Int $product_id 货品ID
-     * @return bool
-     */
+    * 获取组合可售库存=组合库存-组合销售预占
+    * @access public
+    * @param Int $product_id 货品ID
+    * @return bool
+    */
     public function combine_usable_sale_store($product_id){
         if (empty($product_id)) return 0;
         
@@ -205,12 +205,12 @@ class console_stock_stock{
     }
 
     /**
-     * 获取仓库可用库存=仓库实际库存 - 仓库冻结库存
-     * @access public
-     * @param Int $branch_id 仓库ID
-     * @param Int $product_id 货品ID
-     * @return bool
-     */
+    * 获取仓库可用库存=仓库实际库存 - 仓库冻结库存
+    * @access public
+    * @param Int $branch_id 仓库ID
+    * @param Int $product_id 货品ID
+    * @return bool
+    */
     public function branch_usable_store($branch_id,$product_id=''){
         if (empty($branch_id) || empty($product_id)) return 0;
         

@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 开普勒发货业务处理Lib类
  *
@@ -32,7 +33,6 @@ class console_delivery_kepler
     /**
      * 初始化
      */
-
     public function __construct()
     {
         //Obj
@@ -44,7 +44,7 @@ class console_delivery_kepler
     /**
      * [重试发货]京东取消父单后,使用Queue队列进行子订单DELIVERY发货
      * @todo：防止京东同分同秒推送DELIVERY、ACCEPT状态;
-     * 
+     *
      * @param int $cursor_id
      * @param array $params
      * @param string $error_msg

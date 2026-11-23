@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+
 $db['business_branch'] = array(
     'columns' => array(
         'bs_id' => array(

@@ -15,7 +15,12 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
 class app {
 
     static private $__instance     = array();
@@ -137,11 +142,6 @@ class app {
         return $parent_model_class ? $parent_model_class : 'base_db_model';
     }
 
-    /**
-     * define
-     * @param mixed $path path
-     * @return mixed 返回值
-     */
     public function define($path = null) {
         if (!$this->__define) {
             if (is_dir($this->app_dir) && file_exists($this->app_dir . '/app.xml')) {
@@ -160,11 +160,6 @@ class app {
         }
     }
 
-    /**
-     * 获取Conf
-     * @param mixed $key key
-     * @return mixed 返回结果
-     */
     public function getConf($key) {
         if (!isset($this->__appConf[$key])) {
             if (base_kvstore::instance('setting/' . $this->app_id)->fetch($key, $val) === false) {
@@ -195,12 +190,6 @@ class app {
         return $this->__appConf[$key];
     }
 
-    /**
-     * 设置Conf
-     * @param mixed $key key
-     * @param mixed $value value
-     * @return mixed 返回操作结果
-     */
     public function setConf($key, $value) {
         if (base_kvstore::instance('setting/' . $this->app_id)->store($key, $value)) {
             $this->__appConf[$key] = $value;    //todo：更新当前进程缓存
@@ -212,11 +201,6 @@ class app {
         }
     }
 
-    /**
-     * 设置_modified
-     * @param mixed $key key
-     * @return mixed 返回操作结果
-     */
     public function set_modified($key) {
         return;
         $vary_name = strtoupper(md5($this->app_id . $key));
@@ -228,12 +212,6 @@ class app {
         }
     }//End Function
 
-    /**
-     * 检查_expires
-     * @param mixed $key key
-     * @param mixed $force force
-     * @return mixed 返回验证结果
-     */
     public function check_expires($key, $force = false) {
         if ($force || (cachemgr::enable() && cachemgr::check_current_co_depth() > 0)) {
             if (!isset($this->__checkVaryArr[$key])) {

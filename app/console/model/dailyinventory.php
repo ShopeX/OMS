@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
@@ -24,12 +25,6 @@
  */
 class console_mdl_dailyinventory extends dbeav_model
 {
-    /**
-     * gen_id
-     * @param mixed $channel_bn channel_bn
-     * @return mixed 返回值
-     */
-
     public function gen_id($channel_bn)
     {
         $prefix = $channel_bn . '-INVS' . date("Ymd");
@@ -38,11 +33,6 @@ class console_mdl_dailyinventory extends dbeav_model
         return $guid;
     }
 
-    /**
-     * modifier_stock_date
-     * @param mixed $value value
-     * @return mixed 返回值
-     */
     public function modifier_stock_date($value)
     {
         return $value;

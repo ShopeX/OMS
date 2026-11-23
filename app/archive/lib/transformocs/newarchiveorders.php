@@ -161,11 +161,6 @@ class archive_transformocs_newarchiveorders  extends archive_transformocs_abstra
 
     
     
-    /**
-     * _getorderObject
-     * @param mixed $order_ids ID
-     * @return mixed 返回值
-     */
     public function _getorderObject($order_ids)
     {
         $order_ids = implode(',',$order_ids);
@@ -395,7 +390,7 @@ class archive_transformocs_newarchiveorders  extends archive_transformocs_abstra
     
     /**
      * 获取发货地址信息
-     * 
+     *
      * @param Array $order 订单数据
      * @return Array
      */

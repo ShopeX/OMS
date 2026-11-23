@@ -26,10 +26,6 @@ class brush_ctl_admin_orders extends desktop_controller
         'order_type' => 'brush',
     );
     
-    /**
-     * _views
-     * @return mixed 返回值
-     */
     public function _views()
     {
         static $sub_menu;
@@ -56,10 +52,6 @@ class brush_ctl_admin_orders extends desktop_controller
         return $sub_menu;
     }
 
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index()
     {
         $this->app->app_id = 'ome';
@@ -105,10 +97,6 @@ class brush_ctl_admin_orders extends desktop_controller
         }
     }
 
-    /**
-     * 删除
-     * @return mixed 返回值
-     */
     public function delete()
     {
         $orderMdl = app::get('ome')->model('orders');
@@ -253,10 +241,6 @@ class brush_ctl_admin_orders extends desktop_controller
         }
     }
 
-    /**
-     * confirm
-     * @return mixed 返回值
-     */
     public function confirm()
     {
         $orderMdl = app::get('ome')->model('orders');
@@ -277,10 +261,6 @@ class brush_ctl_admin_orders extends desktop_controller
         $this->display('admin/confirm.html');
     }
 
-    /**
-     * rollback
-     * @return mixed 返回值
-     */
     public function rollback()
     {
         $orderMdl = app::get('ome')->model('orders');
@@ -404,7 +384,7 @@ class brush_ctl_admin_orders extends desktop_controller
     
     /**
      * 添加订单预占库存
-     * 
+     *
      * @param array $orderIds
      * @return bool
      */

@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 经销商公共Lib方法类
  *
@@ -25,10 +26,9 @@ class dealer_business
     /**
      * 获取操作人员的企业组织架构ID权限
      * @todo：获取失败或者没有权限，返回-1
-     * 
+     *
      * @return array
      */
-
     public function getOperationCosIds(&$error_msg=null)
     {
         //获取操作员拥有的COS列表
@@ -59,7 +59,7 @@ class dealer_business
     
     /**
      * 获取经销商列表 or 指定经销商信息
-     * 
+     *
      * @param $bs_id 指定返回某个经销商信息
      * @return array
      */
@@ -85,7 +85,7 @@ class dealer_business
     
     /**
      * 获取指定经销商列表(包含贸易公司信息)
-     * 
+     *
      * @param $bs_ids
      * @return array
      */
@@ -144,7 +144,7 @@ class dealer_business
     
     /**
      * 获取店铺关联的供货仓
-     * 
+     *
      * @param $shopBns 店铺编码集合
      * @return array
      */
@@ -192,7 +192,7 @@ class dealer_business
     
     /**
      * 获取指定授权产品线
-     * 
+     *
      * @param $shopIds 店铺ID集合
      * @return array
      */
@@ -254,7 +254,7 @@ class dealer_business
     
     /**
      * 获取指定经销商列表(包含贸易公司信息)
-     * 
+     *
      * @param $bs_ids
      * @return array
      */
@@ -295,7 +295,7 @@ class dealer_business
      * 2. 根据store_bn去sdb_organization_organization表获取org_no=store_bn且org_type='2'的parent_id
      * 3. 用parent_id去sdb_organization_organization表查org_id=parent_id且org_type='3'的org_bn
      * 4. 用org_bn去sdb_dealer_business表匹配bs_bn获取经销商信息
-     * 
+     *
      * @param int|array $branch_id 仓编码或仓编码数组
      * @return array 经销商信息，单个查询返回经销商数组，批量查询返回以branch_id为key的数组
      */
@@ -346,7 +346,7 @@ class dealer_business
      * 2. 根据store_bn去sdb_organization_organization表获取org_no=store_bn且org_type='2'的parent_id
      * 3. 用parent_id去sdb_organization_organization表查org_id=parent_id且org_type='3'的org_no
      * 4. 用org_no去sdb_dealer_business表匹配bs_bn获取经销商信息
-     * 
+     *
      * @param string|array $store_bn 门店编码或门店编码数组
      * @return array 经销商信息，单个查询返回经销商数组，批量查询返回以store_bn为key的数组
      */

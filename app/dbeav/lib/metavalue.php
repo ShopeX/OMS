@@ -14,6 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 /**
  * dbeav_metavalue
  * Metaֵ
@@ -38,15 +46,14 @@ class dbeav_metavalue {
         $this->db->exec($sql);            
     }
     
-    /**
+        /**
      * select 
      * עidֵmetaֵе
      * @param int $mr_id 
      * @param array $pk 
      * @access public
      * @return array
-     */
-
+     */    
     function select($mr_id,$pk){
         $sql = "
         SELECT r.tbl_name,r.col_name,v.pk,v.value 

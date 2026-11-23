@@ -19,10 +19,6 @@ class console_mdl_adjustNumber extends console_mdl_interface_iostocksearchs{
     public $kvdata = array();
 
     //定义导入文件模版字段
-    /**
-     * import_title
-     * @return mixed 返回值
-     */
     public function import_title(){
         $title[1] = array(
             '*:货号',

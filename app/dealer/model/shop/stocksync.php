@@ -17,11 +17,6 @@
 
 class dealer_mdl_shop_stocksync extends dbeav_model {
 
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
     public function table_name($real=false)
     {
         $table_name = 'shop';
@@ -32,10 +27,6 @@ class dealer_mdl_shop_stocksync extends dbeav_model {
         }
     }
 
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema()
     {
         $schema = app::get('ome')->model('shop')->get_schema();
@@ -62,22 +53,12 @@ class dealer_mdl_shop_stocksync extends dbeav_model {
         return $schema;
     }
 
-    /**
-     * modifier_shop_type
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_shop_type($row)
     {
         $row = $row ? ome_shop_type::shop_name($row) : '';
         return $row;
     }
 
-    /**
-     * modifier_bs_id
-     * @param mixed $col col
-     * @return mixed 返回值
-     */
     public function modifier_bs_id($col)
     {
         $col = app::get('dealer')->model('business')->db_dump($col, 'name')['name'];

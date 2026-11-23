@@ -40,10 +40,6 @@ class archive_data extends eccommon_analysis_abstract implements eccommon_analys
         $this->_extra_view = array('archive' => 'search.html');
     }
     
-    /**
-     * 查找er
-     * @return mixed 返回结果
-     */
     public function finder(){
 
         $archorderObj = $this->app->model('orders');
@@ -82,10 +78,6 @@ class archive_data extends eccommon_analysis_abstract implements eccommon_analys
         );
     }
 
-    /**
-     * headers
-     * @return mixed 返回值
-     */
     public function headers(){
         $this->_render->pagedata['title'] = $this->_title;
         $this->_render->pagedata['time_from'] = $this->_params['time_from'];
@@ -130,11 +122,6 @@ class archive_data extends eccommon_analysis_abstract implements eccommon_analys
         }
     }
 
-    /**
-     * 设置_params
-     * @param mixed $params 参数
-     * @return mixed 返回操作结果
-     */
     public function set_params($params) 
     {
         

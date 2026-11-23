@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @author ykm 2015-12-03
  * @describe 特殊订单打印类
@@ -26,12 +27,6 @@ class brush_print
     public $msg;
     public $showError;      //用于页面弹窗的错误信息
     public $hasPrint;       //已经打印过的发货单
-
-    /**
-     * 检查Delivery
-     * @param mixed $filter filter
-     * @return mixed 返回验证结果
-     */
 
     public function checkDelivery($filter)
     {
@@ -69,11 +64,6 @@ class brush_print
         }
     }
 
-    /**
-     * 设置Delivery
-     * @param mixed $delivery delivery
-     * @return mixed 返回操作结果
-     */
     public function setDelivery($delivery) {
         if(count($delivery)) {
             foreach($delivery as $k => $val) {
@@ -86,12 +76,6 @@ class brush_print
         }
     }
 
-    /**
-     * delDelivery
-     * @param mixed $idBn ID
-     * @param mixed $msg msg
-     * @return mixed 返回值
-     */
     public function delDelivery($idBn, $msg) {
         if(count($idBn)) {
             foreach($idBn as $k => $val) {
@@ -105,10 +89,6 @@ class brush_print
         }
     }
 
-    /**
-     * noRepeatPrint
-     * @return mixed 返回值
-     */
     public function noRepeatPrint(){
         $deliveryIds = array_keys($this->delivery);
         if(empty($deliveryIds)) {

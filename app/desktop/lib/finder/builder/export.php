@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 class desktop_finder_builder_export extends desktop_finder_builder_prototype{
     protected $vue_mode = false;
 
@@ -36,23 +42,23 @@ class desktop_finder_builder_export extends desktop_finder_builder_prototype{
         if( $_GET['change_type'] )
             $render->pagedata['change_type'] = $_GET['change_type'];
 
-        //判断当前导出对象是否有配置项目
+        //�жϵ�ǰ���������Ƿ���������Ŀ
         if($this->object->has_export_cnf){
             $render->pagedata['has_export_cnf'] = true;
             $render->pagedata['finder_aliasname'] = $finder_aliasname;
             $render->pagedata['export_type'] = $this->object_name;
             
-            //默认展示导出字段
+            //Ĭ��չʾ�����ֶ�
             $in_use = array_flip($this->getColumns());
             $all_columns = $this->all_columns();
 
-            //扩展额外导出的字段
+            //��չ���⵼�����ֶ�
             if(method_exists($this->object,'export_extra_cols')){
                 $this->export_extra_cols = $this->object->export_extra_cols();
                 $all_columns = array_merge($all_columns, $this->export_extra_cols);
             }
 
-            //去除多余没用的导出字段
+            //ȥ������û�õĵ����ֶ�
             unset($in_use['column_confirm'], $in_use['column_control'], $in_use['column_picurl']);
             unset($all_columns['column_confirm'], $all_columns['column_control'], $all_columns['column_picurl']);
 

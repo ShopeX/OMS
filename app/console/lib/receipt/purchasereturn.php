@@ -33,8 +33,8 @@ class console_receipt_purchasereturn extends console_receipt_common{
         
     );
 
-    /**
-     * 
+   /**
+     *
      * 采购退货单更新方法
      * @param array $data 采购退货单数据信息
      * @msg 错误信息
@@ -178,7 +178,7 @@ class console_receipt_purchasereturn extends console_receipt_common{
         return $iostock_items;
     }
     /**
-     * 
+     *
      * 采购退款单取消
      * @param array $po_bn 采购退款单编号
      */
@@ -200,7 +200,7 @@ class console_receipt_purchasereturn extends console_receipt_common{
     }
 
     /**
-     * 
+     *
      * 检查采购退款单货号是否存在
      * @param array $rp_id 
      */
@@ -222,7 +222,7 @@ class console_receipt_purchasereturn extends console_receipt_common{
     }
 
     /**
-     * 
+     *
      * 检查采购单是否存在判断
      * @param array $rp_bn 采购单编号
      */
@@ -245,12 +245,12 @@ class console_receipt_purchasereturn extends console_receipt_common{
     }
 
     /**
-     * 
+     *
      * 检查采购退款单是否有效
      * @param  $rp_bn 采购单编号
      * @param $status 需要执行状态
      * @msg 返回结果
-     * 
+     *
      */
     public function checkValid($rp_bn,$status,&$msg){
         $this->checkExist($rp_bn);
@@ -321,9 +321,9 @@ class console_receipt_purchasereturn extends console_receipt_common{
     }
 
     /**
-     * 冻结库存添加与释放
-     * 
-     */
+    * 冻结库存添加与释放
+    * 
+    */
     public function clear_stockout_store_freeze($data,$io_status=''){
         //$basicMaterialStock    = kernel::single('material_basic_material_stock');
         //$libBranchProduct    = kernel::single('ome_branch_product');
@@ -400,10 +400,10 @@ class console_receipt_purchasereturn extends console_receipt_common{
         }
     }
 
-     /**
-      * 转换备注
-      * 
-      */
+    /**
+    * 转换备注
+    *
+    */
      function format_memo($oldmemo,$newmemo){
         if ($newmemo){#有备注更新
             $memo = array();

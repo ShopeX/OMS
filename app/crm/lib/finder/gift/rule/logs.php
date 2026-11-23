@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 赠品规则记录
  *
@@ -35,11 +36,6 @@ class crm_finder_gift_rule_logs
     
     public $_ruleObj = null;
     
-    /**
-     * __construct
-     * @return mixed 返回值
-     */
-
     public function __construct()
     {
         $this->_giftObj = app::get('crm')->model('gift');

@@ -14,15 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
 * 其它出库事件
 */
 class console_event_trigger_otherstockout extends console_event_trigger_stockoutabstract{
 
     /**
-     * 其它出库数据整理
-     */
-
+    * 其它出库数据整理
+    */
     function getStockOutParam($param){
         $iostockObj = kernel::single('console_iostockdata');
         $iso_id = $param['iso_id'];

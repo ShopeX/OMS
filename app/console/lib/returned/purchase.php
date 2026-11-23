@@ -18,10 +18,10 @@
 class console_returned_purchase{
 
     /**
-     * 采购退货单详情
-     * 
-     * return $array
-     */
+    * 采购退货单详情
+    *
+    * return $array
+    */
     function detail($rp_id){
         $returned_purchaseObj = app::get('purchase')->model('returned_purchase');
         $branchObj = app::get('ome')->model('branch');
@@ -36,8 +36,8 @@ class console_returned_purchase{
     }
 
     /**
-     * 更新采购退货单状态
-     */
+    * 更新采购退货单状态
+    */
     function update_status($check_status,$rp_id){
         $db = kernel::database();
         $sql = 'UPDATE sdb_purchase_returned_purchase SET check_status='.$check_status.' WHERE rp_id='.$rp_id;
@@ -46,12 +46,12 @@ class console_returned_purchase{
     }
 
     /**
-     * 取消采购退货单
-     * @param int $rp_id 退货单ID
-     * @param string $memo 取消原因备注
-     * @param bool $check_wms 是否检查WMS取消，默认true
-     * @return array 返回结果
-     */
+    * 取消采购退货单
+    * @param int $rp_id 退货单ID
+    * @param string $memo 取消原因备注
+    * @param bool $check_wms 是否检查WMS取消，默认true
+    * @return array 返回结果
+    */
     function cancel($rp_id, $memo = '', $check_wms = true){
         $rpObj = app::get('purchase')->model('returned_purchase');
         $itemsObj = app::get('purchase')->model('returned_purchase_items');

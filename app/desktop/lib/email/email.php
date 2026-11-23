@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 class desktop_email_email{
     var $hasTitle = true; //是否有标题
     var $maxtime = 300; //发送超时时间 ,单位:秒
@@ -34,7 +40,7 @@ class desktop_email_email{
     /**
      * finish
      * 可选方法，结束发送时触发
-     * 
+     *
      * @param mixed $config
      * @access public
      * @return void
@@ -45,18 +51,18 @@ class desktop_email_email{
         }
     }
 
-  /**
-   * send
-   * 必有方法,发送时调用
-   * 
-   * config参数为getOptions取得的所有项的配置结果
-   * 
-   * @param mixed $to
-   * @param mixed $message
-   * @param mixed $config
-   * @access public
-   * @return void
-   */
+    /**
+     * send
+     * 必有方法,发送时调用
+     *
+     * config参数为getOptions取得的所有项的配置结果
+     *
+     * @param mixed $to
+     * @param mixed $message
+     * @param mixed $config
+     * @access public
+     * @return void
+     */
   function send($to, $subject, $body, $config){
         $this->Sender = $config['usermail'];
         $this->Subject = $this->inlineCode($subject);

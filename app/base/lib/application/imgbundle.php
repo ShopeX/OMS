@@ -19,10 +19,6 @@ class base_application_imgbundle extends base_application_prototype_filepath
 {
     var $path = 'statics';
 
-    /**
-     * install
-     * @return mixed 返回值
-     */
     public function install() 
     {
         $dir = $this->getPathname();
@@ -39,11 +35,6 @@ class base_application_imgbundle extends base_application_prototype_filepath
         }
     }//End Function
     
-    /**
-     * 清除_by_app
-     * @param mixed $app_id ID
-     * @return mixed 返回值
-     */
     public function clear_by_app($app_id){
         if(!$app_id){
             return false;
@@ -51,11 +42,6 @@ class base_application_imgbundle extends base_application_prototype_filepath
         base_kvstore::instance('imgbundle')->delete('imgbundle_' . $app_id);
     }
     
-    /**
-     * last_modified
-     * @param mixed $app_id ID
-     * @return mixed 返回值
-     */
     public function last_modified($app_id){
         $info_arr = array();
         foreach($this->detect($app_id) as $item){

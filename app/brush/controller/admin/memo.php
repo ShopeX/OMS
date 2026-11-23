@@ -14,16 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @author ykm 2016-03-23
  * @describe 批量设置备注
  */
-class brush_ctl_admin_memo extends desktop_controller {
 
-    /**
-     * batch_order
-     * @return mixed 返回值
-     */
+class brush_ctl_admin_memo extends desktop_controller {
 
     public function batch_order() {
         $params = kernel::single('base_component_request')->get_post();
@@ -39,10 +36,6 @@ class brush_ctl_admin_memo extends desktop_controller {
         $this->display('admin/memo/batch_order.html');
     }
 
-    /**
-     * do_batch_order
-     * @return mixed 返回值
-     */
     public function do_batch_order() {
         $url = '';
         $arrOrderId = unserialize($_POST['order_id']);

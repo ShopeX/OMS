@@ -19,12 +19,7 @@ class console_mdl_branch_product_extend extends dbeav_model
 {
      var $export_name = '仓库库存';
      
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
-    public function table_name($real = false)
+     public function table_name($real = false)
      {
         if($real){
            $table_name = 'sdb_ome_branch_product_extend';
@@ -35,10 +30,6 @@ class console_mdl_branch_product_extend extends dbeav_model
         return $table_name;
     }
     
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema()
     {
         $schema = app::get('ome')->model('branch_product_extend')->get_schema();

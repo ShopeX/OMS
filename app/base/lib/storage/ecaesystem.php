@@ -30,15 +30,6 @@ class base_storage_ecaesystem implements base_interface_storager
         //todo;
     }//End Function
 
-    /**
-     * 保存
-     * @param mixed $file file
-     * @param mixed $url url
-     * @param mixed $type type
-     * @param mixed $addons addons
-     * @param mixed $ext_name ext_name
-     * @return mixed 返回操作结果
-     */
     public function save($file, &$url, $type, $addons, $ext_name="")
     {
         if($type=='public'){
@@ -58,23 +49,12 @@ class base_storage_ecaesystem implements base_interface_storager
         }
     }//End Function
 
-    /**
-     * replace
-     * @param mixed $file file
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function replace($file, $id)
     {
         return ecae_file_replace($id, $file);
     }//End Function
 
 
-    /**
-     * remove
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function remove($id)
     {
         if($id){
@@ -84,12 +64,6 @@ class base_storage_ecaesystem implements base_interface_storager
         }
     }//End Function
 
-    /**
-     * 获取File
-     * @param mixed $id ID
-     * @param mixed $type type
-     * @return mixed 返回结果
-     */
     public function getFile($id, $type)
     {
         $tmpfile = tempnam('/tmp', 'ecaesystem');

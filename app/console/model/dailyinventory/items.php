@@ -19,22 +19,11 @@ class console_mdl_dailyinventory_items extends dbeav_model
 {
     public $has_export_cnf = true;
 
-    /**
-     * modifier_stock_date
-     * @param mixed $value value
-     * @return mixed 返回值
-     */
     public function modifier_stock_date($value)
     {
         return $value;
     }
 
-    /**
-     * modifier_warehouse_code
-     * @param mixed $value value
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function modifier_warehouse_code($value, $list)
     {
         list($s, $b) = explode('_', $value);
@@ -43,24 +32,11 @@ class console_mdl_dailyinventory_items extends dbeav_model
         return $b ?: $s;
     }
     
-    /**
-     * exportName
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function exportName(&$data)
     {
         $data['name'] = '日盘明细-'.date('Ymd');
     }
     
-    /**
-     * fgetlist_csv
-     * @param mixed $data 数据
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $exportType exportType
-     * @return mixed 返回值
-     */
     public function fgetlist_csv(&$data, $filter, $offset, $exportType = 1)
     {
         $limit = 200;
@@ -104,12 +80,6 @@ class console_mdl_dailyinventory_items extends dbeav_model
         return true;
     }
     
-    /**
-     * export_csv
-     * @param mixed $data 数据
-     * @param mixed $exportType exportType
-     * @return mixed 返回值
-     */
     public function export_csv($data, $exportType = 1)
     {
         
@@ -120,12 +90,6 @@ class console_mdl_dailyinventory_items extends dbeav_model
         echo implode("\n", $output);
     }
     
-    /**
-     * io_title
-     * @param mixed $filter filter
-     * @param mixed $ioType ioType
-     * @return mixed 返回值
-     */
     public function io_title($filter = null, $ioType = 'csv')
     {
         switch ($ioType) {

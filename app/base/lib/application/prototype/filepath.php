@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 class base_application_prototype_filepath extends base_application_prototype_content{
 
     var $current;
@@ -42,18 +48,10 @@ class base_application_prototype_filepath extends base_application_prototype_con
         }
     }
 
-    /**
-     * 获取Pathname
-     * @return mixed 返回结果
-     */
     public function getPathname(){
         return $this->iterator()->getPathname();
     }
 
-    /**
-     * current
-     * @return mixed 返回值
-     */
     public function current() {
         $this->key = $this->iterator()->getFilename();
         return $this;

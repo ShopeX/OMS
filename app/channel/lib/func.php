@@ -15,16 +15,21 @@
  * limitations under the License.
  */
 
-
+/**
+* 对外接口函数
+* 
+* @copyright shopex.cn 2013.4.10
+* @author dongqiujin<123517746@qq.com>
+*/
 class channel_func{
 
     /**
-     * 判断渠道是否已绑定
-     * 
-     * @access public
-     * @param String $channel_id 渠道ID
-     * @return bool
-     */
+    * 判断渠道是否已绑定
+    *
+    * @access public
+    * @param String $channel_id 渠道ID
+    * @return bool
+    */
     public function isBind($channel_id=''){
 
         $channel_adapter = app::get('channel')->model('channel');
@@ -33,12 +38,12 @@ class channel_func{
     }
 
     /**
-     * 存储渠道与适配器的关系
-     * @access public
-     * @param String $channel_id 渠道ID
-     * @param String $adapter 适配器
-     * @return bool
-     */
+    * 存储渠道与适配器的关系
+    * @access public
+    * @param String $channel_id 渠道ID
+    * @param String $adapter 适配器
+    * @return bool
+    */
     public function saveChannelAdapter($channel_id,$adapter){
         $adapterMdl = app::get('channel')->model('adapter');
         $adapter_sdf = array(
@@ -49,10 +54,19 @@ class channel_func{
     }
 
     /**
-     * 获取所有WMS类型的渠道
-     * @access public
-     * @return Array 适配器
-     */
+    * 获取wms适配器列表
+    * @access public
+    * @return Array 适配器
+    */
+    public function getWmsAdapterList(){
+        return middleware_adapter::getWmsList();
+    }
+
+    /**
+    * 获取所有WMS类型的渠道
+    * @access public
+    * @return Array 适配器
+    */
     public function getWmsChannelList(){
         #过滤o2o门店虚拟仓库
         $channelMdl = app::get('channel')->model('channel');
@@ -69,12 +83,12 @@ class channel_func{
     }
 
     /**
-     * 根据节点获取适配器
-     * 
-     * @access public
-     * @param String $node_id 节点号
-     * @return Array 适配器
-     */
+    * 根据节点获取适配器
+    *
+    * @access public
+    * @param String $node_id 节点号
+    * @return Array 适配器
+    */
     public function getAdapterByNodeId($node_id=''){
 
         $channelMdl = app::get('channel')->model('channel');
@@ -86,12 +100,12 @@ class channel_func{
     }
 
     /**
-     * 根据channel_id获取适配器
-     * 
-     * @access public
-     * @param String $channel_id 渠道ID
-     * @return Array 适配器
-     */
+    * 根据channel_id获取适配器
+    *
+    * @access public
+    * @param String $channel_id 渠道ID
+    * @return Array 适配器
+    */
     public function getAdapterByChannelId($channel_id=''){
 
         $channel_adapter = app::get('channel')->model('adapter');
@@ -100,12 +114,12 @@ class channel_func{
     }
 
     /**
-     * 根据wms_id获取wms_bn
-     * 
-     * @access public
-     * @param String $wms_id 渠道ID
-     * @return String wms_bn
-     */
+    * 根据wms_id获取wms_bn
+    *
+    * @access public
+    * @param String $wms_id 渠道ID
+    * @return String wms_bn
+    */
     public function getWmsBnByWmsId($wms_id=''){
 
         $channel_adapter = app::get('channel')->model('channel');
@@ -114,10 +128,10 @@ class channel_func{
     }
     
     /**
-     * 通过node_id获取渠道名称
-     * @param String $node_id 节点号
-     * @return String 
-     */
+    * 通过node_id获取渠道名称
+    * @param String $node_id 节点号
+    * @return String 
+    */
     public function getChannelNameByNodeId($node_id=''){
 
         $channel_adapter = app::get('channel')->model('channel');
@@ -127,10 +141,10 @@ class channel_func{
 
     
     /**
-     * 通过wms_id获取渠道名称
-     * @param String $wms_id wmsID
-     * @return String 
-     */
+    * 通过wms_id获取渠道名称
+    * @param String $wms_id wmsID
+    * @return String 
+    */
     public function getChannelNameById($wms_id=''){
 
         $channel_adapter = app::get('channel')->model('channel');
@@ -139,10 +153,10 @@ class channel_func{
     }
 
     /**
-     * 根据channel_id获取node_id节点号
-     * @param String $channel_id 渠道ID
-     * @return String 
-     */
+    * 根据channel_id获取node_id节点号
+    * @param String $channel_id 渠道ID
+    * @return String 
+    */
     public function getNodeIdByChannelId($channel_id=''){
 
         $channel_adapter = app::get('channel')->model('channel');
@@ -151,10 +165,10 @@ class channel_func{
     }
 
     /**
-     * 根据node_id获取wms_id
-     * @param String $node_id 节点号
-     * @return String 
-     */
+    * 根据node_id获取wms_id
+    * @param String $node_id 节点号
+    * @return String 
+    */
     public function getWmsIdByNodeId($node_id=''){
 
         $channel_adapter = app::get('channel')->model('channel');
@@ -164,11 +178,11 @@ class channel_func{
 
     /**
      * 获取渠道类型
-     * 
+     *
      * @param Int $channel_id
      * @return void
      * @author 
-     * */
+     **/
     public function getWmsNodeTypeById($channel_id)
     {
         $channel_adapter = app::get('channel')->model('channel');
@@ -179,10 +193,10 @@ class channel_func{
     }
 
     /**
-     * 根据node_id获取adapter_type
-     * @param String $node_id
-     * @return String 
-     */
+    * 根据node_id获取adapter_type
+    * @param String $node_id
+    * @return String 
+    */
     public function getAdapterTypeByNodeId($node_id=''){
         $channel_adapter = app::get('channel')->model('channel');
         $detail = $channel_adapter->getList('channel_type',array('node_id'=>$node_id),0,1);
@@ -190,10 +204,10 @@ class channel_func{
     }
 
     /**
-     * 是否自有仓储
-     * @param String $wms_id
-     * @return bool 
-     */
+    * 是否自有仓储
+    * @param String $wms_id
+    * @return bool 
+    */
     public function isSelfWms($wms_id=''){
         if(empty($wms_id)){
             return false;
@@ -205,10 +219,10 @@ class channel_func{
     }
 
     /**
-     * 是否移动端H5仓储
-     * @param String $wms_id
-     * @return bool 
-     */
+    * 是否移动端H5仓储
+    * @param String $wms_id
+    * @return bool 
+    */
     public function isWapWms($wms_id=''){
         if(empty($wms_id)){
             return false;
@@ -220,10 +234,10 @@ class channel_func{
     }
 
     /**
-     * 获取适配器sign密钥
-     * @param String $node_id
-     * @return String 
-     */
+    * 获取适配器sign密钥
+    * @param String $node_id
+    * @return String 
+    */
     public function getSignKey($node_id=''){
         $channel_adapter = app::get('channel')->model('channel');
         $detail = $channel_adapter->getList('secret_key',array('node_id'=>$node_id),0,1);
@@ -348,10 +362,6 @@ class channel_func{
         return true;
     }
     #检查是否有仓库、物流变动
-    /**
-     * 检查_temple_change
-     * @return mixed 返回验证结果
-     */
     public function check_temple_change(){
         $obj_logistics_logs = app::get('channel')->model('logistics_logs');
         $logistics_logs = $obj_logistics_logs->getList('id',array('op_type'=>3,'status'=>'true'),0,1);
@@ -386,10 +396,6 @@ class channel_func{
         return true;
     }
     #检查是否需要重复上传模板
-    /**
-     * 检查_need_upload_temple
-     * @return mixed 返回验证结果
-     */
     public function check_need_upload_temple(){
         $upload_records = $this->get_upload_records();
         #如果没有上传模板记录,则需要上传模板
@@ -404,11 +410,6 @@ class channel_func{
         return false;
     }
     #检查是否订购了第三方平台的智选服务
-    /**
-     * 检查_issubscribe
-     * @param mixed $chanel_type chanel_type
-     * @return mixed 返回验证结果
-     */
     public function check_issubscribe($chanel_type){
         #非菜鸟的不需要检查
         if(!in_array($chanel_type,array('taobao')))return true;
@@ -422,11 +423,6 @@ class channel_func{
         return true;
     }
     #获取智选物流的服务信息
-    /**
-     * 获取_exrecommend_service_info
-     * @param mixed $chanel_type chanel_type
-     * @return mixed 返回结果
-     */
     public function get_exrecommend_service_info($chanel_type){
         if($chanel_type == 'taobao'){
             $exrecommend_info = $this->check_issubscribe($chanel_type);

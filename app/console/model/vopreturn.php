@@ -14,12 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
- * @DateTime:
- * @describe:
+ * @Version:  1.0 
+ * @DateTime: 
+ * @describe: 
  * ============================
  */
 class console_mdl_vopreturn extends dbeav_model {
@@ -36,14 +37,6 @@ class console_mdl_vopreturn extends dbeav_model {
         );
         return array_merge($childOptions,$parentOptions);
     }
-
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
 
     public function _filter($filter,$tableAlias=null,$baseWhere=null){
 
@@ -108,10 +101,6 @@ class console_mdl_vopreturn extends dbeav_model {
         return parent::_filter($filter,$tableAlias,$baseWhere).$where;
     }
 
-    /**
-     * prepared_import_csv
-     * @return mixed 返回值
-     */
     public function prepared_import_csv(){
         $this->import_data =[];
         $this->import_data_barcode =[];
@@ -121,16 +110,6 @@ class console_mdl_vopreturn extends dbeav_model {
 
    
     
-    /**
-     * prepared_import_csv_row
-     * @param mixed $row row
-     * @param mixed $title title
-     * @param mixed $tmpl tmpl
-     * @param mixed $mark mark
-     * @param mixed $newObjFlag newObjFlag
-     * @param mixed $msg msg
-     * @return mixed 返回值
-     */
     public function prepared_import_csv_row($row,&$title,&$tmpl,&$mark,&$newObjFlag,&$msg)
     {
         $postData = $this->import_filter;
@@ -144,16 +123,6 @@ class console_mdl_vopreturn extends dbeav_model {
         return true;
     }
     
-    /**
-     * import_csv_row
-     * @param mixed $row row
-     * @param mixed $title title
-     * @param mixed $tmpl tmpl
-     * @param mixed $mark mark
-     * @param mixed $newObjFlag newObjFlag
-     * @param mixed $msg msg
-     * @return mixed 返回值
-     */
     public function import_csv_row($row,&$title,&$tmpl,&$mark,&$newObjFlag,&$msg){
         $shop_id = $_POST['shop_id'];
         if(empty($shop_id)){
@@ -243,16 +212,6 @@ class console_mdl_vopreturn extends dbeav_model {
         $mark = 'contents';
     }
     
-    /**
-     * import_csv_row_check
-     * @param mixed $row row
-     * @param mixed $title title
-     * @param mixed $tmpl tmpl
-     * @param mixed $mark mark
-     * @param mixed $newObjFlag newObjFlag
-     * @param mixed $msg msg
-     * @return mixed 返回值
-     */
     public function import_csv_row_check($row, &$title, &$tmpl, &$mark, &$newObjFlag, &$msg)
     {
         if (empty($row)) {
@@ -390,10 +349,6 @@ class console_mdl_vopreturn extends dbeav_model {
     }
 
 
-    /**
-     * finish_import_csv
-     * @return mixed 返回值
-     */
     public function finish_import_csv()
     {
         $data = $this->import_data;
@@ -471,15 +426,6 @@ class console_mdl_vopreturn extends dbeav_model {
         return $this->ioTitle[$ioType][$filter];
     }
 
-    /**
-     * 获取exportdetail
-     * @param mixed $fields fields
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $limit limit
-     * @param mixed $has_title has_title
-     * @return mixed 返回结果
-     */
     public function getexportdetail($fields,$filter,$offset=0,$limit=1,$has_title=false)
     {
                 
@@ -521,10 +467,6 @@ class console_mdl_vopreturn extends dbeav_model {
     }
 
 
-    /**
-     * 获取JdTitle
-     * @return mixed 返回结果
-     */
     public function getJdTitle()
     {
 
@@ -554,10 +496,6 @@ class console_mdl_vopreturn extends dbeav_model {
         return $title;
     }
 
-    /**
-     * 获取VopTitle
-     * @return mixed 返回结果
-     */
     public function getVopTitle()
     {
 
@@ -574,10 +512,6 @@ class console_mdl_vopreturn extends dbeav_model {
         return $title;
     }
     
-    /**
-     * 获取VopCheckTitle
-     * @return mixed 返回结果
-     */
     public function getVopCheckTitle()
     {
         $title = array(
@@ -592,11 +526,6 @@ class console_mdl_vopreturn extends dbeav_model {
         return $title;
     }
 
-    /**
-     * 获取TemplateColumn
-     * @param mixed $shop_type shop_type
-     * @return mixed 返回结果
-     */
     public function getTemplateColumn($shop_type) {
 
         
@@ -608,11 +537,6 @@ class console_mdl_vopreturn extends dbeav_model {
         return array_keys($templateColumn);
     }
 
-    /**
-     * 获取exportTemplateColumn
-     * @param mixed $shop_type shop_type
-     * @return mixed 返回结果
-     */
     public function getexportTemplateColumn($shop_type){
         if($shop_type=='360buy'){
             $templateColumn = $this->getJdTitle();
@@ -622,12 +546,6 @@ class console_mdl_vopreturn extends dbeav_model {
         return $templateColumn;
     }
 
-    /**
-     * formatItems
-     * @param mixed $row row
-     * @param mixed $shop_type shop_type
-     * @return mixed 返回值
-     */
     public function formatItems($row,$shop_type){
         $purchaseSkuPriceMdl = app::get('purchase')->model('order_sku_price');
         $basicObj = kernel::single('material_basic_material');
@@ -685,11 +603,6 @@ class console_mdl_vopreturn extends dbeav_model {
         
     }
 
-    /**
-     * 添加Return
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function addReturn($data){
         $logObj = app::get('ome')->model('operation_log');
         $vopreturns = $this->db_dump(array('return_sn'=>$data['return_sn']),'id');
@@ -731,11 +644,6 @@ class console_mdl_vopreturn extends dbeav_model {
     }
 
 
-    /**
-     * 获取BasicMaterialByid
-     * @param mixed $bm_id ID
-     * @return mixed 返回结果
-     */
     public function getBasicMaterialByid($bm_id)
     {
         $materialMdl = app::get('material')->model('basic_material');

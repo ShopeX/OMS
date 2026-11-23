@@ -14,11 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * CONFIG
  *
- * @category
- * @package
+ * @category 
+ * @package 
  * @author chenping<chenping@shopex.cn>
  * @version $Id: Z
  */
@@ -101,21 +102,11 @@ class channel_auth_config
             ],
     );
 
-    /**
-     * 获取Config
-     * @return mixed 返回结果
-     */
-
     public function getConfig()
     {
         return $this->__config;
     }
 
-    /**
-     * 获取AdapterList
-     * @param mixed $chanel_type chanel_type
-     * @return mixed 返回结果
-     */
     public function getAdapterList($chanel_type)
     {
         $adapter = array();
@@ -131,12 +122,6 @@ class channel_auth_config
         return $adapter;
     }
 
-    /**
-     * 获取PlatformList
-     * @param mixed $channel_type channel_type
-     * @param mixed $adapter adapter
-     * @return mixed 返回结果
-     */
     public function getPlatformList($channel_type,$adapter)
     {
         $platform = array();
@@ -152,13 +137,6 @@ class channel_auth_config
         return $platform;
     }
 
-    /**
-     * 获取PlatformParam
-     * @param mixed $channel_type channel_type
-     * @param mixed $adapter adapter
-     * @param mixed $platform platform
-     * @return mixed 返回结果
-     */
     public function getPlatformParam($channel_type, $adapter, $platform)
     {
         $params = [];

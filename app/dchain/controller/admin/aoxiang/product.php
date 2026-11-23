@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * OMS普通商品推送给翱象系统
  *
@@ -31,12 +32,6 @@ class dchain_ctl_admin_aoxiang_product extends desktop_controller
     
     private $_primary_id = null; //主键ID字段名
     private $_primary_bn = null; //单据编号字段名
-    /**
-     * __construct
-     * @param mixed $app app
-     * @return mixed 返回值
-     */
-
     public function __construct($app)
     {
         parent::__construct($app);
@@ -50,10 +45,6 @@ class dchain_ctl_admin_aoxiang_product extends desktop_controller
         $this->_primary_bn = 'product_bn';
     }
     
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index()
     {
         $actions = array();
@@ -132,10 +123,6 @@ class dchain_ctl_admin_aoxiang_product extends desktop_controller
         $this->finder('dchain_mdl_aoxiang_product', $params);
     }
     
-    /**
-     * _views
-     * @return mixed 返回值
-     */
     public function _views()
     {
         $base_filter = array('product_type'=>'normal');
@@ -173,7 +160,7 @@ class dchain_ctl_admin_aoxiang_product extends desktop_controller
 
     /**
      * 单个同步
-     * 
+     *
      * @return array
      */
     public function single_sync()
@@ -415,7 +402,7 @@ class dchain_ctl_admin_aoxiang_product extends desktop_controller
     
     /**
      * 单个关系同步
-     * 
+     *
      * @return array
      */
     public function single_mapping_sync()
@@ -877,7 +864,7 @@ class dchain_ctl_admin_aoxiang_product extends desktop_controller
     
     /**
      * 手工分配普通商品给翱象队列任务
-     * 
+     *
      * @param array $params
      * @param int $page
      */
@@ -1130,7 +1117,7 @@ class dchain_ctl_admin_aoxiang_product extends desktop_controller
     
     /**
      * 手工指定普通商品同步翱象队列任务
-     * 
+     *
      * @param array $params
      * @param int $page
      */
@@ -1272,7 +1259,7 @@ class dchain_ctl_admin_aoxiang_product extends desktop_controller
 
     /**
      * Ajax一键分配普通商品
-     * 
+     *
      * @return void
      */
     public function ajaxPlusMapping()
@@ -1331,7 +1318,7 @@ class dchain_ctl_admin_aoxiang_product extends desktop_controller
 
     /**
      * 手工指定普通商品同步商品关系给翱象队列任务
-     * 
+     *
      * @param array $params
      * @param int $page
      */

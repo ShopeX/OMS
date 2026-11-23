@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
 * 入库接口请求抽象类
 *
@@ -22,15 +23,8 @@
 * @author sunjing<sunjing@shopex.cn>
 * @version $Id: abstract.php 2013-6-1 14:44Z
 */
-
 abstract class console_event_trigger_stockinabstract {
 
-    /**
-     * 创建
-     * @param mixed $data 数据
-     * @param mixed $sync sync
-     * @return mixed 返回值
-     */
     public function create($data, $sync = false){
 
         $data = $this->getStockInParam($data);
@@ -54,7 +48,7 @@ abstract class console_event_trigger_stockinabstract {
     }
 
     /**
-     * 
+     *
      * 入库通知创建发起的响应接收方法
      * @param array $data
      */
@@ -63,7 +57,7 @@ abstract class console_event_trigger_stockinabstract {
     }
 
     /**
-     * 
+     *
      * 入库通知取消变更发起方法
      * @param string $wms_id 仓库类型ID
      * @param string $po_bn 采购通知单编号
@@ -87,12 +81,12 @@ abstract class console_event_trigger_stockinabstract {
     
 
     /**
-     * 获取仓库详情
-     * @access public
-     * @param  $branch_id 仓库ID
-     * 
-     * @return Array 
-     */
+    * 获取仓库详情
+    * @access public
+    * @param  $branch_id 仓库ID
+    * 
+    * @return Array 
+    */
     function getBranchByid($branch_id){
         $oBranch = app::get('ome')->model('branch');
         $branch_damaged = $oBranch->getlist('type,branch_id,branch_bn,storage_code,area,address,zip,phone,mobile,uname,owner_code',array('branch_id' => $branch_id),0,1);
@@ -101,10 +95,10 @@ abstract class console_event_trigger_stockinabstract {
 
     }
 
-    /**
-     * 返回供应商相关信息
-     * 
-     */
+     /**
+    * 返回供应商相关信息
+    *
+    */
     function getSupplier($supplier_id){
         $oSupplier = app::get('purchase')->model('supplier');
         $supplier = $oSupplier->dump($supplier_id,'area,name,zip,addr,telphone,bn');
@@ -124,8 +118,8 @@ abstract class console_event_trigger_stockinabstract {
     }
 
     /**
-     * 更新
-     */
+    *更新
+    */
     
     protected function update_out_bn($iso_id,$out_iso_bn)
     {

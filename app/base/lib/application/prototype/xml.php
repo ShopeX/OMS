@@ -15,7 +15,12 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
 class base_application_prototype_xml extends base_application_prototype_content{
 
     var $current;
@@ -24,10 +29,6 @@ class base_application_prototype_xml extends base_application_prototype_content{
     var $path;
     static $__appinfo;
 
-    /**
-     * 初始化_iterator
-     * @return mixed 返回值
-     */
     public function init_iterator() {
         if(defined('CUSTOM_CORE_DIR') && file_exists(CUSTOM_CORE_DIR.'/'.$this->target_app->app_id.'/'.$this->xml)){
             $ident = $this->target_app->app_id.'-'.$this->xml;

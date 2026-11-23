@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
-
+/**
+ * 渠道对外接口
+ * @author Jack.dong
+ * @copyright shopex.cn
+ */
 class channel_channel
 {
 
-    /**
-     * __construct
-     * @return mixed 返回值
-     */
     public function __construct()
     {
         $this->channel_mdl = app::get('channel')->model('channel');
@@ -149,35 +149,37 @@ class channel_channel
         return $this->channel_mdl->update(array('node_id' => ''), $filter);
     }
 
-    /**
-     * 获取奇门聚石塔内外互通渠道信息
-     * @param string $app_key 可选的app_key查询条件
-     * @return array|null 返回渠道信息数组，不存在返回null
-     */
-    public function getQimenJushitaErp($app_key = '')
+    public function getBindParams($channelId, $show_type = '', $bind_type = '')
     {
-        $filter = array(
-            'channel_type' => 'qimen',
-            'channel_bn'  => 'qimen-jst-erp',
+        $apply = array(
+            'certi_id' => base_certificate::get('certificate_id'),
+            'node_id'  => base_shopnode::node_id('ome'),
+            'sess_id'  => kernel::single('base_session')->sess_id(),
         );
-        
-        if (!empty($app_key)) {
-            $filter['app_key'] = $app_key;
+        $str = '';
+        ksort($apply);
+        foreach ($apply as $key => $value) {
+            $str .= $value;
         }
-        
-        $channel = app::get('channel')->model('channel')->getList('channel_id,channel_bn,channel_name,node_id,app_key,secret_key', $filter, 0, 1);
-        return isset($channel[0]) ? $channel[0] : null;
-    }
 
-    /**
-     * 判断是否是奇门聚石塔内外互通
-     * @param string $channel_type 渠道类型
-     * @param string $channel_bn 渠道编号
-     * @return bool
-     */
-    public function isQimenJushitaErp($channel_type, $channel_bn)
-    {
-        return $channel_type == 'qimen' && $channel_bn == 'qimen-jst-erp';
+        $token              = base_certificate::get('token');
+        $callbackParams     = $channelId ? array('channel_id' => $channelId) : '';
+
+        $apply['certi_ac']  = md5($str . $token);
+        $apply['callback']  = kernel::openapi_url('openapi.channel.bind', 'callback', $callbackParams);
+        $apply['api_url']   = urlencode(kernel::base_url(true) . kernel::url_prefix() . '/api');
+        $apply['show_type'] = $show_type;
+        $apply['bind_type'] = $bind_type;
+
+
+        // $wmsModel      = $this->app->model('storage');
+        // $wms           = $wmsModel->db_dump(array('channel_id' => $channelId, 'channel_type' => 'wms'));
+        // $wms['config'] = @unserialize($wms['config']);
+        // if ($wms['config']['node_type'] == 'scs') {
+        //     $apply['qimen_type'] = 'tob';
+        // }
+
+        return $apply;
     }
 
 }

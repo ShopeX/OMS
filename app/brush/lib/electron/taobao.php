@@ -14,18 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @author ykm 2015-12-16
  * @describe 发起电子面单请求
  */
 class brush_electron_taobao extends brush_electron_abstract{
     protected $preBn = 'bet';
-
-    /**
-     * deliveryToSdf
-     * @param mixed $delivery delivery
-     * @return mixed 返回值
-     */
 
     public function deliveryToSdf($delivery){
         $shop = $this->getChannelExtend();
@@ -204,11 +199,6 @@ class brush_electron_taobao extends brush_electron_abstract{
         return $tbfxBn;
     }
 
-    /**
-     * 获取GoodsDesc
-     * @param mixed $delivery_id ID
-     * @return mixed 返回结果
-     */
     public function getGoodsDesc($delivery_id)
     {
         $basicMaterialObj = app::get('material')->model('basic_material');

@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @author ykm 2015-11-19
  * @describe 特殊订单发货公用类
@@ -22,11 +23,6 @@ class brush_delivery
 {
     public $log_msg = '发货完成';
     private $deliveryOrderSucc = array();
-
-    /**
-     * generateBrushDeliveryBn
-     * @return mixed 返回值
-     */
 
     public function generateBrushDeliveryBn()
     {
@@ -302,10 +298,6 @@ class brush_delivery
         return true;
     }
 
-    /**
-     * sync
-     * @return mixed 返回值
-     */
     public function sync()
     {
         if(empty($this->deliveryOrderSucc)) {

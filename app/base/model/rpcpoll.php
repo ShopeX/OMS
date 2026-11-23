@@ -15,6 +15,13 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 class base_mdl_rpcpoll extends base_db_model{
     
@@ -41,14 +48,6 @@ class base_mdl_rpcpoll extends base_db_model{
         return $rpc_lists;
     }
 
-    /**
-     * insertRpc
-     * @param mixed $data 数据
-     * @param mixed $rpc_id ID
-     * @param mixed $type type
-     * @param mixed $ttl ttl
-     * @return mixed 返回值
-     */
     public function insertRpc($data,$rpc_id,$type='request',$ttl=10800)
     {  
         $cache_key = sprintf("rpcpoll-%s-%s",$type,$rpc_id);
@@ -58,13 +57,6 @@ class base_mdl_rpcpoll extends base_db_model{
         }
     }
 
-    /**
-     * 更新Rpc
-     * @param mixed $data 数据
-     * @param mixed $rpc_id ID
-     * @param mixed $type type
-     * @return mixed 返回值
-     */
     public function updateRpc($data,$rpc_id,$type='request')
     {
         list($id,$calltime) = explode('-', $rpc_id);
@@ -83,12 +75,6 @@ class base_mdl_rpcpoll extends base_db_model{
         }
     }
 
-    /**
-     * 删除Rpc
-     * @param mixed $rpc_id ID
-     * @param mixed $type type
-     * @return mixed 返回值
-     */
     public function deleteRpc($rpc_id,$type='request')
     {
         list($id,$calltime) = explode('-', $rpc_id);
@@ -104,12 +90,6 @@ class base_mdl_rpcpoll extends base_db_model{
         }
     }
 
-    /**
-     * 获取Rpc
-     * @param mixed $rpc_id ID
-     * @param mixed $type type
-     * @return mixed 返回结果
-     */
     public function getRpc($rpc_id,$type='request')
     {
         list($id,$calltime) = explode('-', $rpc_id);

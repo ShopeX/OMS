@@ -31,12 +31,12 @@ class archive_reship
 
     /**
      * 取消退款申请
-     * 
+     *
      * @param String $apply_id 退款申请ID
      * @param String $memo 取消理由
      * @return void
      * @author
-     * */
+     **/
     public function cancelRefundApply($apply_id,$memo='')
     {
         $refundApplyModel = app::get('ome')->model('refund_apply');
@@ -112,12 +112,12 @@ class archive_reship
 
     /**
      * 取消补差价订单
-     * 
+     *
      * @param Int $order_id 订单ID
      * @param String $shop_id 店铺ID
      * @return void
      * @author
-     * */
+     **/
     public function cancelDiffOrder($order_id,$shop_id,$memo='')
     {
         define('FRST_TRIGGER_OBJECT_TYPE','订单：订单作为补差价订单取消');
@@ -138,11 +138,11 @@ class archive_reship
 
     /**
      * 对换货订单进行支付操作
-     * 
+     *
      * @param Array $order 订单信息
      * @return void
      * @author
-     * */
+     **/
     public function payChangeOrder($order)
     {
         $mathLib      = kernel::single('eccommon_math');

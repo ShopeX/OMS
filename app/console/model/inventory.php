@@ -41,13 +41,6 @@ class console_mdl_inventory extends dbeav_model{
     }
     
 
-    /**
-     * modifier_out_id
-     * @param mixed $col col
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_out_id($col,$list,$row){
         $branch_relationObj = app::get('wmsmgr')->model('branch_relation');
         $branch_relation    = $branch_relationObj->dump(array('wms_branch_bn'=>$col,'wms_id'=>$row['wms_id']));
@@ -58,11 +51,6 @@ class console_mdl_inventory extends dbeav_model{
         
     }
 
-    /**
-     * modifier_branch_bn
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_branch_bn($row){
         $branchObj = kernel::single('console_iostockdata');
         $branch = $branchObj->getBranchBybn($row);

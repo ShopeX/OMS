@@ -15,7 +15,12 @@
  * limitations under the License.
  */
 
-
+/**
+ * 请求同步翱象商品关系Lib类
+ *
+ * @author wangbiao@shopex.cn
+ * @version 2023.03.16
+ */
 class dchain_autotask_mappingproduct
 {
     /**

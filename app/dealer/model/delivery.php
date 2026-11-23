@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 分销发货单model类
  *
@@ -27,12 +28,6 @@ class dealer_mdl_delivery extends console_mdl_delivery
         parent::__construct(app::get('ome'));
     }
     
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
-
     public function table_name($real=false)
     {
         $table_name = 'delivery';

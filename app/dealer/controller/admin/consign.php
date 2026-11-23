@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 分销订单发货回写
  *
@@ -31,7 +32,6 @@ class dealer_ctl_admin_consign extends desktop_controller
      * @param void
      * @return void
      */
-
     public function index()
     {
         $actions = array();
@@ -125,7 +125,7 @@ class dealer_ctl_admin_consign extends desktop_controller
     
     /**
      * 公共filter条件
-     * 
+     *
      * @return array
      */
     public function getFilters()
@@ -153,7 +153,7 @@ class dealer_ctl_admin_consign extends desktop_controller
     
     /**
      * 批量消除冲突
-     * 
+     *
      * @param void
      * @return void
      */
@@ -176,7 +176,7 @@ class dealer_ctl_admin_consign extends desktop_controller
 
     /**
      * 批量发货
-     * 
+     *
      * @param void
      * @return void
      */
@@ -232,7 +232,7 @@ class dealer_ctl_admin_consign extends desktop_controller
     
     /**
      * Ajax重试回传平台发货状态
-     * 
+     *
      * @return void
      */
     public function ajax_delivery_confirm()

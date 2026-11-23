@@ -14,18 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 仓库在途流水记录
  */
 class console_mdl_basic_material_stock_arrive extends dbeav_model{
     
     
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
-
     public function table_name($real = false)
     {
         if($real){
@@ -37,10 +32,6 @@ class console_mdl_basic_material_stock_arrive extends dbeav_model{
         return $table_name;
     }
     
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema()
     {
         return app::get('material')->model('basic_material_stock_arrive')->get_schema();
@@ -76,13 +67,6 @@ class console_mdl_basic_material_stock_arrive extends dbeav_model{
         return $columns;
     }
 
-    /**
-     * modifier_obj_id
-     * @param mixed $col col
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_obj_id($col,$list,$row) {
         if($row['obj_type'] == 'purchase') {
             $bill = app::get('purchase')->model('po')->db_dump(['po_id'=>$col],'po_bn as obj_bn');
@@ -92,13 +76,6 @@ class console_mdl_basic_material_stock_arrive extends dbeav_model{
         return $bill['obj_bn'] ? : $col;
     }
 
-    /**
-     * modifier_obj_type
-     * @param mixed $col col
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_obj_type($col,$list,$row) {
         return $col == 'purchase' ? '采购单' : '入库单';
     }

@@ -349,9 +349,9 @@ class console_storefreeze{
        }
 
 
-    /**
-     * 根据所有有差异货品
-     * */
+   /**
+    *根据所有有差异货品
+    **/
     public function get_all_diff()
     {
         $db    = kernel::database();

@@ -1,5 +1,21 @@
 <?php
 /**
+ * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
  * ShopEx licence
  *
  * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
@@ -100,22 +116,11 @@ class desktop_mdl_users extends dbeav_model
         }
     }
 
-    /**
-     * editUser
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function editUser(&$data)
     {
         if ($data['userpass']) {
-            // 编辑用户时，如果传入了 is_hash256，使用传入的值；否则使用新加密方式（1）
-            $is_hash256 = 1; // 默认使用新加密方式
-            if (isset($data['pam_account']['is_hash256'])) {
-                // 如果传入了 is_hash256，使用传入的值
-                $is_hash256 = intval($data['pam_account']['is_hash256']);
-            }
-            // 使用指定的加密方式生成新密码
-            $data[':account@pam']['login_password'] = pam_encrypt::get_encrypted_password(trim($data['userpass']), pam_account::get_account_type($this->app->app_id), $is_hash256);
+            //$data[':account@pam']['login_password'] = md5(trim($data['userpass']));
+            $data[':account@pam']['login_password'] = pam_encrypt::get_encrypted_password(trim($data['userpass']), pam_account::get_account_type($this->app->app_id));
         }
         /*
         else{

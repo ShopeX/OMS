@@ -29,10 +29,6 @@ class console_mdl_foreign_sku extends dbeav_model{
     }
 
     //定义导入文件模版字段
-    /**
-     * import_title
-     * @return mixed 返回值
-     */
     public function import_title(){
         $title = array(
             '*:货品编码',
@@ -44,10 +40,6 @@ class console_mdl_foreign_sku extends dbeav_model{
         return $title;
     }
 
-    /**
-     * 搜索Options
-     * @return mixed 返回值
-     */
     public function searchOptions(){
         return array(
             'inner_sku'       =>  '基础物料编码',
@@ -58,13 +50,6 @@ class console_mdl_foreign_sku extends dbeav_model{
         );
     }
 
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter,$tableAlias=null,$baseWhere=null)
     {
         $basicMaterialObj    = app::get('material')->model('basic_material');
@@ -112,11 +97,6 @@ class console_mdl_foreign_sku extends dbeav_model{
         return parent::_filter($filter,$tableAlias,$baseWhere)." AND ".$where;
     }
 
-    /**
-     * modifier_sync_status
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_sync_status($row){
         $row_name = $this->get_sync_name($row);
         if($row == '4'){
@@ -130,11 +110,6 @@ class console_mdl_foreign_sku extends dbeav_model{
         return $data;
     }
 
-    /**
-     * 获取_sync_name
-     * @param mixed $sync_status sync_status
-     * @return mixed 返回结果
-     */
     public function get_sync_name($sync_status){
         switch($sync_status){
             case 0:
@@ -262,7 +237,7 @@ class console_mdl_foreign_sku extends dbeav_model{
 
     
     /**
-     * 返回商品外部sku
+     *返回商品外部sku
      * @param   
      * @return  
      * @access  public
@@ -290,8 +265,8 @@ class console_mdl_foreign_sku extends dbeav_model{
         return $oForeign_sku['inner_sku'];
     }
     /**
-     * 更新货品同步状态
-     */
+    * 更新货品同步状态
+    */
     function update_status($product_id){
         $SQL = "update sdb_console_foreign_sku SET sync_status='4' WHERE inner_product_id=".$product_id." AND sync_status='3'";
         $result = $this->db->exec($SQL);
@@ -299,11 +274,6 @@ class console_mdl_foreign_sku extends dbeav_model{
     }
 
 
-    /**
-     * replaceinsert
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function replaceinsert($data)
     {
         $columns = $this->schema['columns'];

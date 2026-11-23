@@ -20,10 +20,6 @@
 **报残控制器
 */
 class console_ctl_admin_damaged extends desktop_controller{
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index(){
         $branchMdl = app::get('ome')->model('branch');
         $branch_list = $branchMdl->getList('branch_id,name',array('type'=>array('main','aftersale'),'b_type'=>1));
@@ -31,10 +27,6 @@ class console_ctl_admin_damaged extends desktop_controller{
         $this->page('admin/damaged.html');
     }
 
-    /**
-     * 添加_products
-     * @return mixed 返回值
-     */
     public function add_products(){
         $res = array('res'=>'succ');
         $product_bn = trim($_POST['product_bn']);
@@ -61,10 +53,6 @@ class console_ctl_admin_damaged extends desktop_controller{
         echo json_encode($res);exit;
     }
 
-    /**
-     * do_action
-     * @return mixed 返回值
-     */
     public function do_action(){
         $url = 'index.php?app=console&ctl=admin_damaged&act=index';
         $this->begin($url);

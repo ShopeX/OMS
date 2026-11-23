@@ -37,21 +37,21 @@ class console_email_email
      * Email priority.
      * Options: null (default), 1 = High, 3 = Normal, 5 = low.
      * When null, the header is not set at all.
-     * 
+     *
      * @var int
      */
     public $Priority;
 
     /**
      * The character set of the message.
-     * 
+     *
      * @var string
      */
     public $CharSet = self::CHARSET_ISO88591;
 
     /**
      * The MIME Content-type of the message.
-     * 
+     *
      * @var string
      */
     public $ContentType = self::CONTENT_TYPE_PLAINTEXT;
@@ -59,28 +59,28 @@ class console_email_email
     /**
      * The message encoding.
      * Options: "8bit", "7bit", "binary", "base64", and "quoted-printable".
-     * 
+     *
      * @var string
      */
     public $Encoding = self::ENCODING_8BIT;
 
     /**
      * Holds the most recent mailer error message.
-     * 
+     *
      * @var string
      */
     public $ErrorInfo = '';
 
     /**
      * The From email address for the message.
-     * 
+     *
      * @var string
      */
     public $From = 'root@localhost';
 
     /**
      * The From name of the message.
-     * 
+     *
      * @var string
      */
     public $FromName = 'Root User';
@@ -90,14 +90,14 @@ class console_email_email
      * This will usually be turned into a Return-Path header by the receiver,
      * and is the address that bounces will be sent to.
      * If not empty, will be passed via `-f` to sendmail or as the 'MAIL FROM' value over SMTP.
-     * 
+     *
      * @var string
      */
     public $Sender = '';
 
     /**
      * The Subject of the message.
-     * 
+     *
      * @var string
      */
     public $Subject = '';
@@ -105,7 +105,7 @@ class console_email_email
     /**
      * An HTML or plain text message body.
      * If HTML then call isHTML(true).
-     * 
+     *
      * @var string
      */
     public $Body = '';
@@ -115,7 +115,7 @@ class console_email_email
      * This body can be read by mail clients that do not have HTML email
      * capability such as mutt & Eudora.
      * Clients that can read HTML will view the normal Body.
-     * 
+     *
      * @var string
      */
     public $AltBody = '';
@@ -124,31 +124,31 @@ class console_email_email
      * An iCal message part body.
      * Only supported in simple alt or alt_inline message types
      * To generate iCal event structures, use classes like EasyPeasyICS or iCalcreator.
-     * 
+     *
      * @see http://sprain.ch/blog/downloads/php-class-easypeasyics-create-ical-files-with-php/
      * @see http://kigkonsult.se/iCalcreator/
-     * 
+     *
      * @var string
      */
     public $Ical = '';
 
     /**
      * The complete compiled MIME message body.
-     * 
+     *
      * @var string
      */
     protected $MIMEBody = '';
 
     /**
      * The complete compiled MIME message headers.
-     * 
+     *
      * @var string
      */
     protected $MIMEHeader = '';
 
     /**
      * Extra headers that createHeader() doesn't fold in.
-     * 
+     *
      * @var string
      */
     protected $mailHeader = '';
@@ -156,9 +156,9 @@ class console_email_email
     /**
      * Word-wrap the message body to this number of chars.
      * Set to 0 to not wrap. A useful value here is 78, for RFC2822 section 2.1.1 compliance.
-     * 
+     *
      * @see static::STD_LINE_LENGTH
-     * 
+     *
      * @var int
      */
     public $WordWrap = 0;
@@ -166,14 +166,14 @@ class console_email_email
     /**
      * Which method to use to send mail.
      * Options: "mail", "sendmail", or "smtp".
-     * 
+     *
      * @var string
      */
     public $Mailer = 'mail';
 
     /**
      * The path to the sendmail program.
-     * 
+     *
      * @var string
      */
     public $Sendmail = '/usr/sbin/sendmail';
@@ -181,14 +181,14 @@ class console_email_email
     /**
      * Whether mail() uses a fully sendmail-compatible MTA.
      * One which supports sendmail's "-oi -f" options.
-     * 
+     *
      * @var bool
      */
     public $UseSendmailOptions = true;
 
     /**
      * The email address that a reading confirmation should be sent to, also known as read receipt.
-     * 
+     *
      * @var string
      */
     public $ConfirmReadingTo = '';
@@ -198,7 +198,7 @@ class console_email_email
      * If empty, PHPMailer attempts to find one with, in order,
      * $_SERVER['SERVER_NAME'], gethostname(), php_uname('n'), or the value
      * 'localhost.localdomain'.
-     * 
+     *
      * @var string
      */
     public $Hostname = '';
@@ -208,9 +208,9 @@ class console_email_email
      * If empty, a unique id will be generated.
      * You can set your own, but it must be in the format "<id@domain>",
      * as defined in RFC5322 section 3.6.4 or it will be ignored.
-     * 
+     *
      * @see https://tools.ietf.org/html/rfc5322#section-3.6.4
-     * 
+     *
      * @var string
      */
     public $MessageID = '';
@@ -218,7 +218,7 @@ class console_email_email
     /**
      * The message Date to be used in the Date header.
      * If empty, the current date will be added.
-     * 
+     *
      * @var string
      */
     public $MessageDate = '';
@@ -232,14 +232,14 @@ class console_email_email
      * You can also specify encryption type, for example:
      * (e.g. "tls://smtp1.example.com:587;ssl://smtp2.example.com:465").
      * Hosts will be tried in order.
-     * 
+     *
      * @var string
      */
     public $Host = 'localhost';
 
     /**
      * The default SMTP server port.
-     * 
+     *
      * @var int
      */
     public $Port = 25;
@@ -248,9 +248,9 @@ class console_email_email
      * The SMTP HELO of the message.
      * Default is $Hostname. If $Hostname is empty, PHPMailer attempts to find
      * one with the same method described above for $Hostname.
-     * 
+     *
      * @see PHPMailer::$Hostname
-     * 
+     *
      * @var string
      */
     public $Helo = '';
@@ -258,7 +258,7 @@ class console_email_email
     /**
      * What kind of encryption to use on the SMTP connection.
      * Options: '', 'ssl' or 'tls'.
-     * 
+     *
      * @var string
      */
     public $SMTPSecure = '';
@@ -267,7 +267,7 @@ class console_email_email
      * Whether to enable TLS encryption automatically if a server supports it,
      * even if `SMTPSecure` is not set to 'tls'.
      * Be aware that in PHP >= 5.6 this requires that the server's certificates are valid.
-     * 
+     *
      * @var bool
      */
     public $SMTPAutoTLS = true;
@@ -275,31 +275,31 @@ class console_email_email
     /**
      * Whether to use SMTP authentication.
      * Uses the Username and Password properties.
-     * 
+     *
      * @see PHPMailer::$Username
      * @see PHPMailer::$Password
-     * 
+     *
      * @var bool
      */
     public $SMTPAuth = false;
 
     /**
      * Options array passed to stream_context_create when connecting via SMTP.
-     * 
+     *
      * @var array
      */
     public $SMTPOptions = [];
 
     /**
      * SMTP username.
-     * 
+     *
      * @var string
      */
     public $Username = '';
 
     /**
      * SMTP password.
-     * 
+     *
      * @var string
      */
     public $Password = '';
@@ -307,14 +307,14 @@ class console_email_email
     /**
      * SMTP auth type.
      * Options are CRAM-MD5, LOGIN, PLAIN, XOAUTH2, attempted in that order if not specified.
-     * 
+     *
      * @var string
      */
     public $AuthType = '';
 
     /**
      * An instance of the PHPMailer OAuth class.
-     * 
+     *
      * @var OAuth
      */
     protected $oauth;
@@ -322,7 +322,7 @@ class console_email_email
     /**
      * The SMTP server timeout in seconds.
      * Default of 5 minutes (300sec) is from RFC2821 section 4.5.3.2.
-     * 
+     *
      * @var int
      */
     public $Timeout = 300;
@@ -336,9 +336,9 @@ class console_email_email
      * * `2` Data and commands
      * * `3` As 2 plus connection status
      * * `4` Low-level data output.
-     * 
+     *
      * @see SMTP::$do_debug
-     * 
+     *
      * @var int
      */
     public $SMTPDebug = 0;
@@ -351,20 +351,20 @@ class console_email_email
      * * `error_log` Output to error log as configured in php.ini
      * By default PHPMailer will use `echo` if run from a `cli` or `cli-server` SAPI, `html` otherwise.
      * Alternatively, you can provide a callable expecting two params: a message string and the debug level:
-     * 
+     *
      * ```php
      * $mail->Debugoutput = function($str, $level) {echo "debug level $level; message: $str";};
      * ```
-     * 
+     *
      * Alternatively, you can pass in an instance of a PSR-3 compatible logger, though only `debug`
      * level output is used:
-     * 
+     *
      * ```php
      * $mail->Debugoutput = new myPsr3Logger;
      * ```
-     * 
+     *
      * @see SMTP::$Debugoutput
-     * 
+     *
      * @var string|callable|\Psr\Log\LoggerInterface
      */
     public $Debugoutput = 'echo';
@@ -373,7 +373,7 @@ class console_email_email
      * Whether to keep SMTP connection open after each message.
      * If this is set to true then to close the connection
      * requires an explicit call to smtpClose().
-     * 
+     *
      * @var bool
      */
     public $SMTPKeepAlive = false;
@@ -382,14 +382,14 @@ class console_email_email
      * Whether to split multiple to addresses into multiple messages
      * or send them all in one message.
      * Only supported in `mail` and `sendmail` transports, not in SMTP.
-     * 
+     *
      * @var bool
      */
     public $SingleTo = false;
 
     /**
      * Storage for addresses when SingleTo is enabled.
-     * 
+     *
      * @var array
      */
     protected $SingleToArray = [];
@@ -397,24 +397,24 @@ class console_email_email
     /**
      * Whether to generate VERP addresses on send.
      * Only applicable when sending via SMTP.
-     * 
+     *
      * @see https://en.wikipedia.org/wiki/Variable_envelope_return_path
      * @see http://www.postfix.org/VERP_README.html Postfix VERP info
-     * 
+     *
      * @var bool
      */
     public $do_verp = false;
 
     /**
      * Whether to allow sending messages with an empty body.
-     * 
+     *
      * @var bool
      */
     public $AllowEmpty = false;
 
     /**
      * DKIM selector.
-     * 
+     *
      * @var string
      */
     public $DKIM_selector = '';
@@ -422,7 +422,7 @@ class console_email_email
     /**
      * DKIM Identity.
      * Usually the email address used as the source of the email.
-     * 
+     *
      * @var string
      */
     public $DKIM_identity = '';
@@ -430,60 +430,60 @@ class console_email_email
     /**
      * DKIM passphrase.
      * Used if your key is encrypted.
-     * 
+     *
      * @var string
      */
     public $DKIM_passphrase = '';
 
     /**
      * DKIM signing domain name.
-     * 
+     *
      * @example 'example.com'
-     * 
+     *
      * @var string
      */
     public $DKIM_domain = '';
 
     /**
      * DKIM Copy header field values for diagnostic use.
-     * 
+     *
      * @var bool
      */
     public $DKIM_copyHeaderFields = true;
 
     /**
      * DKIM Extra signing headers.
-     * 
+     *
      * @example ['List-Unsubscribe', 'List-Help']
-     * 
+     *
      * @var array
      */
     public $DKIM_extraHeaders = [];
 
     /**
      * DKIM private key file path.
-     * 
+     *
      * @var string
      */
     public $DKIM_private = '';
 
     /**
      * DKIM private key string.
-     * 
+     *
      * If set, takes precedence over `$DKIM_private`.
-     * 
+     *
      * @var string
      */
     public $DKIM_private_string = '';
 
     /**
      * Callback Action function name.
-     * 
+     *
      * The function that handles the result of the send email action.
      * It is called out by send() for each email sent.
-     * 
+     *
      * Value can be any php callable: http://www.php.net/is_callable
-     * 
+     *
      * Parameters:
      *   bool $result        result of the send action
      *   array   $to            email addresses of the recipients
@@ -494,7 +494,7 @@ class console_email_email
      *   string  $from          email address of sender
      *   string  $extra         extra information of possible use
      *                          "smtp_transaction_id' => last smtp transaction id
-     * 
+     *
      * @var string
      */
     public $action_function = '';
@@ -502,7 +502,7 @@ class console_email_email
     /**
      * What to put in the X-Mailer header.
      * Options: An empty string for PHPMailer default, whitespace for none, or a string to use.
-     * 
+     *
      * @var string
      */
     public $XMailer = '';
@@ -511,44 +511,44 @@ class console_email_email
      * Which validator to use by default when validating email addresses.
      * May be a callable to inject your own validator, but there are several built-in validators.
      * The default validator uses PHP's FILTER_VALIDATE_EMAIL filter_var option.
-     * 
+     *
      * @see PHPMailer::validateAddress()
-     * 
+     *
      * @var string|callable
      */
     public static $validator = 'php';
 
     /**
      * An instance of the SMTP sender class.
-     * 
+     *
      * @var SMTP
      */
     protected $smtp;
 
     /**
      * The array of 'to' names and addresses.
-     * 
+     *
      * @var array
      */
     protected $to = [];
 
     /**
      * The array of 'cc' names and addresses.
-     * 
+     *
      * @var array
      */
     protected $cc = [];
 
     /**
      * The array of 'bcc' names and addresses.
-     * 
+     *
      * @var array
      */
     protected $bcc = [];
 
     /**
      * The array of reply-to names and addresses.
-     * 
+     *
      * @var array
      */
     protected $ReplyTo = [];
@@ -556,11 +556,11 @@ class console_email_email
     /**
      * An array of all kinds of addresses.
      * Includes all of $to, $cc, $bcc.
-     * 
+     *
      * @see PHPMailer::$to
      * @see PHPMailer::$cc
      * @see PHPMailer::$bcc
-     * 
+     *
      * @var array
      */
     protected $all_recipients = [];
@@ -570,12 +570,12 @@ class console_email_email
      * In send(), valid and non duplicate entries are moved to $all_recipients
      * and one of $to, $cc, or $bcc.
      * This array is used only for addresses with IDN.
-     * 
+     *
      * @see PHPMailer::$to
      * @see PHPMailer::$cc
      * @see PHPMailer::$bcc
      * @see PHPMailer::$all_recipients
-     * 
+     *
      * @var array
      */
     protected $RecipientsQueue = [];
@@ -584,79 +584,79 @@ class console_email_email
      * An array of reply-to names and addresses queued for validation.
      * In send(), valid and non duplicate entries are moved to $ReplyTo.
      * This array is used only for addresses with IDN.
-     * 
+     *
      * @see PHPMailer::$ReplyTo
-     * 
+     *
      * @var array
      */
     protected $ReplyToQueue = [];
 
     /**
      * The array of attachments.
-     * 
+     *
      * @var array
      */
     protected $attachment = [];
 
     /**
      * The array of custom headers.
-     * 
+     *
      * @var array
      */
     protected $CustomHeader = [];
 
     /**
      * The most recent Message-ID (including angular brackets).
-     * 
+     *
      * @var string
      */
     protected $lastMessageID = '';
 
     /**
      * The message's MIME type.
-     * 
+     *
      * @var string
      */
     protected $message_type = '';
 
     /**
      * The array of MIME boundary strings.
-     * 
+     *
      * @var array
      */
     protected $boundary = [];
 
     /**
      * The array of available languages.
-     * 
+     *
      * @var array
      */
     protected $language = [];
 
     /**
      * The number of errors encountered.
-     * 
+     *
      * @var int
      */
     protected $error_count = 0;
 
     /**
      * The S/MIME certificate file path.
-     * 
+     *
      * @var string
      */
     protected $sign_cert_file = '';
 
     /**
      * The S/MIME key file path.
-     * 
+     *
      * @var string
      */
     protected $sign_key_file = '';
 
     /**
      * The optional S/MIME extra certificates ("CA Chain") file path.
-     * 
+     *
      * @var string
      */
     protected $sign_extracerts_file = '';
@@ -664,21 +664,21 @@ class console_email_email
     /**
      * The S/MIME password for the key.
      * Used only if the key is encrypted.
-     * 
+     *
      * @var string
      */
     protected $sign_key_pass = '';
 
     /**
      * Whether to throw exceptions for errors.
-     * 
+     *
      * @var bool
      */
     protected $exceptions = false;
 
     /**
      * Unique ID used for message ID and boundaries.
-     * 
+     *
      * @var string
      */
     protected $uniqueid = '';
@@ -713,7 +713,7 @@ class console_email_email
 
     /**
      * SMTP RFC standard line ending.
-     * 
+     *
      * @var string
      */
     protected static $LE = "\r\n";
@@ -737,7 +737,7 @@ class console_email_email
 
     /**
      * Constructor.
-     * 
+     *
      * @param bool $exceptions Should we throw external exceptions?
      */
     public function __construct($exceptions = null)
@@ -763,13 +763,13 @@ class console_email_email
      * Also, unless sendmail_path points to sendmail (or something that
      * claims to be sendmail), don't pass params (not a perfect fix,
      * but it will do).
-     * 
+     *
      * @param string      $to      To
      * @param string      $subject Subject
      * @param string      $body    Message Body
      * @param string      $header  Additional Header(s)
      * @param string|null $params  Params
-     * 
+     *
      * @return bool
      */
     private function mailPassthru($to, $subject, $body, $header, $params)
@@ -793,10 +793,10 @@ class console_email_email
     /**
      * Output debugging info via user-defined method.
      * Only generates output if SMTP debug output is enabled (@see SMTP::$do_debug).
-     * 
+     *
      * @see PHPMailer::$Debugoutput
      * @see PHPMailer::$SMTPDebug
-     * 
+     *
      * @param string $str
      */
     protected function edebug($str)
@@ -850,7 +850,7 @@ class console_email_email
 
     /**
      * Sets message type to HTML or plain.
-     * 
+     *
      * @param bool $isHtml True for HTML mode
      */
     public function isHTML($isHtml = true)
@@ -910,10 +910,10 @@ class console_email_email
 
     /**
      * Add a "To" address.
-     * 
+     *
      * @param string $address The email address to send to
      * @param string $name
-     * 
+     *
      * @return bool true on success, false if address already used or invalid in some way
      */
     public function addAddress($address, $name = '')
@@ -923,10 +923,10 @@ class console_email_email
 
     /**
      * Add a "CC" address.
-     * 
+     *
      * @param string $address The email address to send to
      * @param string $name
-     * 
+     *
      * @return bool true on success, false if address already used or invalid in some way
      */
     public function addCC($address, $name = '')
@@ -936,10 +936,10 @@ class console_email_email
 
     /**
      * Add a "BCC" address.
-     * 
+     *
      * @param string $address The email address to send to
      * @param string $name
-     * 
+     *
      * @return bool true on success, false if address already used or invalid in some way
      */
     public function addBCC($address, $name = '')
@@ -949,10 +949,10 @@ class console_email_email
 
     /**
      * Add a "Reply-To" address.
-     * 
+     *
      * @param string $address The email address to reply to
      * @param string $name
-     * 
+     *
      * @return bool true on success, false if address already used or invalid in some way
      */
     public function addReplyTo($address, $name = '')
@@ -965,13 +965,13 @@ class console_email_email
      * can't validate addresses with an IDN without knowing the PHPMailer::$CharSet (that can still
      * be modified after calling this function), addition of such addresses is delayed until send().
      * Addresses that have been added already return false, but do not throw exceptions.
-     * 
+     *
      * @param string $kind    One of 'to', 'cc', 'bcc', or 'ReplyTo'
      * @param string $address The email address to send, resp. to reply to
      * @param string $name
-     * 
+     *
      * @throws Exception
-     * 
+     *
      * @return bool true on success, false if address already used or invalid in some way
      */
     protected function addOrEnqueueAnAddress($kind, $address, $name)
@@ -1020,13 +1020,13 @@ class console_email_email
     /**
      * Add an address to one of the recipient arrays or to the ReplyTo array.
      * Addresses that have been added already return false, but do not throw exceptions.
-     * 
+     *
      * @param string $kind    One of 'to', 'cc', 'bcc', or 'ReplyTo'
      * @param string $address The email address to send, resp. to reply to
      * @param string $name
-     * 
+     *
      * @throws Exception
-     * 
+     *
      * @return bool true on success, false if address already used or invalid in some way
      */
     protected function addAnAddress($kind, $address, $name = '')
@@ -1079,12 +1079,12 @@ class console_email_email
      * of the form "display name <address>" into an array of name/address pairs.
      * Uses the imap_rfc822_parse_adrlist function if the IMAP extension is available.
      * Note that quotes in the name part are removed.
-     * 
+     *
      * @see    http://www.andrew.cmu.edu/user/agreen1/testing/mrbs/web/Mail/RFC822.php A more careful implementation
-     * 
+     *
      * @param string $addrstr The address list string
      * @param bool   $useimap Whether to use the IMAP extension to parse the list
-     * 
+     *
      * @return array
      */
     public static function parseAddresses($addrstr, $useimap = true)
@@ -1135,13 +1135,13 @@ class console_email_email
 
     /**
      * Set the From and FromName properties.
-     * 
+     *
      * @param string $address
      * @param string $name
      * @param bool   $auto    Whether to also set the Sender address, defaults to true
-     * 
+     *
      * @throws Exception
-     * 
+     *
      * @return bool
      */
     public function setFrom($address, $name = '', $auto = true)
@@ -1180,7 +1180,7 @@ class console_email_email
      * Technically this is the value from the last time the headers were created,
      * but it's also the message ID of the last sent message except in
      * pathological cases.
-     * 
+     *
      * @return string
      */
     public function getLastMessageID()
@@ -1198,18 +1198,18 @@ class console_email_email
      * * `html5` Use the pattern given by the HTML5 spec for 'email' type form input elements.
      * * `noregex` Don't use a regex: super fast, really dumb.
      * Alternatively you may pass in a callable to inject your own validator, for example:
-     * 
+     *
      * ```php
      * PHPMailer::validateAddress('user@example.com', function($address) {
      *     return (strpos($address, '@') !== false);
      * });
      * ```
-     * 
+     *
      * You can also set the PHPMailer::$validator static to a callable, allowing built-in methods to use your validator.
-     * 
+     *
      * @param string          $address       The email address to check
      * @param string|callable $patternselect Which pattern to use
-     * 
+     *
      * @return bool
      */
     public static function validateAddress($address, $patternselect = null)
@@ -1275,7 +1275,7 @@ class console_email_email
     /**
      * Tells whether IDNs (Internationalized Domain Names) are supported or not. This requires the
      * `intl` and `mbstring` PHP extensions.
-     * 
+     *
      * @return bool `true` if required functions for IDN support are present
      */
     public static function idnSupported()
@@ -1290,11 +1290,11 @@ class console_email_email
      * - No conversion is necessary (i.e. domain name is not an IDN, or is already in ASCII form)
      * - Conversion to punycode is impossible (e.g. required PHP functions are not available)
      *   or fails for any reason (e.g. domain contains characters not allowed in an IDN).
-     * 
+     *
      * @see    PHPMailer::$CharSet
-     * 
+     *
      * @param string $address The email address to convert
-     * 
+     *
      * @return string The encoded address in ASCII form
      */
     public function punyencodeAddress($address)
@@ -1324,9 +1324,9 @@ class console_email_email
     /**
      * Create a message and send it.
      * Uses the sending method specified by $Mailer.
-     * 
+     *
      * @throws Exception
-     * 
+     *
      * @return bool false on error - See the ErrorInfo property for details of the error
      */
     public function send()
@@ -1350,9 +1350,9 @@ class console_email_email
 
     /**
      * Prepare a message for sending.
-     * 
+     *
      * @throws Exception
-     * 
+     *
      * @return bool
      */
     public function preSend()
@@ -1483,9 +1483,9 @@ class console_email_email
 
     /**
      * Actually send a message via the selected mechanism.
-     * 
+     *
      * @throws Exception
-     * 
+     *
      * @return bool
      */
     public function postSend()
@@ -1521,14 +1521,14 @@ class console_email_email
 
     /**
      * Send mail using the $Sendmail program.
-     * 
+     *
      * @see    PHPMailer::$Sendmail
-     * 
+     *
      * @param string $header The message headers
      * @param string $body   The message body
-     * 
+     *
      * @throws Exception
-     * 
+     *
      * @return bool
      */
     protected function sendmailSend($header, $body)
@@ -1603,11 +1603,11 @@ class console_email_email
     /**
      * Fix CVE-2016-10033 and CVE-2016-10045 by disallowing potentially unsafe shell characters.
      * Note that escapeshellarg and escapeshellcmd are inadequate for our purposes, especially on Windows.
-     * 
+     *
      * @see https://github.com/PHPMailer/PHPMailer/issues/924 CVE-2016-10045 bug report
-     * 
+     *
      * @param string $string The string to be validated
-     * 
+     *
      * @return bool
      */
     protected static function isShellSafe($string)
@@ -1637,14 +1637,14 @@ class console_email_email
 
     /**
      * Send mail using the PHP mail() function.
-     * 
+     *
      * @see    http://www.php.net/manual/en/book.mail.php
-     * 
+     *
      * @param string $header The message headers
      * @param string $body   The message body
-     * 
+     *
      * @throws Exception
-     * 
+     *
      * @return bool
      */
     protected function mailSend($header, $body)
@@ -1697,7 +1697,7 @@ class console_email_email
      * Get an instance to use for SMTP operations.
      * Override this function to load your own SMTP implementation,
      * or set one with setSMTPInstance.
-     * 
+     *
      * @return SMTP
      */
     public function getSMTPInstance()
@@ -1711,9 +1711,9 @@ class console_email_email
 
     /**
      * Provide an instance to use for SMTP operations.
-     * 
+     *
      * @param SMTP $smtp
-     * 
+     *
      * @return SMTP
      */
     public function setSMTPInstance(report_email_smtp $smtp)
@@ -1726,16 +1726,16 @@ class console_email_email
     /**
      * Send mail via SMTP.
      * Returns false if there is a bad MAIL FROM, RCPT, or DATA input.
-     * 
+     *
      * @see PHPMailer::setSMTPInstance() to use a different class.
-     * 
+     *
      * @uses \PHPMailer\PHPMailer\SMTP
-     * 
+     *
      * @param string $header The message headers
      * @param string $body   The message body
-     * 
+     *
      * @throws Exception
-     * 
+     *
      * @return bool
      */
     protected function smtpSend($header, $body)
@@ -1816,13 +1816,13 @@ class console_email_email
     /**
      * Initiate a connection to an SMTP server.
      * Returns false if the operation failed.
-     * 
+     *
      * @param array $options An array of options compatible with stream_context_create()
-     * 
+     *
      * @throws Exception
-     * 
+     *
      * @uses \PHPMailer\PHPMailer\SMTP
-     * 
+     *
      * @return bool
      */
     public function smtpConnect($options = null)
@@ -1967,10 +1967,10 @@ class console_email_email
      * Set the language for error messages.
      * Returns false if it cannot load the language file.
      * The default language is English.
-     * 
+     *
      * @param string $langcode  ISO 639-1 2-character language code (e.g. French is "fr")
      * @param string $lang_path Path to the language file directory, with trailing separator (slash)
-     * 
+     *
      * @return bool
      */
     public function setLanguage($langcode = 'en', $lang_path = '')
@@ -2039,7 +2039,7 @@ class console_email_email
 
     /**
      * Get the array of strings for the current language.
-     * 
+     *
      * @return array
      */
     public function getTranslations()
@@ -2049,13 +2049,13 @@ class console_email_email
 
     /**
      * Create recipient headers.
-     * 
+     *
      * @param string $type
      * @param array  $addr An array of recipients,
      *                     where each recipient is a 2-element indexed array with element 0 containing an address
      *                     and element 1 containing a name, like:
      *                     [['joe@example.com', 'Joe User'], ['zoe@example.com', 'Zoe User']]
-     * 
+     *
      * @return string
      */
     public function addrAppend($type, $addr)
@@ -2070,10 +2070,10 @@ class console_email_email
 
     /**
      * Format an address for use in a message header.
-     * 
+     *
      * @param array $addr A 2-element indexed array, element 0 containing an address, element 1 containing a name like
      *                    ['joe@example.com', 'Joe User']
-     * 
+     *
      * @return string
      */
     public function addrFormat($addr)
@@ -2092,11 +2092,11 @@ class console_email_email
      * For use with mailers that do not automatically perform wrapping
      * and for quoted-printable encoded messages.
      * Original written by philippe.
-     * 
+     *
      * @param string $message The message to wrap
      * @param int    $length  The line length to wrap to
      * @param bool   $qp_mode Whether to run in Quoted-Printable mode
-     * 
+     *
      * @return string
      */
     public function wrapText($message, $length, $qp_mode = false)
@@ -2193,10 +2193,10 @@ class console_email_email
      * Find the last character boundary prior to $maxLength in a utf-8
      * quoted-printable encoded string.
      * Original written by Colin Brown.
-     * 
+     *
      * @param string $encodedText utf-8 QP text
      * @param int    $maxLength   Find the last character boundary prior to this length
-     * 
+     *
      * @return int
      */
     public function utf8CharBoundary($encodedText, $maxLength)
@@ -2264,7 +2264,7 @@ class console_email_email
 
     /**
      * Assemble message headers.
-     * 
+     *
      * @return string The assembled headers
      */
     public function createHeader()
@@ -2359,7 +2359,7 @@ class console_email_email
 
     /**
      * Get the message MIME type headers.
-     * 
+     *
      * @return string
      */
     public function getMailMIME()
@@ -2413,9 +2413,9 @@ class console_email_email
      * Returns the whole MIME message.
      * Includes complete headers and body.
      * Only valid post preSend().
-     * 
+     *
      * @see PHPMailer::preSend()
-     * 
+     *
      * @return string
      */
     public function getSentMIMEMessage()
@@ -2425,7 +2425,7 @@ class console_email_email
 
     /**
      * Create a unique ID to use for boundaries.
-     * 
+     *
      * @return string
      */
     protected function generateId()
@@ -2447,9 +2447,9 @@ class console_email_email
     /**
      * Assemble the message body.
      * Returns an empty string on failure.
-     * 
+     *
      * @throws Exception
-     * 
+     *
      * @return string The assembled message body
      */
     public function createBody()
@@ -2666,12 +2666,12 @@ class console_email_email
 
     /**
      * Return the start of a message boundary.
-     * 
+     *
      * @param string $boundary
      * @param string $charSet
      * @param string $contentType
      * @param string $encoding
-     * 
+     *
      * @return string
      */
     protected function getBoundary($boundary, $charSet, $contentType, $encoding)
@@ -2700,9 +2700,9 @@ class console_email_email
 
     /**
      * Return the end of a message boundary.
-     * 
+     *
      * @param string $boundary
-     * 
+     *
      * @return string
      */
     protected function endBoundary($boundary)
@@ -2735,10 +2735,10 @@ class console_email_email
 
     /**
      * Format a header line.
-     * 
+     *
      * @param string     $name
      * @param string|int $value
-     * 
+     *
      * @return string
      */
     public function headerLine($name, $value)
@@ -2748,9 +2748,9 @@ class console_email_email
 
     /**
      * Return a formatted mail line.
-     * 
+     *
      * @param string $value
-     * 
+     *
      * @return string
      */
     public function textLine($value)
@@ -2762,15 +2762,15 @@ class console_email_email
      * Add an attachment from a path on the filesystem.
      * Never use a user-supplied path to a file!
      * Returns false if the file could not be found or read.
-     * 
+     *
      * @param string $path        Path to the attachment
      * @param string $name        Overrides the attachment name
      * @param string $encoding    File encoding (see $Encoding)
      * @param string $type        File extension (MIME) type
      * @param string $disposition Disposition to use
-     * 
+     *
      * @throws Exception
-     * 
+     *
      * @return bool
      */
     public function addAttachment($path, $name = '', $encoding = self::ENCODING_BASE64, $type = '', $disposition = 'attachment')
@@ -2815,7 +2815,7 @@ class console_email_email
 
     /**
      * Return the array of attachments.
-     * 
+     *
      * @return array
      */
     public function getAttachments()
@@ -2826,10 +2826,10 @@ class console_email_email
     /**
      * Attach all file, string, and binary attachments to the message.
      * Returns an empty string on failure.
-     * 
+     *
      * @param string $disposition_type
      * @param string $boundary
-     * 
+     *
      * @return string
      */
     protected function attachAll($disposition_type, $boundary)
@@ -2947,12 +2947,12 @@ class console_email_email
     /**
      * Encode a file attachment in requested format.
      * Returns an empty string on failure.
-     * 
+     *
      * @param string $path     The full path to the file
      * @param string $encoding The encoding to use; one of 'base64', '7bit', '8bit', 'binary', 'quoted-printable'
-     * 
+     *
      * @throws Exception
-     * 
+     *
      * @return string
      */
     protected function encodeFile($path, $encoding = self::ENCODING_BASE64)
@@ -2978,10 +2978,10 @@ class console_email_email
     /**
      * Encode a string in requested format.
      * Returns an empty string on failure.
-     * 
+     *
      * @param string $str      The text to encode
      * @param string $encoding The encoding to use; one of 'base64', '7bit', '8bit', 'binary', 'quoted-printable'
-     * 
+     *
      * @return string
      */
     public function encodeString($str, $encoding = self::ENCODING_BASE64)
@@ -3021,10 +3021,10 @@ class console_email_email
      * Encode a header value (not including its label) optimally.
      * Picks shortest of Q, B, or none. Result includes folding if needed.
      * See RFC822 definitions for phrase, comment and text positions.
-     * 
+     *
      * @param string $str      The header value to encode
      * @param string $position What context the string will be used in
-     * 
+     *
      * @return string
      */
     public function encodeHeader($str, $position = 'text')
@@ -3105,9 +3105,9 @@ class console_email_email
 
     /**
      * Check if a string contains multi-byte characters.
-     * 
+     *
      * @param string $str multi-byte text to wrap encode
-     * 
+     *
      * @return bool
      */
     public function hasMultiBytes($str)
@@ -3122,9 +3122,9 @@ class console_email_email
 
     /**
      * Does a string contain any 8-bit chars (in any charset)?
-     * 
+     *
      * @param string $text
-     * 
+     *
      * @return bool
      */
     public function has8bitChars($text)
@@ -3136,12 +3136,12 @@ class console_email_email
      * Encode and wrap long multibyte strings for mail headers
      * without breaking lines within a character.
      * Adapted from a function by paravoid.
-     * 
+     *
      * @see http://www.php.net/manual/en/function.mb-encode-mimeheader.php#60283
-     * 
+     *
      * @param string $str       multi-byte text to wrap encode
      * @param string $linebreak string to use as linefeed/end-of-line
-     * 
+     *
      * @return string
      */
     public function base64EncodeWrapMB($str, $linebreak = null)
@@ -3179,9 +3179,9 @@ class console_email_email
     /**
      * Encode a string in quoted-printable format.
      * According to RFC2045 section 6.7.
-     * 
+     *
      * @param string $string The text to encode
-     * 
+     *
      * @return string
      */
     public function encodeQP($string)
@@ -3191,12 +3191,12 @@ class console_email_email
 
     /**
      * Encode a string using Q encoding.
-     * 
+     *
      * @see http://tools.ietf.org/html/rfc2047#section-4.2
-     * 
+     *
      * @param string $str      the text to encode
      * @param string $position Where the text is going to be used, see the RFC for what that means
-     * 
+     *
      * @return string
      */
     public function encodeQ($str, $position = 'text')
@@ -3247,7 +3247,7 @@ class console_email_email
      * Add a string or binary attachment (non-filesystem).
      * This method can be used to attach ascii or binary data,
      * such as a BLOB record from a database.
-     * 
+     *
      * @param string $string      String attachment data
      * @param string $filename    Name of the attachment
      * @param string $encoding    File encoding (see $Encoding)
@@ -3297,7 +3297,6 @@ class console_email_email
      *
      * @return bool True on successfully adding an attachment
      */
-
     public function addEmbeddedImage($path, $cid, $name = '', $encoding = self::ENCODING_BASE64, $type = '', $disposition = 'inline')
     {
         if (!@is_file($path)) {
@@ -3348,7 +3347,6 @@ class console_email_email
      *
      * @return bool True on successfully adding an attachment
      */
-
     public function addStringEmbeddedImage(
         $string,
         $cid,
@@ -3379,9 +3377,9 @@ class console_email_email
 
     /**
      * Check if an embedded attachment is present with this cid.
-     * 
+     *
      * @param string $cid
-     * 
+     *
      * @return bool
      */
     protected function cidExists($cid)
@@ -3397,7 +3395,7 @@ class console_email_email
 
     /**
      * Check if an inline attachment is present.
-     * 
+     *
      * @return bool
      */
     public function inlineImageExists()
@@ -3413,7 +3411,7 @@ class console_email_email
 
     /**
      * Check if an attachment (non-inline) is present.
-     * 
+     *
      * @return bool
      */
     public function attachmentExists()
@@ -3429,7 +3427,7 @@ class console_email_email
 
     /**
      * Check if this message has an alternative body set.
-     * 
+     *
      * @return bool
      */
     public function alternativeExists()
@@ -3439,7 +3437,7 @@ class console_email_email
 
     /**
      * Clear queued addresses of given kind.
-     * 
+     *
      * @param string $kind 'to', 'cc', or 'bcc'
      */
     public function clearQueuedAddresses($kind)
@@ -3527,7 +3525,7 @@ class console_email_email
 
     /**
      * Add an error message to the error container.
-     * 
+     *
      * @param string $msg
      */
     protected function setError($msg)
@@ -3553,7 +3551,7 @@ class console_email_email
 
     /**
      * Return an RFC 822 formatted date.
-     * 
+     *
      * @return string
      */
     public static function rfcDate()
@@ -3568,7 +3566,7 @@ class console_email_email
     /**
      * Get the server hostname.
      * Returns 'localhost.localdomain' if unknown.
-     * 
+     *
      * @return string
      */
     protected function serverHostname()
@@ -3593,9 +3591,9 @@ class console_email_email
     /**
      * Validate whether a string contains a valid value to use as a hostname or IP address.
      * IPv6 addresses must include [], e.g. `[::1]`, not just `::1`.
-     * 
+     *
      * @param string $host The host name or IP address to check
-     * 
+     *
      * @return bool
      */
     public static function isValidHost($host)
@@ -3627,9 +3625,9 @@ class console_email_email
 
     /**
      * Get an error message in the current language.
-     * 
+     *
      * @param string $key
-     * 
+     *
      * @return string
      */
     protected function lang($key)
@@ -3655,7 +3653,7 @@ class console_email_email
 
     /**
      * Check if an error occurred.
-     * 
+     *
      * @return bool True if an error did occur
      */
     public function isError()
@@ -3667,7 +3665,7 @@ class console_email_email
      * Add a custom header.
      * $name value can be overloaded to contain
      * both header name and value (name:value).
-     * 
+     *
      * @param string      $name  Custom header name
      * @param string|null $value Header value
      */
@@ -3683,7 +3681,7 @@ class console_email_email
 
     /**
      * Returns all custom headers.
-     * 
+     *
      * @return array
      */
     public function getCustomHeaders()
@@ -3709,7 +3707,6 @@ class console_email_email
      *
      * @return string $message The transformed message Body
      */
-
     public function msgHTML($message, $basedir = '', $advanced = false)
     {
         preg_match_all('/(src|background)=["\'](.*)["\']/Ui', $message, $images);
@@ -3817,7 +3814,6 @@ class console_email_email
      *
      * @return string
      */
-
     public function html2text($html, $advanced = false)
     {
         if (is_callable($advanced)) {
@@ -3833,9 +3829,9 @@ class console_email_email
 
     /**
      * Get the MIME type for a file extension.
-     * 
+     *
      * @param string $ext File extension
-     * 
+     *
      * @return string MIME type of file
      */
     public static function _mime_types($ext = '')
@@ -3964,9 +3960,9 @@ class console_email_email
     /**
      * Map a file name to a MIME type.
      * Defaults to 'application/octet-stream', i.e.. arbitrary binary data.
-     * 
+     *
      * @param string $filename A file name or full path, does not need to exist as a file
-     * 
+     *
      * @return string
      */
     public static function filenameToType($filename)
@@ -3984,13 +3980,13 @@ class console_email_email
     /**
      * Multi-byte-safe pathinfo replacement.
      * Drop-in replacement for pathinfo(), but multibyte- and cross-platform-safe.
-     * 
+     *
      * @see    http://www.php.net/manual/en/function.pathinfo.php#107461
-     * 
+     *
      * @param string     $path    A filename or path, does not need to exist as a file
      * @param int|string $options Either a PATHINFO_* constant,
      *                            or a string name to return only the specified piece
-     * 
+     *
      * @return string|array
      */
     public static function mb_pathinfo($path, $options = null)
@@ -4037,10 +4033,10 @@ class console_email_email
      * `$mail->set('SMTPSecure', 'tls');`
      *   is the same as:
      * `$mail->SMTPSecure = 'tls';`.
-     * 
+     *
      * @param string $name  The property name to set
      * @param mixed  $value The value to set the property to
-     * 
+     *
      * @return bool
      */
     public function set($name, $value = '')
@@ -4057,9 +4053,9 @@ class console_email_email
 
     /**
      * Strip newlines to prevent header injection.
-     * 
+     *
      * @param string $str
-     * 
+     *
      * @return string
      */
     public function secureHeader($str)
@@ -4071,10 +4067,10 @@ class console_email_email
      * Normalize line breaks in a string.
      * Converts UNIX LF, Mac CR and Windows CRLF line breaks into a single line break format.
      * Defaults to CRLF (for message bodies) and preserves consecutive breaks.
-     * 
+     *
      * @param string $text
      * @param string $breaktype What kind of line break to use; defaults to static::$LE
-     * 
+     *
      * @return string
      */
     public static function normalizeBreaks($text, $breaktype = null)
@@ -4094,7 +4090,7 @@ class console_email_email
 
     /**
      * Return the current line break format string.
-     * 
+     *
      * @return string
      */
     public static function getLE()
@@ -4104,7 +4100,7 @@ class console_email_email
 
     /**
      * Set the line break format string, e.g. "\r\n".
-     * 
+     *
      * @param string $le
      */
     protected static function setLE($le)
@@ -4114,7 +4110,7 @@ class console_email_email
 
     /**
      * Set the public and private key files and password for S/MIME signing.
-     * 
+     *
      * @param string $cert_filename
      * @param string $key_filename
      * @param string $key_pass            Password for private key
@@ -4130,9 +4126,9 @@ class console_email_email
 
     /**
      * Quoted-Printable-encode a DKIM header.
-     * 
+     *
      * @param string $txt
-     * 
+     *
      * @return string
      */
     public function DKIM_QP($txt)
@@ -4153,11 +4149,11 @@ class console_email_email
 
     /**
      * Generate a DKIM signature.
-     * 
+     *
      * @param string $signHeader
-     * 
+     *
      * @throws Exception
-     * 
+     *
      * @return string The DKIM signature value
      */
     public function DKIM_Sign($signHeader)
@@ -4191,11 +4187,11 @@ class console_email_email
      * Generate a DKIM canonicalization header.
      * Uses the 'relaxed' algorithm from RFC6376 section 3.4.2.
      * Canonicalized headers should *always* use CRLF, regardless of mailer setting.
-     * 
+     *
      * @see    https://tools.ietf.org/html/rfc6376#section-3.4.2
-     * 
+     *
      * @param string $signHeader Header
-     * 
+     *
      * @return string
      */
     public function DKIM_HeaderC($signHeader)
@@ -4233,11 +4229,11 @@ class console_email_email
      * Generate a DKIM canonicalization body.
      * Uses the 'simple' algorithm from RFC6376 section 3.4.3.
      * Canonicalized bodies should *always* use CRLF, regardless of mailer setting.
-     * 
+     *
      * @see    https://tools.ietf.org/html/rfc6376#section-3.4.3
-     * 
+     *
      * @param string $body Message Body
-     * 
+     *
      * @return string
      */
     public function DKIM_BodyC($body)
@@ -4254,11 +4250,11 @@ class console_email_email
 
     /**
      * Create the DKIM header and body in a new message header.
-     * 
+     *
      * @param string $headers_line Header lines
      * @param string $subject      Subject
      * @param string $body         Body
-     * 
+     *
      * @return string
      */
     public function DKIM_Add($headers_line, $subject, $body)
@@ -4367,9 +4363,9 @@ class console_email_email
     /**
      * Detect if a string contains a line longer than the maximum line length
      * allowed by RFC 2822 section 2.1.1.
-     * 
+     *
      * @param string $str
-     * 
+     *
      * @return bool
      */
     public static function hasLineLongerThanMax($str)
@@ -4380,7 +4376,7 @@ class console_email_email
     /**
      * Allows for public read access to 'to' property.
      * Before the send() call, queued addresses (i.e. with IDN) are not yet included.
-     * 
+     *
      * @return array
      */
     public function getToAddresses()
@@ -4391,7 +4387,7 @@ class console_email_email
     /**
      * Allows for public read access to 'cc' property.
      * Before the send() call, queued addresses (i.e. with IDN) are not yet included.
-     * 
+     *
      * @return array
      */
     public function getCcAddresses()
@@ -4402,7 +4398,7 @@ class console_email_email
     /**
      * Allows for public read access to 'bcc' property.
      * Before the send() call, queued addresses (i.e. with IDN) are not yet included.
-     * 
+     *
      * @return array
      */
     public function getBccAddresses()
@@ -4413,7 +4409,7 @@ class console_email_email
     /**
      * Allows for public read access to 'ReplyTo' property.
      * Before the send() call, queued addresses (i.e. with IDN) are not yet included.
-     * 
+     *
      * @return array
      */
     public function getReplyToAddresses()
@@ -4424,7 +4420,7 @@ class console_email_email
     /**
      * Allows for public read access to 'all_recipients' property.
      * Before the send() call, queued addresses (i.e. with IDN) are not yet included.
-     * 
+     *
      * @return array
      */
     public function getAllRecipientAddresses()
@@ -4434,7 +4430,7 @@ class console_email_email
 
     /**
      * Perform a callback.
-     * 
+     *
      * @param bool   $isSent
      * @param array  $to
      * @param array  $cc
@@ -4453,7 +4449,7 @@ class console_email_email
 
     /**
      * Get the OAuth instance.
-     * 
+     *
      * @return OAuth
      */
     public function getOAuth()
@@ -4463,7 +4459,7 @@ class console_email_email
 
     /**
      * Set an OAuth instance.
-     * 
+     *
      * @param OAuth $oauth
      */
     public function setOAuth(OAuth $oauth)

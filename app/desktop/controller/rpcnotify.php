@@ -15,6 +15,13 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+
 use app\desktop\lib\annotation\RequirePermission;
 
 class desktop_ctl_rpcnotify extends desktop_controller
@@ -23,11 +30,6 @@ class desktop_ctl_rpcnotify extends desktop_controller
     var $workground = 'desktop_ctl_system';
     var $limit = 20;
 
-    /**
-     * __construct
-     * @param mixed $app app
-     * @return mixed 返回值
-     */
     public function __construct(&$app) 
     {
         if(defined('WITHOUT_DESKTOP_RPCNOTIFY') && constant('WITHOUT_DESKTOP_RPCNOTIFY')){

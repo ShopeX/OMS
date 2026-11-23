@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 唯品会JIT拣货单mdl类
  *
@@ -24,12 +25,6 @@
 class console_mdl_pick_bills extends dbeav_model{
     var $defaultOrder = array('bill_id',' DESC');
     
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
-
     public function table_name($real = false)
     {
         if($real){
@@ -41,19 +36,10 @@ class console_mdl_pick_bills extends dbeav_model{
         return $table_name;
     }
     
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema(){
         return app::get('purchase')->model('pick_bills')->get_schema();
     }
 
-    /**
-     * modifier_order_cate
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_order_cate($row){
         if($row == 'normal'){
             return '普通';
@@ -64,13 +50,6 @@ class console_mdl_pick_bills extends dbeav_model{
         }
     }
 
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter,$tableAlias=null,$baseWhere=null)
     {
         $where = " 1 ";

@@ -15,6 +15,13 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 /*
  * @package base
@@ -32,10 +39,6 @@ class base_cache_memcache extends base_cache_abstract implements base_interface_
         $this->check_vary_list();
     }//End Function
 
-    /**
-     * connect
-     * @return mixed 返回值
-     */
     public function connect() 
     {
         if(!isset(self::$_cacheObj)){
@@ -57,12 +60,6 @@ class base_cache_memcache extends base_cache_abstract implements base_interface_
         }
     }//End Function
 
-    /**
-     * fetch
-     * @param mixed $key key
-     * @param mixed $result result
-     * @return mixed 返回值
-     */
     public function fetch($key, &$result) 
     {
         $result = self::$_cacheObj->get($key);
@@ -73,22 +70,11 @@ class base_cache_memcache extends base_cache_abstract implements base_interface_
         }
     }//End Function
 
-    /**
-     * store
-     * @param mixed $key key
-     * @param mixed $value value
-     * @param mixed $ttl ttl
-     * @return mixed 返回值
-     */
     public function store($key, $value, $ttl=0) 
     {
         return self::$_cacheObj->set($key, $value, MEMCACHE_COMPRESSED, $ttl);
     }//End Function
 
-    /**
-     * status
-     * @return mixed 返回值
-     */
     public function status() 
     {
         $status = self::$_cacheObj->getStats();
@@ -149,7 +135,7 @@ class base_cache_memcache extends base_cache_abstract implements base_interface_
 
     /**
      * 初始化自增ID值
-     * 
+     *
      * @return void
      * @author 
      */

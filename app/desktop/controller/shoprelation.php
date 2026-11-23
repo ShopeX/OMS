@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 class desktop_ctl_shoprelation extends desktop_controller{
 
     var $workground = 'desktop_ctl_shoprelation';
@@ -31,7 +37,12 @@ class desktop_ctl_shoprelation extends desktop_controller{
         if ($this->Node_id)
             $apply['node_idnode_id'] = $this->Node_id;
         $apply['sess_id'] = $sess_id;
-        $apply['certi_ac'] = base_certificate::getCertiAC($apply);
+        $str   = '';
+        ksort($apply);
+        foreach($apply as $key => $value){
+            $str.=$value;
+        }
+        $apply['certi_ac'] = md5($str.$token);
         if ($method == 'apply')
         {
             if ($apply['node_idnode_id'])

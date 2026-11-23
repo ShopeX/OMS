@@ -17,20 +17,10 @@
 
 class dealer_view_input{
 
-    /**
-     * __construct
-     * @param mixed $app app
-     * @return mixed 返回值
-     */
     public function __construct(&$app){
         $this->app = $app;
     }
     
-    /**
-     * input_dealer_object
-     * @param mixed $params 参数
-     * @return mixed 返回值
-     */
     public function input_dealer_object($params) 
     {
         $return_url = $params['return_url']?$params['return_url']:'index.php?app=dealer&ctl=admin_series&act=object_rows';

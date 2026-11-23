@@ -27,11 +27,6 @@ class channel_finder_channel
     public $addon_cols = 'node_id,node_type,channel_type,shipper';
 
     public $column_opt = '操作';
-    /**
-     * column_opt
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_opt($row)
     {
         $finder_id = $_GET['_finder']['finder_id'];

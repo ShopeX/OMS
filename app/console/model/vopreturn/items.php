@@ -14,20 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * Class console_mdl_vopreturn_items
  */
 class console_mdl_vopreturn_items extends dbeav_model
 {
     
-    /**
-     * 更新SplitNum
-     * @param mixed $itemId ID
-     * @param mixed $num num
-     * @param mixed $op op
-     * @return mixed 返回值
-     */
-
     public function updateSplitNum($itemId, $num, $op = '+')
     {
         $updateSql = 'update sdb_console_vopreturn_items set split_num = ';
@@ -45,13 +38,6 @@ class console_mdl_vopreturn_items extends dbeav_model
         return $this->db->affect_row();
     }
     
-    /**
-     * 更新ReturnNum
-     * @param mixed $itemId ID
-     * @param mixed $num num
-     * @param mixed $op op
-     * @return mixed 返回值
-     */
     public function updateReturnNum($itemId, $num, $op = '+')
     {
         $updateSql = 'update sdb_console_vopreturn_items set num = ';

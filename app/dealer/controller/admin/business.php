@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
@@ -23,11 +24,6 @@
  * ============================
  */
 class dealer_ctl_admin_business extends desktop_controller {
-
-    /**
-     * index
-     * @return mixed 返回值
-     */
 
     public function index() {
         $actions = array(
@@ -46,19 +42,10 @@ class dealer_ctl_admin_business extends desktop_controller {
         $this->finder('dealer_mdl_business', $params);
     }
 
-    /**
-     * 创建
-     * @return mixed 返回值
-     */
     public function create() {
         $this->singlepage('admin/business.html');
     }
 
-    /**
-     * edit
-     * @param mixed $bs_id ID
-     * @return mixed 返回值
-     */
     public function edit($bs_id) {
         $row = app::get('dealer')->model('business')->db_dump(array('bs_id'=>$bs_id));
         $branch_id = app::get('dealer')->model('business_branch')->getList('branch_id', array('bs_id'=>$bs_id));
@@ -67,10 +54,6 @@ class dealer_ctl_admin_business extends desktop_controller {
         $this->singlepage('admin/business.html');
     }
 
-    /**
-     * 保存
-     * @return mixed 返回操作结果
-     */
     public function save() {
         $bs_id = (int) $_POST['bs_id'];
         $bs_bn = (string) $_POST['bs_bn'];
@@ -123,10 +106,6 @@ class dealer_ctl_admin_business extends desktop_controller {
         $this->end(true, '操作成功');
     }
 
-    /**
-     * 检查Exp
-     * @return mixed 返回验证结果
-     */
     public function checkExp() {
         $this->pagedata['expressions'] = $_GET['expvalue'];
         $this->display('admin/check_exp.html');

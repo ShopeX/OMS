@@ -17,10 +17,6 @@
 
 class console_ctl_admin_cpfr extends desktop_controller
 {
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index()
     {
         $actions = array(
@@ -53,10 +49,10 @@ class console_ctl_admin_cpfr extends desktop_controller
     
     /**
      * 一键补发
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     public function cpfrImport()
     {
         $this->display('admin/stock/cpfr_import.html');
@@ -64,10 +60,10 @@ class console_ctl_admin_cpfr extends desktop_controller
     
     /**
      * 下载渠道库存模板
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     public function downloadCpfrTmpl()
     {
         set_time_limit(0);
@@ -105,10 +101,10 @@ class console_ctl_admin_cpfr extends desktop_controller
     
     /**
      * 导入一键补发数据
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     public function importCpfrData()
     {
         ini_set('memory_limit','1G');
@@ -322,11 +318,6 @@ JS;
         }
     }
     
-        /**
-     * sortRegions
-     * @param mixed $region_names region_names
-     * @return mixed 返回值
-     */
     public function sortRegions($region_names){
         $region_names = explode(',',$region_names);
         sort($region_names);
@@ -371,11 +362,6 @@ JS;
         echo(json_encode($dataList));
     }
 
-    /**
-     * singleConfirm
-     * @param mixed $cpfr_id ID
-     * @return mixed 返回值
-     */
     public function singleConfirm($cpfr_id){
         $cpfrMdl = app::get('console')->model('cpfr');
 

@@ -15,6 +15,13 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+
 use app\desktop\lib\annotation\RequirePermission;
 
 class desktop_ctl_users extends desktop_controller
@@ -40,11 +47,6 @@ class desktop_ctl_users extends desktop_controller
      */
     const __STORE_ROLE = 99;
 
-    /**
-     * __construct
-     * @param mixed $app app
-     * @return mixed 返回值
-     */
     public function __construct($app)
     {
         parent::__construct($app);
@@ -111,11 +113,8 @@ class desktop_ctl_users extends desktop_controller
 
                 }
                 $pwd = $_POST['pam_account']['login_password'];
-                // 新添加的用户使用 MD5+SHA256 加密方式（is_hash256=1）
-                $_POST['pam_account']['login_password'] = pam_encrypt::get_encrypted_password($_POST['pam_account']['login_password'], pam_account::get_account_type($this->app->app_id), 1);
+                $_POST['pam_account']['login_password'] = pam_encrypt::get_encrypted_password($_POST['pam_account']['login_password'], pam_account::get_account_type($this->app->app_id));
                 $_POST['pam_account']['account_type']   = pam_account::get_account_type($this->app->app_id);
-                // 设置 is_hash256 字段为 1（新加密方式）
-                $_POST['pam_account']['is_hash256'] = '1';
                 $_POST['create_time']                   = $_POST['last_modify']                   = time();
                 if ($users->save($_POST)) {
                     foreach (kernel::servicelist('desktop_useradd') as $key => $service) {
@@ -216,23 +215,12 @@ class desktop_ctl_users extends desktop_controller
             $sdf                      = $users->dump($_POST['user_id'], '*', array(':account@pam' => array('*'), 'roles' => array('*')));
             $old_password             = $sdf['account']['login_password'];
             $super_row                = $users->getList('user_id', array('super' => '1'));
-            
-            // 查询超级管理员的 is_hash256 值，用于验证旧密码
-            $superAccount = app::get('pam')->model('account')->dump(array(
-                'account_id' => $super_row[0]['user_id'],
-                'account_type' => pam_account::get_account_type($this->app->app_id)
-            ), 'is_hash256');
-            $superIsHash256 = isset($superAccount['is_hash256']) ? intval($superAccount['is_hash256']) : 1;
-            
             $filter['account_id']     = $super_row[0]['user_id'];
             $filter['account_type']   = pam_account::get_account_type($this->app->app_id);
-            // 根据超级管理员的 is_hash256 值选择加密方式验证旧密码
-            $filter['login_password'] = pam_encrypt::get_encrypted_password(trim($_POST['old_login_password']), pam_account::get_account_type($this->app->app_id), $superIsHash256);
+            $filter['login_password'] = pam_encrypt::get_encrypted_password(trim($_POST['old_login_password']), pam_account::get_account_type($this->app->app_id));
 
-            $pass_row = app::get('pam')->model('account')->getList('account_id', $filter);
-            
-            // 修改密码时，使用新加密方式（is_hash256=1）
-            $loginPassword = pam_encrypt::get_encrypted_password(trim($_POST['new_login_password']), pam_account::get_account_type($this->app->app_id), 1);
+            $pass_row      = app::get('pam')->model('account')->getList('account_id', $filter);
+            $loginPassword = pam_encrypt::get_encrypted_password(trim($_POST['new_login_password']), pam_account::get_account_type($this->app->app_id));
             if (!$pass_row) {
                 $this->end(false, app::get('desktop')->_('超级管理员密码不正确'));
             } elseif ($_POST['new_login_password'] != $_POST['pam_account']['login_password']) {
@@ -246,8 +234,6 @@ class desktop_ctl_users extends desktop_controller
             } else {
                 $_POST['pam_account']['account_id']     = $_POST['user_id'];
                 $_POST['pam_account']['login_password'] = $loginPassword;
-                // 修改密码时，将 is_hash256 设置为 1（新加密方式）
-                $_POST['pam_account']['is_hash256'] = '1';
                 $users->save($_POST);
                 $userLib->checkUpdatePwd($_POST['pam_account']['account_id'], true);
                 //新增插入日志
@@ -274,7 +260,7 @@ class desktop_ctl_users extends desktop_controller
      * This is method saveUser
      * 添加编辑
      * @return mixed This is the return value description
-     * 
+     *
      */
 
     #[RequirePermission('operator_edit')]
@@ -334,8 +320,6 @@ class desktop_ctl_users extends desktop_controller
                 foreach ((array) $_POST['role'] as $roles) {
                     $_POST['roles'][] = array('role_id' => $roles);
                 }
-                // 编辑用户时，将 is_hash256 设置为 1（新加密方式）
-                $_POST['pam_account']['is_hash256'] = '1';
                 $users->editUser($_POST);
                 
                 // 门店组织权限处理 - 独立保存，不影响门店角色权限
@@ -395,7 +379,7 @@ class desktop_ctl_users extends desktop_controller
      * This is method edit
      * 添加编辑
      * @return mixed This is the return value description
-     * 
+     *
      */
     #[RequirePermission('operator_edit')]
     public function edit($param_id)
@@ -661,11 +645,6 @@ class desktop_ctl_users extends desktop_controller
     }
 
     //保存工作组细分
-    /**
-     * 保存_ground
-     * @param mixed $aData 数据
-     * @return mixed 返回操作结果
-     */
     public function save_ground($aData)
     {
         $workgrounds = (array) ($aData['role'] ?? []);
@@ -701,11 +680,11 @@ class desktop_ctl_users extends desktop_controller
 
     /**
      * 获取仓库权限分组
-     * 
+     *
      * @param  void
      * @return void
      * @author
-     * */
+     **/
     public function get_show_branch($role_id)
     {
         $roles  = $this->app->model('roles');
@@ -739,11 +718,11 @@ class desktop_ctl_users extends desktop_controller
 
     /**
      * 获取线下门店权限分组
-     * 
+     *
      * @param  void
      * @return void
      * @author
-     * */
+     **/
     public function get_o2o_branch($role_id)
     {
         $roles  = $this->app->model('roles');
@@ -777,11 +756,11 @@ class desktop_ctl_users extends desktop_controller
 
     /**
      * 获取一件代发的分销权限分组
-     * 
+     *
      * @param  void
      * @return void
      * @author
-     * */
+     **/
     public function get_dealer_workgroup($role_id)
     {
         $roles  = $this->app->model('roles');
@@ -813,12 +792,6 @@ class desktop_ctl_users extends desktop_controller
         return false;
     }
 
-        /**
-     * showCosTreeList
-     * @param mixed $serid ID
-     * @param mixed $multi multi
-     * @return mixed 返回值
-     */
     public function showCosTreeList($serid,$multi=false)
     {
          if ($serid)
@@ -843,12 +816,6 @@ class desktop_ctl_users extends desktop_controller
          $this->singlepage('common/treeSelect.html');
     }
 
-    /**
-     * showStoreOrgTreeList
-     * @param mixed $serid ID
-     * @param mixed $multi multi
-     * @return mixed 返回值
-     */
     public function showStoreOrgTreeList($serid,$multi=false)
     {
          if ($serid)
@@ -873,11 +840,6 @@ class desktop_ctl_users extends desktop_controller
          $this->singlepage('common/treeSelect.html');
     }
 
-    /**
-     * 获取CosById
-     * @param mixed $pregionid ID
-     * @return mixed 返回结果
-     */
     public function getCosById($pregionid = 1)
     {
         !$pregionid && $pregionid = 1;
@@ -889,11 +851,6 @@ class desktop_ctl_users extends desktop_controller
         }
     }
 
-    /**
-     * 获取OrgById
-     * @param mixed $porgid ID
-     * @return mixed 返回结果
-     */
     public function getOrgById($porgid = 0)
     {
         !$porgid && $porgid = 0;

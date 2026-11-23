@@ -29,12 +29,6 @@ class crm_mdl_gift extends dbeav_model{
         return parent::count($filter);
     }
 
-    /**
-     * 保存
-     * @param mixed $data 数据
-     * @param mixed $mustUpdate mustUpdate
-     * @return mixed 返回操作结果
-     */
     public function save(&$data, $mustUpdate = NULL){
         return parent::save($data, $mustUpdate);
     }

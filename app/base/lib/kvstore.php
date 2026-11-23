@@ -15,6 +15,13 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 /*
  * @package base
@@ -96,7 +103,6 @@ class base_kvstore{
      * @access public
      * @return string
      */
-
     static public function kvprefix() 
     {
         return (defined('KV_PREFIX')) ? KV_PREFIX : 'default';
@@ -108,7 +114,6 @@ class base_kvstore{
      * @access public
      * @return base_kvstore
      */
-
     static public function instance($prefix){
         if(!isset(self::$__instance[$prefix])){
             self::$__instance[$prefix] = new base_kvstore($prefix);
@@ -122,7 +127,6 @@ class base_kvstore{
      * @access public
      * @return void
      */
-
     public function set_prefix($prefix) 
     {
         $this->__prefix = $prefix;
@@ -132,10 +136,6 @@ class base_kvstore{
      * 取得prefix
      * @access public
      * @return string
-     */
-    /**
-     * 获取_prefix
-     * @return mixed 返回结果
      */
     public function get_prefix() 
     {
@@ -148,7 +148,6 @@ class base_kvstore{
      * @access public
      * @return void
      */
-
     public function set_controller($controller) 
     {
         if($controller instanceof base_interface_kvstore_base){
@@ -163,10 +162,6 @@ class base_kvstore{
      * @access public
      * @return object
      */
-    /**
-     * 获取_controller
-     * @return mixed 返回结果
-     */
     public function get_controller() 
     {
         return $this->__controller;
@@ -179,7 +174,6 @@ class base_kvstore{
      * @access public
      * @return int
      */
-
     public function increment($key, $offset=1) 
     {
         if($this->get_controller() instanceof base_interface_kvstore_extension){
@@ -196,7 +190,6 @@ class base_kvstore{
      * @access public
      * @return int
      */
-   
     public function decrement($key, $offset=1) 
     {
         if($this->get_controller() instanceof base_interface_kvstore_extension){
@@ -214,7 +207,6 @@ class base_kvstore{
      * @access public
      * @return boolean
      */
-
     public function fetch($key, &$value, $timeout_version=null){
         self::$__fetch_count++;
         if($this->get_controller()->fetch($key, $value, $timeout_version)){
@@ -224,20 +216,12 @@ class base_kvstore{
         }
     }//End Function
 
-    /**
-     * supportUUID
-     * @return mixed 返回值
-     */
     public function supportUUID(){
         
         return $this->get_controller()->supportUUID();
     }//End Function
 
 
-    /**
-     * 获取UUIDFix
-     * @return mixed 返回结果
-     */
     public function getUUIDFix(){
         
         return $this->get_controller()->getUUIDFix();
@@ -251,7 +235,6 @@ class base_kvstore{
      * @access public
      * @return boolean
      */
-
     public function store($key, $value, $ttl=0)
     {
         self::$__store_count++;
@@ -268,12 +251,6 @@ class base_kvstore{
      * @access public
      * @return boolean
      */
-    /**
-     * 删除
-     * @param mixed $key key
-     * @param mixed $ttl ttl
-     * @return mixed 返回值
-     */
     public function delete($key, $ttl=1) 
     {
         if($this->fetch($key, $value)){
@@ -282,12 +259,7 @@ class base_kvstore{
         return true;
     }//End Function
 
-    /**
-     * real_delete
-     * @param mixed $key key
-     * @return mixed 返回值
-     */
-    public function real_delete($key) 
+	public function real_delete($key) 
     {
     	$single = base_kvstore::instance($this->__prefix);
         $single->get_controller()->delete($key);
@@ -302,7 +274,6 @@ class base_kvstore{
      * @access public
      * @return void
      */
-
     public function persistent($key, $value, $ttl=0) 
     {
         kernel::single('base_kvstore_mysql', $this->get_prefix())->store($key, $value, $ttl);  //todo: 持久化
@@ -313,11 +284,6 @@ class base_kvstore{
      * @var array $record
      * @access public
      * @return boolean
-     */
-    /**
-     * recovery
-     * @param mixed $record record
-     * @return mixed 返回值
      */
     public function recovery($record) 
     {
@@ -330,7 +296,6 @@ class base_kvstore{
      * @access public
      * @return boolean
      */
-
     static public function delete_expire_data() 
     {
         $time = time();
@@ -349,13 +314,6 @@ class base_kvstore{
         kernel::database()->exec('DELETE FROM sdb_base_kvstore WHERE ttl>0 AND (dateline+ttl)<'.$time, true);
     }//End Function
     
-    /**
-     * append
-     * @param mixed $key key
-     * @param mixed $value value
-     * @param mixed $ttl ttl
-     * @return mixed 返回值
-     */
     public function append($key, $value, $ttl=0)
     {
         
@@ -372,7 +330,7 @@ class base_kvstore{
 
     /**
      * 初始化自增ID值
-     * 
+     *
      * @return void
      * @author 
      */

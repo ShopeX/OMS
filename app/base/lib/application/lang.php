@@ -15,15 +15,18 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 class base_application_lang extends base_application_prototype_filepath 
 {
     var $path = 'lang';
 
-    /**
-     * install
-     * @return mixed 返回值
-     */
     public function install() 
     {
         $dir = $this->getPathname();
@@ -38,11 +41,6 @@ class base_application_lang extends base_application_prototype_filepath
         lang::set_res($this->target_app->app_id, $tree);
     }//End Function
     
-    /**
-     * 清除_by_app
-     * @param mixed $app_id ID
-     * @return mixed 返回值
-     */
     public function clear_by_app($app_id){
         if(!$app_id){
             return false;

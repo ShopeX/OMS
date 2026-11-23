@@ -28,11 +28,6 @@ class base_kvstore_ecae extends base_kvstore_abstract implements base_interface_
         $this->prefix = $prefix;
     }//End Function
 
-    /**
-     * 创建_key
-     * @param mixed $key key
-     * @return mixed 返回值
-     */
     public function create_key($key) 
     {
         if(isset($key[201])){
@@ -41,13 +36,6 @@ class base_kvstore_ecae extends base_kvstore_abstract implements base_interface_
         return sprintf("%s/%s/%s", base_kvstore::kvprefix(), $this->prefix, $key);
     }//End Function
 
-    /**
-     * store
-     * @param mixed $key key
-     * @param mixed $value value
-     * @param mixed $ttl ttl
-     * @return mixed 返回值
-     */
     public function store($key, $value, $ttl=0) 
     {
         $data['key'] = $key;
@@ -58,13 +46,6 @@ class base_kvstore_ecae extends base_kvstore_abstract implements base_interface_
         return ecae_kvstore_write($this->create_key($key), $data);
     }//End Function
 
-    /**
-     * fetch
-     * @param mixed $key key
-     * @param mixed $value value
-     * @param mixed $timeout_version timeout_version
-     * @return mixed 返回值
-     */
     public function fetch($key, &$value, $timeout_version=null) 
     {
         if(ecae_kvstore_read($this->create_key($key), $data)){
@@ -79,21 +60,11 @@ class base_kvstore_ecae extends base_kvstore_abstract implements base_interface_
         return false;
     }//End Function
 
-    /**
-     * 删除
-     * @param mixed $key key
-     * @return mixed 返回值
-     */
     public function delete($key) 
     {
         return ecae_kvstore_delete($this->create_key($key));
     }//End Function
 
-    /**
-     * recovery
-     * @param mixed $record record
-     * @return mixed 返回值
-     */
     public function recovery($record) 
     {
         $key = $record['key'];

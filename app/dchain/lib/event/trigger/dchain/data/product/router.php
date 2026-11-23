@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @Author: xueding@shopex.cn
  * @Datetime: 2022/4/24
@@ -23,12 +24,6 @@ class dchain_event_trigger_dchain_data_product_router
 {
     private $__shop_id;
 
-    /**
-     * 设置_shop_id
-     * @param mixed $shop_id ID
-     * @return mixed 返回操作结果
-     */
-
     public function set_shop_id($shop_id)
     {
         $this->__shop_id = $shop_id;
@@ -36,12 +31,6 @@ class dchain_event_trigger_dchain_data_product_router
         return $this;
     }
 
-    /**
-     * __call
-     * @param mixed $method method
-     * @param mixed $args args
-     * @return mixed 返回值
-     */
     public function __call($method,$args)
     { 
         $platform = kernel::single('dchain_event_trigger_dchain_data_product_common');

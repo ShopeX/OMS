@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 唯品会JIT采购单管理
  * 
@@ -73,7 +74,6 @@ class console_ctl_admin_vopurchase extends desktop_controller{
     /**
      * 人工点击生成拣货单
      */
-
     function createPick()
     {
         @set_time_limit(0);

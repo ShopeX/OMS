@@ -14,10 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: 2020/9/7 15:49:19
  * @describe: 经销商货品
  * ============================
@@ -37,12 +38,6 @@ class dealer_finder_goods {
     public $column_bs_bn = "经销商编码";
     public $column_bs_bn_width = 120;
     public $column_bs_bn_order = 1;
-    /**
-     * column_bs_bn
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
-
     public function column_bs_bn($row){
         $bs_id = $row[$this->col_prefix.'bs_id'];
         if(!isset($this->business[$bs_id])) {
@@ -53,11 +48,6 @@ class dealer_finder_goods {
     public $column_name = "经销商名称";
     public $column_name_width = 120;
     public $column_name_order = 2;
-    /**
-     * column_name
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_name($row){
         $bs_id = $row[$this->col_prefix.'bs_id'];
         if(!isset($this->business[$bs_id])) {
@@ -72,11 +62,6 @@ class dealer_finder_goods {
 
     public $column_material_bn = "基础物料编码";
     public $column_material_bn_order = 3;
-    /**
-     * column_material_bn
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_material_bn($row) {
         $bm_id = $row[$this->col_prefix . 'bm_id'];
         if(!isset($this->material[$bm_id])) {
@@ -87,11 +72,6 @@ class dealer_finder_goods {
 
     public $column_material_name = "基础物料名称";
     public $column_material_name_order = 3;
-    /**
-     * column_material_name
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_material_name($row) {
         $bm_id = $row[$this->col_prefix . 'bm_id'];
         if(!isset($this->material[$bm_id])) {

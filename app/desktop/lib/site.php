@@ -17,10 +17,6 @@
 
 class desktop_site
 {
-    /**
-     * 获取Info
-     * @return mixed 返回结果
-     */
     public function getInfo()
     {
         $info = app::get('desktop')->getConf('siteInfo');

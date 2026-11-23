@@ -15,6 +15,12 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
 
 class base_mdl_services extends base_db_model{
 
@@ -92,15 +98,6 @@ class base_mdl_services extends base_db_model{
         return 1;
     }
 
-    /**
-     * 获取List
-     * @param mixed $cols cols
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $limit limit
-     * @param mixed $orderby orderby
-     * @return mixed 返回结果
-     */
     public function getList($cols='*', $filter='null', $offset=0, $limit=-1, $orderby=null)
     {
         $data = app::get('base')->model('app_content')->getlist('*',$filter);

@@ -14,10 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: 2021/9/22 11:27:32
  * @describe: 开普勒一件代发业务发货单处理
  * ============================
@@ -25,13 +26,6 @@
 class console_delivery_yjdf {
 
     #获取渠道ID
-    /**
-     * 获取WMSChannelId
-     * @param mixed $branchId ID
-     * @param mixed $items items
-     * @return mixed 返回结果
-     */
-
     public function getWMSChannelId($branchId, $items) {
         $wms_type = kernel::single('ome_branch')->getNodetypBybranchId($branchId);
         if($wms_type != 'yjdf') {

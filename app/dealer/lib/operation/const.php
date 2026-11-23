@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 异常标识常量定义Lib方法类
  *
@@ -47,11 +48,10 @@ class dealer_operation_const
     
     /**
      * 获取异常标识
-     * 
+     *
      * @param $boolType
      * @return string
      */
-
     public function getAbnormalTag($boolType)
     {
         if(empty($boolType)){

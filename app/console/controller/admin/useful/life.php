@@ -14,21 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * Created by PhpStorm.
  * User: yaokangming
  * Date: 2019/5/6
  * Time: 14:13
  */
+
 class console_ctl_admin_useful_life extends desktop_controller
 {
     var $name = "仓库库存查看";
     var $workground = "storage_center";
-    /**
-     * index
-     * @return mixed 返回值
-     */
-
     public function index(){
         $params = array(
             'title'=>'有效期商品列表',
@@ -45,10 +42,6 @@ class console_ctl_admin_useful_life extends desktop_controller
         $this->finder('console_mdl_useful_life', $params);
     }
 
-    /**
-     * 获取LifeItems
-     * @return mixed 返回结果
-     */
     public function getLifeItems() {
         $purchaseCode = trim($_POST['purchase_code']);
         $branchId = trim($_POST['branch_id']);

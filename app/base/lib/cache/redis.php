@@ -15,6 +15,13 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 /*
  * @package base
@@ -32,10 +39,6 @@ class base_cache_redis extends base_cache_abstract implements base_interface_cac
         $this->check_vary_list();
     }//End Function
 
-    /**
-     * connect
-     * @return mixed 返回值
-     */
     public function connect() 
     {
         if(!isset(self::$_cacheObj)){
@@ -61,12 +64,6 @@ class base_cache_redis extends base_cache_abstract implements base_interface_cac
         }
     }//End Function
 
-    /**
-     * fetch
-     * @param mixed $key key
-     * @param mixed $result result
-     * @return mixed 返回值
-     */
     public function fetch($key, &$result) 
     {
         $result = self::$_cacheObj->get($key);
@@ -78,23 +75,12 @@ class base_cache_redis extends base_cache_abstract implements base_interface_cac
         }
     }//End Function
 
-    /**
-     * store
-     * @param mixed $key key
-     * @param mixed $value value
-     * @param mixed $ttl ttl
-     * @return mixed 返回值
-     */
     public function store($key, $value, $ttl=0) 
     {
 	$value = json_encode($value);
         return self::$_cacheObj->setex($key, $ttl, $value);
     }//End Function
 
-    /**
-     * status
-     * @return mixed 返回值
-     */
     public function status() 
     {
         //$status = self::$_cacheObj->info();
@@ -133,7 +119,7 @@ class base_cache_redis extends base_cache_abstract implements base_interface_cac
 
     /**
      * 初始化自增ID值
-     * 
+     *
      * @return void
      * @author 
      */

@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 class crm_rpc_gift extends crm_rpc_request
 {
 

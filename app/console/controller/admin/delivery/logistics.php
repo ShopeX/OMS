@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 在途监控
  *
@@ -26,11 +27,6 @@ class console_ctl_admin_delivery_logistics extends desktop_controller
     public $name               = "发货中心";
     public $workground         = "delivery_center";
 
-    /**
-     * _views
-     * @return mixed 返回值
-     */
-
     public function _views()
     {
     	if (method_exists($this, sprintf('_%s_views', $_GET['act']))) {
@@ -40,10 +36,6 @@ class console_ctl_admin_delivery_logistics extends desktop_controller
     	return array ();
     }
 
-    /**
-     * _lanshou_views
-     * @return mixed 返回值
-     */
     public function _lanshou_views()
     {
         $sub_menu = array (
@@ -53,10 +45,6 @@ class console_ctl_admin_delivery_logistics extends desktop_controller
         return $sub_menu;
     }
 
-    /**
-     * _qianshou_views
-     * @return mixed 返回值
-     */
     public function _qianshou_views()
     {
         $sub_menu = array (
@@ -67,12 +55,12 @@ class console_ctl_admin_delivery_logistics extends desktop_controller
         return $sub_menu;
     }
 
-    /**
-     * 揽收列表
-     * 
-     * @return void
-     * @author 
-     * */
+	/**
+	 * 揽收列表
+	 *
+	 * @return void
+	 * @author 
+	 **/
 	public function lanshou()
 	{
         $params = array(
@@ -135,11 +123,11 @@ class console_ctl_admin_delivery_logistics extends desktop_controller
 	}
 
 	/**
-     * 签收列表
-     * 
-     * @return void
-     * @author 
-     * */
+	 * 签收列表
+	 *
+	 * @return void
+	 * @author 
+	 **/
 	public function qianshou()
 	{
         $params = array(
@@ -201,11 +189,7 @@ class console_ctl_admin_delivery_logistics extends desktop_controller
         $this->finder('console_mdl_delivery', $params);
 	}
 
-	    /**
-     * batchLogiSync
-     * @return mixed 返回值
-     */
-    public function batchLogiSync()
+	public function batchLogiSync()
 	{
         $this->pagedata['request_url'] = $this->url.'&act=ajaxBatchLogiSync';
         // $this->pagedata['autotime']    = '500';
@@ -213,11 +197,7 @@ class console_ctl_admin_delivery_logistics extends desktop_controller
         parent::dialog_batch('ome_mdl_delivery',true,20,'incr');
 	}
 
-    /**
-     * ajaxBatchLogiSync
-     * @return mixed 返回值
-     */
-    public function ajaxBatchLogiSync()
+	public function ajaxBatchLogiSync()
 	{
         parse_str($_POST['primary_id'], $postdata);
 

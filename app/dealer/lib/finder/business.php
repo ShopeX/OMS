@@ -14,10 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: 2020/9/4 16:22:23
  * @describe: 经销商
  * ============================
@@ -35,12 +36,6 @@ class dealer_finder_business {
     public $column_edit = "操作";
     public $column_edit_width = 120;
     public $column_edit_order = 1;
-    /**
-     * column_edit
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
-
     public function column_edit($row){
         $finder_id = $_GET['_finder']['finder_id'];
         $bs_id = $row[$this->col_prefix.'bs_id'];

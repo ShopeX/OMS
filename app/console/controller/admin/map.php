@@ -19,10 +19,6 @@ class console_ctl_admin_map extends desktop_controller {
     public $name = '第三方仓储';
     public $workground = "console_center";
 
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index(){
         $params = array(
             'title' => '商品映射',
@@ -47,11 +43,6 @@ class console_ctl_admin_map extends desktop_controller {
         $this->finder('console_mdl_map_goods', $params);
     }
 
-    /**
-     * mapUpdate
-     * @param mixed $operateType operateType
-     * @return mixed 返回值
-     */
     public function mapUpdate($operateType) {
         $filter = array();
         $filter['id'] = $_REQUEST['id'];
@@ -69,10 +60,6 @@ class console_ctl_admin_map extends desktop_controller {
         $this->display('admin/material/sync_map.html');
     }
 
-    /**
-     * doMapUpdate
-     * @return mixed 返回值
-     */
     public function doMapUpdate() {
         $wmsId = (int) $_POST['wms_id'];
         $id = $_POST['id'];

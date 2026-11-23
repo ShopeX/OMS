@@ -15,6 +15,13 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 /*
  * @package base
@@ -33,10 +40,6 @@ class base_kvstore_tokyotyrant extends base_kvstore_abstract implements base_int
         $this->prefix = $prefix;
     }//End Function
 
-    /**
-     * connect
-     * @return mixed 返回值
-     */
     public function connect() 
     {
         if(!isset(self::$_cacheObj)){
@@ -58,13 +61,6 @@ class base_kvstore_tokyotyrant extends base_kvstore_abstract implements base_int
         }
     }//End Function
 
-    /**
-     * fetch
-     * @param mixed $key key
-     * @param mixed $value value
-     * @param mixed $timeout_version timeout_version
-     * @return mixed 返回值
-     */
     public function fetch($key, &$value, $timeout_version=null) 
     {
         $data = self::$_cacheObj->get($this->create_key($key));
@@ -81,13 +77,6 @@ class base_kvstore_tokyotyrant extends base_kvstore_abstract implements base_int
         return false;
     }//End Function
 
-    /**
-     * store
-     * @param mixed $key key
-     * @param mixed $value value
-     * @param mixed $ttl ttl
-     * @return mixed 返回值
-     */
     public function store($key, $value, $ttl=0) 
     {
         $store['value'] = $value;
@@ -96,21 +85,11 @@ class base_kvstore_tokyotyrant extends base_kvstore_abstract implements base_int
         return self::$_cacheObj->set($this->create_key($key), serialize($store), 0, 0);  //todo：不压缩，序列化
     }//End Function
 
-    /**
-     * 删除
-     * @param mixed $key key
-     * @return mixed 返回值
-     */
     public function delete($key) 
     {
         return self::$_cacheObj->delete($this->create_key($key));
     }//End Function
 
-    /**
-     * recovery
-     * @param mixed $record record
-     * @return mixed 返回值
-     */
     public function recovery($record) 
     {
         $key = $record['key'];

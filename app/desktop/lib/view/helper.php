@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 class desktop_view_helper{
 
     function block_tab($params, $content, &$smarty){
@@ -114,12 +120,6 @@ class desktop_view_helper{
         echo $smarty->_fetch_compile_include('desktop','system/tools/uploader.html',$params);
     }
 
-    /**
-     * function_desktop_header
-     * @param mixed $params 参数
-     * @param mixed $smarty smarty
-     * @return mixed 返回值
-     */
     public function function_desktop_header($params, &$smarty) 
     {
         $headers = $smarty->pagedata['headers'];
@@ -136,12 +136,6 @@ class desktop_view_helper{
         return $html;
     }//End Function
 
-    /**
-     * function_desktop_footer
-     * @param mixed $params 参数
-     * @param mixed $smarty smarty
-     * @return mixed 返回值
-     */
     public function function_desktop_footer($params, &$smarty) 
     {
         $footers = $smarty->pagedata['footers']; 

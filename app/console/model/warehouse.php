@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 唯品会仓库mdl类
  *
@@ -22,12 +23,6 @@
  */
 class console_mdl_warehouse extends dbeav_model
 {
-
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
 
     public function table_name($real = false)
     {
@@ -40,20 +35,11 @@ class console_mdl_warehouse extends dbeav_model
         return $table_name;
     }
 
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema()
     {
         return app::get('purchase')->model('warehouse')->get_schema();
     }
 
-    /**
-     * 保存Warehouses
-     * @param mixed $data 数据
-     * @return mixed 返回操作结果
-     */
     public function saveWarehouses($data = [])
     {
         $warehouseList = array_column($data, 'warehouse_code');
@@ -88,11 +74,6 @@ class console_mdl_warehouse extends dbeav_model
         }
     }
 
-    /**
-     * 保存Cooperation
-     * @param mixed $data 数据
-     * @return mixed 返回操作结果
-     */
     public function saveCooperation($data = [])
     {
         foreach ($data as $k => $v) {

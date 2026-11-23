@@ -14,21 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: 2022/11/21 15:16:56
  * @describe: 控制器
  * ============================
  */
 class console_ctl_admin_difference extends desktop_controller {
-
-    /**
-     * index
-     * @param mixed $operate_type operate_type
-     * @return mixed 返回值
-     */
 
     public function index($operate_type='') {
 
@@ -95,11 +90,6 @@ class console_ctl_admin_difference extends desktop_controller {
 
 
 
-    /**
-     * singleConfirm
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function singleConfirm($id) {
         list($rs, $rsData) = kernel::single('console_difference')->confirm($id);
         $differenceMdl = app::get('console')->model('difference');
@@ -111,11 +101,6 @@ class console_ctl_admin_difference extends desktop_controller {
         $this->splash('success', $this->url.'&p[0]='.$diff['operate_type'], '确认成功');
     }
 
-    /**
-     * cancel
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function cancel($id) {
         $id = (int)$id;
         $differenceMdl = app::get('console')->model('difference');
@@ -158,22 +143,12 @@ class console_ctl_admin_difference extends desktop_controller {
         $this->splash('success', $this->url.'&p[0]='.$diff['operate_type'], '操作完成');
     }
 
-    /**
-     * retry
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function retry($id) {
         list($rs, $rsData) = kernel::single('console_difference')->retryInAndOut($id);
         app::get('ome')->model('operation_log')->write_log('difference@console',$id,"重试：".$rsData['msg']);
         $this->splash(($rs ? 'success' : 'error'), $this->url, $rsData['msg']);
     }
 
-    /**
-     * doEdit
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function doEdit($id) {
         $main = app::get('console')->model('difference')->db_dump(['id'=>$id]);
         $items = app::get('console')->model('difference_items')->getList('*', ['diff_id'=>$id]);
@@ -184,10 +159,6 @@ class console_ctl_admin_difference extends desktop_controller {
         $this->singlepage('admin/difference/main.html');
     }
 
-    /**
-     * 保存
-     * @return mixed 返回操作结果
-     */
     public function save() {
         $id = (int) $_POST['id'];
         $number = $_POST['number'];
@@ -232,20 +203,12 @@ class console_ctl_admin_difference extends desktop_controller {
         $this->end(true, '操作完成');
     }
 
-    /**
-     * 添加
-     * @return mixed 返回值
-     */
     public function add() {
         $this->pagedata['operate_type'] = $_GET['operate_type'];
         $this->pagedata['operate_type_name'] = app::get('console')->model('difference')->schema['columns']['operate_type']['type'][$_GET['operate_type']];
         $this->singlepage('admin/difference/add.html');
     }
 
-    /**
-     * doAdd
-     * @return mixed 返回值
-     */
     public function doAdd() {
         $this->begin($this->url);
         
@@ -281,10 +244,6 @@ class console_ctl_admin_difference extends desktop_controller {
         $this->end(true, '操作成功');
     }
 
-    /**
-     * batchAudit
-     * @return mixed 返回值
-     */
     public function batchAudit(){
         if($_POST['isSelectedAll'] == '_ALL_'){
             die('不能使用全选功能,每次最多选择500条!');
@@ -294,10 +253,6 @@ class console_ctl_admin_difference extends desktop_controller {
         parent::dialog_batch('console_mdl_difference');
     }
 
-    /**
-     * allAudit
-     * @return mixed 返回值
-     */
     public function allAudit()
     {
         $msg        = '审核成功';

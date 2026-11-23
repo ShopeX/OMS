@@ -129,10 +129,6 @@ class console_ctl_admin_branch_product_extend extends desktop_controller
         parent::dialog_batch();
     }
     
-    /**
-     * 保存StoreMode
-     * @return mixed 返回操作结果
-     */
     public function saveStoreMode()
     {
         $salesMaterialObj = app::get('material')->model('sales_material');
@@ -414,7 +410,7 @@ class console_ctl_admin_branch_product_extend extends desktop_controller
     
     /**
      * ajax加载发货时效
-     * 
+     *
      * @return Json
      */
     public function ajax_get_sell_delay()

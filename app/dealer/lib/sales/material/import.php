@@ -27,10 +27,6 @@ class dealer_sales_material_import
         '*:基础物料数量',
     ];
 
-    /**
-     * 获取ExcelTitle
-     * @return mixed 返回结果
-     */
     public function getExcelTitle()
     {
         return ['销售物料导入模板.xlsx',[
@@ -45,10 +41,10 @@ class dealer_sales_material_import
 
     /**
      * undocumented function
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     public function processExcelRow($import_file, $post)
     {
         $format = [];
@@ -99,11 +95,6 @@ class dealer_sales_material_import
         }, [], $format);
     }
 
-        /**
-     * _dealSalesMaterial
-     * @param mixed $salesMaterial salesMaterial
-     * @return mixed 返回值
-     */
     public function _dealSalesMaterial($salesMaterial) {
         $required = [
             '*:销售物料编码',

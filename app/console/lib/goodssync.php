@@ -18,10 +18,10 @@
 class console_goodssync{
 
     /**
-     * 编辑货品前的操作
-     * @param Array $sdf 货品编辑前的数据
-     * @return void
-     */
+    * 编辑货品前的操作
+    * @param Array $sdf 货品编辑前的数据
+    * @return void
+    */
     public function pre_update($sdf=array()){
         if (empty($sdf)) return false;
 
@@ -32,11 +32,11 @@ class console_goodssync{
     }
 
     /**
-     * 编辑货品成功后的操作
-     * @param Array $sdf 货品编辑后的数据
-     * @param String $msg 引用返回消息
-     * @return void
-     */
+    * 编辑货品成功后的操作
+    * @param Array $sdf 货品编辑后的数据
+    * @param String $msg 引用返回消息
+    * @return void
+    */
     public function after_update($sdf=array(),&$msg=''){
         if (empty($sdf)) return false;
 
@@ -53,10 +53,10 @@ class console_goodssync{
     }
 
     /**
-     * 删除货品时的操作
-     * @param Int $product_id 货品ID
-     * @return void
-     */
+    * 删除货品时的操作
+    * @param Int $product_id 货品ID
+    * @return void
+    */
     public function delete_product($product_id=''){
         if (empty($product_id)) return false;
 
@@ -130,11 +130,6 @@ class console_goodssync{
         return true;
     }
 
-    /**
-     * doadd
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function doadd ($sdf){
         if (!is_array($sdf)) return $this->msg->get_flag('success');
 
@@ -157,10 +152,10 @@ class console_goodssync{
     }
 
     /**
-     * 通过wms_id获取未分派的商品
-     * @params $wms_id wms_id
-     * return array 未分派的商品
-     * */
+    *通过wms_id获取未分派的商品
+    *@params $wms_id wms_id
+    *return array 未分派的商品
+    **/
     public function get_goods_by_wms($wms_id,$offset='0',$limit='999999')
     {
         $basicMaterialSelect    = kernel::single('material_basic_select');
@@ -190,12 +185,12 @@ class console_goodssync{
     }
 
     /**
-     * 通过wms_id获取未分派的商品
-     * @params $wms_id wms_id
-     * @params $search_key 搜索的键
-     * @params $search_value 搜索的值
-     * return array 未分派的商品
-     * */
+    *通过wms_id获取未分派的商品
+    *@params $wms_id wms_id
+    *@params $search_key 搜索的键
+    *@params $search_value 搜索的值
+    *return array 未分派的商品
+    **/
     public function get_data_by_search($search_key,$search_value,$wms_id)
     {
         $basicMaterialSelect    = kernel::single('material_basic_select');
@@ -222,10 +217,10 @@ class console_goodssync{
 
 
     /**
-     * 通过wms_id获取未分派的商品的数量
-     * @params $wms_id wms_id
-     * return array 未分派的商品
-     * */
+    *通过wms_id获取未分派的商品的数量
+    *@params $wms_id wms_id
+    *return array 未分派的商品
+    **/
     public function get_goods_count_by_wms($wms_id)
     {
         $basicMaterialSelect    = kernel::single('material_basic_select');
@@ -250,10 +245,10 @@ class console_goodssync{
     }
 
     /**
-     * 通过product_id获取未分派的商品的数量
-     * @params array $product_id
-     * return array 未分派的商品
-     * */
+    *通过product_id获取未分派的商品的数量
+    *@params array $product_id
+    *return array 未分派的商品
+    **/
     public function get_wms_goods($product_id)
     {
         $basicMaterialSelect    = kernel::single('material_basic_select');
@@ -264,9 +259,9 @@ class console_goodssync{
     }
 
     /**
-     * 获取自定义搜素选项
-     * return array
-     * */
+    *获取自定义搜素选项
+    *return array
+    **/
     public function get_search_options(){
         $options = array(
             'bn'=>'货品编码',
@@ -278,9 +273,9 @@ class console_goodssync{
     }
 
     /**
-     * 获取自定义搜素选项
-     * return array
-     * */
+    *获取自定义搜素选项
+    *return array
+    **/
     public function get_search_list(){
         $brandObj = app::get('ome')->model('brand');
         //$packObj = app::get('ome')->model('pack');//
@@ -302,9 +297,9 @@ class console_goodssync{
     }
 
     /**
-     * 组织filter条件
-     * return array
-     * */
+    *组织filter条件
+    *return array
+    **/
     public function get_filter($data,$offset='0',$limit='999999'){
         if(empty($data['search_key']) || empty($data['search_value'])){
             return false;
@@ -366,10 +361,9 @@ class console_goodssync{
     }
 
     /*通过搜索条件获取未分派的商品
-     * @params $filter 搜索条件
-     * return array 未分派的商品
-     * */
-
+    *@params $filter 搜索条件
+    *return array 未分派的商品
+    **/
     public function get_goods_by_product_ids($product_ids)
     {
         $basicMaterialSelect    = kernel::single('material_basic_select');
@@ -393,11 +387,6 @@ class console_goodssync{
     *@params $data 搜索条件
     *return array 未分派的商品
     **/
-    /**
-     * 获取_goods_count_by_search
-     * @param mixed $data 数据
-     * @return mixed 返回结果
-     */
     public function get_goods_count_by_search($data)
     {
         $db = kernel::database();
@@ -453,9 +442,9 @@ class console_goodssync{
     }
 
     /**
-     * 获得非selfwms wms_id数组
-     * flag notequal
-     */
+    * 获得非selfwms wms_id数组
+    * flag notequal
+    */
     function get_wms_list($type,$flag='') {
         $wms_list = kernel::single('channel_func')->getWmsChannelList();
 
@@ -481,8 +470,8 @@ class console_goodssync{
     }
 
     /**
-     * 商品同步发起通知数据
-     */
+    * 商品同步发起通知数据
+    */
     function syncProduct_notifydata($wms_id,$product_sdf,$branch_bn='') {
         if (is_array($product_sdf) && $wms_id) {
             foreach($product_sdf as $key=>$item ){
@@ -512,11 +501,6 @@ class console_goodssync{
         return true;
     }
 
-    /**
-     * 获取ProductSdf
-     * @param mixed $product_ids ID
-     * @return mixed 返回结果
-     */
     public function getProductSdf($product_ids) {
         if(empty($product_ids) || !is_array($product_ids)) {
             return [];
@@ -656,11 +640,6 @@ class console_goodssync{
     }
 
 
-    /**
-     * 获取cats
-     * @param mixed $cat_ids ID
-     * @return mixed 返回结果
-     */
     public function getcats($cat_ids){
 
 

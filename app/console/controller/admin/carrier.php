@@ -14,9 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 唯品会承运商管理
- *
+ * 
  * @access public
  * @author wangbiao<wangbiao@shopex.cn>
  */
@@ -47,11 +48,6 @@ class console_ctl_admin_carrier extends desktop_controller{
     }
     
     //同步
-    /**
-     * sync
-     * @return mixed 返回值
-     */
-
     public function sync()
     {
         $this->begin('index.php?app=console&ctl=admin_carrier&act=index');

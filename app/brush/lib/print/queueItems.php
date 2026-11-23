@@ -14,19 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @author ykm 2015-12-25
  * @describe print_queue_items打印数据整理
  */
-class brush_print_queueItems{
 
-    /**
-     * queueItems
-     * @param mixed $oriData ID
-     * @param mixed $corp corp
-     * @param mixed $field field
-     * @return mixed 返回值
-     */
+class brush_print_queueItems{
 
     public function queueItems(&$oriData, $corp, $field) {
         $pre = __FUNCTION__ . '.';

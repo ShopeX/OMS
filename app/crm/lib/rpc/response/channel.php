@@ -16,11 +16,6 @@
  */
 
 class crm_rpc_response_channel extends ome_rpc_response{
-    /**
-     * crm_callback
-     * @param mixed $result result
-     * @return mixed 返回值
-     */
     public function crm_callback($result){
         $channel_type = 'crm';//定义写死为crm类型
         $nodes = $_POST;

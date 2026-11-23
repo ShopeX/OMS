@@ -25,10 +25,6 @@ class console_material_package_import {
         '数量' => 'number',
     ];
 
-    /**
-     * 获取ExcelTitle
-     * @return mixed 返回结果
-     */
     public function getExcelTitle()
     {
         return ['加工单导入模板.xlsx',[

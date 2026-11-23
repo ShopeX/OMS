@@ -14,21 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: 2021/1/20 14:36:16
  * @describe: model层
  * ============================
  */
 class desktop_mdl_login extends dbeav_model {
-
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
 
     public function table_name($real = false)
     {
@@ -41,10 +36,6 @@ class desktop_mdl_login extends dbeav_model {
         return $table_name;
     }
     
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema(){
         $return = app::get('pam')->model('log')->get_schema();
         foreach ($return['columns'] as $key => $value) {
@@ -55,11 +46,6 @@ class desktop_mdl_login extends dbeav_model {
         return $return;
     }
 
-    /**
-     * modifier_event_time
-     * @param mixed $col col
-     * @return mixed 返回值
-     */
     public function modifier_event_time($col) {
         return date('Y-m-d H:i:s', $col);
     }

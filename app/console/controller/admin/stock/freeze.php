@@ -14,9 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 仓库预占流水
- *
+ * 
  * @access public
  * @author wangbiao<wangbiao@shopex.cn>
  */
@@ -96,11 +97,6 @@ class console_ctl_admin_stock_freeze extends desktop_controller{
         $this->finder('console_mdl_basic_material_stock_freeze', $params);
     }
     
-    /**
-     * show_store_freeze_list
-     * @return mixed 返回值
-     */
-
     public function show_store_freeze_list() {
         $filter = [];
         $filter['bm_id']    = intval($_GET['product_id']);
@@ -245,11 +241,6 @@ class console_ctl_admin_stock_freeze extends desktop_controller{
 
 
     //整单释放
-    /**
-     * single_order_unfreeze
-     * @param mixed $order_id ID
-     * @return mixed 返回值
-     */
     public function single_order_unfreeze($order_id) {
         $this->begin('javascript:finderGroup["'.$_GET['finder_id'].'"].refresh();');
 
@@ -272,10 +263,6 @@ class console_ctl_admin_stock_freeze extends desktop_controller{
         $this->end(true, '整单释放成功');
     }
 
-    /**
-     * batch_unfreeze
-     * @return mixed 返回值
-     */
     public function batch_unfreeze() {
         $branchMdl      = app::get('ome')->model('branch');
         $operateLog     = app::get('ome')->model('operation_log');

@@ -58,11 +58,6 @@ class channel_ctl_admin_channel extends desktop_controller
                     'href'   => $this->url . '&act=add&p[]=' . $channel_type,
                     'target' => "dialog::{width:700,height:400,title:'" . sprintf('添加%s', $typemap[$channel_type]) . "'}",
                 ),
-                array(
-                    'label'  => '查看绑定关系',
-                    'href'   => $this->url . '&act=view_bindrelation&p[]=' . $channel_type,
-                    'target' => '_blank',
-                ),
             ),
             'use_buildin_new_dialog' => false,
             'use_buildin_set_tag'    => false,
@@ -72,6 +67,13 @@ class channel_ctl_admin_channel extends desktop_controller
             'base_filter'            => array('channel_type' => $channel_type),
         );
 
+        if ($channel_type != 'sms') {
+            $params['actions'][] = array(
+                'label'  => '查看绑定关系',
+                'href'   => $this->url . '&act=view_bindrelation&p[]=' . $channel_type,
+                'target' => '_blank',
+            );
+        }
         $this->finder('channel_mdl_channel', $params);
     }
 
@@ -84,45 +86,12 @@ class channel_ctl_admin_channel extends desktop_controller
         echo sprintf('<title>查看绑定关系</title><iframe width="100%%" height="95%%" frameborder="0" src="%s" ></iframe>', MATRIX_RELATION_URL . '?' . http_build_query($params));
     }
 
-    /**
-     * 查看奇门绑定关系
-     * @return mixed 返回值
-     */
-    public function view_qimen_bindrelation()
-    {
-        $channel_lib = kernel::single('channel_channel');
-        $qimen_data = $channel_lib->getQimenJushitaErp();
-        
-        // 对 Secret Key 进行打码处理
-        if (!empty($qimen_data['secret_key'])) {
-            $secret_key = $qimen_data['secret_key'];
-            $length = strlen($secret_key);
-            if ($length > 8) {
-                // 显示前4位和后4位，中间用星号代替
-                $qimen_data['secret_key'] = substr($secret_key, 0, 4) . str_repeat('*', $length - 8) . substr($secret_key, -4);
-            } else {
-                // 如果长度小于等于8，全部用星号代替
-                $qimen_data['secret_key'] = str_repeat('*', $length);
-            }
-        }
-        
-        // 获取后端服务地址：域名 + /index.php/openapi/process/handle
-        $base_url = kernel::base_url(true);
-        $api_url = rtrim($base_url, '/') . '/index.php/openapi/process/handle';
-        
-        $this->pagedata['qimen_data'] = $qimen_data;
-        $this->pagedata['has_data'] = !empty($qimen_data);
-        $this->pagedata['api_url'] = $api_url;
-        
-        $this->display('admin/channel/qimen_bindrelation.html');
-    }
-
     public function apply_bindrelation($channel_id)
     {
-        $params = kernel::single('channel_rpc_response_bind')->get_params($channel_id, '', '', 'apply');
-        $this->pagedata['license_iframe_url'] = MATRIX_RELATION_URL . '?' . http_build_query($params);
-
-
+        // 顺丰 / 快递鸟等：统一走矩阵绑定页（顺丰自有key: show_type=kuaidi&sf_type=self，见 get_params）
+        $params                           = kernel::single('channel_rpc_response_bind')->get_params($channel_id);
+        $params['source']                 = 'apply';
+        $this->pagedata['license_iframe'] = sprintf('<iframe width="100%%" frameborder="0" height="99%%" id="iframe" onload="this.height=document.documentElement.clientHeight-4" src="%s" ></iframe>', MATRIX_RELATION_URL . '?' . http_build_query($params));
         $this->display('admin/channel/bindrelation.html');
     }
 

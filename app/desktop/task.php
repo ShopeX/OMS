@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 class desktop_task{
     
     function install_options(){
@@ -65,7 +71,7 @@ class desktop_task{
         $account = array(
             'pam_account'=>array(
                 'login_name'=>$options['admin_uname'],
-                'login_password' => hash('sha256', md5($options['admin_password'])),
+                'login_password'=>md5($options['admin_password']),
                 'account_type'=>'shopadmin',
                 ),
             'name'=>$options['admin_uname'],
@@ -87,9 +93,5 @@ class desktop_task{
         $deploy_info = base_setup_config::deploy_info();
         $logo = substr($deploy_info['product_name'],strlen('商派ONex  '));
         app::get('desktop')->setConf('logo',$logo);
-
-        if (!pam_account::get_account_type('desktop')){
-            pam_account::register_account_type('desktop','shopadmin','后台管理系统');
-        }
     }
 }

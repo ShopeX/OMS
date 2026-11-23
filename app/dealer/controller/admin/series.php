@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 产品线列表
  * @author wangjianjun@shopex.cn
@@ -26,7 +27,6 @@ class dealer_ctl_admin_series extends desktop_controller{
      * @param Post
      * @return String
      */
-
     public function index(){
         $actions = array(
             array(

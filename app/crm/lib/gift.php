@@ -369,7 +369,7 @@ class crm_gift{
     
     /**
      * 获取补发赠品规则
-     * 
+     *
      * @param $orderInfo 订单信息（包含objects、items商品明细）
      * @param $applyGiftInfo 订单审核时符合条件的赠品应用规则
      * @return array

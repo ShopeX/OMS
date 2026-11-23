@@ -17,11 +17,6 @@
 
 class console_mdl_map_goods extends dbeav_model{
 
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
     public function table_name($real = false){
         if($real){
            $table_name = 'sdb_inventorydepth_shop_skus';
@@ -31,10 +26,6 @@ class console_mdl_map_goods extends dbeav_model{
         return $table_name;
     }
 
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema(){
         $schema = app::get('inventorydepth')->model('shop_skus')->get_schema();
         if($schema['columns']['shop_id']) {
@@ -46,13 +37,6 @@ class console_mdl_map_goods extends dbeav_model{
         return $schema;
     }
 
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
     public function _filter($filter,$tableAlias=null,$baseWhere=null) {
         $shopFilter = array('node_type' => 'taobao');
         if($filter['shop_id']) {

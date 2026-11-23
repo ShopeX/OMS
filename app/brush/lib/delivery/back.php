@@ -14,22 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @author ykm 2015-12-30
  * @describe 特殊订单发货完成，进行发货回传
  */
+
 class brush_delivery_back
 {
     private $deliveryOrder;
     private $shipItemUseOrderItem = array('shopex_b2b');
-
-    /**
-     * back
-     * @param mixed $cursor_id ID
-     * @param mixed $params 参数
-     * @param mixed $errormsg errormsg
-     * @return mixed 返回值
-     */
 
     public function back($cursor_id,$params,$errormsg)
     {
@@ -38,11 +32,6 @@ class brush_delivery_back
         return false;
     }
 
-    /**
-     * backRequest
-     * @param mixed $orderIds ID
-     * @return mixed 返回值
-     */
     public function backRequest($orderIds)
     {
         set_time_limit(0);

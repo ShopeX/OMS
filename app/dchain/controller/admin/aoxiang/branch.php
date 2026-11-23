@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * OMS仓库推送给翱象系统
  *
@@ -30,12 +31,6 @@ class dchain_ctl_admin_aoxiang_branch extends desktop_controller
     
     private $_primary_id = null; //主键ID字段名
     private $_primary_bn = null; //单据编号字段名
-    /**
-     * __construct
-     * @param mixed $app app
-     * @return mixed 返回值
-     */
-
     public function __construct($app)
     {
         parent::__construct($app);
@@ -47,10 +42,6 @@ class dchain_ctl_admin_aoxiang_branch extends desktop_controller
         $this->_primary_bn = 'branch_bn';
     }
     
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index()
     {
         $actions = array();
@@ -103,10 +94,6 @@ JS
         $this->finder('dchain_mdl_aoxiang_branch', $params);
     }
     
-    /**
-     * _views
-     * @return mixed 返回值
-     */
     public function _views()
     {
         $base_filter = array();
@@ -187,10 +174,6 @@ JS
         $this->finder('ome_mdl_branch', $params);
     }
     
-    /**
-     * handwork_allot
-     * @return mixed 返回值
-     */
     public function handwork_allot()
     {
         $branch_ids = $_POST['branch_id'];
@@ -221,7 +204,7 @@ JS
     
     /**
      * 单个同步
-     * 
+     *
      * @return array
      */
     public function single_sync()

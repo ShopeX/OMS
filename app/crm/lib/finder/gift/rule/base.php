@@ -60,11 +60,6 @@ class crm_finder_gift_rule_base{
 
     var $column_limit = '是否限量';
     var $column_limit_width = 200;
-    /**
-     * column_limit
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_limit($row){
         $db = kernel::database();
         $filter_arr = $row[$this->col_prefix.'filter_arr'];
@@ -91,11 +86,6 @@ class crm_finder_gift_rule_base{
 
 
     var $detail_snapshot = '快照';
-    /**
-     * detail_snapshot
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function detail_snapshot($id){
         $render = app::get('crm')->render();
         $mdl_snapshot = app::get('crm')->model("snapshot");

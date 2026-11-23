@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 人工库存预占公用类
  * by wangjianjun 20171014
@@ -286,12 +287,6 @@ class console_stock_artificial_freeze{
     }
 
     //新增预占数据 返回lastInsert
-    /**
-     * insert_freeze_data
-     * @param mixed $current_data_arr 数据
-     * @return mixed 返回值
-     */
-
     public function insert_freeze_data($current_data_arr){
         $mdl_artificial_freeze = app::get('material')->model('basic_material_stock_artificial_freeze');
         $insert_arr = array(
@@ -395,10 +390,6 @@ class console_stock_artificial_freeze{
     }
 
     //获取非超级管理员的branch_id权限
-    /**
-     * 获取_user_branch
-     * @return mixed 返回结果
-     */
     public function get_user_branch(){
         $mdl_ome_branch = app::get('ome')->model('branch');
         $rs_branch = $mdl_ome_branch->getList();

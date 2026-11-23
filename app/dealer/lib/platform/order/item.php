@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 订单组结构
  *
@@ -36,12 +37,11 @@ class dealer_platform_order_item
      * 订单数据
      * @var Array
      */
-
     private $orders = array();
     
     /**
      * 析构
-     * 
+     *
      * @param Array $orders 订单组数据
      * @return void
      */
@@ -53,7 +53,7 @@ class dealer_platform_order_item
     
     /**
      * 对当前结果进行处理
-     * 
+     *
      * @param $config
      * @return false
      */
@@ -64,7 +64,7 @@ class dealer_platform_order_item
     
     /**
      * 检查订单组内容是否有效
-     * 
+     *
      * @param Array $orders 订单组
      * @return Boolean
      */
@@ -75,7 +75,7 @@ class dealer_platform_order_item
     
     /**
      * 获取订单内容
-     * 
+     *
      * @return array
      */
     public function getOrders()
@@ -85,7 +85,7 @@ class dealer_platform_order_item
     
     /**
      * 获取送货地址
-     * 
+     *
      * @return String
      */
     public function getShipArea()
@@ -101,7 +101,7 @@ class dealer_platform_order_item
     
     /**
      * 获取shop_id
-     * 
+     *
      * @return string
      */
     public function getShopId()
@@ -117,7 +117,7 @@ class dealer_platform_order_item
     
     /**
      * 获取订单条数
-     * 
+     *
      * @return Integer
      */
     public function getOrderNum()
@@ -131,7 +131,7 @@ class dealer_platform_order_item
     
     /**
      * 获取店铺类型
-     * 
+     *
      * @return string
      */
     public function getShopType()
@@ -147,7 +147,7 @@ class dealer_platform_order_item
     
     /**
      * 获取订单重量
-     * 
+     *
      * @return number
      */
     public function getWeight()
@@ -174,7 +174,7 @@ class dealer_platform_order_item
     
     /**
      * 获取订单商品重量
-     * 
+     *
      * @param $plat_order_id
      * @param $type
      * @param $additional

@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @Author: xueding@shopex.cn
  * @Date: 2022/12/19
@@ -30,7 +31,6 @@ class dealer_verify_orders
      * @param null $msg
      * @return bool
      */
-
     public function createB2BInvoice($verifyOrdersData, &$msg = null)
     {
         $orderSdf = $this->_formatCreateParams($verifyOrdersData);

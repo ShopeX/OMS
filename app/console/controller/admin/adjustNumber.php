@@ -17,10 +17,6 @@
 
 class console_ctl_admin_adjustNumber extends desktop_controller{
 
-    /**
-     * exportTemplate
-     * @return mixed 返回值
-     */
     public function exportTemplate(){
         die('此接口已经废弃');
         $filename = "调账模板".date('Y-m-d').".csv";
@@ -44,10 +40,6 @@ class console_ctl_admin_adjustNumber extends desktop_controller{
         echo '"'.implode('","',$title).'"';
     }
     
-    /**
-     * import
-     * @return mixed 返回值
-     */
     public function import(){
         die('此接口已经废弃');
         $this->finder('console_mdl_adjustNumber',array(

@@ -18,7 +18,7 @@
 class desktop_ip{
     /**
      * IP限制
-     * 
+     *
      * @return void
      * @author 
      */
@@ -35,7 +35,7 @@ class desktop_ip{
 
     /**
      * IP段
-     * 
+     *
      * @return void
      * @author 
      */

@@ -14,6 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+
+/**
+ * dbeav_model
+ * App
+ *
+ * @uses modelFactory
+ * @package
+ * @version $Id$
+ * @copyright 2003-2007 ShopEx
+ * @author Ever <ever@shopex.cn>
+ * @license Commercial
+ */
 class dbeav_model extends base_db_model{
 
     //dbschema tableNameѡһ
@@ -58,7 +77,7 @@ class dbeav_model extends base_db_model{
 
     /**
      * 某些列表不用很准确，返回估算值就行
-     * 
+     *
      * @return void
      * @author 
      */
@@ -107,11 +126,6 @@ class dbeav_model extends base_db_model{
         return $data;
     }
 
-    /**
-     * 查找er_count
-     * @param mixed $filter filter
-     * @return mixed 返回结果
-     */
     public function finder_count($filter=null){
         return $this->count($filter);
     }
@@ -135,11 +149,6 @@ class dbeav_model extends base_db_model{
         return $dbeav_filter_ret;
     }
 
-    /**
-     * insert
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function insert(&$data){
         if($ret = parent::insert($data)){
             if($this->use_meta){
@@ -156,12 +165,6 @@ class dbeav_model extends base_db_model{
         return $ret;
     }
 
-    /**
-     * 删除
-     * @param mixed $filter filter
-     * @param mixed $subSdf subSdf
-     * @return mixed 返回值
-     */
     public function delete($filter,$subSdf = 'delete'){
         if( $subSdf && !is_array( $subSdf ) ){
             $subSdf = $this->getSubSdf($subSdf);
@@ -240,11 +243,11 @@ class dbeav_model extends base_db_model{
         return $pk;
     }
 
-    /**
+     /**
      * register_meta
-     * 
+     *
      * Ϊעһֶ
-     * 
+     *
      * @param mixed $column
      * @access public
      * @return bool
@@ -261,9 +264,9 @@ class dbeav_model extends base_db_model{
 
     /**
      * prepare_select
-     * 
+     *
      * ȥѯmetaֶκΪеĲѯ
-     * 
+     *
      * @param string $cols
      * @access public
      * @return array
@@ -294,11 +297,6 @@ class dbeav_model extends base_db_model{
     }
 
 
-    /**
-     * select
-     * @param mixed $table_name table_name
-     * @return mixed 返回值
-     */
     public function select($table_name='')
     {
         $table_name = ($talbe_name) ? $table_name : $this->table_name(true);
@@ -719,11 +717,6 @@ class dbeav_model extends base_db_model{
     }
 
     //根据配置字段获取导出的标题行
-    /**
-     * 获取ExportTitle
-     * @param mixed $fields fields
-     * @return mixed 返回结果
-     */
     public function getExportTitle($fields){
         $title = array();
         $main_columns = $this->get_schema();
@@ -737,12 +730,6 @@ class dbeav_model extends base_db_model{
     }
 
 
-    /**
-     * exportTemplateV2
-     * @param mixed $className className
-     * @param mixed $sort sort
-     * @return mixed 返回值
-     */
     public function exportTemplateV2($className = '', $sort = true) {
         $title = [];
         

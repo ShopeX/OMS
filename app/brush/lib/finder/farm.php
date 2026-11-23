@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @author ykm 2015-11-16
  * @describe 特殊订单条件列表
@@ -29,12 +30,6 @@ class brush_finder_farm{
     public $column_edit = '操作';
     var $column_edit_width = 120;
     var $column_edit_order = 1;
-    /**
-     * column_edit
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
-
     public function column_edit($row){
         $farm_id = $row['farm_id'];
         $finder_id = $_GET['_finder']['finder_id'];
@@ -42,11 +37,6 @@ class brush_finder_farm{
     }
 
     public $detail_log = '操作日志';
-    /**
-     * detail_log
-     * @param mixed $farmId ID
-     * @return mixed 返回值
-     */
     public function detail_log($farmId) {
         $render = app::get('brush')->render();
         $logObj = app::get('ome')->model('operation_log');

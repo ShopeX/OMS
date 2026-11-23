@@ -14,9 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 贸易公司
  */
+
 class dealer_mdl_betc extends dbeav_model
 {
     private $import_data      = [];
@@ -38,14 +40,6 @@ class dealer_mdl_betc extends dbeav_model
     //     );
     // }
 
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
-
     public function _filter($filter, $tableAlias = null, $baseWhere = null)
     {
         $where = ' 1 ';
@@ -55,7 +49,6 @@ class dealer_mdl_betc extends dbeav_model
     /*
      * 导出模板
      */
-
     public function exportTemplate()
     {
         foreach ($this->io_title() as $v) {
@@ -65,11 +58,6 @@ class dealer_mdl_betc extends dbeav_model
         return $title;
     }
 
-    /**
-     * io_title
-     * @param mixed $ioType ioType
-     * @return mixed 返回值
-     */
     public function io_title($ioType = 'csv')
     {
         $this->oSchema['csv'] = $this->templateColumn;
@@ -194,10 +182,6 @@ class dealer_mdl_betc extends dbeav_model
         return null;
     }
 
-    /**
-     * finish_import_csv
-     * @return mixed 返回值
-     */
     public function finish_import_csv()
     {
         $oQueue = app::get('base')->model('queue');
@@ -237,12 +221,6 @@ class dealer_mdl_betc extends dbeav_model
         return null;
     }
 
-    /**
-     * import_run
-     * @param mixed $cursor_id ID
-     * @param mixed $params 参数
-     * @return mixed 返回值
-     */
     public function import_run(&$cursor_id, $params)
     {
         $opInfo  = kernel::single('ome_func')->getDesktopUser();

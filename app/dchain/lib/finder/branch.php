@@ -28,11 +28,6 @@ class dchain_finder_branch{
     public $column_edit = "操作";
     public $column_edit_width = "170";
     public $column_edit_order = "1";
-    /**
-     * column_edit
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_edit($row){
         $finder_id  = $_GET['_finder']['finder_id'];
         $channel_id = $row[$this->col_prefix.'channel_id'];

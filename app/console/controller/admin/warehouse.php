@@ -14,9 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 唯品会仓库管理
- *
+ * 
  * @access public
  * @author wangbiao<wangbiao@shopex.cn>
  */
@@ -135,11 +136,6 @@ class console_ctl_admin_warehouse extends desktop_controller{
         
         $this->end(true, '保存成功');
     }
-
-    /**
-     * 获取Warehouses
-     * @return mixed 返回结果
-     */
 
     public function getWarehouses()
     {

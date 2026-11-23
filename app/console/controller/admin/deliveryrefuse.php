@@ -22,7 +22,7 @@ class console_ctl_admin_deliveryrefuse extends desktop_controller {
 
 
     /**
-     * 
+     *
      * 拒收退货单列表
      */
     function index(){

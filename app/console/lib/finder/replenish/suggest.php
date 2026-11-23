@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 补货建议单finder类
  *
@@ -33,12 +34,6 @@ class console_finder_replenish_suggest
     var $column_edit = '操作';
     var $column_edit_width = 180;
     var $column_edit_order = 1;
-    /**
-     * column_edit
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
-
     public function column_edit($row)
     {
         $finder_id = $_GET['_finder']['finder_id'];
@@ -64,11 +59,6 @@ EOF;
     }
     
     var $detail_basic = '补货任务详情';
-    /**
-     * detail_basic
-     * @param mixed $sug_id ID
-     * @return mixed 返回值
-     */
     public function detail_basic($sug_id)
     {
         $render = app::get('console')->render();
@@ -92,11 +82,6 @@ EOF;
 
   
     var $detail_log = '日志详情';
-    /**
-     * detail_log
-     * @param mixed $sug_id ID
-     * @return mixed 返回值
-     */
     public function detail_log($sug_id)
     {
        

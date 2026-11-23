@@ -14,21 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   Assistant
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: 2024年
  * @describe: 经销商物料价格管理
  * ============================
  */
 class dealer_ctl_admin_goods_price extends desktop_controller 
 {
-    /**
-     * index
-     * @return mixed 返回值
-     */
-
     public function index() 
     {
         // 检查导出权限
@@ -169,10 +165,6 @@ class dealer_ctl_admin_goods_price extends desktop_controller
     }
     
     
-    /**
-     * 添加
-     * @return mixed 返回值
-     */
     public function add()
     {
         // 检查新增权限
@@ -193,10 +185,6 @@ class dealer_ctl_admin_goods_price extends desktop_controller
         $this->display('admin/goods/price/add.html');
     }
     
-    /**
-     * 保存
-     * @return mixed 返回操作结果
-     */
     public function save()
     {
         $this->begin('index.php?app=dealer&ctl=admin_goods_price&act=index'); // 开始事务，返回列表页

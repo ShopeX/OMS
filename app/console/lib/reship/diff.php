@@ -19,11 +19,6 @@
 
 class console_reship_diff {
 
-    /**
-     * doCheck
-     * @param mixed $reship reship
-     * @return mixed 返回值
-     */
     public function doCheck($reship) {
         $reship_id = $reship['reship_id'];
         $rsTran = kernel::database()->beginTransaction();
@@ -46,11 +41,6 @@ class console_reship_diff {
         return [true, ['msg'=>'操作成功']];
     }
 
-    /**
-     * reshipStockout
-     * @param mixed $reship_id ID
-     * @return mixed 返回值
-     */
     public function reshipStockout($reship_id) {
         $oReship = app::get('ome')->model('reship');
         $reship = $oReship->dump(array('reship_id'=>$reship_id),'reship_id,reship_bn,branch_id,return_type');

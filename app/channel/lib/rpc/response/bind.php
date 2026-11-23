@@ -17,11 +17,6 @@
 
 class channel_rpc_response_bind
 {
-    /**
-     * callback
-     * @param mixed $result result
-     * @return mixed 返回值
-     */
     public function callback($result)
     {
         // 验证签名
@@ -45,8 +40,6 @@ class channel_rpc_response_bind
         $node_id   = $nodes['node_id'];
         $node_type = $nodes['node_type'];
         $api_v     = $nodes['api_v'];
-        $app_key   = isset($nodes['app_key']) ? $nodes['app_key'] : '';
-        $app_secret = isset($nodes['app_secret']) ? $nodes['app_secret'] : '';
 
         $filter = array('channel_id' => $channel_id);
 
@@ -61,15 +54,6 @@ class channel_rpc_response_bind
                     'api_version' => $api_v,
                     'addon'       => $nodes,
                 );
-                
-                // 存储 app_key 和 app_secret
-                if ($app_key) {
-                    $upData['app_key'] = $app_key;
-                }
-                if ($app_secret) {
-                    $upData['secret_key'] = $app_secret;
-                }
-                
                 $objStorage->update($upData, $filter);
                 die('1');
             }
@@ -80,41 +64,32 @@ class channel_rpc_response_bind
         die('0');
     }
 
-    /**
-     * 获取_params
-     * @param mixed $channel_id ID
-     * @param mixed $show_type show_type
-     * @param mixed $bind_type bind_type
-     * @param mixed $source source
-     * @return mixed 返回结果
-     */
-    public function get_params($channel_id, $show_type = '', $bind_type = '', $source = '')
+    public function get_params($channel_id, $show_type = '', $bind_type = '')
     {
         $apply = array(
             'certi_id' => base_certificate::get('certificate_id'),
             'node_id'  => base_shopnode::node_id('ome'),
             'sess_id'  => kernel::single('base_session')->sess_id(),
         );
+        $str = '';
+        ksort($apply);
+        foreach ($apply as $key => $value) {
+            $str .= $value;
+        }
+
+        $token          = base_certificate::get('token');
         $callbackParams = array('channel_id' => (int) $channel_id);
 
-        $apply['certi_ac'] = base_certificate::getCertiAC($apply);
+        $apply['certi_ac']       = md5($str . $token);
         $apply['callback']       = kernel::openapi_url('openapi.channel.bind', 'callback', $callbackParams);
-        $apply['api_url']        = urlencode(kernel::base_url(true) . kernel::url_prefix() . '/api?sess_id=' . $apply['sess_id']);
+        $apply['api_url']        = urlencode(kernel::base_url(true) . kernel::url_prefix() . '/api');
         $apply['show_type']      = $show_type;
         $apply['bind_type']      = $bind_type;
         $apply['version_source'] = 'onex-oms';
-        $apply['source']         = $source;
 
         if ($channel_id) {
-            $channel = app::get('channel')->model('channel')->dump($channel_id,'node_type,channel_type,channel_bn,shipper');
+            $channel = app::get('channel')->model('channel')->dump($channel_id,'node_type,channel_type,shipper');
             $apply['show_type'] = $channel['channel_type'];
-            
-            // 判断是否是奇门聚石塔内外互通
-            $channelObj = kernel::single('channel_channel');
-            if ($channelObj->isQimenJushitaErp($channel['channel_type'], $channel['channel_bn'])) {
-                $apply['source'] = 'qimenBind';
-            }
-            
             if ($channel['node_type'] == 'kdn') {
                 $apply['kdn_type'] = 'self';
                 

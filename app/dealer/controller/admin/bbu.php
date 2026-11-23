@@ -18,10 +18,6 @@
 class dealer_ctl_admin_bbu extends desktop_controller
 {
 
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index()
     {
         $actions = array(
@@ -45,20 +41,11 @@ class dealer_ctl_admin_bbu extends desktop_controller
         $this->finder('dealer_mdl_bbu', $params);
     }
 
-    /**
-     * 创建
-     * @return mixed 返回值
-     */
     public function create()
     {
         $this->display('admin/bbu.html');
     }
 
-    /**
-     * edit
-     * @param mixed $bbuId ID
-     * @return mixed 返回值
-     */
     public function edit($bbuId)
     {
         $row = app::get('dealer')->model('bbu')->db_dump(array('bbu_id' => $bbuId));
@@ -69,10 +56,6 @@ class dealer_ctl_admin_bbu extends desktop_controller
         $this->display('admin/bbu.html');
     }
 
-    /**
-     * 保存
-     * @return mixed 返回操作结果
-     */
     public function save()
     {
         $this->begin('index.php?app=dealer&ctl=admin_bbu&act=index');

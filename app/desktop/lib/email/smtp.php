@@ -1,6 +1,27 @@
 <?php
+/**
+ * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 ////////////////////////////////////////////////////
 // SMTP - PHP SMTP class
 //
@@ -50,26 +71,35 @@ class desktop_email_smtp {
     var $helo_rply;      # the reply the server sent to us for HELO
     /**#@-*/
 
-
+    /**
+     * Initialize the class so that the data is in a known state.
+     * @access public
+     * @return void
+     */
     function shopex_member_smtp() {
         $this->smtp_conn = 0;
         $this->error = null;
         $this->helo_rply = null;
         $this->do_debug = 0;
-    }    /**
+    }
+
+    /*************************************************************
+     *                    CONNECTION FUNCTIONS                  *
+     ***********************************************************/
+
+    /**
      * Connect to the server specified on the port specified.
      * If the port is not specified use the default SMTP_PORT.
      * If tval is specified then a connection will try and be
      * established with the server for that number of seconds.
      * If tval is not specified the default is 30 seconds to
      * try on the connection.
-     * 
+     *
      * SMTP CODE SUCCESS: 220
      * SMTP CODE FAILURE: 421
      * @access public
      * @return bool
      */
-
     function Connect($host,$port=0,$tval=30) {
         # set the error val to null so there is no confusion
         $this->error = null;
@@ -236,7 +266,25 @@ class desktop_email_smtp {
      *                        SMTP COMMANDS                       *
      *************************************************************/
 
-
+    /**
+     * Issues a data command and sends the msg_data to the server
+     * finializing the mail transaction. $msg_data is the message
+     * that is to be send with the headers. Each header needs to be
+     * on a single line followed by a <CRLF> with the message headers
+     * and the message body being seperated by and additional <CRLF>.
+     *
+     * Implements rfc 821: DATA <CRLF>
+     *
+     * SMTP CODE INTERMEDIATE: 354
+     *     [data]
+     *     <CRLF>.<CRLF>
+     *     SMTP CODE SUCCESS: 250
+     *     SMTP CODE FAILURE: 552,554,451,452
+     * SMTP CODE FAILURE: 451,554
+     * SMTP CODE ERROR  : 500,501,503,421
+     * @access public
+     * @return bool
+     */
     function Data($msg_data) {
         $this->error = null; # so no confusion is caused
 
@@ -367,9 +415,9 @@ class desktop_email_smtp {
      * Each value in the array returned has the format of:
      *     [ <full-name> <sp> ] <path>
      * The definition of <path> is defined in rfc 821
-     * 
+     *
      * Implements rfc 821: EXPN <SP> <string> <CRLF>
-     * 
+     *
      * SMTP CODE SUCCESS: 250
      * SMTP CODE FAILURE: 550
      * SMTP CODE ERROR  : 500,501,502,504,421
@@ -419,9 +467,9 @@ class desktop_email_smtp {
      * Sends the HELO command to the smtp server.
      * This makes sure that we and the server are in
      * the same known state.
-     * 
+     *
      * Implements from rfc 821: HELO <SP> <domain> <CRLF>
-     * 
+     *
      * SMTP CODE SUCCESS: 250
      * SMTP CODE ERROR  : 500, 501, 504, 421
      * @access public
@@ -493,9 +541,9 @@ class desktop_email_smtp {
      * returns the results back to the user. It is up to the user to
      * handle the returned data. If an error occurs then false is
      * returned with $this->error set appropiately.
-     * 
+     *
      * Implements rfc 821: HELP [ <SP> <string> ] <CRLF>
-     * 
+     *
      * SMTP CODE SUCCESS: 211,214
      * SMTP CODE ERROR  : 500,501,502,504,421
      * @access public
@@ -544,9 +592,9 @@ class desktop_email_smtp {
      * $from. Returns true if successful or false otherwise. If True
      * the mail transaction is started and then one or more Recipient
      * commands may be called followed by a Data command.
-     * 
+     *
      * Implements rfc 821: MAIL <SP> FROM:<reverse-path> <CRLF>
-     * 
+     *
      * SMTP CODE SUCCESS: 250
      * SMTP CODE SUCCESS: 552,451,452
      * SMTP CODE SUCCESS: 500,501,421
@@ -587,9 +635,9 @@ class desktop_email_smtp {
 
     /**
      * Sends the command NOOP to the SMTP server.
-     * 
+     *
      * Implements from rfc 821: NOOP <CRLF>
-     * 
+     *
      * SMTP CODE SUCCESS: 250
      * SMTP CODE ERROR  : 500, 421
      * @access public
@@ -630,9 +678,9 @@ class desktop_email_smtp {
     /**
      * Sends the quit command to the server and then closes the socket
      * if there is no error or the $close_on_error argument is true.
-     * 
+     *
      * Implements from rfc 821: QUIT <CRLF>
-     * 
+     *
      * SMTP CODE SUCCESS: 221
      * SMTP CODE ERROR  : 500
      * @access public
@@ -683,9 +731,9 @@ class desktop_email_smtp {
     /**
      * Sends the command RCPT to the SMTP server with the TO: argument of $to.
      * Returns true if the recipient was accepted false if it was rejected.
-     * 
+     *
      * Implements from rfc 821: RCPT <SP> TO:<forward-path> <CRLF>
-     * 
+     *
      * SMTP CODE SUCCESS: 250,251
      * SMTP CODE FAILURE: 550,551,552,553,450,451,452
      * SMTP CODE ERROR  : 500,501,503,421
@@ -728,9 +776,9 @@ class desktop_email_smtp {
      * Sends the RSET command to abort and transaction that is
      * currently in progress. Returns true if successful false
      * otherwise.
-     * 
+     *
      * Implements rfc 821: RSET <CRLF>
-     * 
+     *
      * SMTP CODE SUCCESS: 250
      * SMTP CODE ERROR  : 500,501,504,421
      * @access public
@@ -776,9 +824,9 @@ class desktop_email_smtp {
      * commands may be called followed by a Data command. This command
      * will send the message to the users terminal if they are logged
      * in.
-     * 
+     *
      * Implements rfc 821: SEND <SP> FROM:<reverse-path> <CRLF>
-     * 
+     *
      * SMTP CODE SUCCESS: 250
      * SMTP CODE SUCCESS: 552,451,452
      * SMTP CODE SUCCESS: 500,501,502,421
@@ -824,9 +872,9 @@ class desktop_email_smtp {
      * commands may be called followed by a Data command. This command
      * will send the message to the users terminal if they are logged
      * in and send them an email.
-     * 
+     *
      * Implements rfc 821: SAML <SP> FROM:<reverse-path> <CRLF>
-     * 
+     *
      * SMTP CODE SUCCESS: 250
      * SMTP CODE SUCCESS: 552,451,452
      * SMTP CODE SUCCESS: 500,501,502,421
@@ -872,9 +920,9 @@ class desktop_email_smtp {
      * commands may be called followed by a Data command. This command
      * will send the message to the users terminal if they are logged
      * in or mail it to them if they are not.
-     * 
+     *
      * Implements rfc 821: SOML <SP> FROM:<reverse-path> <CRLF>
-     * 
+     *
      * SMTP CODE SUCCESS: 250
      * SMTP CODE SUCCESS: 552,451,452
      * SMTP CODE SUCCESS: 500,501,502,421
@@ -917,9 +965,9 @@ class desktop_email_smtp {
      * This is an optional command for SMTP that this class does not
      * support. This method is here to make the RFC821 Definition
      * complete for this class and __may__ be implimented in the future
-     * 
+     *
      * Implements from rfc 821: TURN <CRLF>
-     * 
+     *
      * SMTP CODE SUCCESS: 250
      * SMTP CODE FAILURE: 502
      * SMTP CODE ERROR  : 500, 503
@@ -939,9 +987,9 @@ class desktop_email_smtp {
      * Verifies that the name is recognized by the server.
      * Returns false if the name could not be verified otherwise
      * the response from the server is returned.
-     * 
+     *
      * Implements rfc 821: VRFY <SP> <string> <CRLF>
-     * 
+     *
      * SMTP CODE SUCCESS: 250,251
      * SMTP CODE FAILURE: 550,551,553
      * SMTP CODE ERROR  : 500,501,502,421
@@ -984,7 +1032,15 @@ class desktop_email_smtp {
      *                       INTERNAL FUNCTIONS                       *
      ******************************************************************/
 
-
+    /**
+     * Read in as many lines as possible
+     * either before eof or socket timeout occurs on the operation.
+     * With SMTP we can tell if we have more lines to read if the
+     * 4th character is '-' symbol. If it is a space then we don't
+     * need to read anything else.
+     * @access private
+     * @return string
+     */
     function get_lines() {
         $data = "";
         while($str = @fgets($this->smtp_conn,515)) {

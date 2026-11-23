@@ -34,11 +34,6 @@ class console_finder_products{
         $this->_basicMStockFreezeLib = kernel::single('material_basic_material_stock_freeze');
     }
 
-    /**
-     * row_style
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function row_style($row){
         if($row[$this->col_prefix.'alert_store']==999){
             return 'list-warning';

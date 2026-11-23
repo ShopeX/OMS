@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 class desktop_view_input{
     function input_skunum($params) {
 		$html = utils::buildTag($params,'input autocomplete="off" class="x-input '.$params['class'].'" style="width:24px;"');

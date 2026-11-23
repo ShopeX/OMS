@@ -17,10 +17,10 @@
 
 class console_mdl_cpfr extends dbeav_model{
     
-   /**
-    * @param $cpfr_id
-    * @param string $update_type inc 增量，all 全量
-    */
+    /**
+     * @param $cpfr_id
+     * @param string $update_type inc 增量，all 全量
+     */
    public function finishIostock($cpfr_id,$update_type = 'inc'){
 
         ini_set('memory_limit','1024M');
@@ -88,12 +88,6 @@ class console_mdl_cpfr extends dbeav_model{
    }
 
 
-    /**
-     * 获取BranchStore
-     * @param mixed $branch_id ID
-     * @param mixed $product_id ID
-     * @return mixed 返回结果
-     */
     public function getBranchStore($branch_id,$product_id){
         $bpMdl = app::get('ome')->model('branch_product');
         $basicMStockFreezeLib   = kernel::single('material_basic_material_stock_freeze');

@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+
 $db['goods_price'] = array(
     'columns' => array(
         'id'           => array(

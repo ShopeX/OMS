@@ -30,11 +30,6 @@ class console_finder_product_store
     public $column_store_freeze = '线上在售冻结';
     public $column_store_freeze_width = 120;
     public $column_store_freeze_order = 90;
-    /**
-     * column_store_freeze
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_store_freeze($row)
     {
         $basicMStockFreezeLib = kernel::single('material_basic_material_stock_freeze');
@@ -44,12 +39,6 @@ class console_finder_product_store
     }
 
     public $column_store_bn = '关联门店编码';
-    /**
-     * column_store_bn
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_store_bn($row, $list)
     {
         $store = $this->_getStore($row[$this->col_prefix . 'branch_id'], $list);

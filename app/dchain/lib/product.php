@@ -14,9 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 翱象系统Lib抽象类
- *
+ * 
  * @author wangbiao@shopex.cn
  * @version 2023.03.08
  */
@@ -25,12 +26,11 @@ class dchain_product extends dchain_abstract
     /**
      * 同步普通商品给到翱象系统
      * @todo：支持批量同步,每次最多同步50条;
-     * 
+     *
      * @param array $dataList
      * @param string $operation
      * @return array
      */
-
     public function syncNormalProduct($dataList, $operation='')
     {
         $axProductMdl = app::get('dchain')->model('aoxiang_product');
@@ -109,7 +109,7 @@ class dchain_product extends dchain_abstract
     /**
      * 同步商品关系给到翱象系统
      * @todo：支持批量同步,每次最多同步50条;
-     * 
+     *
      * @param array $dataList
      * @param string $operation
      * @return array
@@ -209,7 +209,7 @@ class dchain_product extends dchain_abstract
     /**
      * 同步组合商品给到翱象系统
      * @todo：支持批量同步,每次最多同步50条;
-     * 
+     *
      * @param array $dataList
      * @param string $operation
      * @return array
@@ -342,7 +342,7 @@ class dchain_product extends dchain_abstract
     
     /**
      * 指定普通商品同步翱象任务
-     * 
+     *
      * @param $cursor_id
      * @param $params
      * @param $error_msg
@@ -445,7 +445,7 @@ class dchain_product extends dchain_abstract
 
     /**
      * 指定组合商品分配队列任务
-     * 
+     *
      * @param $cursor_id
      * @param $params
      * @param $error_msg
@@ -598,7 +598,7 @@ class dchain_product extends dchain_abstract
     
     /**
      * 拆分同步商品的任务
-     * 
+     *
      * @param $cursor_id
      * @param $params
      * @param $error_msg
@@ -675,7 +675,7 @@ class dchain_product extends dchain_abstract
     
     /**
      * 指定商品同步关系队列任务
-     * 
+     *
      * @param $cursor_id
      * @param $params
      * @param $error_msg
@@ -784,7 +784,7 @@ class dchain_product extends dchain_abstract
     /**
      * 删除翱象系统里OMS同步的商品
      * @todo：支持批量删除,每次最多同步50条;
-     * 
+     *
      * @param array $dataList
      * @param string $operation
      * @return array
@@ -883,7 +883,7 @@ class dchain_product extends dchain_abstract
     /**
      * 删除翱象系统里OMS同步的商品
      * @todo：支持批量删除,每次最多同步50条;
-     * 
+     *
      * @param array $dataList
      * @param string $operation
      * @return array
@@ -965,7 +965,7 @@ class dchain_product extends dchain_abstract
     
     /**
      * 获取组合销售物料对应的所有基础物料列表
-     * 
+     *
      * @param $sm_ids
      * @return void
      */

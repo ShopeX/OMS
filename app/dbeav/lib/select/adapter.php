@@ -15,6 +15,13 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 abstract class dbeav_select_adapter
 {
@@ -43,22 +50,12 @@ abstract class dbeav_select_adapter
 
     }//End Function
 
-    /**
-     * query
-     * @param mixed $selectObj selectObj
-     * @return mixed 返回值
-     */
     public function query($selectObj){        
         $sql = $selectObj->assemble();
         $res = $this->_connect->query($sql);
         return $res;
     }
 
-    /**
-     * quote
-     * @param mixed $name name
-     * @return mixed 返回值
-     */
     public function quote($name) 
     {
         if (is_int($value)) {

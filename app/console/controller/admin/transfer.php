@@ -62,11 +62,6 @@ class console_ctl_admin_transfer extends desktop_controller{
     }
 
 
-    /**
-     * 检查
-     * @param mixed $appropriation_id ID
-     * @return mixed 返回验证结果
-     */
     public function check($appropriation_id){
         $approMdl   = app::get('taoguanallocate')->model('appropriation');
         
@@ -85,11 +80,6 @@ class console_ctl_admin_transfer extends desktop_controller{
         
     }
 
-    /**
-     * finish
-     * @param mixed $appropriation_id ID
-     * @return mixed 返回值
-     */
     public function finish($appropriation_id){
         $approLib = kernel::single('erpapi_store_response_process_appropriation');
         if(!$appropriation_id){

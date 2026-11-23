@@ -14,21 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @author ykm 2015-11-20
  * @describe 特殊订单发货订单
  */
+
 class brush_mdl_delivery extends dbeav_model{
     //是否有导出配置
     var $has_export_cnf = true;
     var $export_name = '特殊订单发货单';
     var $export_flag = false;
-
-    /**
-     * modifier_bnsContent
-     * @param mixed $col col
-     * @return mixed 返回值
-     */
 
     public function modifier_bnsContent($col){
         $bnsContent = unserialize($col);
@@ -44,11 +40,6 @@ class brush_mdl_delivery extends dbeav_model{
         return sprintf("<span alt='%s' title='%s'><font color='red'>(%d / %d)</font> %s</span>",$cnt, $cnt, $skuNum, $itemNum, $content);
     }
 
-    /**
-     * modifier_logi_id
-     * @param mixed $col col
-     * @return mixed 返回值
-     */
     public function modifier_logi_id($col) {
         if(!$col) {
             return '';
@@ -58,13 +49,6 @@ class brush_mdl_delivery extends dbeav_model{
         return $row ? $row[$model->textColumn] : $col;
     }
 
-    /**
-     * modifier_ship_name
-     * @param mixed $ship_name ship_name
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_ship_name($ship_name,$list,$row)
     {
         if ($this->is_export_data) return $ship_name;
@@ -81,13 +65,6 @@ HTML;
         return $ship_name?$return:$ship_name;
     }
 
-    /**
-     * modifier_ship_tel
-     * @param mixed $tel tel
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_ship_tel($tel,$list,$row)
     {
         if ($this->is_export_data) return $tel;
@@ -105,13 +82,6 @@ HTML;
         return $tel?$return:$tel;
     }
 
-    /**
-     * modifier_ship_mobile
-     * @param mixed $mobile mobile
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_ship_mobile($mobile,$list,$row)
     {
         if ($this->is_export_data) return $mobile;
@@ -129,13 +99,6 @@ HTML;
         return $mobile?$return:$mobile;
     }
 
-    /**
-     * modifier_ship_addr
-     * @param mixed $ship_addr ship_addr
-     * @param mixed $list list
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_ship_addr($ship_addr,$list,$row)
     {
         if ($this->is_export_data) return $ship_addr;

@@ -28,11 +28,6 @@ class console_finder_dailyinventory_wmsdinv
 
     public $column_opt       = '操作';
     public $column_opt_order = 1;
-    /**
-     * column_opt
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_opt($row)
     {
         $buttons = [];
@@ -47,11 +42,6 @@ class console_finder_dailyinventory_wmsdinv
 
     public $column_outer_stock       = 'WMS库存';
     public $column_outer_stock_order = 50;
-    /**
-     * column_outer_stock
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_outer_stock($row)
     {
         return $row[$this->col_prefix . 'outer_stock'];

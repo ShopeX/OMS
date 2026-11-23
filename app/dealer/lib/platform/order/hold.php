@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 平台一件代发订单Hold单规则
  *
@@ -22,12 +23,6 @@
  */
 class dealer_platform_order_Hold extends dealer_abstract
 {
-    /**
-     * 处理
-     * @param mixed $plat_order_id ID
-     * @return mixed 返回值
-     */
-
     public function process($plat_order_id)
     {
         $logMdl = app::get('ome')->model('operation_log');
@@ -64,7 +59,7 @@ class dealer_platform_order_Hold extends dealer_abstract
     
     /**
      * 获取一件代发店铺Hold规则列表
-     * 
+     *
      * @return array|void
      */
     public function getHoldRules()
@@ -122,7 +117,7 @@ class dealer_platform_order_Hold extends dealer_abstract
     
     /**
      * 生成订单结构
-     * 
+     *
      * @param Array $plat_order_id
      * @retun void
      */
@@ -157,7 +152,7 @@ class dealer_platform_order_Hold extends dealer_abstract
     
     /**
      * 获取有效的Hold规则
-     * 
+     *
      * @param $rules
      * @param $group
      * @return void

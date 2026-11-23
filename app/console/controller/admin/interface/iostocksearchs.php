@@ -20,10 +20,6 @@ class console_ctl_admin_interface_iostocksearchs extends desktop_controller{
     var $workground = "interface_iostocksearchs_center";
 
 
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index()
     {
         $iostocksearchs = kernel::single('console_finder_interface_iostocksearchs');

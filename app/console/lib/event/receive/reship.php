@@ -92,7 +92,7 @@ class console_event_receive_reship extends console_event_response
     
     /**
      * WMS京东云交易订单退款成功MQ消息
-     * 
+     *
      * @param array $params
      * @return array
      */

@@ -14,19 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 补货建议单列表
- *
+ * 
  * @author wangbiao<wangbiao@shopex.cn>
  * @version $Id: Z
  */
 class console_ctl_admin_replenish_suggest extends desktop_controller
 {
-    /**
-     * index
-     * @return mixed 返回值
-     */
-
     public function index()
     {
         
@@ -154,11 +150,6 @@ class console_ctl_admin_replenish_suggest extends desktop_controller
         $this->splash('success', null, '修改成功', '',['info'=>$suggest]);
     }
 
-    /**
-     * exportTemplate
-     * @param mixed $sug_id ID
-     * @return mixed 返回值
-     */
     public function exportTemplate($sug_id)
     {
 

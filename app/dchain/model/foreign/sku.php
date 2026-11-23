@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 class dchain_mdl_foreign_sku extends dbeav_model
 {
 }

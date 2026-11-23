@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
@@ -24,11 +25,6 @@
  */
 class console_ctl_admin_o2oadjust extends desktop_controller
 {
-    /**
-     * index
-     * @return mixed 返回值
-     */
-
     public function index()
     {
         $actions   = [];
@@ -77,10 +73,6 @@ class console_ctl_admin_o2oadjust extends desktop_controller
         $this->finder('console_mdl_adjust', $params);
     }
 
-    /**
-     * exportTemplate
-     * @return mixed 返回值
-     */
     public function exportTemplate()
     {
         $row  = app::get('console')->model('adjust')->getTemplateColumn();
@@ -92,10 +84,6 @@ class console_ctl_admin_o2oadjust extends desktop_controller
         $lib->newExportExcel($data, '门店调整单模板-' . date('Y-m-d'), 'xls', $row);
     }
 
-    /**
-     * 添加
-     * @return mixed 返回值
-     */
     public function add() {
         // 获取用户有权限的门店仓库
 
@@ -121,10 +109,6 @@ class console_ctl_admin_o2oadjust extends desktop_controller
         $this->singlepage('admin/adjust/add.html');
     }
 
-    /**
-     * 保存
-     * @return mixed 返回操作结果
-     */
     public function save() {
         // 权限验证：检查用户是否有权限操作选择的门店仓库
         $is_super = kernel::single('desktop_user')->is_super();

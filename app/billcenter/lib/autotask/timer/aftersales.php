@@ -17,12 +17,6 @@
 
 class billcenter_autotask_timer_aftersales
 {
-    /**
-     * 处理
-     * @param mixed $params 参数
-     * @param mixed $error_msg error_msg
-     * @return mixed 返回值
-     */
     public function process($params, &$error_msg=''){
         set_time_limit(0); ignore_user_abort(1);
         

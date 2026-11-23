@@ -22,11 +22,6 @@ class desktop_finder
 
     public $detail_operation_log='操作日志';
 
-    /**
-     * detail_items
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function detail_items($id)
     {
         $render   = app::get('desktop')->render();

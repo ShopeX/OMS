@@ -45,12 +45,6 @@ class crm_mdl_gift_rule_base extends dbeav_model{
         return parent::_filter($filter, $tableAlias, $baseWhere);
     }
 
-    /**
-     * modifier_gift_list
-     * @param mixed $col col
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function modifier_gift_list($col, $list) {
         $col = unserialize($col);
         static $giftBn = array();

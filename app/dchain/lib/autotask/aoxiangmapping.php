@@ -15,7 +15,12 @@
  * limitations under the License.
  */
 
-
+/**
+ * 翱象同步商品Lib类
+ *
+ * @author wangbiao@shopex.cn
+ * @version 2023.03.15
+ */
 class dchain_autotask_aoxiangmapping
 {
     //当前的执行时间

@@ -14,6 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * ============================
+ * @Author:   yaokangming
+ * @Version:  1.0 
+ * @DateTime: 2022/11/23 15:40:10
+ * @describe: model层
+ * ============================
+ */
 class console_mdl_material_package extends dbeav_model {
 
     private $templateColumn = array(

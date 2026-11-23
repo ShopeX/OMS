@@ -14,18 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @author ykm 2015-12-16
  * @describe 发起电子面单请求
  */
 class brush_electron_yunda extends brush_electron_abstract{
     protected $preBn = 'bey';
-
-    /**
-     * deliveryToSdf
-     * @param mixed $arrDelivery arrDelivery
-     * @return mixed 返回值
-     */
 
     public function deliveryToSdf($arrDelivery){
         $shop = $this->getChannelExtend();

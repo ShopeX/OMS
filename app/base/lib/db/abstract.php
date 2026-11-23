@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 class base_db_abstract 
 {
     public $prefix = 'sdb_';
@@ -25,25 +31,11 @@ class base_db_abstract
         $this->prefix = DB_PREFIX;
     }
 
-    /**
-     * query
-     * @param mixed $sql sql
-     * @param mixed $skipModifiedMark skipModifiedMark
-     * @param mixed $db_lnk db_lnk
-     * @return mixed 返回值
-     */
     public function query($sql , $skipModifiedMark = false,$db_lnk=null){
         $rs = $this->exec($sql,$skipModifiedMark,$db_lnk);
         return $rs;
     }
 
-    /**
-     * selectPager
-     * @param mixed $queryString queryString
-     * @param mixed $pageStart pageStart
-     * @param mixed $pageLimit pageLimit
-     * @return mixed 返回值
-     */
     public function selectPager($queryString,$pageStart=null,$pageLimit=null) {
         $_data['total'] = $this->count($queryString);
         $_data['page'] = ceil($_data['total']/$pageLimit);

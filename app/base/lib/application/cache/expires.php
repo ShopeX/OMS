@@ -15,15 +15,18 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 class base_application_cache_expires extends base_application_prototype_filepath  
 {
     var $path = 'dbschema';
 
-    /**
-     * install
-     * @return mixed 返回值
-     */
     public function install() 
     {
         $dbschema = $this->getPathname();

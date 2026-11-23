@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
  *
@@ -14,6 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+
 class desktop_application_menu extends desktop_application_prototype_xml
 {
 

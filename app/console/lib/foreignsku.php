@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
 * 关联外部sku
 * @author Mr.dong 2011.8.29
@@ -21,14 +22,13 @@
 class console_foreignsku {
     
     /**
-     * 单个添加外部sku关联关系
-     * @access public
-     * @param String $inner_sku 内部sku
-     * @param String $wms_id wmsID
-     * @param String $sync_status 同步状态,默认未同步0
-     * @return boolean
-     */
-
+    * 单个添加外部sku关联关系
+    * @access public
+    * @param String $inner_sku 内部sku
+    * @param String $wms_id wmsID
+    * @param String $sync_status 同步状态,默认未同步0
+    * @return boolean
+    */
     public function insert($inner_sku,$wms_id,$sync_status='0'){
         if ( empty($inner_sku) ) return false;
 
@@ -48,15 +48,15 @@ class console_foreignsku {
     }
 
     /**
-     * 更新外部sku关联关系
-     * @access public
-     * @param String $inner_sku 内部sku
-     * @param String $wms_id wmsID
-     * @param String $new_tag 是否新品标识,0:新品,1:非新品
-     * @param String $sync_status 同步状态
-     * @param String $outer_sku 外部sku
-     * @return boolean
-     */
+    * 更新外部sku关联关系
+    * @access public
+    * @param String $inner_sku 内部sku
+    * @param String $wms_id wmsID
+    * @param String $new_tag 是否新品标识,0:新品,1:非新品
+    * @param String $sync_status 同步状态
+    * @param String $outer_sku 外部sku
+    * @return boolean
+    */
     public function update($inner_sku,$wms_id,$new_tag=NULL,$sync_status,$outer_sku=''){
         if ( empty($inner_sku) || empty($wms_id) ) return false;
 
@@ -82,13 +82,13 @@ class console_foreignsku {
     }
 
     /**
-     * 更新外部sku
-     * @access public
-     * @param String $inner_sku 内部sku
-     * @param String $wms_id wmsID
-     * @param String $outer_sku 外部sku
-     * @return boolean
-     */
+    * 更新外部sku
+    * @access public
+    * @param String $inner_sku 内部sku
+    * @param String $wms_id wmsID
+    * @param String $outer_sku 外部sku
+    * @return boolean
+    */
     public function update_sku($inner_sku,$wms_id,$outer_sku){
         if ( empty($inner_sku) || empty($wms_id) || empty($outer_sku) ) return false;
 
@@ -105,11 +105,11 @@ class console_foreignsku {
     }
 
     /**
-     * 删除sku信息
-     * @access public
-     * @param Int $product_id 货品ID
-     * @return bool
-     */
+    * 删除sku信息
+    * @access public
+    * @param Int $product_id 货品ID
+    * @return bool
+    */
     public function delete_sku($product_id=''){
         if (empty($product_id)) return false;
 
@@ -119,19 +119,19 @@ class console_foreignsku {
     }
 
     /**
-     * 批量更新SKU状态
-     * @access public
-     * @param Array $data SKU数据,多维
+    * 批量更新SKU状态
+    * @access public
+    * @param Array $data SKU数据,多维
      *              $data = array(
-     *                array(
-     *                 'inner_sku' => '内部SKU',
-     *                'outer_sku' => '外部SKU',
-     *               'status' => '同步状态,0 => '未同步',1 => '同步失败',2 => '同步中',3 => '同步成功',4 => '同步后编辑',
-     *            ),
-     *        );
-     * @param String $node_id 节点标识号
-     * @return boolean
-     */
+      *                array(
+       *                 'inner_sku' => '内部SKU',
+        *                'outer_sku' => '外部SKU',
+         *               'status' => '同步状态,0 => '未同步',1 => '同步失败',2 => '同步中',3 => '同步成功',4 => '同步后编辑',
+          *            ),
+           *        );
+    * @param String $node_id 节点标识号
+    * @return boolean
+    */
     public function set_sync_status($data,$node_id=''){
         if (!is_array($data) || empty($data) || empty($node_id)) return false;
 
@@ -151,12 +151,12 @@ class console_foreignsku {
     }
 
     /**
-     * 获取外部sku
-     * @access public
-     * @param String $inner_sku 内部sku
-     * @param String $wms_id wmsID
-     * @return String $outer_sku 外部sku
-     */
+    * 获取外部sku
+    * @access public
+    * @param String $inner_sku 内部sku
+    * @param String $wms_id wmsID
+    * @return String $outer_sku 外部sku
+    */
     public function get_outer_sku($inner_sku,$wms_id){
         $foreignObj = app::get('console')->model('foreign_sku');
         $foreign_detail = $foreignObj->dump(array('inner_sku'=>$inner_sku,'wms_id'=>$wms_id));
@@ -168,12 +168,12 @@ class console_foreignsku {
     }
 
     /**
-     * 获取内部sku
-     * @access public
-     * @param String $wms_id wmsID
-     * @param String $outer_sku 外部sku
-     * @return String $inner_sku 内部sku
-     */
+    * 获取内部sku
+    * @access public
+    * @param String $wms_id wmsID
+    * @param String $outer_sku 外部sku
+    * @return String $inner_sku 内部sku
+    */
     public function get_inner_sku($wms_id,$outer_sku){
         return $outer_sku;
         $foreignObj = app::get('console')->model('foreign_sku');
@@ -186,12 +186,12 @@ class console_foreignsku {
     }
 
     /**
-     * 获取当前wms sku是否需要再次同步
-     * @access public
-     * @param String $inner_sku 内部sku
-     * @param String $wms_id wms ID
-     * @return array('status'=>'allow','method'=>'') method:add商品添加,update商品编辑
-     */
+    * 获取当前wms sku是否需要再次同步
+    * @access public
+    * @param String $inner_sku 内部sku
+    * @param String $wms_id wms ID
+    * @return array('status'=>'allow','method'=>'') method:add商品添加,update商品编辑
+    */
     public function sync($inner_sku,$wms_id){
 
         $result = array('status'=>'', 'method'=>'');
@@ -210,12 +210,12 @@ class console_foreignsku {
     }
 
     /**
-     * 是否已同步
-     * @access public
-     * @param String $inner_sku 货号
-     * @param String $node_id
-     * @return bool true已同步 false未同步
-     */
+    * 是否已同步
+    * @access public
+    * @param String $inner_sku 货号
+    * @param String $node_id
+    * @return bool true已同步 false未同步
+    */
     public function issync($inner_sku,$node_id=''){
         if (empty($inner_sku) || empty($node_id)) return false;
 
@@ -230,12 +230,12 @@ class console_foreignsku {
 
 
     /**
-     * 获取当前wms sku信息
-     * @access public
-     * @param String $inner_sku 内部sku
-     * @param String $wms_id wms ID
-     * @return Array sku信息
-     */
+    * 获取当前wms sku信息
+    * @access public
+    * @param String $inner_sku 内部sku
+    * @param String $wms_id wms ID
+    * @return Array sku信息
+    */
     public function sku_info($inner_sku,$wms_id){
 
         $foreignObj = app::get('console')->model('foreign_sku');
@@ -245,12 +245,12 @@ class console_foreignsku {
 
 
     /**
-     * 获取当前wms sku信息
-     * @access public
-     * @param String $inner_sku 内部sku
-     * @param String $wms_id wms ID
-     * @return Array sku信息
-     */
+    * 获取当前wms sku信息
+    * @access public
+    * @param String $inner_sku 内部sku
+    * @param String $wms_id wms ID
+    * @return Array sku信息
+    */
     public function update_sync_status($bn){
 
         $db = kernel::database();
@@ -259,9 +259,9 @@ class console_foreignsku {
     }
  
     /**
-     * 批量更新商品同步状态
-     * 
-     */
+    * 批量更新商品同步状态
+    *
+    */
     public function batch_syncupdate($wms_id,$new_tag,$sync_status,$bns){
         $db = kernel::database();
         if($bns){

@@ -15,6 +15,12 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
 
 class desktop_ctl_system extends desktop_controller{
 
@@ -117,7 +123,7 @@ class desktop_ctl_system extends desktop_controller{
 
     /**
      * 站点设置
-     * 
+     *
      * @access public
      * @author chenping<chenping@shopex.cn>
      * @time 2024-06-20 11:35:00
@@ -128,61 +134,13 @@ class desktop_ctl_system extends desktop_controller{
         $siteInfo = kernel::single('desktop_site')->getInfo();
         
         $this->pagedata['siteInfo'] = $siteInfo;
-        
-        // 读取企业信息
-        $entId = base_enterprise::ent_id();
-        $entAc = base_enterprise::ent_ac();
-        $entEmail = base_enterprise::ent_email();
-        
-        // 处理密码显示：中间用星号隐藏
-        $entAcDisplay = '';
-        if ($entAc) {
-            $len = strlen($entAc);
-            if ($len <= 4) {
-                // 密码长度小于等于4，全部显示星号
-                $entAcDisplay = str_repeat('*', $len);
-            } else {
-                // 显示前2位和后2位，中间用星号
-                $entAcDisplay = substr($entAc, 0, 2) . str_repeat('*', $len - 4) . substr($entAc, -2);
-            }
-        }
-        
-        $this->pagedata['enterprise'] = array(
-            'ent_id' => $entId,
-            'ent_ac' => $entAcDisplay,
-            'ent_email' => $entEmail,
-        );
-        
-        // 检查是否是超级管理员
-        $is_super = $this->user->is_super();
-        $this->pagedata['is_super'] = $is_super;
-        
-        // 读取密钥（所有人默认看到打码版本，超级管理员可以查看明文）
-        $auth_key_full = app::get('entermembercenter')->getConf('auth.key');
-        $auth_key_display = '';
-        if ($auth_key_full) {
-            $len = strlen($auth_key_full);
-            if ($len <= 8) {
-                // 密钥长度小于等于8，全部显示星号
-                $auth_key_display = str_repeat('*', $len);
-            } else {
-                // 显示前4位和后4位，中间用星号
-                $auth_key_display = substr($auth_key_full, 0, 4) . str_repeat('*', $len - 8) . substr($auth_key_full, -4);
-            }
-        }
-        // 只有超级管理员才能获取完整密钥
-        $this->pagedata['auth_key'] = $is_super ? $auth_key_full : '';
-        $this->pagedata['auth_key_display'] = $auth_key_display;
-        
-        // 生成认证URL（统一使用 base_enterprise 提供的方法）
-        $this->pagedata['auth_url'] = base_enterprise::generate_auth_url();
 
         $this->page('site/setting.html');
     }
     
     /**
      * 站点信息保存
-     * 
+     *
      * @access public
      * @author chenping<chenping@shopex.cn>
      * @time 2024-06-20 13:38:00

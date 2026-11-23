@@ -15,6 +15,13 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 /*
  * @package base
@@ -50,7 +57,6 @@ abstract class base_cache_abstract
      * @access public
      * @return mixed
      */
-
     public function get_modified($type, $key) 
     {
         return $this->_vary_list[strtoupper($type)][strtoupper($key)];
@@ -64,7 +70,6 @@ abstract class base_cache_abstract
      * @access public
      * @return boolean
      */
-   
     public function set_modified($type, $key, $time=0) 
     {
         $now = ($time>0) ? $time : time();

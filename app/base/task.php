@@ -15,17 +15,16 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.com/license/gpl GPL License
+ */
 require_once(dirname(__FILE__) . '/lib/db/compat.php');
 class base_task {
 
     function install_options() {
-
-        // Allow environment overrides for DB config
-        $envDbHost = getenv('ONEX_OMS_DB_HOST');
-        $envDbUser = getenv('ONEX_OMS_DB_USER');
-        $envDbPassword = getenv('ONEX_OMS_DB_PASSWORD');
-        $envDbName = getenv('ONEX_OMS_DB_NAME');
 
         $_https_default = ($_SERVER['HTTPS'] == 'on') ? "On" : "Off";
         if (ECAE_MODE) {
@@ -44,15 +43,15 @@ class base_task {
         } else {
 
             return array(
-                'db_host'            => array('type' => 'text', 'vtype' => 'required', 'required' => true, 'title' => app::get('base')->_('数据库主机'), 'default' => $envDbHost ? $envDbHost : 'localhost'),
-                'db_user'            => array('type' => 'text', 'vtype' => 'required', 'required' => true, 'title' => app::get('base')->_('数据库用户名'), 'default' => $envDbUser ? $envDbUser : 'root'),
-                'db_password'        => array('type' => 'password', 'title' => app::get('base')->_('数据库密码'), 'default' => $envDbPassword ? $envDbPassword : ''),
-                'db_name'            => array('type' => 'select', 'vtype' => 'required', 'required' => true, 'title' => app::get('base')->_('数据库名'), 'options_callback' => array('app' => 'base', 'method' => 'dbnames'), 'onfocus' => 'setuptools.getdata(\'base\', \'dbnames\', this);', 'default' => $envDbName ? $envDbName : ''),
+                'db_host'            => array('type' => 'text', 'vtype' => 'required', 'required' => true, 'title' => app::get('base')->_('数据库主机'), 'default' => 'localhost'),
+                'db_user'            => array('type' => 'text', 'vtype' => 'required', 'required' => true, 'title' => app::get('base')->_('数据库用户名'), 'default' => 'root'),
+                'db_password'        => array('type' => 'password', 'title' => app::get('base')->_('数据库密码'), 'default' => ''),
+                'db_name'            => array('type' => 'select', 'vtype' => 'required', 'required' => true, 'title' => app::get('base')->_('数据库名'), 'options_callback' => array('app' => 'base', 'method' => 'dbnames'), 'onfocus' => 'setuptools.getdata(\'base\', \'dbnames\', this);'),
                 'db_prefix'          => array('type' => 'text', 'title' => app::get('base')->_('数据库表前缀'), 'default' => 'sdb_'),
                 'default_timezone'   => array('type'  => 'select', 'options' => base_location::timezone_list(),
                                               'title' => app::get('base')->_('默认时区'), 'default' => '8', 'vtype' => 'required', 'required' => true),
                 'with_https_support' => array('type'    => 'select', 'options' => array('Off' => '关闭', 'On' => '开启'), 'title' => app::get('base')->_('SSL安全支持'),
-                                              'default' => $_https_default, 'vtype' => 'required', 'required' => true),
+                                              'default' => $_https_default, 'vtype' => 'required', 'required' => true),//'ceti_identifier'=>array('type'=>'text','vtype'=>'required','required'=>true,'title'=>app::get('base')->_('电子邮箱或企业帐号'),'default'=>''),
             );
         }
     }
@@ -154,6 +153,7 @@ class base_task {
     }
 
     function post_install() {
+        kernel::single('base_application_manage')->sync();
         kernel::set_online(true);
         $rpc_server = array(
             'node_id'     => '1',
@@ -182,6 +182,31 @@ class base_task {
             cachemgr::clean($msg);  //清空缓存
             kernel::log('cache expiers update');
         }//变更cache_expires结构及数据，0.1版本前存在的问题包括0.1
+
+        if ($dbver && $dbver == '0.12') {
+            // 升级版本，清理原来rpcpoll表里面的大量冗余数据。
+            app::get('base')->model('rpcpoll')->delete(array('type' => 'response'));
+        } elseif ($dbver && $dbver == '0.13') {
+            // 0.13-0.14版本历史性的解决下openapi的bug-修改数据互联callback_url的地址.
+            // 将原来的api->openapi.
+            $params = array(
+                'app'     => 'app.updateRelCallbackUrl',
+                'cert_id' => base_certificate::get('certificate_id'),
+            );
+            $token = base_certificate::get('token');
+            $str = '';
+            ksort($params);
+            foreach ($params as $key => $value) {
+                $str .= $value;
+            }
+            $params['certi_ac'] = md5($str . $token);
+            $http = kernel::single('base_httpclient');
+            $http->timeout = 6;
+            $result = $http->post(
+                MATRIX_RELATION_URL . '/api.php',
+                $params
+            );
+        }
 
     }//End Function
 

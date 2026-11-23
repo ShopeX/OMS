@@ -14,22 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @author ykm 2015-12-15
  * @describe 特殊订单获取电子面单类
  */
+
 class brush_electron{
     public $logiId;
     public $delivery;
     public $channel;
     public $corp;
     public $msg;
-
-    /**
-     * __construct
-     * @param mixed $param param
-     * @return mixed 返回值
-     */
 
     public function __construct($param){
         if($param['logi_id']) {
@@ -41,10 +37,6 @@ class brush_electron{
         $this->delivery = $param['delivery'];
     }
 
-    /**
-     * isElectron
-     * @return mixed 返回值
-     */
     public function isElectron(){
         if(empty($this->logiId)) {
             return false;
@@ -64,10 +56,6 @@ class brush_electron{
     }
 
     //获取电子面单，判断直连 或 缓存池
-    /**
-     * 获取WaybillNumber
-     * @return mixed 返回结果
-     */
     public function getWaybillNumber(){
         $objEle = $this->getEleChannel();
         if($objEle) {
@@ -78,10 +66,6 @@ class brush_electron{
     }
 
     //从缓存池中获取电子面单
-    /**
-     * 获取BufferWaybill
-     * @return mixed 返回结果
-     */
     public function getBufferWaybill(){
         $objEle = $this->getEleChannel();
         if($objEle) {
@@ -92,11 +76,6 @@ class brush_electron{
     }
 
     //直连获取电子面单
-    /**
-     * 获取DirectWaybill
-     * @param mixed $delivery_id ID
-     * @return mixed 返回结果
-     */
     public function getDirectWaybill($delivery_id){
         $objEle = $this->getEleChannel();
         if($objEle) {
@@ -107,10 +86,6 @@ class brush_electron{
     }
 
     //获取大头笔
-    /**
-     * 获取WaybillExtend
-     * @return mixed 返回结果
-     */
     public function getWaybillExtend(){
         $objEle = $this->getEleChannel();
         if($objEle) {

@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 采购退货单
  * @author sunjing@shopex.cn
@@ -76,10 +77,9 @@ class console_ctl_admin_returned_purchase extends desktop_controller
     }
 
     /**
-     * 采购退货单新建
-     * 
-     */
-
+    * 采购退货单新建
+    *
+    */
     function add(){
         $supplierObj = app::get('purchase')->model('supplier');
         $branchObj = app::get('ome')->model('branch');
@@ -310,11 +310,11 @@ class console_ctl_admin_returned_purchase extends desktop_controller
     }
 
     /**
-     * 审核采购退货单
-     * 
-     * @access public
-     * return
-     */
+    * 审核采购退货单
+    *
+    * @access public
+    * return
+    */
     function check($rp_id){
         $detail = kernel::single('console_returned_purchase')->detail($rp_id);
         $this->pagedata['detail'] = $detail;
@@ -323,11 +323,11 @@ class console_ctl_admin_returned_purchase extends desktop_controller
     }
 
     /**
-     * 保存审核采购退货单
-     * 
-     * @access public
-     * return
-     */
+    * 保存审核采购退货单
+    *
+    * @access public
+    * return
+    */
     function do_check()
     {
         $libBranchProduct    = kernel::single('ome_branch_product');
@@ -384,7 +384,7 @@ class console_ctl_admin_returned_purchase extends desktop_controller
     
     /**
      * 编辑采购退货单
-     * 
+     *
      */
     function editReturn($rp_id){
         $this->begin('index.php?app=console&ctl=admin_returned_purchase&act=index');
@@ -557,7 +557,7 @@ class console_ctl_admin_returned_purchase extends desktop_controller
 
     /**
      * 打印退货单
-     * 
+     *
      * @param int $rp_id
      */
     function printItem($rp_id){
@@ -599,9 +599,9 @@ class console_ctl_admin_returned_purchase extends desktop_controller
     }
 
     /**
-     * 采购退货入库查异查看
-     * @ int rp_id
-     */
+    * 采购退货入库查异查看
+    * @ int rp_id
+    */
     function difference($rp_id){
         $returnedObj = app::get('purchase')->model('returned_purchase');
         $eoObj = app::get('purchase')->model('eo');
@@ -622,8 +622,8 @@ class console_ctl_admin_returned_purchase extends desktop_controller
     }
 
     /**
-     * 取消采购退货
-     */
+    * 取消采购退货
+    */
     function cancel($rp_id){
         $rpObj = app::get('purchase')->model('returned_purchase');
 
@@ -636,8 +636,8 @@ class console_ctl_admin_returned_purchase extends desktop_controller
     }
 
     /**
-     * 执行取消
-     */
+    * 执行取消
+    */
     function doCancel(){
         $this->begin('index.php?app=console&ctl=admin_returned_purchase&act=index&p[0]=eo');
         

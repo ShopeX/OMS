@@ -14,8 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
- * 经销商品价格导入导出类
+ * 经销商物料价格导入导出类
  * 参考订单导入导出的实现方式
  */
 class dealer_goods_price_importV2 implements omecsv_data_split_interface
@@ -42,7 +43,6 @@ class dealer_goods_price_importV2 implements omecsv_data_split_interface
      * @param $queue_data 请求参数
      * @return array
      */
-
     public function checkFile($file_name, $file_type, $queue_data)
     {
         // 检查导入权限

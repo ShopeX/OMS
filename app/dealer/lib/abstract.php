@@ -14,24 +14,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * 抽象类
+ *
+ * @author wangbiao@shopex.cn
+ * @version 2024.04.12
+ */
 abstract class dealer_abstract
 {
     public $page_size = 100;
     
-    /**
-     * __construct
-     * @return mixed 返回值
-     */
     public function __construct()
     {
         //--
     }
     
     /**
-     * succ
-     * @param mixed $msg msg
-     * @param mixed $data 数据
-     * @return mixed 返回值
+     * 成功输出
+     * 
+     * @param string $msg
+     * @param string $data
+     * @return array
      */
     final public function succ($msg='', $data=null)
     {
@@ -39,10 +43,11 @@ abstract class dealer_abstract
     }
     
     /**
-     * error
-     * @param mixed $error_msg error_msg
-     * @param mixed $data 数据
-     * @return mixed 返回值
+     * 失败输出
+     * 
+     * @param string $msg
+     * @param string $data
+     * @return array
      */
     final public function error($error_msg, $data=null)
     {

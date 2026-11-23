@@ -14,22 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * Created by PhpStorm.
  * User: yaokangming
  * Date: 2019/6/28
  * Time: 9:30
  */
+
 class crm_gift_sendgoods
 {
-    /**
-     * 处理
-     * @param mixed $ruleBase ruleBase
-     * @param mixed $sdf sdf
-     * @param mixed $suite suite
-     * @return mixed 返回值
-     */
-
     public function process(&$ruleBase, $sdf, $suite) {
         $error_msg_giftset = '';
         if ($ruleBase["filter_arr"]["sendgoods"]["type"] == 2) {
@@ -149,12 +143,6 @@ class crm_gift_sendgoods
         return true;
     }
 
-    /**
-     * crmGiftSendSms
-     * @param mixed $giftName giftName
-     * @param mixed $mobile mobile
-     * @return mixed 返回值
-     */
     public function crmGiftSendSms($giftName, $mobile) {
         foreach (explode('#', $mobile) as $telephone) {
             $errorMsg = '';
@@ -221,11 +209,6 @@ class crm_gift_sendgoods
         return true;
     }
 
-    /**
-     * 获取SalesMStock
-     * @param mixed $sm_id ID
-     * @return mixed 返回结果
-     */
     public function getSalesMStock($sm_id){
         $salesMaterialObj = app::get('material')->model('sales_material');
         $salesBasicMaterialObj = app::get('material')->model('sales_basic_material');
@@ -260,11 +243,6 @@ class crm_gift_sendgoods
     }
 
 
-    /**
-     * 获取EcMaterialStock
-     * @param mixed $bm_ids ID
-     * @return mixed 返回结果
-     */
     public function getEcMaterialStock($bm_ids){
         
         // 获取main仓库的ID列表

@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 产品线列表
  * @author wangjianjun@shopex.cn
@@ -27,7 +28,6 @@ class dealer_ctl_admin_series_products extends desktop_controller
      * @param Post
      * @return String
      */
-
     public function index($type = 'series')
     {
         $actions = $base_filter = [];
@@ -54,10 +54,10 @@ class dealer_ctl_admin_series_products extends desktop_controller
 
     /**
      * 产品线维度视图
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     public function seriesIndex($actions,$base_filter)
     {
         $params = array(
@@ -79,10 +79,10 @@ class dealer_ctl_admin_series_products extends desktop_controller
 
     /**
      * 经销商维度视图
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     public function bsIndex($actions,$base_filter)
     {
         $base_filter['filter_sql'] = ' e.bs_id is not null'; 
@@ -123,10 +123,10 @@ EOF;
 
     /**
      * 商品维度视图
-     * 
+     *
      * @return void
      * @author
-     * */
+     **/
     public function skuIndex($actions,$base_filter)
     {
         $params = array(
@@ -168,10 +168,6 @@ EOF;
         $this->finder('dealer_mdl_series_products', $params);
     }
 
-        /**
-     * exportSeriesProductsTemplate
-     * @return mixed 返回值
-     */
     public function exportSeriesProductsTemplate()
     {
         $seriesMdl   = app::get('dealer')->model('series_products');

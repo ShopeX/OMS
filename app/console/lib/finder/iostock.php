@@ -18,11 +18,6 @@
 class console_finder_iostock{
     var $detail_basic = '详情';
 
-    /**
-     * detail_basic
-     * @param mixed $bn_branch bn_branch
-     * @return mixed 返回值
-     */
     public function detail_basic($bn_branch)
     {
         // 取货号和库ID

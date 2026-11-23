@@ -15,6 +15,13 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 
 /*
  * 实现个简单的select对像
@@ -64,51 +71,28 @@ class dbeav_select
     
     private $_parts = array();
 
-    /**
-     * 设置_model
-     * @param mixed $model model
-     * @return mixed 返回操作结果
-     */
     public function set_model(&$model) 
     {
         $this->_model = $model;
         return $this;
     }//End Function
 
-    /**
-     * 获取_model
-     * @return mixed 返回结果
-     */
     public function get_model() 
     {
         return $this->_model;
     }//End Function
 
-    /**
-     * 设置_adapter
-     * @param mixed $adapter adapter
-     * @return mixed 返回操作结果
-     */
     public function set_adapter($adapter) 
     {
         $this->_adapter = $adapter;
         return $this;
     }//End Function
 
-    /**
-     * 获取_parts
-     * @return mixed 返回结果
-     */
     public function get_parts() 
     {
         return $this->_parts;
     }//End Function
 
-    /**
-     * 重置
-     * @param mixed $part part
-     * @return mixed 返回值
-     */
     public function reset($part=null) 
     {
         if ($part == null) {
@@ -119,23 +103,12 @@ class dbeav_select
         return $this;
     }//End Function
 
-    /**
-     * distinct
-     * @param mixed $flag flag
-     * @return mixed 返回值
-     */
     public function distinct($flag=true) 
     {
         $this->_parts[self::DISTINCT] = (bool) $flag;
         return $this;
     }//End Function
 
-    /**
-     * from
-     * @param mixed $db db
-     * @param mixed $cols cols
-     * @return mixed 返回值
-     */
     public function from($db, $cols=self::SQL_WILDCARD) 
     {
         $this->_parts[self::FROM] = $db;
@@ -143,11 +116,6 @@ class dbeav_select
         return $this;
     }//End Function
 
-    /**
-     * columns
-     * @param mixed $cols cols
-     * @return mixed 返回值
-     */
     public function columns($cols=self::SQL_WILDCARD) 
     {
         $this->reset('columns');
@@ -158,24 +126,12 @@ class dbeav_select
         return $this;
     }//End Function
 
-    /**
-     * where
-     * @param mixed $str str
-     * @param mixed $val val
-     * @return mixed 返回值
-     */
     public function where($str, $val='') 
     {
         $this->_parts[self::WHERE][] = $this->_where($str, $val, true);
         return $this;
     }//End Function
 
-    /**
-     * or_where
-     * @param mixed $str str
-     * @param mixed $val val
-     * @return mixed 返回值
-     */
     public function or_where($str, $val='') 
     {
         $this->_parts[self::WHERE][] = $this->_where($str, $val, false);
@@ -188,11 +144,6 @@ class dbeav_select
         return ($bool) ? self::SQL_AND . ' ' . $str : self::SQL_OR . ' ' . $str;
     }//End Function
 
-    /**
-     * group
-     * @param mixed $groups groups
-     * @return mixed 返回值
-     */
     public function group($groups) 
     {
         if(!is_array($groups)) $groups = array($groups);
@@ -202,11 +153,6 @@ class dbeav_select
         return $this;
     }//End Function
 
-    /**
-     * having
-     * @param mixed $str str
-     * @return mixed 返回值
-     */
     public function having($str) 
     {
         if(func_num_args() > 1){
@@ -220,11 +166,6 @@ class dbeav_select
         return $this;
     }//End Function
 
-    /**
-     * or_having
-     * @param mixed $str str
-     * @return mixed 返回值
-     */
     public function or_having($str) 
     {
         if(func_num_args() > 1){
@@ -238,11 +179,6 @@ class dbeav_select
         return $this;
     }//End Function
 
-    /**
-     * order
-     * @param mixed $orders orders
-     * @return mixed 返回值
-     */
     public function order($orders) 
     {
         if(!is_array($orders))  $orders = array($orders);
@@ -258,12 +194,6 @@ class dbeav_select
         return $this;
     }//End Function
 
-    /**
-     * limit
-     * @param mixed $offset offset
-     * @param mixed $count count
-     * @return mixed 返回值
-     */
     public function limit($offset=null, $count=null) 
     {
         $this->_parts[self::LIMIT_COUNT]  = (int) $count;
@@ -271,12 +201,6 @@ class dbeav_select
         return $this;
     }//End Function
 
-    /**
-     * page
-     * @param mixed $page page
-     * @param mixed $size size
-     * @return mixed 返回值
-     */
     public function page($page=null, $size=null) 
     {
         $page = ($page > 0) ? $page : 1;
@@ -286,20 +210,12 @@ class dbeav_select
         return $this;
     }//End Function
 
-    /**
-     * instance
-     * @return mixed 返回值
-     */
     public function instance() 
     {
         $this->_adapter->set_obj($this);
         return $this->_adapter;
     }//End Function
 
-    /**
-     * assemble
-     * @return mixed 返回值
-     */
     public function assemble() 
     {
         $sql = self::SQL_SELECT;
@@ -335,10 +251,6 @@ class dbeav_select
         return $sql .= ' ' . implode(', ', $columns);
     }//End Function
 
-    /**
-     * 获取_columns
-     * @return mixed 返回结果
-     */
     public function get_columns() 
     {
         $columns = array();
@@ -420,10 +332,6 @@ class dbeav_select
         return $sql;
     }//End Function
 
-    /**
-     * to_sql
-     * @return mixed 返回值
-     */
     public function to_sql() 
     {
         return $this->assemble();

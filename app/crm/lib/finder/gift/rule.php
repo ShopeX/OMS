@@ -86,11 +86,6 @@ class crm_finder_gift_rule{
         return $button;
     }
     
-    /**
-     * row_style
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function row_style($row)
     {
         $start_time = $row[$this->col_prefix.'start_time'];
@@ -106,11 +101,6 @@ class crm_finder_gift_rule{
 
     public $detail_detail = '详情';
     public $detail_detail_order = '10';
-    /**
-     * detail_detail
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function detail_detail($id){
         $render = app::get('crm')->render();
         $mdlRule = app::get('crm')->model("gift_rule");
@@ -167,11 +157,6 @@ class crm_finder_gift_rule{
 
     public $detail_snapshot = '快照';
     public $detail_snapshot_order = '20';
-    /**
-     * detail_snapshot
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function detail_snapshot($id){
         $render = app::get('crm')->render();
         $mdl_snapshot = app::get('crm')->model("snapshot");

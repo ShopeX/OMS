@@ -32,7 +32,7 @@ class console_event_trigger_returned_purchase{
 
    
     /**
-     * 
+     *
      * 采购退货单通知创建发起方法
      * @param string $wms_id 仓库类型ID
      * @param array $data 采购通知数据信息
@@ -44,7 +44,7 @@ class console_event_trigger_returned_purchase{
     }
 
     /**
-     * 
+     *
      * 采购退货单通知创建发起的响应接收方法
      * @param array $data
      */
@@ -53,7 +53,7 @@ class console_event_trigger_returned_purchase{
     }
 
     /**
-     * 
+     *
      * 采购退货单通知状态变更发起方法
      * @param string $wms_id 仓库类型ID
      * @param string $po_bn 采购通知单编号
@@ -66,7 +66,7 @@ class console_event_trigger_returned_purchase{
     }
 
     /**
-     * 
+     *
      * 采购通知状态变更发起方法
      * @param array $data
      */

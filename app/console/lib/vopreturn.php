@@ -320,7 +320,7 @@ class console_vopreturn
      * 生成售后单
      * @param int $iso_id
      * @return array
-     * */
+     **/
     public function _createAftersales($iso_id)
     {
         

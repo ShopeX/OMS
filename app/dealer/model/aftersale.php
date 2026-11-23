@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 分销售后单model类
  *
@@ -23,12 +24,6 @@
 class dealer_mdl_aftersale extends sales_mdl_aftersale
 {
     
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
-
     public function table_name($real = false)
     {
         if($real){
@@ -40,11 +35,7 @@ class dealer_mdl_aftersale extends sales_mdl_aftersale
         return $table_name;
     }
 
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
-    public function get_schema(){
+     public function get_schema(){
         return app::get('sales')->model('aftersale')->get_schema();
     }
 

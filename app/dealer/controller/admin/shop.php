@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 经销店铺管理
  *
@@ -33,12 +34,6 @@ class dealer_ctl_admin_shop extends desktop_controller
     private $_primary_id = null; //主键ID字段名
     private $_primary_bn = null; //单据编号字段名
     
-    /**
-     * __construct
-     * @param mixed $app app
-     * @return mixed 返回值
-     */
-
     public function __construct($app)
     {
         parent::__construct($app);
@@ -54,10 +49,6 @@ class dealer_ctl_admin_shop extends desktop_controller
         $this->_primary_bn = 'shop_bn';
     }
     
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index()
     {
         $actions = array();
@@ -96,7 +87,7 @@ class dealer_ctl_admin_shop extends desktop_controller
     
     /**
      * 公共filter条件
-     * 
+     *
      * @return array
      */
     public function getFilters()
@@ -268,10 +259,6 @@ class dealer_ctl_admin_shop extends desktop_controller
         $this->end(true, app::get('base')->_('保存成功'));
     }
     
-    /**
-     * showProduct
-     * @return mixed 返回值
-     */
     public function showProduct()
     {
         //get

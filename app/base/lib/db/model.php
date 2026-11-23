@@ -15,6 +15,12 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
 
 class base_db_model implements base_interface_model
 {
@@ -22,11 +28,6 @@ class base_db_model implements base_interface_model
     /** @var app */
     public $app;
     public $db;
-    /**
-     * __construct
-     * @param mixed $app app
-     * @return mixed 返回值
-     */
     public function __construct($app='')
     {
         $this->app = $app;
@@ -44,11 +45,6 @@ class base_db_model implements base_interface_model
         //end check
     }
 
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
     public function table_name($real = false)
     {
         $class_name = get_class($this);
@@ -72,12 +68,6 @@ class base_db_model implements base_interface_model
         return $rows;
     }
 
-    /**
-     * tidy_data
-     * @param mixed $rows rows
-     * @param mixed $cols cols
-     * @return mixed 返回值
-     */
     public function tidy_data(&$rows, $cols = '*')
     {
         if ($rows) {
@@ -122,11 +112,6 @@ class base_db_model implements base_interface_model
         }
     } //End Function
 
-    /**
-     * filter
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function filter($filter)
     {
         if (is_array($filter)) {
@@ -140,22 +125,12 @@ class base_db_model implements base_interface_model
         return base_db_tools::filter2sql($filter);
     }
 
-    /**
-     * count
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function count($filter = null)
     {
         $row = $this->db->select('SELECT count(*) as _count FROM `' . $this->table_name(1) . '` WHERE ' . $this->filter($filter));
         return intval($row[0]['_count']);
     }
 
-    /**
-     * viewcount
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function viewcount($filter = null)
     {
         $tab_style = app::get('ome')->getConf('desktop.finder.tab');
@@ -217,10 +192,6 @@ class base_db_model implements base_interface_model
         }
     }
 
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema()
     {
         $table = $this->table_name();
@@ -233,20 +204,12 @@ class base_db_model implements base_interface_model
         return $this->__exists_schema[$this->app->app_id][$table];
     }
 
-    /**
-     * _columns
-     * @return mixed 返回值
-     */
     public function _columns()
     {
         $schema = new base_application_dbtable;
         $dbinfo = $schema->detect($this->app, $this->table_name())->load();
         return (array) $dbinfo['columns'];
     }
-    /**
-     * 搜索Options
-     * @return mixed 返回值
-     */
     public function searchOptions()
     {
         $columns = array();
@@ -258,12 +221,6 @@ class base_db_model implements base_interface_model
         return $columns;
     }
 
-    /**
-     * replace
-     * @param mixed $data 数据
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function replace($data, $filter)
     {
         $where = base_db_tools::filter2sql($filter);
@@ -272,11 +229,6 @@ class base_db_model implements base_interface_model
         return !$sql || $this->db->exec($sql, $this->skipModifiedMark);
     }
 
-    /**
-     * insert
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     public function insert(&$data)
     {
         $cols         = $this->_columns();
@@ -428,11 +380,11 @@ class base_db_model implements base_interface_model
 
     /**
      * delete
-     * 
+     *
      * 根据条件删除条目
      * 不可以由pipe控制
      * 可以广播事件
-     * 
+     *
      * @param mixed $filter
      * @param mixed $named_action
      * @access public
@@ -450,7 +402,7 @@ class base_db_model implements base_interface_model
 
     /**
      * fireEvent 触发事件
-     * 
+     *
      * @param mixed $event
      * @access public
      * @return void
@@ -497,23 +449,11 @@ class base_db_model implements base_interface_model
         return $this->insert($dbData);
     }
 
-    /**
-     * 保存
-     * @param mixed $dbData 数据
-     * @param mixed $mustUpdate mustUpdate
-     * @return mixed 返回操作结果
-     */
     public function save(&$dbData, $mustUpdate = null)
     {
         return $this->db_save($dbData, $mustUpdate);
     }
 
-    /**
-     * db_dump
-     * @param mixed $filter filter
-     * @param mixed $field field
-     * @return mixed 返回值
-     */
     final public function db_dump($filter, $field = '*')
     {
         if (!isset($filter)) {
@@ -530,12 +470,6 @@ class base_db_model implements base_interface_model
         return $data;
     }
 
-    /**
-     * dump
-     * @param mixed $filter filter
-     * @param mixed $field field
-     * @return mixed 返回值
-     */
     public function dump($filter, $field = '*')
     {
         return $this->db_dump($filter, $field);

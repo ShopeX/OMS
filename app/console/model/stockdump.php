@@ -23,11 +23,6 @@ class console_mdl_stockdump extends dbeav_model{
     var $has_export_cnf = true;
     var $export_name = '转储单';
 
-    /**
-     * modifier_type
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function modifier_type($row){
         $info = kernel::single('siso_receipt_iostock')->get_iostock_types();
         return $info[$row]['info'];
@@ -152,20 +147,20 @@ class console_mdl_stockdump extends dbeav_model{
   }
     
     /**
-     * 生成调拨单号
-     * 
-     * */
+    * 生成调拨单号
+    *
+    **/
     function get_appro_bn($type){
         $iostcok = kernel::single("ome_iostock");
         return $iostcok->get_iostock_bn($type);
     }
 
     /**
-     * 获取出入库主表数据
-     * @access public
-     * @param Number $stock_id 出入库单ID
-     * @return 主表数据 
-     */
+    * 获取出入库主表数据
+    * @access public
+    * @param Number $stock_id 出入库单ID
+    * @return 主表数据 
+    */
     function detail($stock_id){
         if (empty($stock_id)) return NULL;
 
@@ -175,11 +170,11 @@ class console_mdl_stockdump extends dbeav_model{
     }
 
     /**
-     * 获取出入库商品总金额
-     * @access public
-     * @param Number $stock_id 出入库单ID
-     * @return 总金额 
-     */
+    * 获取出入库商品总金额
+    * @access public
+    * @param Number $stock_id 出入库单ID
+    * @return 总金额 
+    */
     function total_money($stock_id){
         if (empty($stock_id)) return NULL;
 
@@ -478,15 +473,6 @@ class console_mdl_stockdump extends dbeav_model{
         return null;
     }
 
-    /**
-     * 获取exportdetail
-     * @param mixed $fields fields
-     * @param mixed $filter filter
-     * @param mixed $offset offset
-     * @param mixed $limit limit
-     * @param mixed $has_title has_title
-     * @return mixed 返回结果
-     */
     public function getexportdetail($fields,$filter,$offset=0,$limit=1,$has_title=false)
     {
         

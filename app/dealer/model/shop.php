@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 经销店铺model类
  *
@@ -27,12 +28,6 @@ class dealer_mdl_shop extends ome_mdl_shop
         parent::__construct(app::get('ome'));
     }
     
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
-
     public function table_name($real=false)
     {
         $table_name = 'shop';

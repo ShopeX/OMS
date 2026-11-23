@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 class console_ctl_admin_delivery_sync extends desktop_controller {
 
     var $name = "通知仓库取消列表";

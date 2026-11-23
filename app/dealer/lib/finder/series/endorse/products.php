@@ -30,11 +30,6 @@ class dealer_finder_series_endorse_products
     public $column_edit       = '操作';
     public $column_edit_width = 90;
     public $column_edit_order = 1;
-    /**
-     * column_edit
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_edit($row)
     {
         $btn_arr = [
@@ -49,11 +44,6 @@ class dealer_finder_series_endorse_products
      * @return string
      */
     public $detail_show_log = '操作记录';
-    /**
-     * detail_show_log
-     * @param mixed $sep_id ID
-     * @return mixed 返回值
-     */
     public function detail_show_log($sep_id)
     {
         $finder_id = $_GET['_finder']['finder_id'];
@@ -75,12 +65,6 @@ class dealer_finder_series_endorse_products
     public $column_actual_stock = '可售库存数';
     public $column_actual_stock_order = 89;
     private $initMaterialSale = false;
-    /**
-     * column_actual_stock
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_actual_stock($row, $list)
     {
         if(!$this->initMaterialSale) {

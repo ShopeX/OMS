@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 门店店铺商品库存
  *
@@ -30,7 +31,6 @@ class console_ctl_admin_product_store extends desktop_controller
     /**
      * 正价店铺商品
      */
-
     function normal()
     {
         $base_filter = array();
@@ -173,7 +173,7 @@ class console_ctl_admin_product_store extends desktop_controller
     
     /**
      * 修改物流公司
-     * */
+     **/
     public function ajaxSetScope()
     {
         $key_id_name = 'id';

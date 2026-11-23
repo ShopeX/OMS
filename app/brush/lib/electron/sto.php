@@ -14,18 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @author ykm 2015-12-16
  * @describe 发起电子面单请求
  */
 class brush_electron_sto extends brush_electron_abstract
 {
-    /**
-     * deliveryToSdf
-     * @param mixed $delivery delivery
-     * @return mixed 返回值
-     */
-
     public function deliveryToSdf($delivery) {//各自实现
         $sdf = array();
 
@@ -33,10 +28,6 @@ class brush_electron_sto extends brush_electron_abstract
     }
     
     //获取大头笔
-    /**
-     * 获取WaybillExtend
-     * @return mixed 返回结果
-     */
     public function getWaybillExtend()
     {
         $waybill = array();

@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 公共共享Lib方法类
  *
@@ -24,11 +25,10 @@ class dealer_common
 {
     /**
      * 替换特定字符为空
-     * 
+     *
      * @param string $str
      * @return string
      */
-
     public function replaceChar($str)
     {
         $str = str_replace(array("\r\n","\r","\n","\t","\\","'",'"',"	", ' ','&nbsp;'), '', $str);
@@ -38,7 +38,7 @@ class dealer_common
     
     /**
      * 检查手机号有效性
-     * 
+     *
      * @param $mobile
      * @param $error_msg
      * @return boolean

@@ -15,16 +15,17 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 class base_request{
 
     var $request_params = array();
 
-    /**
-     * 设置_params
-     * @param mixed $request_params 参数
-     * @return mixed 返回操作结果
-     */
     public function set_params($request_params){
         $this->request_params = $request_params;
     }

@@ -15,6 +15,12 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
 
 class desktop_finder_builder_panel_render
 {
@@ -32,11 +38,6 @@ class desktop_finder_builder_panel_render
         $this->finder_aliasname = $finder_aliasname;
     }
 
-    /**
-     * 设置Finder
-     * @param mixed $finder finder
-     * @return mixed 返回操作结果
-     */
     public function setFinder($finder) {
         $this->finder = $finder;
     }

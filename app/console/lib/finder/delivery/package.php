@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 物流包裹明细列表Finder类
  *
@@ -117,7 +118,6 @@ class console_finder_delivery_package
      * 暂时未考虑性能，后需需要优化
      * @param $list
      */
-
     public function _getDeliveryList($list)
     {
         if(empty(self::$_orderList)){

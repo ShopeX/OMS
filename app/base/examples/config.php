@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 /**
  * 网店配置模板
  *
@@ -24,391 +30,180 @@
  */
 
 
-// 可配置项总览（envMap 已集中定义；下方保留逐条配置作对照）
-// 推荐在 .env 中设置以下 key，系统按 env 优先、无值用 default。
-
-// 读取同级/上级 .env（支持 key=value），便于本地安装不改代码
-if (!function_exists('__load_env_if_exists')) {
-    function __load_env_if_exists(array $paths)
-    {
-        foreach ($paths as $envFile) {
-            if (!$envFile || !is_readable($envFile)) {
-                continue;
-            }
-            $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-            foreach ($lines as $line) {
-                if (strpos(ltrim($line), '#') === 0) {
-                    continue;
-                }
-                $parts = explode('=', $line, 2);
-                if (count($parts) !== 2) {
-                    continue;
-                }
-                $k = trim($parts[0]);
-                $v = trim($parts[1]);
-                // 去掉包裹引号
-                if ((str_starts_with($v, '"') && str_ends_with($v, '"')) || (str_starts_with($v, "'") && str_ends_with($v, "'"))) {
-                    $v = substr($v, 1, -1);
-                }
-                putenv($k.'='.$v);
-                $_ENV[$k] = $v;
-            }
-        }
-    }
-}
-$envCandidates = array(
-    __DIR__.'/.env',
-);
-
-// 去重
-$envCandidates = array_values(array_unique(array_filter($envCandidates)));
-__load_env_if_exists($envCandidates);
-// 数据库      : 用户/密码/库名/主机/持久连接                -> ONEX_OMS_DB_USER / ONEX_OMS_DB_PASSWORD / ONEX_OMS_DB_NAME / ONEX_OMS_DB_HOST / ONEX_OMS_DB_PCONNECT
-// 运行控制    : URL 重写、密钥、表前缀、时区、禁缓存/禁 kv    -> ONEX_OMS_WITH_REWRITE / ONEX_OMS_STORE_KEY / ONEX_OMS_DB_PREFIX / ONEX_OMS_DEFAULT_TIMEZONE / ONEX_OMS_WITHOUT_CACHE / ONEX_OMS_WITHOUT_KVSTORE_PERSISTENT
-// 调优        : 字符集、排序、前端调试、HTTPS 支持            -> ONEX_OMS_DB_CHARSET / ONEX_OMS_DB_COLLATE / ONEX_OMS_DEBUG_JS / ONEX_OMS_WITH_HTTPS_SUPPORT
-// 目录常量    : 根目录自动计算，其余可改                     -> ROOT_DIR / DATA_DIR / THEME_DIR / PUBLIC_DIR / MEDIA_DIR / SECACHE_SIZE / MAIL_LOG / DEFAULT_INDEX / SERVER_TIMEZONE / WITHOUT_GZIP / WITHOUT_STRIP_HTML
-// 日志        : 级别/类型/格式/日志文件/头部                 -> ONEX_OMS_LOG_LEVEL / ONEX_OMS_LOG_TYPE / ONEX_OMS_LOG_FORMAT / LOG_FILE / LOG_HEAD_TEXT
-// KV          : 后端选择、前缀、memcache/memcached/redis 配置 -> ONEX_OMS_KVSTORE_STORAGE / ONEX_OMS_KV_PREFIX / ONEX_OMS_KVSTORE_MEMCACHE_CONFIG / ONEX_OMS_KVSTORE_MEMCACHED_CONFIG / ONEX_OMS_KVSTORE_REDIS_CONFIG / ONEX_OMS_KVSTORE_REDIS_AUTH
-// Cache       : 后端选择及各存储配置                         -> ONEX_OMS_CACHE_STORAGE / ONEX_OMS_CACHE_MEMCACHE_CONFIG / ONEX_OMS_CACHE_MEMCACHED_CONFIG / ONEX_OMS_CACHE_REDIS_CONFIG / ONEX_OMS_CACHE_REDIS_AUTH / ONEX_OMS_CACHE_ALICACHE_CONFIG / ONEX_OMS_CACHE_XCACHE_CONFIG / ONEX_OMS_CACHE_WINCACHE_CONFIG / ONEX_OMS_CACHE_EACCELERATOR_CONFIG / ONEX_OMS_CACHE_APC_CONFIG / ONEX_OMS_CACHE_ECAE_CONFIG / ONEX_OMS_CACHE_SECACHE_CONFIG
-// 可选功能    : 安全模式/模板/入口/代理/触发器/从库/镜像/存储/压缩/静态/日志 -> ONEX_OMS_SAFE_MODE / ONEX_OMS_TEMPLATE_MODE / ONEX_OMS_APP_ROOT_PHP / ONEX_OMS_HTTP_PROXY / ONEX_OMS_TRIGGER_LOG / ONEX_OMS_DISABLE_TRIGGER / ONEX_OMS_BLACKLIST / ONEX_OMS_DB_SLAVE_NAME / ONEX_OMS_DB_SLAVE_USER / ONEX_OMS_DB_SLAVE_PASSWORD / ONEX_OMS_DB_SLAVE_HOST / ONEX_OMS_HOST_MIRRORS / ONEX_OMS_WITH_STORAGER / ONEX_OMS_GZIP_CSS / ONEX_OMS_GZIP_JS / ONEX_OMS_FILE_STORAGER / ONEX_OMS_STORAGE_MEMCACHED / ONEX_OMS_APP_STATICS_HOST / ONEX_OMS_MONOLOG_OPTIONS
-
-// ** envMap 集中定义（执行后续仍保留逐条配置，便于对照） ** //
-$defaultRootDir = realpath(dirname(__FILE__) . '/../');
-$envMap = array(
-    // DB 基础
-    'DB_USER'                    => array(
-        'env'     => 'ONEX_OMS_DB_USER',
-        'default' => 'usernamehere',
-    ), # DB 用户
-    'DB_PASSWORD'                => array(
-        'env'     => 'ONEX_OMS_DB_PASSWORD',
-        'default' => 'yourpasswordhere',
-    ), # DB 密码
-    'DB_NAME'                    => array(
-        'env'     => 'ONEX_OMS_DB_NAME',
-        'default' => 'putyourdbnamehere',
-    ), # DB 名
-    'DB_HOST'                    => array(
-        'env'     => 'ONEX_OMS_DB_HOST',
-        'default' => 'localhost',
-    ), # DB 主机
-    'DB_PCONNECT'                => array(
-        'env'     => 'ONEX_OMS_DB_PCONNECT',
-        'default' => null,
-        'bool'    => true,
-    ), # 持久连接开关
-
-    // 运行时控制
-    'WITH_REWRITE'               => array(
-        'env'     => 'ONEX_OMS_WITH_REWRITE',
-        'default' => false,
-        'bool'    => true,
-    ), # URL 重写
-    'STORE_KEY'                  => array(
-        'env'     => 'ONEX_OMS_STORE_KEY',
-        'default' => '',
-    ), # 密钥
-    'DB_PREFIX'                  => array(
-        'env'     => 'ONEX_OMS_DB_PREFIX',
-        'default' => 'sdb_',
-    ), # 表前缀
-    'DEFAULT_TIMEZONE'           => array(
-        'env'     => 'ONEX_OMS_DEFAULT_TIMEZONE',
-        'default' => '8',
-    ), # 默认时区
-    'WITHOUT_CACHE'              => array(
-        'env'     => 'ONEX_OMS_WITHOUT_CACHE',
-        'default' => false,
-        'bool'    => true,
-    ), # 全局禁缓存
-    'WITHOUT_KVSTORE_PERSISTENT' => array(
-        'env'     => 'ONEX_OMS_WITHOUT_KVSTORE_PERSISTENT',
-        'default' => false,
-        'bool'    => true,
-    ), # 禁 kv 持久
-
-    // 调优参数
-    'DB_CHARSET'                 => array(
-        'env'     => 'ONEX_OMS_DB_CHARSET',
-        'default' => 'utf8mb4',
-    ), # 字符集
-    'DB_COLLATE'                 => array(
-        'env'     => 'ONEX_OMS_DB_COLLATE',
-        'default' => '',
-    ), # 排序规则
-    'DEBUG_JS'                   => array(
-        'env'     => 'ONEX_OMS_DEBUG_JS',
-        'default' => false,
-        'bool'    => true,
-    ), # 前端调试
-    'WITH_HTTPS_SUPPORT'         => array(
-        'env'     => 'ONEX_OMS_WITH_HTTPS_SUPPORT',
-        'default' => 'Off',
-    ), # HTTPS 支持
-
-    // 目录与常量
-    'ROOT_DIR'                   => array(
-        'default' => $defaultRootDir,
-    ), # 根目录
-    'DATA_DIR'                   => array(
-        'default' => $defaultRootDir.'/data',
-    ), # 数据目录
-    'THEME_DIR'                  => array(
-        'default' => $defaultRootDir.'/themes',
-    ), # 主题目录
-    'PUBLIC_DIR'                 => array(
-        'default' => $defaultRootDir.'/public',
-    ), # 公共目录
-    'MEDIA_DIR'                  => array(
-        'default' => $defaultRootDir.'/public/images',
-    ), # 媒体目录
-    'SECACHE_SIZE'               => array(
-        'default' => '1024M',
-    ), # secache 大小
-    'MAIL_LOG'                   => array(
-        'default' => false,
-    ), # 邮件日志开关
-    'DEFAULT_INDEX'              => array(
-        'default' => '',
-    ), # 默认首页
-    'SERVER_TIMEZONE'            => array(
-        'default' => 8,
-    ), # 服务器时区
-    'WITHOUT_GZIP'               => array(
-        'default' => false,
-    ), # 关闭 GZIP
-    'WITHOUT_STRIP_HTML'         => array(
-        'default' => true,
-    ), # 关闭 strip html
-
-    // 日志
-    'LOG_FILE'                   => array(
-        'default' => $defaultRootDir.'/data/logs/{date}/{ip}.php',
-    ), # 日志文件
-    'LOG_HEAD_TEXT'              => array(
-        'default' => '<' . '?php exit()?' . ">\n",
-    ), # 日志头
-    'LOG_LEVEL'                  => array(
-        'env'     => 'ONEX_OMS_LOG_LEVEL',
-        'default' => null,
-    ), # 日志级别
-    'LOG_TYPE'                   => array(
-        'env'     => 'ONEX_OMS_LOG_TYPE',
-        'default' => null,
-    ), # 日志类型
-    'LOG_FORMAT'                 => array(
-        'env'     => 'ONEX_OMS_LOG_FORMAT',
-        'default' => null,
-    ), # 日志格式
-
-    // kvstore / cache
-    'KVSTORE_STORAGE'            => array(
-        'env'     => 'ONEX_OMS_KVSTORE_STORAGE',
-        'default' => 'base_kvstore_filesystem',
-    ), # kv 存储
-    'KVSTORE_MEMCACHE_CONFIG'    => array(
-        'env'     => 'ONEX_OMS_KVSTORE_MEMCACHE_CONFIG',
-        'default' => null,
-    ), # kv memcache 配置
-    'KVSTORE_MEMCACHED_CONFIG'   => array(
-        'env'     => 'ONEX_OMS_KVSTORE_MEMCACHED_CONFIG',
-        'default' => null,
-    ), # kv memcached 配置
-    'KVSTORE_REDIS_CONFIG'       => array(
-        'env'     => 'ONEX_OMS_KVSTORE_REDIS_CONFIG',
-        'default' => null,
-    ), # kv redis 配置
-    'KVSTORE_REDIS_AUTH'         => array(
-        'env'     => 'ONEX_OMS_KVSTORE_REDIS_AUTH',
-        'default' => null,
-    ), # kv redis 密码
-
-    'CACHE_STORAGE'              => array(
-        'env'     => 'ONEX_OMS_CACHE_STORAGE',
-        'default' => 'base_cache_secache',
-    ), # 缓存存储
-    'KV_PREFIX'                  => array(
-        'env'     => 'ONEX_OMS_KV_PREFIX',
-        'default' => null,
-    ), # kv 前缀
-    'CACHE_MEMCACHE_CONFIG'      => array(
-        'env'     => 'ONEX_OMS_CACHE_MEMCACHE_CONFIG',
-        'default' => null,
-    ), # cache memcache 配置
-    'CACHE_MEMCACHED_CONFIG'     => array(
-        'env'     => 'ONEX_OMS_CACHE_MEMCACHED_CONFIG',
-        'default' => null,
-    ), # cache memcached 配置
-    'CACHE_REDIS_CONFIG'         => array(
-        'env'     => 'ONEX_OMS_CACHE_REDIS_CONFIG',
-        'default' => null,
-    ), # cache redis 配置
-    'CACHE_REDIS_AUTH'           => array(
-        'env'     => 'ONEX_OMS_CACHE_REDIS_AUTH',
-        'default' => null,
-    ), # cache redis 密码
-    'CACHE_ALICACHE_CONFIG'      => array(
-        'env'     => 'ONEX_OMS_CACHE_ALICACHE_CONFIG',
-        'default' => null,
-    ), # alicache 配置
-    'CACHE_XCACHE_CONFIG'        => array(
-        'env'     => 'ONEX_OMS_CACHE_XCACHE_CONFIG',
-        'default' => null,
-    ), # xcache 配置
-    'CACHE_WINCACHE_CONFIG'      => array(
-        'env'     => 'ONEX_OMS_CACHE_WINCACHE_CONFIG',
-        'default' => null,
-    ), # wincache 配置
-    'CACHE_EACCELERATOR_CONFIG'  => array(
-        'env'     => 'ONEX_OMS_CACHE_EACCELERATOR_CONFIG',
-        'default' => null,
-    ), # eaccelerator 配置
-    'CACHE_APC_CONFIG'           => array(
-        'env'     => 'ONEX_OMS_CACHE_APC_CONFIG',
-        'default' => null,
-    ), # apc 配置
-    'CACHE_ECAE_CONFIG'          => array(
-        'env'     => 'ONEX_OMS_CACHE_ECAE_CONFIG',
-        'default' => null,
-    ), # ecae 配置
-    'CACHE_SECACHE_CONFIG'       => array(
-        'env'     => 'ONEX_OMS_CACHE_SECACHE_CONFIG',
-        'default' => null,
-    ), # secache 配置
-
-    // Session
-    'SESS_NAME'                  => array(
-        'env'     => 'ONEX_OMS_SESS_NAME',
-        'default' => null,
-    ), # session 名称
-    'SESS_CACHE_EXPIRE'          => array(
-        'env'     => 'ONEX_OMS_SESS_CACHE_EXPIRE',
-        'default' => null,
-    ), # session 过期（分钟）
-
-    // 其他可选
-    'SAFE_MODE'                  => array(
-        'env'     => 'ONEX_OMS_SAFE_MODE',
-        'default' => null,
-        'bool'    => true,
-    ), # 安全模式
-    'TEMPLATE_MODE'              => array(
-        'env'     => 'ONEX_OMS_TEMPLATE_MODE',
-        'default' => null,
-    ), # 模板模式
-    'APP_ROOT_PHP'               => array(
-        'env'     => 'ONEX_OMS_APP_ROOT_PHP',
-        'default' => null,
-    ), # 自定义入口
-    'HTTP_PROXY'                 => array(
-        'env'     => 'ONEX_OMS_HTTP_PROXY',
-        'default' => null,
-    ), # HTTP 代理
-    'TRIGGER_LOG'                => array(
-        'env'     => 'ONEX_OMS_TRIGGER_LOG',
-        'default' => null,
-        'bool'    => true,
-    ), # 触发器日志
-    'DISABLE_TRIGGER'            => array(
-        'env'     => 'ONEX_OMS_DISABLE_TRIGGER',
-        'default' => null,
-        'bool'    => true,
-    ), # 禁用触发器
-    'BLACKLIST'                  => array(
-        'env'     => 'ONEX_OMS_BLACKLIST',
-        'default' => null,
-    ), # 前台黑名单
-    'DB_SLAVE_NAME'              => array(
-        'env'     => 'ONEX_OMS_DB_SLAVE_NAME',
-        'default' => null,
-    ), # 从库名
-    'DB_SLAVE_USER'              => array(
-        'env'     => 'ONEX_OMS_DB_SLAVE_USER',
-        'default' => null,
-    ), # 从库用户
-    'DB_SLAVE_PASSWORD'          => array(
-        'env'     => 'ONEX_OMS_DB_SLAVE_PASSWORD',
-        'default' => null,
-    ), # 从库密码
-    'DB_SLAVE_HOST'              => array(
-        'env'     => 'ONEX_OMS_DB_SLAVE_HOST',
-        'default' => null,
-    ), # 从库主机
-    'HOST_MIRRORS'               => array(
-        'env'     => 'ONEX_OMS_HOST_MIRRORS',
-        'default' => null,
-    ), # 镜像域名
-    'WITH_STORAGER'              => array(
-        'env'     => 'ONEX_OMS_WITH_STORAGER',
-        'default' => null,
-    ), # 存储驱动
-    'GZIP_CSS'                   => array(
-        'env'     => 'ONEX_OMS_GZIP_CSS',
-        'default' => null,
-        'bool'    => true,
-    ), # gzip CSS
-    'GZIP_JS'                    => array(
-        'env'     => 'ONEX_OMS_GZIP_JS',
-        'default' => null,
-        'bool'    => true,
-    ), # gzip JS
-    'FILE_STORAGER'              => array(
-        'env'     => 'ONEX_OMS_FILE_STORAGER',
-        'default' => null,
-    ), # 文件存储
-    'STORAGE_MEMCACHED'          => array(
-        'env'     => 'ONEX_OMS_STORAGE_MEMCACHED',
-        'default' => null,
-    ), # memcached 节点
-    'APP_STATICS_HOST'           => array(
-        'env'     => 'ONEX_OMS_APP_STATICS_HOST',
-        'default' => null,
-    ), # 静态资源 host
-    'MONOLOG_OPTIONS'            => array(
-        'env'     => 'ONEX_OMS_MONOLOG_OPTIONS',
-        'default' => null,
-    ), # Monolog 配置
-);
-
-if (!function_exists('__env_or_default')) {
-    function __env_or_default($key, $default = null, $asBool = false)
-    {
-        $v = getenv($key);
-        if ($v === false) {
-            $v = null;
-        }
-        if ($v === null) {
-            $v = $default;
-        }
-        if ($asBool && $v !== null) {
-            $v = in_array(strtolower((string)$v), array('1','true','on','yes'), true);
-        }
-        return $v;
-    }
-}
-
-foreach ($envMap as $name => $cfg) {
-    if (defined($name)) {
-        continue;
-    }
-    $val = null;
-    if (is_array($cfg)) {
-        $asBool = !empty($cfg['bool']);
-        if (isset($cfg['env'])) {
-            $val = __env_or_default($cfg['env'], array_key_exists('default', $cfg) ? $cfg['default'] : null, $asBool);
-        } elseif (array_key_exists('default', $cfg)) {
-            $val = $cfg['default'];
-            if ($asBool && $val !== null) {
-                $val = (bool)$val;
-            }
-        }
-    } else {
-        $val = $cfg;
-    }
-    if ($val !== null) {
-        define($name, $val);
-    }
-}
-
 // ** 数据库配置 ** //
+define('DB_USER', getenv('ONEX_DB_USER') ?: 'usernamehere');  # 数据库用户名
+define('DB_PASSWORD', getenv('ONEX_DB_PASSWORD') ?: 'yourpasswordhere'); # 数据库密码
+define('DB_NAME', getenv('ONEX_DB_NAME') ?: 'putyourdbnamehere');    # 数据库名
+
+# 数据库服务器 -- 99% 的情况下您不需要修改此参数
+define('DB_HOST', getenv('ONEX_DB_HOST') ?: 'localhost');
+//define('DB_PCONNECT',1); #是否启用数据库持续连接？
+
+define('WITH_REWRITE',false);
+
+define('STORE_KEY', ''); #密钥
+define('DB_PREFIX', 'sdb_');
+#define('LANG', '');
+define('DEFAULT_TIMEZONE', '8');
+define('WITHOUT_CACHE',false);
+define('WITHOUT_KVSTORE_PERSISTENT', false);
+#启用触发器日志: home/logs/trigger.php
+//define ('TRIGGER_LOG',true);
+//define ('DISABLE_TRIGGER',true); #禁用触发器
+
+/* 以下为调优参数 */
+define('DB_CHARSET', 'utf8mb4');
+define('DB_COLLATE', '');
+define('DEBUG_JS',false);
+define('ROOT_DIR', realpath(dirname(__FILE__).'/../'));
+
+//安全模式启用后将禁用插件
+//define('SAFE_MODE',false);
+
+#您可以更改这个目录的位置来获得更高的安全性
+define('DATA_DIR', ROOT_DIR.'/data'); 
+define('THEME_DIR', ROOT_DIR.'/themes');
+define('PUBLIC_DIR', ROOT_DIR.'/public');  #同一主机共享文件
+define('MEDIA_DIR', PUBLIC_DIR.'/images');
+define('SECACHE_SIZE','1024M'); #缓存大小,最大不能超过1G
+//define('TEMPLATE_MODE','database');
+define("MAIL_LOG",false);
+define('DEFAULT_INDEX','');
+define('SERVER_TIMEZONE',8); #服务器时区
+//define('APP_ROOT_PHP','index.php'); #iis 5
+//define('HTTP_PROXY','127.0.0.1:8888');
 @ini_set('memory_limit','32M');
+define('WITHOUT_GZIP',false);
+define('WITHOUT_STRIP_HTML', true);
+define('WITH_HTTPS_SUPPORT', 'yourhttpssupport'); #是否开启HTTPS支持
+
+# Session 配置
+# define('SESS_NAME', 's');   #used as cookie name
+# define('SESS_CACHE_EXPIRE', 60);  #expires after n minutes
+
+#前台禁ip
+//define('BLACKLIST','10.0.0.0/24 192.168.0.1/24');
+
+#数据库集群.
+//define('DB_SLAVE_NAME',DB_NAME);
+//define('DB_SLAVE_USER',DB_USER);
+//define('DB_SLAVE_PASSWORD',DB_PASSWORD);
+//define('DB_SLAVE_HOST',DB_HOST);
+
+#支持泛解的时候才可以用这个, 仅支持fs_storager
+/*
+ * define('HOST_MIRRORS',
+ * 'http://img0.example.com,
+ * http://img2.example.com,
+ * http://img2.example.com');
+ */
+
+#使用ftp存放图片文件
+//define('WITH_STORAGER','ftp_storager');
+
+#确定服务器支持htaccess文件时，可以打开下面两个参数获得加速。
+//define ('GZIP_CSS',true);
+//define ('GZIP_JS',true);
+
+/* 日志 */
+//define('LOG_LEVEL',E_ERROR);
+
+/* 日志保存类型 0=>使用系统日志， 3=>保存文件 */
+#define('LOG_TYPE', 0);
+#define('LOG_TYPE', 3);
+
+#按日期分目录，每个ip一个日志文件。扩展名是php防止下载。
+define('LOG_FILE', DATA_DIR.'/logs/{date}/{ip}.php');
+
+#log文件头部放上exit()保证无法下载。
+define('LOG_HEAD_TEXT', '<'.'?php exit()?'.">\n");  
+//define('LOG_FORMAT',"{gmt}\t{request}\t{code}");
+
+#建议kvstore配置，使用 REDIS
+# define('KVSTORE_STORAGE', 'base_kvstore_redis');
+# define('KVSTORE_REDIS_CONFIG', '127.0.0.1:6379');
+# TLS（需 phpredis 5.3+，connect 支持 stream context）
+# define('KVSTORE_REDIS_TLS', true);
+# define('KVSTORE_REDIS_CONNECT_TIMEOUT', 2.0);
+# define('KVSTORE_REDIS_READ_TIMEOUT', 2.0);
+# define('KVSTORE_REDIS_STREAM_CONTEXT', array('stream' => array('verify_peer' => true, 'verify_peer_name' => true, 'cafile' => '/path/to/ca.pem')));
+
+# ome 独享库存 Redis（STORE_REDIS_STORAGE=true 时；TLS 常量 STORE_REDIS_*）
+# define('STORE_REDIS_CONFIG', '127.0.0.1:6379');
+# define('STORE_REDIS_TLS', true);
+# define('STORE_REDIS_CONNECT_TIMEOUT', 2.0);
+# define('STORE_REDIS_READ_TIMEOUT', 2.0);
+# define('STORE_REDIS_STREAM_CONTEXT', array('stream' => array('verify_peer' => true, 'verify_peer_name' => true, 'cafile' => '/path/to/ca.pem')));
+
+# taskmgr 缓存 Redis（app/taskmgr/lib/cache/redis.php）
+# define('__REDIS_CONFIG', '127.0.0.1:6379');
+# define('__REDIS_TLS', true);
+# define('__REDIS_CONNECT_TIMEOUT', 2.0);
+# define('__REDIS_READ_TIMEOUT', 2.0);
+# define('__REDIS_STREAM_CONTEXT', array('stream' => array('verify_peer' => true, 'verify_peer_name' => true, 'cafile' => '/path/to/ca.pem')));
+# taskmgr 队列 connecter（app/taskmgr/lib/connecter/redis.php）配置数组可选：TLS|USE_TLS, CONNECT_TIMEOUT, READ_TIMEOUT, STREAM_CONTEXT
+
+#建议Cache配置，使用Memcache或Redis
+# Memcache
+# define('CACHE_STORAGE', 'base_cache_memcache');
+# define('CACHE_MEMCACHE_CONFIG', '127.0.0.1:11211,127.0.0.1:11212');
+
+# Redis
+# define('CACHE_STORAGE', 'base_cache_redis');
+# define('CACHE_REDIS_CONFIG', '127.0.0.1:6379');
+
+#禁止运行安装
+//define('DISABLE_SYS_CALL',1);
+
+#使用数据库存放改动过的模板
+//define('THEME_STORAGE','db');
+
+# kvstroe后台存储类
+define('KVSTORE_STORAGE', 'base_kvstore_filesystem');
+# define('KVSTORE_STORAGE', 'base_kvstore_mysql');
+# define('KVSTORE_STORAGE', 'base_kvstore_memcache');
+# define('KVSTORE_STORAGE', 'base_kvstore_dba');
+# define('KVSTORE_STORAGE', 'base_kvstore_tokyotyrant');
+# define('KVSTORE_STORAGE', 'base_kvstore_mongodb');
+# define('KVSTORE_STORAGE', 'base_kvstore_redis');
+
+# cache后端存储类
+# define('CACHE_STORAGE', 'base_cache_nocache');
+define('CACHE_STORAGE', 'base_cache_secache');
+# define('CACHE_STORAGE', 'base_cache_memcache');
+# define('CACHE_STORAGE', 'base_cache_memcached');
+# define('CACHE_STORAGE', 'base_cache_redis');
+
+# KV_PREFIX KV引擎前缀
+# define('KV_PREFIX', 'default');
+
+# file_storage
+#define('FILE_STORAGER','filesystem');
+#define('STORAGE_MEMCACHED','192.168.0.230:11211,192.168.0.231:11211');
+#define('HOST_MIRRORS','http://img.demo.cn,http://img1.demo.cn');
+
+# app statics host
+#define('APP_STATICS_HOST', 'http://img.demo.cn;http://img1.demo.cn');
+
+# Monolog日志配置
+// define('MONOLOG_OPTIONS', [
+//     'api_log' => [
+//         'handlers' => [
+
+//         ],
+//     ],
+//     'web_log' => [
+//         'handlers' => [
+//             '\Monolog\Handler\StreamHandler' => [
+//                 DATA_DIR.'/logs/web.log'
+//             ],
+//             'base_logger_handler_apidb' => [],
+//         ]
+//     ]
+// ]);
+
+
+/**************** compat functions begin ****************/
+
+
+/**************** compat functions end ****************/

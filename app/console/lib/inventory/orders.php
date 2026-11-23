@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 唯品会平台拣货单任务Lib类
  *
@@ -24,11 +25,10 @@ class console_inventory_orders extends console_abstract
 {
     /**
      * 通过拣货单号获取JIT订单明细
-     * 
+     *
      * @param $pickInfo
      * @return void
      */
-
     public function getJitorderdetail($pickInfo)
     {
         $pickObj = app::get('purchase')->model('pick_bills');
@@ -166,7 +166,7 @@ class console_inventory_orders extends console_abstract
     
     /**
      * 拉取唯品会实时销售订单并进行库存冻结预占
-     * 
+     *
      * @param $pickInfo
      * @return void
      */
@@ -375,7 +375,7 @@ class console_inventory_orders extends console_abstract
     
     /**
      * 拉取唯品会实时销售订单并进行库存冻结预占
-     * 
+     *
      * @param $pickInfo
      * @return void
      */
@@ -598,7 +598,7 @@ class console_inventory_orders extends console_abstract
     
     /**
      * 按barcode条形码获取关联的OMS货品信息
-     * 
+     *
      * @param $orderBns
      * @return array|false
      */
@@ -656,7 +656,7 @@ class console_inventory_orders extends console_abstract
     
     /**
      * 通过销售订单ID获取对应的所有订单明细(以订单ID为下标)
-     * 
+     *
      * @param $ids
      * @return array
      */
@@ -691,7 +691,7 @@ class console_inventory_orders extends console_abstract
     /**
      * [唯品会销售订单]增加货品的库存预占冻结数量和店铺冻结数量
      * @todo：调用之前，已经有方法重置指定单个货品,店铺冻结数量为0;这里只需要累加店铺冻结数量;
-     * 
+     *
      * @param $product_id
      * @param $error_msg
      * @return bool
@@ -777,7 +777,7 @@ class console_inventory_orders extends console_abstract
     /**
      * [唯品会销售订单]增加货品的库存预占冻结数量和店铺冻结数量
      * @todo：调用之前，已经有方法重置指定单个货品,店铺冻结数量为0;这里只需要累加店铺冻结数量;
-     * 
+     *
      * @param $product_id
      * @param $error_msg
      * @return bool
@@ -889,7 +889,7 @@ class console_inventory_orders extends console_abstract
     
     /**
      * 核销处理订单
-     * 
+     *
      * @param $filter
      * @return void
      */
@@ -1049,7 +1049,7 @@ class console_inventory_orders extends console_abstract
     
     /**
      * 核销拣货订单明细任务
-     * 
+     *
      * @param $filter
      * @return void
      */
@@ -1245,7 +1245,7 @@ class console_inventory_orders extends console_abstract
     
     /**
      * 批量查询唯品会商品库存并保存
-     * 
+     *
      * @param $vopShopInfo
      * @param $materialList
      * @return void

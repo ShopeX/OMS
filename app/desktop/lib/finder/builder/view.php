@@ -15,7 +15,12 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
 class desktop_finder_builder_view extends desktop_finder_builder_prototype {
     protected $vue_mode = false;
 
@@ -860,11 +865,6 @@ EOF;
         return $body;
     }
 
-    /**
-     * 获取_views
-     * @param mixed $source source
-     * @return mixed 返回结果
-     */
     public function get_views($source = '')
     {
         $this->_tab_view_data = parent::get_views($source);

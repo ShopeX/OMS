@@ -15,6 +15,12 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
 
 if(!defined('APP_DIR')){
     define('APP_DIR',ROOT_DIR.'/app');
@@ -475,29 +481,16 @@ class kernel{
         _eogo_auto_load($class_name);
     }
 
-    /**
-     * 设置_lang
-     * @param mixed $language language
-     * @return mixed 返回操作结果
-     */
     static public function set_lang($language)
     {
         self::$__language = trim(strtolower($language));
     }//End Function
 
-    /**
-     * 获取_lang
-     * @return mixed 返回结果
-     */
     static public function get_lang()
     {
         return  self::$__language ? self::$__language : ((defined('LANG')&&constant('LANG')) ? LANG : 'zh-cn');
     }//End Function
 
-    /**
-     * require_ego
-     * @return mixed 返回值
-     */
     static public function require_ego() {
 
         require_once(dirname(__FILE__) . '/lib/ego/ego.php');

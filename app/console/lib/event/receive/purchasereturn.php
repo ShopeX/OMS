@@ -18,7 +18,7 @@
 class console_event_receive_purchasereturn extends console_event_response{
 
     /**
-     * 
+     *
      * 采购退货入库事件处理
      * @param array $data
      */

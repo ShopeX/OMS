@@ -18,10 +18,6 @@
 #增加规则的
 class crm_ctl_admin_gift_rulebase extends desktop_controller{
 
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index(){
         $actions     = array(
             array(
@@ -43,18 +39,10 @@ class crm_ctl_admin_gift_rulebase extends desktop_controller{
         ));
     }
 
-    /**
-     * 添加RuleBase
-     * @return mixed 返回值
-     */
     public function addRuleBase() {
         $this->editRuleBase();
     }
 
-    /**
-     * editRuleBase
-     * @return mixed 返回值
-     */
     public function editRuleBase() {
         $id = $_GET['id'];
         $gifts = array();
@@ -116,10 +104,6 @@ EOF;
         $this->page('admin/gift/rule_edit_base.html');
     }
 
-    /**
-     * ajax_get_gifts
-     * @return mixed 返回值
-     */
     public function ajax_get_gifts(){
         // 参数处理
         $s_gift_bn   = trim($_POST['s_gift_bn']);   // 赠品编码
@@ -143,10 +127,6 @@ EOF;
         echo(json_encode(array_values($rs)));
     }
     #显示选用的货品
-    /**
-     * showProducts
-     * @return mixed 返回值
-     */
     public function showProducts(){
         $bm_id = kernel::single('base_component_request')->get_post('bm_id');
         if ($bm_id) {
@@ -163,10 +143,6 @@ EOF;
         $this->display('admin/gift/show_products.html');
     }
     #显示所选的捆绑商品
-    /**
-     * showPkg
-     * @return mixed 返回值
-     */
     public function showPkg()
     {
         $sm_id = kernel::single('base_component_request')->get_post('sm_id');
@@ -185,10 +161,6 @@ EOF;
         $this->display('admin/gift/show_pkg.html');
     }
 
-    /**
-     * 保存
-     * @return mixed 返回操作结果
-     */
     public function save(){
         // 启动事务
         $this->begin("index.php?app=crm&ctl=admin_gift_rulebase&act=index");
@@ -294,11 +266,6 @@ EOF;
         }
     }
 
-    /**
-     * gift_rule_change
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function gift_rule_change($sdf){
         $mdl_snapshot = app::get('crm')->model('snapshot');
         $data = array(
@@ -313,10 +280,6 @@ EOF;
         return true;
     }
 
-    /**
-     * delRuleBase
-     * @return mixed 返回值
-     */
     public function delRuleBase(){
         $this->begin('index.php?app=crm&ctl=admin_gift_rulebase&act=index');
         #校验与写链路抽到 crm_capability_gift_rulebase::deleteRuleBases()，与 Vue 侧 api_gift_rulebase 共用同一实现
@@ -334,10 +297,6 @@ EOF;
         $this->end(true, $this->app->_('删除成功'));
     }
 
-    /**
-     * view_rule
-     * @return mixed 返回值
-     */
     public function view_rule(){
 
         $rule = array(

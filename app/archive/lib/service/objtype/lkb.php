@@ -23,7 +23,6 @@ class archive_service_objtype_lkb {
      * 
      * @return array $items 订单详情
      */
-
     public function process($obj){
         if ($obj['obj_type'] == 'lkb'){
 

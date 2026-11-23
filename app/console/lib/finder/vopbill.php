@@ -14,10 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: alt+t
  * @describe: 类
  * ============================
@@ -35,12 +36,6 @@ class console_finder_vopbill {
     
 
     public $detail_basic = '账单总览';
-
-    /**
-     * detail_basic
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
 
     public function detail_basic($id){
         $render = app::get('console')->render();
@@ -78,11 +73,6 @@ class console_finder_vopbill {
         return $render->fetch('admin/vop/bill_basic.html');
     }
     public $detail_amount = '销售/客退';
-    /**
-     * detail_amount
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function detail_amount($id)
     {
         @ini_set('memory_limit','1024M');
@@ -102,11 +92,6 @@ class console_finder_vopbill {
 
 
     public $detail_items = '明细列表';
-    /**
-     * detail_items
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function detail_items($id)
     {
         @ini_set('memory_limit','1024M');
@@ -120,11 +105,6 @@ class console_finder_vopbill {
     
 
     public $detail_oplog = "操作记录";
-    /**
-     * detail_oplog
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function detail_oplog($id){
         $render = app::get('console')->render();
         $opObj  = app::get('ome')->model('operation_log');

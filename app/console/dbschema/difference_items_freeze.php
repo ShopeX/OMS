@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+
 $db['difference_items_freeze'] = array(
     'columns' => array(
         'id'     => array(

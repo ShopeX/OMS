@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 class desktop_roles{
 
     function __construct($app)
@@ -189,10 +195,6 @@ class desktop_roles{
         return array('widgets'=>$widgets_permissions,'workgrounds'=>$workgrounds_permissions,'adminpanels'=>$adminpanels_permissions,'others'=>$others_permissions);
     }
 
-    /**
-     * syncPermissionQueue
-     * @return mixed 返回值
-     */
     public function syncPermissionQueue()
     {
         $oidc = app::get('ome')->getConf('pam.passport.oidc.enable');
@@ -217,13 +219,6 @@ class desktop_roles{
         $oQueue->flush();
     }
 
-    /**
-     * syncPermission
-     * @param mixed $cursor_id ID
-     * @param mixed $params 参数
-     * @param mixed $errormsg errormsg
-     * @return mixed 返回值
-     */
     public function syncPermission($cursor_id, $params, $errormsg)
     {
         $data = $this->get_roles();

@@ -21,8 +21,8 @@ class console_event_trigger_purchase extends console_event_trigger_stockinabstra
     protected $_io_type = 'PURCHASE';
 
     /**
-     * 入库数据
-     */
+    * 入库数据
+    */
     function getStockInParam($param){
         
         $Opo = app::get('purchase')->model('po');

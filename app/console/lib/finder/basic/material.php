@@ -14,9 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 基础物料查询数据finder
- *
+ * 
  * @version 1.0
  */
 class console_finder_basic_material
@@ -264,12 +265,6 @@ class console_finder_basic_material
     //-- 显示行样式[粗体：highlight-row]
     //-- [加绿：list-even 加黄：selected 加红：list-warning]
     /*------------------------------------------------------ */
-    /**
-     * row_style
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
-
     public function row_style($row)
     {
         $has = app::get('ome')->model('branch_product')->dump(array('product_id'=>$row['bm_id'], 'filter_sql'=>'(CAST(safe_store AS SIGNED)+store_freeze)>(store+CAST(arrive_store AS SIGNED))'), 'product_id');
@@ -281,12 +276,7 @@ class console_finder_basic_material
         }
     }
 
-    /**
-     * 获取bmStocklist
-     * @param mixed $list list
-     * @return mixed 返回结果
-     */
-    public function getbmStocklist($list){
+     public function getbmStocklist($list){
         static $bmstocklist;
         if(isset($bmstocklist)) {
             return $bmstocklist;
@@ -301,11 +291,6 @@ class console_finder_basic_material
         
     }
 
-    /**
-     * 获取MaterialWarehouseStorelist
-     * @param mixed $list list
-     * @return mixed 返回结果
-     */
     public function getMaterialWarehouseStorelist($list){
         static $warehousestorelist;
         if(isset($warehousestorelist)){
@@ -336,7 +321,7 @@ class console_finder_basic_material
 
     /**
      * 根据基础物料bm_id获取该物料仓库级的预占
-     * 
+     *
      * @param Int $bm_id 基础物料ID
      * @param Array $branch_ids 仓库
      * @return number
@@ -368,11 +353,6 @@ class console_finder_basic_material
     }
 
     //店铺冻结
-    /**
-     * 获取ShopFreezelist
-     * @param mixed $list list
-     * @return mixed 返回结果
-     */
     public function getShopFreezelist($list){
         
         static $shopfreezelist;
@@ -390,11 +370,6 @@ class console_finder_basic_material
     }
 
     //o2o仓库列表
-    /**
-     * 获取MaterialO2oStorelist
-     * @param mixed $list list
-     * @return mixed 返回结果
-     */
     public function getMaterialO2oStorelist($list){
         static $o2ostores;
         if(isset($o2ostores)){
@@ -415,8 +390,8 @@ class console_finder_basic_material
 
     /**
      * 在途库存
-     * 
-     */
+     *
+    */
    
     public function getMaterialArriveStorelist($list){
         static $arrivestores;
@@ -438,8 +413,8 @@ class console_finder_basic_material
 
     /**
      * 门店冻结
-     * 
-     */
+     *
+    */
     public function getStoreBranchFreezelist($list){
         
         static $storebranchfreezes;

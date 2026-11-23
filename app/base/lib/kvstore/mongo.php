@@ -75,13 +75,6 @@ class base_kvstore_mongo extends base_kvstore_abstract implements base_interface
         throw new Exception("I've tried several times getting MongoClient.. Is mongod really running?");
     }
 
-    /**
-     * fetch
-     * @param mixed $key key
-     * @param mixed $value value
-     * @param mixed $timeout_version timeout_version
-     * @return mixed 返回值
-     */
     public function fetch($key, &$value, $timeout_version=null) 
     {
         $_interKey = $this->create_key($key);
@@ -125,13 +118,6 @@ class base_kvstore_mongo extends base_kvstore_abstract implements base_interface
         return false;
     }//End Function
 
-    /**
-     * store
-     * @param mixed $key key
-     * @param mixed $value value
-     * @param mixed $ttl ttl
-     * @return mixed 返回值
-     */
     public function store($key, $value, $ttl=0) 
     {
         $_interKey = $this->create_key($key);
@@ -157,11 +143,6 @@ class base_kvstore_mongo extends base_kvstore_abstract implements base_interface
         return $res;
     }//End Function
 
-    /**
-     * 删除
-     * @param mixed $key key
-     * @return mixed 返回值
-     */
     public function delete($key) 
     {
         $_interKey = $this->create_key($key);
@@ -173,11 +154,6 @@ class base_kvstore_mongo extends base_kvstore_abstract implements base_interface
         return $res;
     }//End Function
 
-    /**
-     * recovery
-     * @param mixed $record record
-     * @return mixed 返回值
-     */
     public function recovery($record) 
     {
         if (isset($record['o_key']) && !empty($record['o_key'])) {
@@ -205,11 +181,6 @@ class base_kvstore_mongo extends base_kvstore_abstract implements base_interface
         return $res;
     }//End Function
 
-    /**
-     * persistence
-     * @param mixed $dateline dateline
-     * @return mixed 返回值
-     */
     public function persistence($dateline = 0) {
 
         $db = kernel::database();

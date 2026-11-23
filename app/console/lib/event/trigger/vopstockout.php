@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
 * 唯品会出库事件
 */
@@ -22,7 +23,6 @@ class console_event_trigger_vopstockout extends console_event_trigger_stockoutab
     /**
      * 出库数据整理
      */
-
     function getStockOutParam($param)
     {
         $iso_id    = $param['iso_id'];
@@ -58,12 +58,6 @@ class console_event_trigger_vopstockout extends console_event_trigger_stockoutab
     }
 
     // 返回给唯品会的时效订单结果反馈
-    /**
-     * occupied_order_feedback
-     * @param mixed $data 数据
-     * @param mixed $sync sync
-     * @return mixed 返回值
-     */
     public function occupied_order_feedback($data, $sync = false)
     {
         $stockout_id  = $data['stockout_id'];

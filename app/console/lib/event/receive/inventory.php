@@ -18,7 +18,7 @@
 class console_event_receive_inventory extends console_event_response{
 
     /**
-     * 
+     *
      * 盘点单事件处理
      * @param array $datainStorage
      */

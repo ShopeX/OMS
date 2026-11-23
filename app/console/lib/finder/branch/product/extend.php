@@ -59,11 +59,6 @@ class console_finder_branch_product_extend
      * 库存扩展详情
      */
     var $detail_base = '库存扩展详情';
-    /**
-     * detail_base
-     * @param mixed $eid ID
-     * @return mixed 返回值
-     */
     public function detail_base($eid)
     {
         $render = app::get('console')->render();

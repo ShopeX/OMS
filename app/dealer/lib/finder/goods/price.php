@@ -14,10 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   Assistant
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: 2024年
  * @describe: 经销商物料价格管理
  * ============================
@@ -58,13 +59,6 @@ class dealer_finder_goods_price
         }
     }
 
-    /**
-     * column_bs_name
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
-
     public function column_bs_name($row, $list)
     {
         if (empty($row['bs_id'])) {
@@ -92,12 +86,6 @@ class dealer_finder_goods_price
         return isset($dealerCache[$row['bs_id']]) ? $dealerCache[$row['bs_id']] : '';
     }
     
-    /**
-     * column_material_name
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_material_name($row, $list)
     {
         if (empty($row['bm_id'])) {
@@ -127,11 +115,6 @@ class dealer_finder_goods_price
     
 
     
-    /**
-     * column_edit
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_edit($row)
     {
         $finder_id = $_GET['_finder']['finder_id'];
@@ -165,11 +148,6 @@ class dealer_finder_goods_price
     
     // 添加操作日志功能
     public $detail_show_log = '操作记录';
-    /**
-     * detail_show_log
-     * @param mixed $price_id ID
-     * @return mixed 返回值
-     */
     public function detail_show_log($price_id)
     {
         // 使用ome模块的read_log方法，与经销商保持一致

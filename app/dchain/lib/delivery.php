@@ -14,9 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 翱象系统发货单Lib类
- *
+ * 
  * @author wangbiao@shopex.cn
  * @version 2023.03.04
  */
@@ -28,7 +29,6 @@ class dchain_delivery extends dchain_abstract
      * @param $error_msg
      * @return void
      */
-
     public function addAoxiangDelivery(&$cursor_id, $params, &$error_msg=null)
     {
         $aoDeliveryObj = app::get('dchain')->model('aoxiang_delivery');
@@ -81,7 +81,7 @@ class dchain_delivery extends dchain_abstract
 
     /**
      * 自动同步翱象发货单状态队列任务
-     * 
+     *
      * @param $deliveryIds
      * @param $error_msg
      * @return void
@@ -122,7 +122,7 @@ class dchain_delivery extends dchain_abstract
 
     /**
      * 请求创建发货单给到翱象系统
-     * 
+     *
      * @param array $deliveryInfo
      * @param string $operation
      * @return array
@@ -180,7 +180,7 @@ class dchain_delivery extends dchain_abstract
 
     /**
      * 请求取消发货单
-     * 
+     *
      * @param array $deliveryInfo
      * @param string $operation
      * @return array

@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 人工库存预占流水记录
  */
@@ -24,12 +25,6 @@ class console_mdl_basic_material_stock_artificial_freeze extends material_mdl_ba
     var $export_name = '人工预占列表';
     
     //确定表名获取表数据
-    /**
-     * table_name
-     * @param mixed $real real
-     * @return mixed 返回值
-     */
-
     public function table_name($real = false){
         if($real){
             $table_name = 'sdb_material_basic_material_stock_artificial_freeze';
@@ -40,10 +35,6 @@ class console_mdl_basic_material_stock_artificial_freeze extends material_mdl_ba
     }
     
     //确定表结构
-    /**
-     * 获取_schema
-     * @return mixed 返回结果
-     */
     public function get_schema(){
         return app::get('material')->model('basic_material_stock_artificial_freeze')->get_schema();
     }
@@ -78,11 +69,6 @@ class console_mdl_basic_material_stock_artificial_freeze extends material_mdl_ba
     }
     
     //导出 字段配置 移除不需要的字段
-    /**
-     * disabled_export_cols
-     * @param mixed $cols cols
-     * @return mixed 返回值
-     */
     public function disabled_export_cols(&$cols){
         unset($cols['column_edit']);
     }

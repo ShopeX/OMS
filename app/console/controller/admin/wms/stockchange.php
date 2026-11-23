@@ -14,20 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: 2022/10/20 14:34:12
  * @describe: 控制器
  * ============================
  */
 class console_ctl_admin_wms_stockchange extends desktop_controller {
-
-    /**
-     * index
-     * @return mixed 返回值
-     */
 
     public function index() {
         $actions = array();
@@ -50,10 +46,6 @@ class console_ctl_admin_wms_stockchange extends desktop_controller {
         $this->finder('console_mdl_wms_stock_change', $params);
     }
 
-    /**
-     * generateAdjust
-     * @return mixed 返回值
-     */
     public function generateAdjust() {
         $finder_id = $_GET['finder_id'];
         $filter = array(
@@ -72,10 +64,6 @@ class console_ctl_admin_wms_stockchange extends desktop_controller {
         parent::dialog_batch();
     }
 
-    /**
-     * ajaxGenerateAdjust
-     * @return mixed 返回值
-     */
     public function ajaxGenerateAdjust() {
         $itemIds = explode(',',$_POST['primary_id']);
 

@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 经销店铺finder
  *
@@ -43,12 +44,6 @@ class dealer_finder_shop extends ome_finder_shop
     public $column_edit = "操作";
     public $column_edit_width = 280;
     public $column_edit_order = 1;
-    /**
-     * column_edit
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
-
     public function column_edit($row)
     {
         $finder_id = $_GET['_finder']['finder_id'];
@@ -64,8 +59,7 @@ class dealer_finder_shop extends ome_finder_shop
         //button
         $button1 = sprintf('<a href="index.php?app=%s&ctl=admin_%s&act=editShop&p[0]=%s&finder_id=%s" target="dialog::{width:650,height:550,title:\'编辑经销店铺\'}">编辑</a>', $this->_appName, $this->_modelName, $row[$this->_primary_id], $finder_id);
         
-        $sess_id = kernel::single('base_session')->sess_id();
-        $callback_url = urlencode(kernel::openapi_url('openapi.ome.shop', 'shop_callback', array('shop_id' => $shop_id, 'sess_id' => $sess_id)));
+        $callback_url = urlencode(kernel::openapi_url('openapi.ome.shop', 'shop_callback', array('shop_id' => $shop_id)));
         $api_url = urlencode($api_url);
         
         //button3
@@ -104,12 +98,6 @@ class dealer_finder_shop extends ome_finder_shop
     var $column_business_name = '所属经销商';
     var $column_business_name_width = 130;
     var $column_business_name_order = 50;
-    /**
-     * column_business_name
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_business_name($row, $list)
     {
         $this->_getBusiness($list);
@@ -129,12 +117,6 @@ class dealer_finder_shop extends ome_finder_shop
     var $column_betc_name = '所属贸易公司';
     var $column_betc_name_width = 130;
     var $column_betc_name_order = 52;
-    /**
-     * column_betc_name
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_betc_name($row, $list)
     {
         $this->_getBusiness($list);
@@ -159,12 +141,6 @@ class dealer_finder_shop extends ome_finder_shop
     var $column_supply_branch = '供货仓';
     var $column_supply_branch_width = 230;
     var $column_supply_branch_order = 54;
-    /**
-     * column_supply_branch
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_supply_branch($row, $list)
     {
         $this->_getSupplyBranchs($list);
@@ -185,12 +161,6 @@ class dealer_finder_shop extends ome_finder_shop
     var $column_series_name = '授权产品线';
     var $column_series_name_width = 230;
     var $column_series_name_order = 56;
-    /**
-     * column_series_name
-     * @param mixed $row row
-     * @param mixed $list list
-     * @return mixed 返回值
-     */
     public function column_series_name($row, $list)
     {
         $this->_getSeriesList($list);
@@ -208,7 +178,7 @@ class dealer_finder_shop extends ome_finder_shop
     
     /**
      * 批量获取指定经销商列表(包含贸易公司信息)
-     * 
+     *
      * @param $list
      * @return boolean
      */
@@ -231,7 +201,7 @@ class dealer_finder_shop extends ome_finder_shop
     
     /**
      * 批量获取供货仓
-     * 
+     *
      * @param $list
      * @return boolean
      */
@@ -254,7 +224,7 @@ class dealer_finder_shop extends ome_finder_shop
     
     /**
      * 批量获取授权产品线
-     * 
+     *
      * @param $list
      * @return boolean
      */

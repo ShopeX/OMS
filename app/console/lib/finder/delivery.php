@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 class console_finder_delivery{
     var $detail_basic = "发货单详情";
     var $detail_item = "基础物料详情";

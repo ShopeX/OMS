@@ -25,7 +25,6 @@ class lang
      * @access public
      * @return mixed
      */
-
     static public function init_pack($app) 
     {
         $current_lang = kernel::get_lang();
@@ -48,13 +47,6 @@ class lang
      * @access public
      * @return mixed
      */
-    /**
-     * 获取_info
-     * @param mixed $app_id ID
-     * @param mixed $res res
-     * @param mixed $key key
-     * @return mixed 返回结果
-     */
     static public function get_info($app_id, $res=null, $key=null) 
     {
         if(!isset(self::$_langPack[$app_id])){
@@ -76,12 +68,6 @@ class lang
         return [];
     }//End Function
 
-    /**
-     * 设置_res
-     * @param mixed $app_id ID
-     * @param mixed $res res
-     * @return mixed 返回操作结果
-     */
     static public function set_res($app_id, $res) 
     {
         $app_res = (array)self::get_res($app_id);
@@ -89,11 +75,6 @@ class lang
         return base_kvstore::instance('lang/'.$app_id)->store('res', $app_res);
     }//End Function
 
-    /**
-     * 获取_res
-     * @param mixed $app_id ID
-     * @return mixed 返回结果
-     */
     static public function get_res($app_id) 
     {
         if(base_kvstore::instance('lang/'.$app_id)->fetch('res', $app_res)){
@@ -103,11 +84,6 @@ class lang
         }
     }//End Function
 
-    /**
-     * del_res
-     * @param mixed $app_id ID
-     * @return mixed 返回值
-     */
     static public function del_res($app_id) 
     {
         return base_kvstore::instance('lang/'.$app_id)->store('res', array());

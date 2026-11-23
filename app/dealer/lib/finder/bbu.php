@@ -30,11 +30,6 @@ class dealer_finder_bbu
     public $column_edit       = "操作";
     public $column_edit_width = 60;
     public $column_edit_order = 1;
-    /**
-     * column_edit
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_edit($row)
     {
         // ⚠️ vue 模式下 col_prefix 未设置（仅 legacy builder 注入）⇒ 优先读 addon_cols 顺序下发的原始值别名
@@ -60,11 +55,6 @@ class dealer_finder_bbu
     public $column_status       = "状态";
     public $column_status_width = 60;
     public $column_status_order = 30;
-    /**
-     * column_status
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_status($row)
     {
         // vue 模式下 col_prefix 未设置、且 status 可能已被 type modifier 转成显示值
@@ -91,11 +81,6 @@ class dealer_finder_bbu
      * @return string
      */
     public $detail_show_log = '操作记录';
-    /**
-     * detail_show_log
-     * @param mixed $bbu_id ID
-     * @return mixed 返回值
-     */
     public function detail_show_log($bbu_id)
     {
         $omeLogMdl = app::get('ome')->model('operation_log');

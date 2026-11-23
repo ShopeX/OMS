@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * @Author: xueding@shopex.cn
  * @Datetime: 2022/4/25
@@ -24,11 +25,6 @@ class dchain_ctl_admin_foreign_sku extends desktop_controller
     public $name = '外部优仓商品映射';
     public $workground = "channel_center";
     
-    /**
-     * _views
-     * @return mixed 返回值
-     */
-
     public function _views()
     {
         $dchain = app::get('channel')->model('channel')->getList('channel_id,channel_name',
@@ -49,10 +45,6 @@ class dchain_ctl_admin_foreign_sku extends desktop_controller
         return $view;
     }
     
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index()
     {
         $cur_dchain_id   = $_GET['dchain_id'];
@@ -121,10 +113,6 @@ JS
         $this->finder('dchain_mdl_foreign_sku', $params);
     }
     
-    /**
-     * 查找Product
-     * @return mixed 返回结果
-     */
     public function findProduct()
     {
         $filter = array();
@@ -151,10 +139,6 @@ JS
         $this->finder('inventorydepth_mdl_shop_skus', $params);
     }
     
-    /**
-     * handwork_allot
-     * @return mixed 返回值
-     */
     public function handwork_allot()
     {
         $id        = $_POST['id'];
@@ -203,10 +187,6 @@ JS
         $this->splash('success');
     }
     
-    /**
-     * sync_page
-     * @return mixed 返回值
-     */
     public function sync_page()
     {
         $dchain_id = $_GET['dchain_id'];
@@ -221,11 +201,6 @@ JS
         $this->display('foreign/sku/sync_page.html');
     }
     
-    /**
-     * do_sync
-     * @param mixed $pageno pageno
-     * @return mixed 返回值
-     */
     public function do_sync($pageno = 1)
     {
         $limit = 30;

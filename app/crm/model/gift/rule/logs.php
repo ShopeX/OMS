@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 赠品规则记录
  *
@@ -37,11 +38,10 @@ class crm_mdl_gift_rule_logs extends dbeav_model
     
     /**
      * 导入导出的标题
-     * 
+     *
      * @param Null
      * @return Array
      */
-
     function io_title($filter, $ioType='csv')
     {
         switch($filter)
@@ -74,7 +74,7 @@ class crm_mdl_gift_rule_logs extends dbeav_model
     
     /**
      * 导出模板的标题
-     * 
+     *
      * @param Null
      * @return array
      */

@@ -15,6 +15,12 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
 
 class base_mdl_queue extends base_db_model{
 
@@ -45,7 +51,7 @@ class base_mdl_queue extends base_db_model{
 
     /**
      *  重写伪队列数据保存的方法，任务走taskmgr机制
-     * 
+     *
      * @param array $data 传入参数
      * @param array $mustUpdate 是否必须更新，框架机制没人用过，是不是坑请仙人自己尝试
      * @return boolean true/false

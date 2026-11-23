@@ -18,10 +18,6 @@
 class base_service_queue 
 {
 
-    /**
-     * worker
-     * @return mixed 返回值
-     */
     public function worker(){
         set_time_limit(0);
         ignore_user_abort(true);

@@ -18,11 +18,6 @@
 #增加规则的
 class crm_ctl_admin_gift_rule extends desktop_controller{
 
-    /**
-     * index
-     * @param mixed $act act
-     * @return mixed 返回值
-     */
     public function index($act = '')
     {        
         if($act == 'add'){
@@ -218,10 +213,6 @@ class crm_ctl_admin_gift_rule extends desktop_controller{
         $this->page('admin/gift/rule_edit.html');
     }
 
-    /**
-     * view_rule
-     * @return mixed 返回值
-     */
     public function view_rule(){
 
         $shopObj = app::get('ome')->model('shop');
@@ -301,11 +292,6 @@ class crm_ctl_admin_gift_rule extends desktop_controller{
         $this->display('admin/gift/rule_view.html');
     }
 
-    /**
-     * priority
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function priority($id=0){
         if($_POST){
             $this->begin("index.php?app=crm&ctl=admin_gift_rule&act=index");
@@ -407,10 +393,6 @@ class crm_ctl_admin_gift_rule extends desktop_controller{
         }
     }
 
-    /**
-     * logs
-     * @return mixed 返回值
-     */
     public function logs(){
         $actions     = array();
         $base_filter = array();
@@ -426,11 +408,6 @@ class crm_ctl_admin_gift_rule extends desktop_controller{
         ));
     }
 
-    /**
-     * showSensitiveData
-     * @param mixed $order_bn order_bn
-     * @return mixed 返回值
-     */
     public function showSensitiveData($order_bn)
     {
         $order = app::get('ome')->model('orders')->db_dump(array('order_bn'=>$order_bn,'order_type'=>'_ALL_'), 'order_bn,member_id,shop_type,shop_id,order_id');
@@ -455,10 +432,6 @@ class crm_ctl_admin_gift_rule extends desktop_controller{
         $this->splash('success',null,null,'redirect',$order);
     } 
 
-    /**
-     * 设置_logs
-     * @return mixed 返回操作结果
-     */
     public function set_logs() {
         if(isset($_POST['set_gift_erp'])){
            $set_type = $_POST['set_type'];
@@ -553,12 +526,6 @@ class crm_ctl_admin_gift_rule extends desktop_controller{
     }
 
     #恢复已删除赠品规则
-    /**
-     * recover
-     * @param mixed $status status
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function recover($status = false,$id = false){
         $finder_id = $_GET['finder_id'];
         $this->begin('index.php?app=crm&ctl=admin_gift_rule&act=index&$finder_id='.$finder_id);
@@ -574,10 +541,6 @@ class crm_ctl_admin_gift_rule extends desktop_controller{
         $obj_rule->update($data,$filter);
         $this->end(true,$this->app->_('设置成功'));
     }
-    /**
-     * delRule
-     * @return mixed 返回值
-     */
     public function delRule(){
         $this->begin('index.php?app=crm&ctl=admin_gift_rule&act=index');
         $obj_rule = $this->app->model('gift_rule');
@@ -595,11 +558,6 @@ class crm_ctl_admin_gift_rule extends desktop_controller{
         $this->end(true, $this->app->_('删除成功'));
     }
 
-    /**
-     * gift_rule_change
-     * @param mixed $sdf sdf
-     * @return mixed 返回值
-     */
     public function gift_rule_change($sdf){
         $mdl_snapshot = app::get('crm')->model('snapshot');
         $data = array(

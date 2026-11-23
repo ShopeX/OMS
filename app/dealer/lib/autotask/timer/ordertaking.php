@@ -15,12 +15,17 @@
  * limitations under the License.
  */
 
-
+/**
+ * 经销商订单审核task定时任务====>暂时不用此Lib类
+ *
+ * @author wangbiao@shopex.cn
+ * @version 2024.04.19
+ */
 class dealer_autotask_timer_ordertaking
 {
     /**
      * 系统自动获取经销商订单
-     * 
+     *
      * @param $params
      * @param $error_msg
      * @return true

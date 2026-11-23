@@ -14,6 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * 翱象系统Lib抽象类
+ *
+ * @author wangbiao@shopex.cn
+ * @version 2023.03.08
+ */
 abstract class dchain_abstract
 {
     /**
@@ -23,22 +30,17 @@ abstract class dchain_abstract
      * @param string $data
      * @return array
      */
-    /**
-     * succ
-     * @param mixed $msg msg
-     * @param mixed $data 数据
-     * @return mixed 返回值
-     */
     final public function succ($msg='', $data=null)
     {
         return array('rsp'=>'succ', 'msg'=>$msg, 'data'=>$data);
     }
 
     /**
-     * error
-     * @param mixed $error_msg error_msg
-     * @param mixed $data 数据
-     * @return mixed 返回值
+     * 失败输出
+     *
+     * @param string $msg
+     * @param string $data
+     * @return array
      */
     final public function error($error_msg, $data=null)
     {

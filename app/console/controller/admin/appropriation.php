@@ -381,10 +381,10 @@ class console_ctl_admin_appropriation extends desktop_controller{
     }
 
     /**
-     * 删除未入库调拔单
-     * 
-     * 
-     */
+    * 删除未入库调拔单
+    *
+    *
+    */
     function deleteAppropriation($id){
         $this->begin('javascript:finderGroup["'.$_GET['finder_id'].'"].refresh();');
         $iostockorder = app::get('taoguaniostockorder')->model('iso')->dump(array('original_id'=>$id,'type_id'=>40),'confirm');
@@ -402,9 +402,9 @@ class console_ctl_admin_appropriation extends desktop_controller{
     }
 
     /**
-     * 根据采购单编号返回采购单所有信息
-     * 
-     */
+    * 根据采购单编号返回采购单所有信息
+    *
+    */
     function getPurchaseBybn($bn,$from_branch_id = null,$to_branch_id = null)
     {
         $libBranchProduct    = kernel::single('ome_branch_product');
@@ -435,9 +435,9 @@ class console_ctl_admin_appropriation extends desktop_controller{
 
     }
     /**
-     * 导出调拨单模板
-     * 
-     */
+    * 导出调拨单模板
+    *
+    */
     function exportTemplate(){
         header("Content-Type: text/csv");
         header("Content-Disposition: attachment; filename=调拨单模板".date('YmdHis').".csv");

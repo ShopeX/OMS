@@ -14,20 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: 2022/11/21 11:47:12
  * @describe: model层
  * ============================
  */
 class console_mdl_difference extends dbeav_model {
-
-    /**
-     * gen_id
-     * @return mixed 返回值
-     */
 
     public function gen_id() {
         $prefix = 'DF'.date("ymd");

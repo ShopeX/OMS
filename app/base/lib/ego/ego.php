@@ -95,6 +95,140 @@ function _eogo_auto_load($class_name)
     }
 }
 
+/**
+ * Created by PhpStorm.
+ * User: hao
+ * Date: 2017/6/8
+ * Time: 13:50
+ * 数据加密/解密 sdk，用于对系统api数据进行加密处理-Discuz!经典代码
+ * 该加密算法需放置在ego.php文件中
+ */
+
+class base_authcode
+{
+    protected $shopex_authKey = 'AeE7SuJfT6IELwq9Qdn8tMuuA0a'; //加密密钥，不可修改,每个产品先唯一
+
+    public function authcode($string, $key = '', $expiry = 0)
+    {
+        // 动态密匙长度，相同的明文会生成不同密文就是依靠动态密匙
+        $ckey_length = 4;
+
+        // 密匙
+        $key = md5($key);
+
+        // 密匙a会参与加解密
+        $keya = md5(substr($key, 0, 16));
+        // 密匙b会用来做数据完整性验证
+        $keyb = md5(substr($key, 16, 16));
+        // 密匙c用于变化生成的密文
+        $keyc = $ckey_length ? substr(md5(microtime()), -$ckey_length) : '';
+        // 参与运算的密匙
+        $cryptkey   = $keya . md5($keya . $keyc);
+        $key_length = strlen($cryptkey);
+        // 明文，前10位用来保存时间戳，解密时验证数据有效性，10到26位用来保存$keyb(密匙b)，
+        //解密时会通过这个密匙验证数据完整性
+        // 如果是解码的话，会从第$ckey_length位开始，因为密文前$ckey_length位保存 动态密匙，以保证解密正确
+        $string        = sprintf('%010d', $expiry ? $expiry + time() : 0) . substr(md5($string . $keyb), 0, 16) . $string;
+        $string_length = strlen($string);
+        $result        = '';
+        $box           = range(0, 255);
+        $rndkey        = array();
+        // 产生密匙簿
+        for ($i = 0; $i <= 255; $i++) {
+            $rndkey[$i] = ord($cryptkey[$i % $key_length]);
+        }
+        // 用固定的算法，打乱密匙簿，增加随机性，好像很复杂，实际上对并不会增加密文的强度
+        for ($j = $i = 0; $i < 256; $i++) {
+            $j       = ($j + $box[$i] + $rndkey[$i]) % 256;
+            $tmp     = $box[$i];
+            $box[$i] = $box[$j];
+            $box[$j] = $tmp;
+        }
+        // 核心加解密部分
+        for ($a = $j = $i = 0; $i < $string_length; $i++) {
+            $a       = ($a + 1) % 256;
+            $j       = ($j + $box[$a]) % 256;
+            $tmp     = $box[$a];
+            $box[$a] = $box[$j];
+            $box[$j] = $tmp;
+            // 从密匙簿得出密匙进行异或，再转成字符
+            $result .= chr(ord($string[$i]) ^ ($box[($box[$a] + $box[$j]) % 256]));
+        }
+
+        // 把动态密匙保存在密文里，这也是为什么同样的明文，生产不同密文后能解密的原因
+        // 因为加密后的密文可能是一些特殊字符，复制过程可能会丢失，所以用base64编码
+        return $keyc . str_replace('=', '', base64_encode($result));
+    }
+
+    /**
+     * 加密方法，返回string类型
+     * @param array $arr
+     */
+    public function encode(array $arr)
+    {
+        $str = serialize($arr);
+        return $this->authcode($str, $this->shopex_authKey, 86400);
+    }
+
+    private function genCode()
+    {
+        //deploy信息
+        $deploy       = kernel::single('base_xml')->xml2array(file_get_contents(ROOT_DIR . '/config/deploy.xml'), 'base_deploy');
+        $product_info = explode('.', $deploy['ver']);
+
+        //zend信息
+        if (function_exists('zend_loader_file_licensed') && zend_loader_file_licensed()) {
+            $zend_info = zend_loader_file_licensed();
+        }
+
+        //以下数据为必填内容
+        $data = array(
+            'node_id'        => base_shopnode::node_id('ome'), //节点号
+            'certificate_id' => base_certificate::get('certificate_id'), //证书号
+            'shopex_id'      => base_enterprise::ent_id(), //shopexID
+            'active_key'     => app::get('desktop')->getConf('activation_code'), //激活码
+            'url'            => kernel::base_url(1), //站点系统域名
+            'version'        => $product_info[0] . '.' . $product_info[1] . '.' . $product_info[2], //版本号
+            'product_name'   => $zend_info ? $zend_info['Product-Name'] : 'oms_no_zend', //zend授权文件中的product_name
+        );
+        //加密
+        return $this->encode($data); //注意：使用get方法一定要加urlencode方法
+    }
+
+    public function greenchannel()
+    {
+        //加密
+        $code = $this->genCode();
+        return EGO_URL . 'shopex/login?product=oms&code=' . urlencode($code);
+    }
+
+    public function consultandpatch()
+    {
+        //加密
+        $code = $this->genCode();
+
+        $params = array(
+            'code'    => $code,
+            'product' => 'oms',
+            'limit'   => '10',
+        );
+        $url = EGO_URL . 'api/shopex/ad';
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
+        $result = curl_exec($ch);
+        curl_close($ch);
+
+        return $result;
+    }
+}
+
 class base_rpc_caller
 {
 
@@ -316,6 +450,7 @@ class base_rpc_caller
 
         }
 
+        kernel::log('Response: ' . $response);
         if ($this->callback_class && method_exists(kernel::single($this->callback_class), 'response_log')) {
             $response_log_func = 'response_log';
             $callback_params   = $this->callback_params ? array_merge($this->callback_params, array('rpc_key' => $rpc_id . '-' . $rpc_calltime)) : array('rpc_key' => $rpc_id . '-' . $rpc_calltime);
@@ -1029,18 +1164,6 @@ class erpapi_rpc_service
             }
         }
 
-        
-        // 如果content_type为application/json，则将body内容转换为json
-        if (stripos($_SERVER['CONTENT_TYPE'], 'application/json') !== false) {
-            // 需要判断php://input是否为空
-            if ($input = file_get_contents('php://input')) {
-                $input = json_decode($input, true);
-                
-                // merge
-                $_REQUEST = array_merge($_REQUEST, $input?:[]);
-            }
-        }
-        
         if ($_REQUEST['format']) {
             if (class_exists('erpapi_format_' . $_REQUEST['format'])) {
                 $this->format = $_REQUEST['format'];
@@ -1351,43 +1474,7 @@ class erpapi_rpc_service
             'data'     => '',
             'msg'      => $err_msg,
             'msg_code' => $code,
-            //'flag' => 'failure', // qimen奇门字段
-            //'code' => $code, // qimen奇门字段
-            //'message' => $err_msg, // qimen奇门字段
         );
-        
-        // qimen接口返回数据
-        if(in_array($_REQUEST['method'], ['qimen.taobao.erp.order.add', 'qimen.taobao.erp.order.update'])){
-            $qimenResult = [
-                'flag' => 'failure',
-                'code' => '0',
-                'message' => '',
-            ];
-            
-            // succ
-            if($res['rsp'] == 'succ' || $res['rsp'] == 'success'){
-                $qimenResult['flag'] = 'success';
-            }
-            
-            // msg_code
-            if(isset($res['msg_code'])){
-                $qimenResult['code'] = $res['msg_code'];
-            }
-            
-            // message
-            if(isset($res['msg']) || isset($res['mmessagesg'])){
-                $qimenResult['message'] = ($res['msg'] ? $res['msg'] : $res['mmessagesg']);
-            }
-            
-            // data
-            if(isset($data['data'])){
-                $qimenResult['data'] = $data['data'];
-            }
-            
-            // 重置
-            $res = $qimenResult;
-        }
-        
         $this->rpc_response_end($err_msg, $this->rpc_id, $res);
 
         echo json_encode($res);
@@ -1629,6 +1716,44 @@ class base_shopnode
 {
     static $snode = null;
 
+    public static function register($app_id, $data = null)
+    {
+        $obj_app = app::get($app_id);
+        // 生成参数...
+        $api_data = array(
+            'certi_app'      => 'node.reg',
+            'certificate_id' => base_certificate::certi_id(),
+            'node_type'      => 'ecos.' . $app_id,
+            'api_ver'        => '1.1',
+            'format'         => 'json',
+            'api_url'        => kernel::base_url(1) . kernel::url_prefix() . '/api',
+        );
+
+        ksort($api_data);
+        foreach ($api_data as $key => $value) {
+            $str .= $value;
+        }
+        $api_data['certi_ac'] = strtoupper(md5($str . base_certificate::token()));
+        $http                 = kernel::single('base_httpclient');
+
+        $http->timeout = 6;
+        $result        = $http->post(
+            LICENSE_CENTER_V,
+            $api_data);
+
+        #日志
+        $logStr = 'Url: ' . LICENSE_CENTER_V;
+        $logStr .= ', Response: ' . $result;
+        kernel::log($logStr);
+
+        $result = json_decode($result, true);
+
+        if ($result['res'] == 'succ') {
+            self::set_node_id($result['info'], $app_id);
+        } else {
+            return false;
+        }
+    }
 
     public static function get($code = 'node_id', $app_id = 'b2c')
     {
@@ -1653,7 +1778,8 @@ class base_shopnode
         if (self::get('node_id', $app_id)) {
             kernel::log('Using exists shopnode: kvstore shop_site_node_id');
         } else {
-            kernel::log('Shopnode not found: node_id now obtained from callback interface');
+            kernel::log('Request new shopnode');
+            self::register($app_id);
         }
     }
 
@@ -1741,6 +1867,111 @@ class base_certificate
 
     static $certi = null;
 
+    public static function register($data = null)
+    {
+        $sys_params = base_setup_config::deploy_info();
+        $code       = md5(microtime());
+        base_kvstore::instance('ecos')->store('net.handshake', $code);
+        $app_exclusion = app::get('base')->getConf('system.main_app');
+        /** 得到框架的总版本号 **/
+        $obj_apps           = app::get('base')->model('apps');
+        $tmp                = $obj_apps->getList('*', array('app_id' => 'base'));
+        $app_xml            = $tmp[0];
+        $app_xml['version'] = $app_xml['local_ver'];
+        $conf               = base_setup_config::deploy_info();
+        /*$data = array(
+        'certi_app'=>'open.reg',
+        'identifier'=>base_enterprise::ent_id(),
+        'password'=>base_enterprise::ent_ac(),
+        'product_key' => $conf['product_key'],
+        'url' => kernel::base_url(1),
+        'result' => $code,
+        'version'=> $app_xml['version'],
+        'api_ver'=>'1.3',
+        );*/
+
+        //为了不用企业帐号
+        $data = array(
+            'certi_app' => 'open.reg',
+            'app_id'    => 'ecos.' . $app_exclusion['app_id'],
+            // 'url' => kernel::base_url(1),
+            'url'       => $data ? $data : kernel::base_url(1),
+            'result'    => $code,
+            'version'   => $app_xml['version'],
+        );
+
+        $http          = kernel::single('base_httpclient');
+        $http->timeout = 6;
+        $result        = $http->post(
+            LICENSE_CENTER,
+            $data);
+
+        #日志
+        $logStr = 'Url: ' . LICENSE_CENTER;
+        $logStr .= ', Response: ' . $result;
+        kernel::log($logStr);
+
+        //todo: 声称获取一个唯一iD，发给飞飞
+        $result = json_decode($result, 1);
+
+        if ($result['res'] == 'succ') {
+            if ($result['info']) {
+                if ($result['info']['node_id']) {
+                    $arr_shop_node_id = array(
+                        'node_id' => $result['info']['node_id'],
+                    );
+                    base_shopnode::set_node_id($arr_shop_node_id, $app_exclusion['app_id']);
+                    unset($result['info']['node_id']);
+                }
+                $certificate = $result['info'];
+                $flag        = self::set_certificate($certificate);
+                if ($flag) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        } else {
+            return false;
+        }
+    }
+
+    public static function update_node($data = null)
+    {
+
+        //$nodeUpdateKey = 'ome_node_update'.base_shopnode::node_id('ome');
+        //$nodeUpdate = app::get('ome')->getConf($nodeUpdateKey);
+        $token          = self::token();
+        $nodeUpdateData = array(
+            'certi_app'       => 'node.update', //接口方法
+            'node_id'         => base_shopnode::node_id('ome'), //应用节点号
+            'certificate_id'  => self::certi_id(), //产品证书号
+            'url'             => $data ? $data : kernel::base_url(1), //店铺地址（申请证书的地址）
+            'node_type'       => 'ecos.ome', //应用类型
+            'release_version' => self::get_release_version(), //对外发布版本
+            'api_ver'         => '1.0', //授权中心接口版本号
+            'format'          => 'json', //返回参数格式
+            //'version'=>'', //应用版本号
+            //'channel_ver'=>'', //矩阵通路接口版本号
+            //'certi_ac'=>'', //调用方验证字符串
+        );
+        ksort($nodeUpdateData);
+        foreach ($nodeUpdateData as $key => $value) {
+            $str .= stripslashes($value);
+        }
+        $nodeUpdateData['certi_ac'] = strtoupper(md5($str . $token));
+
+        $http          = kernel::single('base_httpclient');
+        $http->timeout = 6;
+        $updateResult  = $http->post(LICENSE_CENTER_V, $nodeUpdateData);
+        $updateResult  = json_decode($updateResult, true);
+
+        if ($updateResult['res'] == 'succ') {
+            //app::get('ome')->setConf($nodeUpdateKey, 'true');
+        } else {
+            return false;
+        }
+    }
 
     //设置对外发布版本
     public static function set_release_version($release_version = null)
@@ -1758,67 +1989,109 @@ class base_certificate
         return (app::get('ome')->getConf('tg_release_version')) ? app::get('ome')->getConf('tg_release_version') : 'tg';
     }
 
-    public static function get($code = 'certificate_id')
+    /**
+     * 获取证书的版权信息
+     * @param string app id
+     * @return boolean 成功与否
+     */
+    public static function active_certi_info($app_id = 'b2c')
     {
-        if (self::$certi === null) {
-            base_kvstore::instance('certificate')->fetch('cert', $certificate);
-            if (!empty($certificate)) {
-                self::$certi = $certificate;
-            } elseif (file_exists(ROOT_DIR . '/config/certi.php')) {
-                $certificate = array();
-                require ROOT_DIR . '/config/certi.php';
-                self::$certi = is_array($certificate) ? $certificate : array();
-            } else {
-                self::$certi = array();
-            }
+        $ceti_app = 'open.certi_info';
+        $certi_id = self::certi_id();
+        $token    = self::token();
+
+        $certi_ac = md5($ceti_app . $certi_id . $token);
+        $data     = array(
+            'certi_app'      => $ceti_app,
+            'certificate_id' => $certi_id,
+            'certi_ac'       => $certi_ac,
+        );
+
+        $http          = kernel::single('base_httpclient');
+        $http->timeout = 6;
+        $result        = $http->post(
+            LICENSE_CENTER_INFO,
+            $data);
+
+        $result = json_decode($result, 1);
+        if ($result['res'] == 'succ') {
+            return self::set_certi_info($app_id, json_encode($result['info']));
+        } else {
+            kernel::log('Certificate info getting fail, ' . $result['msg']);
+            return false;
+        }
+    }
+
+    /**
+     * 设置证书的正确权限信息
+     * @param string app id
+     * @param mixed certi info
+     * @return boolean 成功与否
+     */
+    public static function set_certi_info($app_id, $info)
+    {
+        if (!$app_id || !$info) {
+            return false;
         }
 
-        return isset(self::$certi[$code]) ? self::$certi[$code] : null;
+        return app::get($app_id)->setConf('certi_info', $info);
+    }
+
+    /**
+     * 获取证书的版权信息
+     * @param string app id
+     * @return string key_type
+     */
+    public static function certi_info($app_id = 'b2c')
+    {
+        $certi_info = app::get($app_id)->getConf('certi_info');
+        $certi_info = json_decode($certi_info, 1);
+
+        return $certi_info['key_type'];
+    }
+
+    public static function get($code = 'certificate_id')
+    {
+
+        if (!function_exists('get_certificate')) {
+            if (self::$certi === null) {
+                if (file_exists(ROOT_DIR . '/config/certi.php')) {
+                    require ROOT_DIR . '/config/certi.php';
+                    self::$certi = $certificate;
+                }
+            }
+        } else {
+            self::$certi = get_certificate();
+        }
+
+        return self::$certi[$code];
     }
 
     public static function active()
     {
         if (self::get()) {
-            kernel::log('Using exists certificate: kvstore certificate');
+            kernel::log('Using exists certificate: config/certi.php');
         } else {
-            kernel::log('Certificate not found: kvstore certificate');
+            kernel::log('Request new certificate');
+            self::register();
         }
     }
 
     public static function set_certificate($certificate)
     {
-        $stored = base_kvstore::instance('certificate')->store('cert', $certificate);
-        $configFile = ROOT_DIR . '/config/certi.php';
-
-        // kv 保存失败时，回退写入配置文件
-        if ($stored === false) {
-            $content = "<?php\n\$certificate = " . var_export($certificate, true) . ";\n";
-            if (file_put_contents($configFile, $content, LOCK_EX) === false) {
-                return false;
-            }
-            self::$certi = null;
-            return true;
+        if (!function_exists('set_certificate')) {
+            return file_put_contents(ROOT_DIR . '/config/certi.php'
+                , '<?php $certificate=' . var_export($certificate, 1) . ';');
+        } else {
+            return set_certificate($certificate);
         }
-
-        // kv 保存成功：仅在清空证书时删除文件，正常情况下依赖 kv
-        if (empty($certificate) && file_exists($configFile)) {
-            @unlink($configFile);
-        }
-
-        // 清除缓存，下次获取时重新读取
-        self::$certi = null;
-        return true;
     }
     public static function del_certificate()
     {
-        base_kvstore::instance('certificate')->delete('cert');
-        // 删除配置文件，避免残留
-        $configFile = ROOT_DIR . '/config/certi.php';
-        if (file_exists($configFile)) {
-            @unlink($configFile);
+        if (is_file(ROOT_DIR . '/config/certi.php')) {
+            unlink(ROOT_DIR . '/config/certi.php');
         }
-        // 清除缓存
-        self::$certi = null;
+
     }
     public static function gen_sign($params)
     {
@@ -1857,35 +2130,190 @@ class base_certificate
      * 生成 certi_ac 签名
      * 
      * @param array $params 需要签名的参数数组
-     * @param array $options 选项数组
-     *   - exclude_keys: 排除的字段列表，默认 ['certi_ac']
-     *   - token: 自定义 token，默认使用 base_certificate::token()。仅在调用企业 API 等特殊场景时需要传入
-     *   - uppercase: 是否返回大写，默认 false
-     *   - stripslashes: 是否对值使用 stripslashes，默认 false
      * @return string 签名字符串
      */
-    public static function getCertiAC($params, $options = array())
+    public static function getCertiAC($params)
     {
-        // 默认选项：默认使用证书 token，仅在特殊场景（如企业 API）需要传入自定义 token
-        $exclude_keys = isset($options['exclude_keys']) ? $options['exclude_keys'] : array('certi_ac');
-        $token = isset($options['token']) ? $options['token'] : self::token();
-        $uppercase = isset($options['uppercase']) ? $options['uppercase'] : false;
-        $stripslashes = isset($options['stripslashes']) ? $options['stripslashes'] : false;
-        
+        $token = self::token();
         ksort($params);
         $str = '';
         foreach ($params as $key => $value) {
-            if (!in_array($key, $exclude_keys)) {
-                $value = $stripslashes ? stripslashes($value) : $value;
+            if ($key != 'certi_ac') {
                 $str .= $value;
             }
         }
         $signString = md5($str . $token);
-        return $uppercase ? strtoupper($signString) : $signString;
+        return $signString;
     }
+
 }
 
+define('CSM_URL', 'http://csm.shopex.cn/index.php/api/csm.datastat/exec/');
+define('AFRESH_GET_ORDER_URL', 'http://esb.shopex.cn/api.php');
 
+
+class desktop_cert_certcheck
+{
+    public function __construct($app)
+    {
+        $this->app = $app;
+    }
+    public function check($app)
+    {
+        $activation_arr = $this->app->getConf('activation_code');
+        if ($activation_arr) {
+            return;
+        } else {
+            echo $this->error_view();
+            exit;
+        }
+    }
+
+    public function getform()
+    {
+        $render                             = $this->app->render();
+        $render->pagedata['res_url']        = $this->app->res_url;
+        $render->pagedata['auth_error_msg'] = $auth_error_msg;
+        return $render->display('active_code_form.html');
+    }
+
+    public function error_view($auth_error_msg = null)
+    {
+        $render                             = $this->app->render();
+        $render->pagedata['res_url']        = $this->app->res_url;
+        $render->pagedata['auth_error_msg'] = $auth_error_msg;
+        return $render->display('active_code.html');
+    }
+    /**
+     *     ocs :
+     *     $method = 'active.do_active'
+     *     $ac = 'SHOPEX_ACTIVE'
+     *
+     *     其它产品默认
+     */
+    public function check_code($code = null, $method = 'oem.do_active', $ac = 'SHOPEX_OEM')
+    {
+        if (!$code) {
+            return false;
+        }
+
+        $certificate_id = base_certificate::certi_id();
+        if (!$certificate_id) {
+            base_certificate::register();
+        }
+
+        $certificate_id = base_certificate::certi_id();
+        $token          = base_certificate::token();
+        $data           = array(
+            'certi_app'      => $method,
+            'certificate_id' => $certificate_id,
+            'active_key'     => $_POST['auth_code'],
+            'ac'             => md5($certificate_id . $ac));
+        $result = kernel::single('base_httpclient')->post(LICENSE_CENTER_INFO, $data);
+        $result = json_decode($result, true);
+        return $result;
+    }
+
+    public function check_certid()
+    {
+        $params['certi_app']      = 'open.login';
+        $this->Certi              = base_certificate::get('certificate_id');
+        $this->Token              = base_certificate::get('token');
+        $params['certificate_id'] = $this->Certi;
+        $params['format']         = 'json';
+        /** 增加反查参数result和反查基础地址url **/
+        $code = md5(microtime());
+        base_kvstore::instance('ecos')->store('net.login_handshake', $code);
+        $params['result']  = $code;
+        $obj_apps          = app::get('base')->model('apps');
+        $tmp               = $obj_apps->getList('*', array('app_id' => 'base'));
+        $app_xml           = $tmp[0];
+        $params['version'] = $app_xml['local_ver'];
+        $params['url']     = kernel::base_url(1);
+        /** end **/
+        $token = $this->Token;
+        $str   = '';
+        ksort($params);
+        foreach ($params as $key => $value) {
+            $str .= $value;
+        }
+        $params['certi_ac'] = md5($str . $token);
+        $http               = kernel::single('base_httpclient');
+        $http->timeout      = 20;
+        $result             = $http->post(LICENSE_CENTER_INFO, $params);
+        $api_result         = stripslashes($result);
+        $api_arr            = json_decode($api_result, true);
+        return $api_arr;
+    }
+
+    public function listener_login($params)
+    {
+        //距离上次成功验证时长不足一周的，不用验证
+        $chk_certid_lasttime = app::get('desktop')->getConf('chk_certid_lasttime');
+        if ($chk_certid_lasttime && (time() - $chk_certid_lasttime) < 86400 * 7) {
+            return;
+        }
+
+        //预先计算验证失败的次数
+        $chk_certid_errtimes = app::get('desktop')->getConf('chk_certid_errtimes');
+        $chk_certid_errtimes = intval($chk_certid_errtimes) + 1;
+
+        $mode = app::get('base')->getConf('ome.install.mode');
+        //开发环境
+        if ($mode == 2) {
+            $orderObj    = app::get('ome')->model('orders');
+            $deliveryObj = app::get('ome')->model('delivery');
+            $orderNum    = $orderObj->count();
+            $deliveryNum = $deliveryObj->count();
+
+            //开发环境数据量超出一定后也要走验证
+            if ($orderNum > 500 || $deliveryNum > 500) {
+                if ($params['type'] === pam_account::get_account_type('desktop')) {
+                    $result = $this->check_certid();
+                    if ($result['res'] == 'succ' && $result['info']['valid']) {
+                        app::get('desktop')->setConf('chk_certid_errtimes', 0);
+                        app::get('desktop')->setConf('chk_certid_lasttime', time());
+                        return;
+                    } elseif ($chk_certid_lasttime && $chk_certid_errtimes <= 5) {
+                        app::get('desktop')->setConf('chk_certid_errtimes', $chk_certid_errtimes);
+                        return;
+                    } else {
+                        unset($_SESSION['account'][$params['type']]);
+                        $url      = $this->app->base_url(1);
+                        $code_url = $url . 'index.php?app=desktop&ctl=code&act=error_view';
+                        echo "<html><head><meta charset='utf-8' /></head><body>";
+                        echo "激活码失效或者检查超时，点击<a href='{$url}'/>重新登录</a>,或者   <a href='{$code_url}' />重新输入激活码</a>激活";
+                        echo "</body></html>";
+                        exit;
+                    }
+                }
+            }
+        } else {
+            //安装模式是正式环境直接验证
+            if ($params['type'] === pam_account::get_account_type('desktop')) {
+                $result = $this->check_certid();
+                if ($result['res'] == 'succ' && $result['info']['valid']) {
+                    app::get('desktop')->setConf('chk_certid_errtimes', 0);
+                    app::get('desktop')->setConf('chk_certid_lasttime', time());
+                    return;
+                } elseif ($chk_certid_lasttime && $chk_certid_errtimes <= 5) {
+                    app::get('desktop')->setConf('chk_certid_errtimes', $chk_certid_errtimes);
+                    return;
+                } else {
+                    unset($_SESSION['account'][$params['type']]);
+                    $url      = $this->app->base_url(1);
+                    $code_url = $url . 'index.php?app=desktop&ctl=code&act=error_view';
+                    echo "<html><head><meta charset='utf-8' /></head><body>";
+                    echo "激活码失效或者检查超时，点击<a href='{$url}'/>重新登录</a>,或者   <a href='{$code_url}' />重新输入激活码</a>激活";
+                    echo "</body></html>";
+                    exit;
+                }
+            }
+        }
+
+    }
+
+}
 
 class ome_cert_certcheck
 {
@@ -2026,6 +2454,8 @@ class ome_rpc_request
      * @param String $http_method HTTP请求方式,POST或GET
      * @return RPC响应结果
      */
+    //http://rpc.ex-sandbox.com/sync
+    //http://matrix.ecos.shopex.cn
     public function rpc_request($method, $params, $callback, $time_out = 5, $write_log = array(), $center = false, $http_method = 'POST')
     {
 
@@ -2458,6 +2888,17 @@ class ome_rpc_request
 
         return md5($str . base_certificate::get('token'));
     }
+
+    public function make_sign_matrix($params)
+    {
+        ksort($params);
+        $query = '';
+        foreach ($params as $k => $v) {
+            $query .= $k . '=' . $v . '&';
+        }
+
+        return md5(substr($query, 0, strlen($query) - 1) . base_certificate::get('token'));
+    }
 }
 
 class erpapi_rpc_caller
@@ -2490,6 +2931,30 @@ class erpapi_rpc_caller
      * @var string
      **/
     private $gateway      = 'matrix';
+    protected $gateway_list = array(
+        '360buy'       => 'hufu',
+        'pinduoduo'    => 'fangzhou',
+        'vop'          => 'vop',
+        'taobao'       => 'taobao',
+        'luban'        => 'luban',
+        'alibaba4ascp' => 'alibaba4ascp',
+        'dangdang'     => 'dangdang',
+        'alibaba'      => 'alibaba',
+        'youzan'       => 'youzan',
+        'suning'       => 'suning',
+        'suning4zy'    => 'suning4zy',
+        'yunmall'      => 'yunmall',
+        'kuaishou'     => 'kuaishou',
+        'yunji4fx'     => 'yunji4fx',
+        'yangsc'       => 'yangsc',
+        'huawei'       => 'huawei',
+        'xhs'          => 'xhs',
+        'wxshipin'     => 'wxshipin',
+        'haoshiqi'     => 'haoshiqi',
+        'dewu'         => 'dewu',
+        'meituan4bulkpurchasing' => 'meituan4bulkpurchasing',
+        'meituan4medicine' => 'meituan4medicine',
+    );
 
     /**
      * 平台对象
@@ -2640,7 +3105,17 @@ class erpapi_rpc_caller
 
         $query_params = array_merge((array) $params, (array) $query_params);
 
-        $core_http = kernel::single('base_httpclient');
+        if ($gw = $this->gateway_list[$this->gateway]) {
+            $core_http = kernel::single('erpapi_rpc_'.$gw);
+            if(method_exists($core_http, 'get_encrypt_original')) {
+                $eoData = $core_http->get_encrypt_original($query_params);
+                if($eoData) {
+                    $query_params = array_merge($query_params, $eoData);
+                }
+            }
+        } else {
+            $core_http = kernel::single('base_httpclient');
+        }
         $query_params['sign'] = $this->config->gen_sign($query_params,$method);
 
         $url = $this->config->get_url($method,$query_params,$this->realtime);
@@ -2732,7 +3207,17 @@ class erpapi_rpc_caller
 
         $query_params = array_merge((array) $params, (array) $query_params);
         
-        $core_http = kernel::single('base_httpclient');
+        if ($gw = $this->gateway_list[$this->gateway]) {
+            $core_http = kernel::single('erpapi_rpc_'.$gw);
+            if(method_exists($core_http, 'get_encrypt_original')) {
+                $eoData = $core_http->get_encrypt_original($query_params);
+                if($eoData) {
+                    $query_params = array_merge($query_params, $eoData);
+                }
+            }
+        } else {
+            $core_http = kernel::single('base_httpclient');
+        }
 
         $query_params['sign'] = $this->config->gen_sign($query_params);
 
@@ -2754,6 +3239,7 @@ class erpapi_rpc_caller
             $responseHeader = is_array($core_http->responseHeader) ? json_encode($core_http->responseHeader) : $core_http->responseHeader;
         }
 
+        kernel::log('Response: ' . $response);
         if ($this->callback_class && method_exists(kernel::single($this->callback_class), 'response_log')) {
             $response_log_func = 'response_log';
             $callback_params   = $this->callback_params ? array_merge($this->callback_params, array('rpc_key' => $rpc_id . '-' . $rpc_calltime)) : array('rpc_key' => $rpc_id . '-' . $rpc_calltime);

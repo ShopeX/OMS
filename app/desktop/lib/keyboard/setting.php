@@ -15,18 +15,17 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
 
 class desktop_keyboard_setting {
     private $_setting_key = array('全局操作','界面操作','导航菜单上的栏目');
 
     
-    /**
-     * 设置_default_control
-     * @param mixed $default default
-     * @param mixed $row row
-     * @param mixed $skip skip
-     * @return mixed 返回操作结果
-     */
     public function set_default_control( $default,&$row,$skip=false ) {
         if( !$skip ) {
             if( $row['params']['control'] && is_array($row['params']['control']) ) {
@@ -87,11 +86,6 @@ class desktop_keyboard_setting {
         }
     }
     
-    /**
-     * 获取_setting_json
-     * @param mixed $setting setting
-     * @return mixed 返回结果
-     */
     public function get_setting_json( $setting ) {
         $this->init_keyboard_setting_data( $keyboard_setting,$keyboard,$setting );
         foreach( (array)$setting as $_keyboard_setting_key => $row ) {

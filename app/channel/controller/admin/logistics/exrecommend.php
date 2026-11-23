@@ -17,10 +17,6 @@
 
 class channel_ctl_admin_logistics_exrecommend extends desktop_controller{
 	
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index(){
     	$this->pagedata['exrecommend_service'] = false;
     	#获取智选物流订购的信息
@@ -74,10 +70,6 @@ class channel_ctl_admin_logistics_exrecommend extends desktop_controller{
 
         $this->page('admin/logistics/exrecommend.html');
     }
-    /**
-     * 设置_exrecommend
-     * @return mixed 返回操作结果
-     */
     public function set_exrecommend(){
     	$this->begin();
     	$data['exrecommend_souce'] = $_POST['set']['exrecommend_souce'];#智能发货提供方
@@ -133,10 +125,6 @@ class channel_ctl_admin_logistics_exrecommend extends desktop_controller{
     	$obj_logistics_logs->update(array('status'=>''),array('op_type'=>3));#上传完毕，把模板变动的状态都清除
     }
     #获取智选物流提供方的智选策略类型
-    /**
-     * ajax_get_exrecommend_type
-     * @return mixed 返回值
-     */
     public function ajax_get_exrecommend_type(){
         $souce_type = $_POST['souce_type'];
         $exrecommend_type = kernel::single('channel_func')->exrecommend_type($souce_type);

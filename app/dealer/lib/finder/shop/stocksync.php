@@ -28,11 +28,6 @@ class dealer_finder_shop_stocksync {
     public $column_request = '自动回写库存';
     public $column_request_order = 2;
     public $column_request_width = 100;
-    /**
-     * column_request
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_request($row)
     {
         $request = kernel::single('inventorydepth_shop')->getStockConf($row['shop_id']);
@@ -62,11 +57,6 @@ EOF;
     
     public $column_stock_regulation = '库存更新规则';
     public $column_stock_regulation_order = 29;
-    /**
-     * column_stock_regulation
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_stock_regulation($row)
     {
         $regulation_id = app::get('inventorydepth')->model('regulation_apply')->select()->columns('regulation_id')
@@ -95,11 +85,6 @@ EOF;
 
     public $column_supply_branches = '供货仓';
     public $column_supply_branches_order = 90;
-    /**
-     * column_supply_branches
-     * @param mixed $row row
-     * @return mixed 返回值
-     */
     public function column_supply_branches($row) 
     {
         $branches = kernel::single('inventorydepth_shop')->getBranchByshop($row[$this->col_prefix.'shop_bn']);
@@ -119,11 +104,6 @@ EOF;
     }
 
     public $detail_operation_log = '操作日志';
-    /**
-     * detail_operation_log
-     * @param mixed $shop_id ID
-     * @return mixed 返回值
-     */
     public function detail_operation_log($shop_id)
     {
         $this->_render =  app::get('inventorydepth')->render();

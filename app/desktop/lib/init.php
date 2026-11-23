@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
+ 
 class desktop_init{
 
     public $export_temps = array(
@@ -59,10 +65,6 @@ class desktop_init{
     );
 
     //初始化系统导出的标准模板
-    /**
-     * 添加DefaultExportStandardTemplate
-     * @return mixed 返回值
-     */
     public function addDefaultExportStandardTemplate(){
 
         $extempObj = app::get('desktop')->model('export_template');

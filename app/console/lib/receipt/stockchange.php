@@ -14,21 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: 2022/10/20 11:14:29
  * @describe: 库存异动
  * ============================
  */
 class console_receipt_stockchange {
-
-    /**
-     * doAdjust
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
 
     public function doAdjust($id) {
         $objSC = app::get('console')->model('wms_stock_change');
@@ -129,12 +124,6 @@ class console_receipt_stockchange {
     }
 
 
-    /**
-     * 获取BranchId
-     * @param mixed $node_id ID
-     * @param mixed $warehouse warehouse
-     * @return mixed 返回结果
-     */
     public function getBranchId($node_id, $warehouse) {
         $wmsModel = app::get('channel')->model('channel');
         $filter                 = array('node_id' => $node_id);
@@ -167,12 +156,6 @@ class console_receipt_stockchange {
         return $data;
     }
 
-    /**
-     * cmp_by_negative
-     * @param mixed $a a
-     * @param mixed $b b
-     * @return mixed 返回值
-     */
     public function cmp_by_negative($a, $b) {
         if($a['negative'] == $b['negative']) {
             return 0;

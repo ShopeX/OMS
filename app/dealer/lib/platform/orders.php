@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 经销商订单公共Lib方法类
  *
@@ -24,12 +25,11 @@ class dealer_platform_orders extends dealer_abstract
 {
     /**
      * 创建平台订单
-     * 
+     *
      * @param $sdf
      * @param $errmsg
      * @return bool
      */
-
     public function create_order(&$sdf, &$error_msg='')
     {
         $jxOrderMdl = app::get('dealer')->model('platform_orders');
@@ -224,7 +224,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * 获取指定平台订单主表信息
-     * 
+     *
      * @param $filter 查询条件
      * @param $fields 字段名(默认*表示所有)
      * @return array
@@ -250,7 +250,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * 获取指定平台订单信息(包含：objects、items商品明细)
-     * 
+     *
      * @param $filter 查询条件
      * @return array
      */
@@ -329,7 +329,7 @@ class dealer_platform_orders extends dealer_abstract
     /**
      * 获取基础物料的发货方式(自发、代发)、所属产品线、所属贸易公司
      * @todo：只有基础物料设置了发货方式为：代发，其它情况都是：自发；
-     * 
+     *
      * @param $productList
      * @param $businessInfo 经销商信息
      * @return array
@@ -375,7 +375,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * 获取发货方式（1:自发，2:代发）
-     * 
+     *
      * @param $productInfo
      * @return array
      */
@@ -410,7 +410,7 @@ class dealer_platform_orders extends dealer_abstract
     /**
      * 设置订单Hold单时间
      * @todo：创建订单完成后，根据配置项设置hold单时间，防止避免发货前退款；
-     * 
+     *
      * @param $plat_order_id
      * @return void
      */
@@ -456,7 +456,7 @@ class dealer_platform_orders extends dealer_abstract
     /**
      * 审核经销商订单
      * @todo: 根据基础物料发货方式，创建OMS订单(多个SKU对应多个分销商,拆分成多个OMS订单);
-     * 
+     *
      * @param array $params
      * @return array
      */
@@ -616,7 +616,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * 检查订单信息
-     * 
+     *
      * @param $orderInfo
      * @param $error_msg
      * @return bool
@@ -659,7 +659,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * 按照[贸易公司]进行分组,获取需要代发货的objects数据
-     * 
+     *
      * @param $orderInfo
      * @return array
      */
@@ -862,7 +862,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * [按贸易公司纬度]格式化OMS订单结构数据
-     * 
+     *
      * @param $orderInfo
      * @param $betcGroup
      * @return array
@@ -918,7 +918,7 @@ class dealer_platform_orders extends dealer_abstract
     /**
      * 格式化平台推送过来的订单原数据(删除掉自发商品明细)
      * @todo：object层所有商品金额固定为0元，创建OMS订单后，请求smart接口获取价格，再更新订单明细上的所有金额及创建支付单；
-     * 
+     *
      * @param $params
      * @param $objectList 需要处理的订单明细
      * @return array
@@ -1039,7 +1039,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * 批量创建OMS订单
-     * 
+     *
      * @param $orderInfo
      * @param $error_msg
      * @return array
@@ -1111,7 +1111,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * 释放订单库存冻结
-     * 
+     *
      * @param $orderInfo
      * @return bool
      */
@@ -1163,7 +1163,7 @@ class dealer_platform_orders extends dealer_abstract
      * 1、更新分销商平台订单items层：erp_order_id、erp_order_bn
      * 2、更新order_objects层：obj_line_no
      * 3、更新order_items层：item_line_no
-     * 
+     *
      * @param $orderInfo
      * @param $erp_order_bn
      * @return array
@@ -1334,7 +1334,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * 更新订单明细发货方式
-     * 
+     *
      * @param $params
      * @return array
      */
@@ -1532,7 +1532,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * 修复经销商失败订单
-     * 
+     *
      * @param $params
      * @return array
      */
@@ -1869,7 +1869,7 @@ class dealer_platform_orders extends dealer_abstract
     /**
      * 取消订单
      * 参考OMS取消订单：kernel::single('ome_batch_order')->create_refund($sdf['order_id']);
-     * 
+     *
      * @param $sdf
      * @return void
      */
@@ -1918,7 +1918,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * 更新订单支付状态&&打回发货单
-     * 
+     *
      * @param $plat_order_id
      * @return bool
      */
@@ -2042,7 +2042,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * 取消经销商订单产生的OMS订单、OMS发货单
-     * 
+     *
      * @param $orderInfo
      * @return void
      */
@@ -2190,7 +2190,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * 取消经销商订单产生的OMS发货单
-     * 
+     *
      * @param $orderInfo
      * @return void
      */
@@ -2202,7 +2202,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * 取消经销商订单
-     * 
+     *
      * @param $orderInfo
      * @return void
      */
@@ -2334,7 +2334,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * 订单暂停
-     * 
+     *
      * @param int $order_id
      * @return array
      */
@@ -2392,7 +2392,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * 订单恢复
-     * 
+     *
      * @param int $plat_order_id
      * @return boolean
      */
@@ -2430,7 +2430,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * OMS订单发货后更新经销订单数据
-     * 
+     *
      * @param $orderIds
      * @return void
      */
@@ -2512,7 +2512,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * 获取支付状态名称
-     * 
+     *
      * @return string
      */
     public function getPayStatusName($pay_status)
@@ -2534,7 +2534,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * 获取订单状态名称
-     * 
+     *
      * @return string
      */
     public function getShipStatusName($ship_status)
@@ -2552,7 +2552,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * 生成本地经销订单号
-     * 
+     *
      * @param $flag
      * @return string
      */
@@ -2592,7 +2592,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * [已经作废]获取smart订单价格(直接使用基础物料的销售价)
-     * 
+     *
      * @param $orderInfo
      * @return array|void
      */
@@ -2741,7 +2741,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * 获取smart订单价格(使用平台订单明细上的金额)
-     * 
+     *
      * @param $orderInfo
      * @return array|void
      */
@@ -2892,7 +2892,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * 获取ERP分销订单、发货单信息
-     * 
+     *
      * @param $filter
      * @return array
      */
@@ -3025,7 +3025,7 @@ class dealer_platform_orders extends dealer_abstract
      * 平台原订单顾客修改地址
      * 1、撤消审核生成的OMS发货单；
      * 2、不用取消审核生成的OMS订单；
-     * 
+     *
      * @param int $order_id
      * @return array
      */
@@ -3131,7 +3131,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * 取消分销订单审核生成的OMS发货单
-     * 
+     *
      * @param $orderInfo
      * @return void
      */
@@ -3180,7 +3180,7 @@ class dealer_platform_orders extends dealer_abstract
     
     /**
      * 更新OMS订单收货人信息
-     * 
+     *
      * @param $erpOrderInfo
      * @param $platformOrderInfo
      * @return void

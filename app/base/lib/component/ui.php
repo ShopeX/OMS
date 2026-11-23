@@ -15,6 +15,12 @@
  * limitations under the License.
  */
 
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.com/license/gpl GPL License
+ */
 
 class base_component_ui {
 
@@ -563,10 +569,6 @@ EOF;
         return sprintf('<link href="%s" %s/>', $file, $ext);
     }//End Function
 
-    /**
-     * pageid
-     * @return mixed 返回值
-     */
     public function pageid() 
     {
         if(is_null($this->_pageid)){

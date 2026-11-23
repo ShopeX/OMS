@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  * 产品线model类
  * @author wangjianjun@shopex.cn
@@ -23,14 +24,6 @@ class dealer_mdl_series extends dbeav_model
 {
     var $has_export_cnf = false;
     var $export_name    = '产品线';
-
-    /**
-     * _filter
-     * @param mixed $filter filter
-     * @param mixed $tableAlias tableAlias
-     * @param mixed $baseWhere baseWhere
-     * @return mixed 返回值
-     */
 
     public function _filter($filter, $tableAlias = null, $baseWhere = null)
     {
@@ -51,11 +44,6 @@ class dealer_mdl_series extends dbeav_model
         return parent::_filter($filter, $tableAlias, $baseWhere) . " AND " . $where;
     }
 
-    /**
-     * exportTemplate
-     * @param mixed $filter filter
-     * @return mixed 返回值
-     */
     public function exportTemplate($filter = 'series_main')
     {
         foreach ($this->io_title($filter) as $v) {
@@ -64,12 +52,6 @@ class dealer_mdl_series extends dbeav_model
         return $title;
     }
 
-    /**
-     * io_title
-     * @param mixed $filter filter
-     * @param mixed $ioType ioType
-     * @return mixed 返回值
-     */
     public function io_title($filter = 'series_main', $ioType = 'csv')
     {
         switch ($filter) {
@@ -86,10 +68,6 @@ class dealer_mdl_series extends dbeav_model
         return $this->ioTitle[$ioType][$filter];
     }
 
-    /**
-     * finish_import_csv
-     * @return mixed 返回值
-     */
     public function finish_import_csv()
     {
         header("Content-type: text/html; charset=utf-8");
@@ -129,16 +107,6 @@ class dealer_mdl_series extends dbeav_model
         return true;
     }
 
-    /**
-     * prepared_import_csv_row
-     * @param mixed $row row
-     * @param mixed $title title
-     * @param mixed $tmpl tmpl
-     * @param mixed $mark mark
-     * @param mixed $newObjFlag newObjFlag
-     * @param mixed $msg msg
-     * @return mixed 返回值
-     */
     public function prepared_import_csv_row($row, $title, &$tmpl, &$mark, &$newObjFlag, &$msg)
     {
         $mark = 'contents';
@@ -212,14 +180,6 @@ class dealer_mdl_series extends dbeav_model
         return true;
     }
 
-    /**
-     * prepared_import_csv_obj
-     * @param mixed $data 数据
-     * @param mixed $mark mark
-     * @param mixed $tmpl tmpl
-     * @param mixed $msg msg
-     * @return mixed 返回值
-     */
     public function prepared_import_csv_obj($data, $mark, $tmpl, &$msg = '')
     {
         return true;
