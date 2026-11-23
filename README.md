@@ -1,8 +1,38 @@
+# Shopex OMS
 
-<p align="center">
-  <img src="app/desktop/statics/opensource-logo.png" alt="ONEX OMS Logo" width="320" />
-</p>
-<div>
+Shopex OMS（订单管理系统）：PHP 8 后端 + Vue 3 前端 + MCP 接口。
+
+仓库结构
+------------
+前后端分离 & MCP 改造后，系统由三个仓库组成：
+
+| 仓库 | 地址 | 说明 |
+| ---- | ---- | ---- |
+| 本仓库 | （PHP 后端主仓库） | `app/`（63 个业务模块）、`tests/`、`docker/`、`upgrade/`；`public/`、`assets/`、根 `index.html` 为前端构建产物部署位置 |
+| 前端 | `oms-system-iframeui.git` | Vue 3 + Element Plus SPA，clone 到本仓库同级或 `frontend/` 目录（本仓库不跟踪该目录内容） |
+| MCP 服务 | `oms-system-mcp.git` | TypeScript MCP Server（stdio / Streamable HTTP），调用本仓库 `app/mcpapi/` 暴露的 MCPAPI |
+
+后端 MCP 接口由 `app/mcpapi/` 模块提供，通过 `/index.php/mcp-api/v1/*` 路由访问，详见 `app/mcpapi/README.md`。
+
+开发前准备事项
+------------
+- GIT提交风格统一
+  1. 下载template仓库
+  2. 执行``` ln -s <your_path>/template/hooks/commit-msg .git/hooks/ ```
+  3. 执行``` chmod +x <your_path>/template/hooks/commit-msg  ```
+
+安装注意事项
+------------
+- 准备工作
+  1. 先安装好composer并执行``` composer install --no-dev ```
+  2. 如果是Apache, 开启RewriteEngine
+    ```
+      LoadModule rewrite_module modules/mod_rewrite.so
+    ```
+    ```
+      <VirtualHost *:80>
+          DocumentRoot "/var/www/html/oms"
+          ServerName xxx.com
 
 ![PHP >=8.0](https://img.shields.io/badge/PHP-%3E%3D8.0-blue.svg)&nbsp;
 ![License Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-green.svg)&nbsp;
@@ -10,17 +40,10 @@
 
 </div>
 
-## 📋 目录
-+ [项目介绍](#项目介绍)
-+ [核心特性](#核心特性)
-+ [系统要求](#系统要求)
-+ [安装指南](#安装指南)
-+ [配置说明](#配置说明)
-+ [任务管理](#任务管理)
-+ [开发文档](#开发文档)
-+ [常见问题](#常见问题)
-+ [开源社群](#开源社群)
-+ [许可证](#许可证)
+          <Directory "/var/www/html/oms">
+              Options FollowSymLinks
+              AllowOverride None
+              Require all granted
 
 ---
 
@@ -71,97 +94,26 @@ ONEX OMS 是由 [商派 ShopeX](https://www.shopex.cn) 开发并开源的企业�
 + **出入库管理**：支持采购入库、销售出库、调拨、盘点等操作
 + **库存盘点**：支持库存盘点和盘点表确认
 
-### 💰 财务管理
-+ **订单财务**：订单收入、成本、利润统计
-+ **物流费用管理**：物流费用统计和结算
-+ **财务报表**：支持多种财务报表和统计
+前端
+------------
+前端代码在独立仓库 `oms-system-iframeui.git`，clone 到 `frontend/` 后本地开发：
 
-### 售后管理
-+ **仅退款**：发货前直接同意退款；发货后多为**退差价**或异常场景（如丢件）按仅退款处理。
-+ **退货退款**：用户寄回商品后按质检与入库结果执行退款。
-+ **换货**：通常拆分为“**换入**（用户寄回）”与“**换出**（商家重发）”两个流程，支持校验“换入完成后再换出”。
-+ **补发**：不退货直接补发，生成新订单进入正向履约。
-+ 扩展类型：支持**维修、服务单、赔付单**等，用于更细分的服务场景
-
-
-
-### 🔌 系统集成
-+ **OpenAPI 接口**：提供基于类方法的统一 API 接口
-+ **WMS 集成**：支持奇门WMS场景标准对接
-+ **POS 系统集成**：支持 POS 系统对接
-+ **快递鸟集成**：支持快递鸟电子面单、智选物流等功能
-+ **开票系统集成**：支持电子发票、纸质发票等开票系统对接
-
-### 🔐 权限管理
-+ **角色权限**：支持多角色、多权限的细粒度权限控制
-+ **组织架构**：支持多级组织架构和权限继承
-+ **操作日志**：完整的操作日志记录和审计
-
----
-
-## 🚀 安装快速入口
-
-**Docker 一键安装**（需已安装 Docker 与 Docker Compose >= 2.0）：
-
-**Linux / macOS：**
 ```bash
-curl -fsSL https://oss.shopex.cn/oms/install.sh | sudo bash -s -- -s --auto-install --admin-pass MyPass123
+cd frontend
+pnpm install
+pnpm dev          # Vite 开发服务，端口 3333
 ```
 
-**Windows（在 PowerShell 中执行）：**
-```powershell
-wsl -d Ubuntu -e bash -c "curl -fsSL https://oss.shopex.cn/oms/install.sh | sudo bash -s -- -s --auto-install --admin-pass MyPass123"
-```
-> **注意**：Windows 必须启用 WSL2，详见[部署指南](https://doc.shopex.cn/oms/200.install-deploy/deployment-guide.html)
+- 开发前把 `oms.local`、`oms-frontend.local` 映射到 `127.0.0.1`，浏览器访问 `http://oms-frontend.local:3333`（与后端 Cookie 同源）
+- Vite 会把 `/index.php`、`/mcp-api` 等请求代理到 `OMS_PHP_PROXY_TARGET`（默认 `http://oms.local`，即 `httpd-php82` 的容器网络别名）
+- 生产构建执行 `pnpm build:prod`，将 `dist/` 产物（`index.html` + `assets/`）发布到本仓库根目录
 
-将 `MyPass123` 改为你的管理员密码。安装后访问 http://opensource-oms.local（需在 `/etc/hosts` 添加 `127.0.0.1 opensource-oms.local`）。
-
-- 浏览器安装（最快）：[部署指南 - 浏览器安装](https://doc.shopex.cn/oms/200.install-deploy/deployment-guide.html#production-deployment)
-- 命令行安装（可脚本化）：[部署指南 - 命令行](https://doc.shopex.cn/oms/200.install-deploy/deployment-guide.html#production-deployment)
-- Docker 手动部署：[部署指南 - Docker](https://doc.shopex.cn/oms/200.install-deploy/deployment-guide.html#docker-deployment)
-
-更多细节：
-- 完整部署步骤：[部署指南](https://doc.shopex.cn/oms/200.install-deploy/deployment-guide.html)
-- 开发环境搭建：[开发者指南](https://doc.shopex.cn/oms/100.rule/1.code.html)
-
----
-
-## 📄 许可证
-本项目采用 Apache-2.0 许可证。
-
-+ 英文原版：[LICENSE](LICENSE)
-
----
-
-## 🤝 贡献
-请先阅读 `.github/CONTRIBUTING.md`，了解提交流程、分支/提交规范、测试要求。更多开发规则见 [开发者指南](https://doc.shopex.cn/oms/100.rule/1.code.html)。
-
----
-
-## 📞 支持
-+ **文档中心**：[https://doc.shopex.cn/oms/100.rule/1.code.html](https://doc.shopex.cn/oms/100.rule/1.code.html)
-+ **问题反馈**：[GitHub Issues](https://github.com/ShopeX/OMS/issues)
-+ **开发指南**：[PHP编码规范](https://doc.shopex.cn/oms/100.rule/1.code.html)
-
----
-
-## 💬 开源社群
-
-欢迎扫码加入 **ONEX OMS** 开源交流社群，获取更新动态、使用交流与问题互助。
-
-<p align="center">
-  <img src="app/desktop/statics/opensource-community.png" alt="ONEX OMS Community Exchange 二维码" width="240" />
-</p>
-
----
-
-## 🎉 致谢
-感谢所有为 ONEX OMS 项目做出贡献的开发者和用户们！
-
-----
-
-**最后更新**：2026年9月  
-**版本**：8.15.5
+MCP 接入
+------------
+- 后端 MCPAPI 路由统一为 `POST/GET /index.php/mcp-api/v1/*`（注意：不带 `/index.php` 前缀的裸 `/mcp-api/*` 会被 rewrite 进前端 SPA，不是有效 API 入口）
+- 认证使用 OMS 客户端凭证：`Authorization: Basic base64(client_id:client_secret)`
+- 客户端凭证在 OMS 后台「修改密码 → MCP接入凭证」创建/轮换/吊销，secret 仅创建时展示一次；凭证继承所属账号当前的角色权限，账号禁用或凭证吊销即时生效
+- MCP Server（`oms-system-mcp.git`）以 stdio 或 Streamable HTTP 方式对外提供 120+ 业务工具，配置 `SHOPEX_OMS_BASE_URL`（以 `/index.php` 结尾）、`SHOPEX_OMS_CLIENT_ID`、`SHOPEX_OMS_CLIENT_SECRET` 三个环境变量后启动，详见该仓库 README
 
 Task任务执行
 ------------
