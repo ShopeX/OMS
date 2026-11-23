@@ -41,7 +41,7 @@
                 <{if $log.operation=='特殊订单条件编辑'}>
                     <a href='index.php?app=brush&ctl=admin_condition&act=show_history&p[0]=<{$log.log_id}>' target="_blank">查看快照</a>
                 <{else}>
-                    $log.memo
+                    <{$log.memo}>
                 <{/if}>
            </td>
         </tr>

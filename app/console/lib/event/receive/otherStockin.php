@@ -17,27 +17,22 @@
 
 class console_event_receive_otherStockin extends console_event_response
 {
-
     /**
-     * 
      * 其它入库事件处理
      * @param array $data
      */
     public function inStorage($data)
     {
-
         $stockObj  = kernel::single('console_receipt_stock');
         $io        = 1;
         $io_status = $data['io_status'];
-        if ($data['io_source'] == 'selfwms') { //自有仓储不作处理
-            //return $this->send_succ();
-        }
-        #检查编号是否存在
+        
+        // 检查编号是否存在
         if (!$stockObj->checkExist($data['io_bn'])) {
             return $this->send_error('入库单号不存在');
         }
 
-        #检查状态是否可操作
+        // 检查状态是否可操作
         if (!$stockObj->checkValid($data['io_bn'], $io_status, $msg)) {
             return $this->send_error($msg);
         }

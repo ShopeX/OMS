@@ -273,7 +273,7 @@ class brush_ctl_admin_print extends desktop_controller
         $type   = $_POST['type'];
         $str_id = $_POST['str'];
         $dlyObj = $this->app->model('delivery');
-        $deliveryIds = array_filter(explode(',', $str_id));
+        $deliveryIds = array_map('intval', array_filter(explode(',', $str_id)));
         $dlys = $dlyObj->getList('*', array('delivery_id' => $deliveryIds), 0, -1);
         $deliveryOrderId = array();
         $deliveryOrderBn = array();

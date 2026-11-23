@@ -1,29 +1,9 @@
 <?php
-/**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class console_ctl_admin_purchase extends desktop_controller
 {
     public $name       = "采购管理";
     public $workground = "console_purchasecenter";
 
-    /**
-     * index
-     * @return mixed 返回值
-     */
     public function index()
     {
         $singleselect = $_GET['singleselect'];
@@ -99,10 +79,6 @@ class console_ctl_admin_purchase extends desktop_controller
         $this->finder('purchase_mdl_po', $params);
     }
 
-    /**
-     * 检查list
-     * @return mixed 返回验证结果
-     */
     public function checklist()
     {
         $params = array(
@@ -119,10 +95,6 @@ class console_ctl_admin_purchase extends desktop_controller
         $this->finder('purchase_mdl_po', $params);
     }
 
-    /**
-     * 检查_auto
-     * @return mixed 返回验证结果
-     */
     public function check_auto()
     {
         $this->begin('index.php?app=console&ctl=admin_purchase&act=index');
@@ -133,12 +105,6 @@ class console_ctl_admin_purchase extends desktop_controller
         $this->end(true, '批量审核成功');
     }
 
-    /**
-     * 检查
-     * @param mixed $po_id ID
-     * @param mixed $uncheck uncheck
-     * @return mixed 返回验证结果
-     */
     public function check($po_id, $uncheck = false)
     {
         $this->begin('index.php?app=console&ctl=admin_purchase&act=index');
@@ -198,10 +164,6 @@ class console_ctl_admin_purchase extends desktop_controller
         $this->singlepage("admin/purchase/purchase_check.html");
     }
 
-    /**
-     * do_check
-     * @return mixed 返回值
-     */
     public function do_check()
     {
         $this->begin('index.php?app=console&ctl=admin_purchase&act=index');
@@ -212,30 +174,16 @@ class console_ctl_admin_purchase extends desktop_controller
         $this->end($rs, $msg);
     }
 
-    /**
-     * uncheck
-     * @param mixed $po_id ID
-     * @return mixed 返回值
-     */
     public function uncheck($po_id)
     {
         $this->check($po_id, true);
     }
 
-    /**
-     * do_uncheck
-     * @return mixed 返回值
-     */
     public function do_uncheck()
     {
 
     }
 
-    /**
-     * eoList
-     * @param mixed $p p
-     * @return mixed 返回值
-     */
     public function eoList($p = null)
     {
         switch ($p) {
@@ -275,10 +223,6 @@ class console_ctl_admin_purchase extends desktop_controller
         $this->finder('purchase_mdl_po', $params);
     }
     
-    /**
-     * exportTemplate
-     * @return mixed 返回值
-     */
     public function exportTemplate()
     {
         $pObj   = app::get('purchase')->model('po');
@@ -290,7 +234,7 @@ class console_ctl_admin_purchase extends desktop_controller
     }
     /**
      * 新建采购单
-     * 
+     *
      */
     public function add()
     {
@@ -326,10 +270,6 @@ class console_ctl_admin_purchase extends desktop_controller
         $this->singlepage("admin/purchase/purchase_add.html");
     }
 
-    /**
-     * 添加_replenishment
-     * @return mixed 返回值
-     */
     public function add_replenishment(){
         $oPo  = app::get('purchase')->model('po');
         $branchMdl  = app::get('ome')->model('branch');
@@ -380,14 +320,14 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
     public function findInBranch()
     {
         $where = ' 1 ';
+        $poObj = app::get('purchase')->model('po');
         if ($_POST['name'] != '') {
-            $where .= " AND p.name LIKE '%" . $_POST['name'] . "%' ";
+            $where .= " AND p.name LIKE " . $poObj->db->quote('%' . $_POST['name'] . '%');
         }
         if ($_POST['branch'] != '') {
-            $where .= " AND bp.branch_id='" . $_POST['branch'] . "' ";
+            $where .= " AND bp.branch_id=" . intval($_POST['branch']);
         }
         $branchObj = app::get('ome')->model('branch');
-        $poObj     = app::get('purchase')->model('po');
         $branch    = $branchObj->getList('branch_id,name', '', 0, -1);
         $data      = $poObj->findProductsByBranch($where);
 
@@ -399,10 +339,6 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
     }
 
     //获取基础物料
-    /**
-     * 获取Products
-     * @return mixed 返回结果
-     */
     public function getProducts()
     {
         $basicMaterialSelect  = kernel::single('material_basic_select');
@@ -478,10 +414,6 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
         echo "window.autocompleter_json=" . json_encode($rows);
     }
 
-    /**
-     * 获取OriginalPurchaseItems
-     * @return mixed 返回结果
-     */
     public function getOriginalPurchaseItems(){
         $oPo  = app::get('purchase')->model('po');
         $po_items = $oPo->getPoItemByPoId($_REQUEST['po_id']);
@@ -496,13 +428,6 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
         echo "window.autocompleter_json=" . json_encode($arr_return);
     }
 
-    /**
-     * 创建Purchase
-     * @param mixed $supplier_id ID
-     * @param mixed $branch_id ID
-     * @param mixed $bn bn
-     * @return mixed 返回值
-     */
     public function createPurchase($supplier_id, $branch_id, $bn)
     {
 
@@ -515,6 +440,7 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
         } else {
             $product_id = $_POST['product_id'];
         }
+        $product_id = array_map('intval', (array)$product_id);
         $this->pagedata['product_ids'] = implode(',', $product_id);
 
         // 获取供应商id
@@ -566,10 +492,6 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
         $this->singlepage("admin/purchase/purchase_create.html");
     }
 
-    /**
-     * need
-     * @return mixed 返回值
-     */
     public function need()
     {
         $supplierObj = app::get('purchase')->model('supplier');
@@ -596,14 +518,6 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
         $this->page("admin/purchase/requirement.html");
     }
 
-    /**
-     * 获取SafeStock
-     * @param mixed $supplier_id ID
-     * @param mixed $branch_id ID
-     * @param mixed $bn bn
-     * @param mixed $product_ids ID
-     * @return mixed 返回结果
-     */
     public function getSafeStock($supplier_id, $branch_id, $bn, $product_ids)
     {
         $data['supplier_id'] = $supplier_id;
@@ -616,11 +530,6 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
         echo json_encode($data);
     }
 
-    /**
-     * safeStockPreview
-     * @param mixed $page page
-     * @return mixed 返回值
-     */
     public function safeStockPreview($page = 1)
     {
         $data = utils::addslashes_array($_POST);
@@ -651,11 +560,6 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
         return $this->display("admin/inventory/safe_stock_div.html");
     }
 
-    /**
-     * 获取EditProducts
-     * @param mixed $po_id ID
-     * @return mixed 返回结果
-     */
     public function getEditProducts($po_id)
     {
         if ($po_id == '') {
@@ -711,7 +615,7 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
 
     /**
      * 保存采购单
-     * 
+     *
      */
     public function doSave()
     {
@@ -803,7 +707,7 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
 
     /**
      * 采购补货单入库操作
-     * 
+     *
      * author : Joe
      * Date : 2022-01-26 15:32
      */
@@ -873,7 +777,7 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
 
     /**
      * 修改采购单
-     * 
+     *
      */
     public function editPo($po_id)
     {
@@ -920,7 +824,7 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
 
     /**
      * 修改采购补货单页面
-     * 
+     *
      * @param $po_id
      * author : Joe
      * Date : 2022-01-27 10:42
@@ -966,10 +870,6 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
         $this->singlepage("admin/purchase/purchase_replenishment_edit.html");
     }
 
-    /**
-     * doEdit
-     * @return mixed 返回值
-     */
     public function doEdit()
     {
         $this->begin();
@@ -1196,7 +1096,7 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
 
     /**
      * 保存详情
-     * 
+     *
      */
     public function doDetail()
     {
@@ -1235,7 +1135,7 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
 
     /**
      * 打印采购单
-     * 
+     *
      * @param int $po_id
      */
     public function printItem($po_id, $type = 'po')
@@ -1297,12 +1197,6 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
         kernel::single('ome_print_otmpl')->printOTmpl($_GET['otmplId'], 'purchase', $this);
     }
 
-    /**
-     * cancel
-     * @param mixed $po_id ID
-     * @param mixed $type type
-     * @return mixed 返回值
-     */
     public function cancel($po_id, $type = 'confirm')
     {
 
@@ -1320,11 +1214,6 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
         $this->display("admin/purchase/purchase_cancel.html");
     }
 
-    /**
-     * 添加Same
-     * @param mixed $po_id ID
-     * @return mixed 返回值
-     */
     public function addSame($po_id)
     {
         $this->begin('index.php?app=console&ctl=admin_purchase&act=index');
@@ -1390,10 +1279,6 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
 
     }
 
-    /**
-     * doSame
-     * @return mixed 返回值
-     */
     public function doSame()
     {
         $this->begin('index.php?app=console&ctl=admin_purchase&act=index');
@@ -1520,7 +1405,7 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
     }
 
     /**
-     * 根据条码查询商品详情
+     *根据条码查询商品详情
      */
     public function getProduct()
     {
@@ -1565,7 +1450,7 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
 
     /**
      * 入库确认
-     * 
+     *
      */
     public function purchaseConfirm($po_id)
     {
@@ -1676,7 +1561,6 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
     /*
      * 供应商查找
      */
-
     public function getSupplier()
     {
 
@@ -1692,10 +1576,6 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
     /*
      * 供应商查找 by id
      */
-    /**
-     * 获取SupplierById
-     * @return mixed 返回结果
-     */
     public function getSupplierById()
     {
 
@@ -1709,10 +1589,6 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
         }
     }
 
-    /**
-     * doRefund
-     * @return mixed 返回值
-     */
     public function doRefund()
     {
         $po_id = $_POST['po_id'];
@@ -1889,7 +1765,7 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
 
     /**
      * 检测是否可以取消
-     * 
+     *
      */
     public function checkCancel($po_id)
     {
@@ -1959,7 +1835,7 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
 
     /**
      * 基础物料列表弹窗数据获取方法
-     * 
+     *
      * @param Void
      * @return String
      */
@@ -2005,11 +1881,6 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
         $this->finder('material_mdl_basic_material', $params);
     }
 
-    /**
-     * iostockConfirm
-     * @param mixed $po_id ID
-     * @return mixed 返回值
-     */
     public function iostockConfirm($po_id)
     {
         $poObj       = app::get('purchase')->model('po');
@@ -2026,10 +1897,6 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
         $this->singlepage('admin/purchase/iostock_confirm.html');
     }
 
-    /**
-     * doIostockconfirm
-     * @return mixed 返回值
-     */
     public function doIostockconfirm()
     {
         $this->begin();
@@ -2103,10 +1970,6 @@ window.location.href = \"index.php?app=console&ctl=admin_purchase&act=add\";
         }
     }
 
-    /**
-     * 获取POById
-     * @return mixed 返回结果
-     */
     public function getPOById(){
         $po_id = $_POST['id'];
         if ($po_id){

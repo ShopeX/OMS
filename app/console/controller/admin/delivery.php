@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 class console_ctl_admin_delivery extends desktop_controller {
     var $name = "发货单列表";
     var $workground = "console_center";
@@ -220,7 +221,7 @@ class console_ctl_admin_delivery extends desktop_controller {
         
         $deliveryObj = app::get('ome')->model('delivery');
         
-        $ids = $_POST['delivery_id'];
+        $ids = array_map('intval', (array)$_POST['delivery_id']);
         
         //check
         if($_POST['isSelectedAll'] == '_ALL_'){
@@ -509,11 +510,12 @@ class console_ctl_admin_delivery extends desktop_controller {
      * @param bigint $dly_id
      */
     function showmemo($dly_id){
+        $dly_id = intval($dly_id);
         $deliveryObj  = app::get('ome')->model("delivery");
         $dly          = $deliveryObj->dump($dly_id,'is_bind,delivery_bn');
         
         if ($dly['is_bind'] == 'true'){
-            $ids = $deliveryObj->getItemsByParentId($dly_id, 'array');
+            $ids = array_map('intval', (array)$deliveryObj->getItemsByParentId($dly_id, 'array'));
             $returnids = implode(',', $ids);
             $idd = array();
             if ($ids){

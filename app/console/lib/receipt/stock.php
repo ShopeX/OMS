@@ -1,5 +1,21 @@
 <?php
 /**
+ * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
  * 出入库单据相关处理
  */
 class console_receipt_stock
@@ -744,6 +760,7 @@ class console_receipt_stock
             kernel::database()->commit();
             return true;
         }
+        
         $stockLib = kernel::single('siso_receipt_iostock_stockinwarehouse');
         $stockLib->_typeId = $this->_isoInfo['type_id'];
         if($iostockData['items']){
@@ -756,23 +773,28 @@ class console_receipt_stock
                 return false;
             }
         }
+        
         $io_update_data = array('iso_status'=>self::$iso_status[$io_status],'confirm'=>'Y');
         if (!$iostock_update){#是否需要确认
             $io_update_data['defective_status'] = '1';#未确认
         }
-        #是否有备注
+        
+        // 是否有备注
         if ($data['memo']){
             $memo = '';
             if (!$this->_isoInfo['memo']){
-                $memo.= $_isoInfo['memo'];
+                $memo.= (isset($iostockData['memo']) ? $iostockData['memo'] : '');
             }
-            $memo.=htmlspecialchars($data['memo']);
+            $memo .= htmlspecialchars($data['memo']);
+            
             $io_update_data['memo'] = $memo;
         }
+        
         //当完成时更新完成时间
         if($io_status == 'FINISH'){
             $io_update_data["complete_time"] = time();
         }
+        
         $iso_result = $isoObj->update($io_update_data,array('iso_id'=>$this->_isoInfo['iso_id']));
         if (!$iso_result){
             $msg = '出入库单据状态更新失败';
@@ -780,6 +802,7 @@ class console_receipt_stock
             kernel::database()->rollBack();
             return false;
         }
+        
         kernel::database()->commit();
         return true;
     }
@@ -824,14 +847,11 @@ class console_receipt_stock
             }
         }
         $iostock['items'] = $items;
+        
         return $iostock;
     }
-
-
+    
      function _processPackage($iso_id,$packages){
-
-      
-
         $bn_packages = $package_data = array();
         foreach ($packages as $value) {
             $bn =$value['bn'];
@@ -839,7 +859,6 @@ class console_receipt_stock
                 $bn_packages[$bn]['bn']               = $value['bn'];
                 $bn_packages[$bn]['package_code']     = $value['package_code'];
             }
-            
         }
 
         $items       = $this->_itemsObj->getList('iso_id,iso_items_id,nums,product_id,bn', array('iso_id' => $iso_id));
@@ -858,13 +877,9 @@ class console_receipt_stock
                     $updata = array('extendpro'=>$extendpro);
 
                     $detailMdl->update($updata,array('id'=>$iv['id']));
-
                 }
-                
             }
-
         }else{
-           
             foreach($items as $v){
                 $bn = $v['bn'];
                 if($bn_packages[$bn]){
@@ -885,22 +900,13 @@ class console_receipt_stock
 
                     );
                 }
-
-                
-                
             }
 
             if($package_data){
                 $sql = kernel::single('ome_func')->get_insert_sql($detailMdl, $package_data);
-                
                 $detailMdl->db->exec($sql);
             }
-            
         }
-        
-        //
-        
-
     }
 
     public function machineCenterOtherStockAdd($original_id, $isoInfo)

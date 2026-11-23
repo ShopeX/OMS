@@ -58,8 +58,7 @@ class base_finder_rpcnotify
     }
     
     var $column_msg = '信息';
-    var $column_msg_width = "300";
-    
+    var $column_msg_width = 420;
     function column_msg($row)
     {
         if (is_array($info = json_decode($row[$this->col_prefix . 'msg'], true))) {
@@ -67,5 +66,19 @@ class base_finder_rpcnotify
         } else {
             return $row[$this->col_prefix . 'msg'];
         }
+    }
+    
+    var $detail_log = '操作日志';
+    public function detail_log($id)
+    {
+        $render = app::get('ome')->render();
+        
+        //log
+        $operLogMdl = app::get('ome')->model('operation_log');
+        $logList = $operLogMdl->read_log(array('obj_id'=>$id, 'obj_type'=>'rpcnotify@base'), 0, -1, 'log_id DESC');
+        
+        $render->pagedata['logList'] = $logList;
+        
+        return $render->fetch('admin/common/detail_log.html');
     }
 }

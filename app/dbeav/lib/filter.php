@@ -14,6 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * ShopEx licence
+ *
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
+ */
 class dbeav_filter{
 
     /**
@@ -51,11 +58,36 @@ class dbeav_filter{
     }
 
     /**
+     * Build a quoted Y-m-d H:i:s literal for TIMESTAMP compare ops.
+     * Accepts non-zero-padded dates like 2026-11-3; returns null if unparseable.
+     *
+     * @param mixed $date
+     * @param mixed $hour
+     * @param mixed $minute
+     * @return string|null
+     */
+    protected function formatTimestampFilterLiteral($date, $hour, $minute){
+        if($date === null || $date === '' || is_array($date) || is_bool($date)){
+            return null;
+        }
+        $hour = ($hour === null || $hour === '') ? '00' : $hour;
+        $minute = ($minute === null || $minute === '') ? '00' : $minute;
+        if(is_array($hour) || is_array($minute)){
+            return null;
+        }
+        $ts = strtotime((string)$date.' '.(string)$hour.':'.(string)$minute.':00');
+        if($ts === false){
+            return null;
+        }
+        return "'".date('Y-m-d H:i:s', $ts)."'";
+    }
+
+    /**
      * Normalize values for unquoted compare operators (than/lthan/sthan/bthan/between).
      *
      * - Numbers are coerced (CNVD-2026-42947: block expression injection like "0 AND sleep(1)").
      * - Legacy TIMESTAMP filters pass already-quoted datetime literals into these operators;
-     *   allow only a strict `'YYYY-MM-DD[ HH:MM:SS]'` shape so those filters keep working.
+     *   allow `'Y-m-d[ H:i:s]'` with 1–2 digit month/day/hour (finder may omit zero-padding).
      * - Any other string is rejected (returns null → condition skipped).
      *
      * @param mixed $var
@@ -75,7 +107,7 @@ class dbeav_filter{
             return $var + 0;
         }
         // Quoted datetime literal produced by TIMESTAMP branch (not user-raw SQL).
-        if(preg_match("/^'[0-9]{4}-[0-9]{2}-[0-9]{2}( [0-9]{2}:[0-9]{2}:[0-9]{2})?'$/", $var) === 1){
+        if(preg_match("/^'[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}( [0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2})?'$/", $var) === 1){
             return $var;
         }
         return null;
@@ -211,19 +243,44 @@ class dbeav_filter{
                                 }
                         }elseif($cols[$k]['type']=='TIMESTAMP'){
                                 if($filter['_'.$k.'_search']=='between'){
-                                    $a_v = array();
-                                    $a_v[] = "'".$filter[$k.'_from'].' '.$filter['_DTIME_']['H'][$k.'_from'].':'.$filter['_DTIME_']['M'][$k.'_from'].':00'."'";
-                                    $a_v[] = "'".$filter[$k.'_to'].' '.$filter['_DTIME_']['H'][$k.'_to'].':'.$filter['_DTIME_']['M'][$k.'_to'].':00'."'";
+                                    $a_v = array(
+                                        $this->formatTimestampFilterLiteral(
+                                            isset($filter[$k.'_from']) ? $filter[$k.'_from'] : '',
+                                            isset($filter['_DTIME_']['H'][$k.'_from']) ? $filter['_DTIME_']['H'][$k.'_from'] : '00',
+                                            isset($filter['_DTIME_']['M'][$k.'_from']) ? $filter['_DTIME_']['M'][$k.'_from'] : '00'
+                                        ),
+                                        $this->formatTimestampFilterLiteral(
+                                            isset($filter[$k.'_to']) ? $filter[$k.'_to'] : '',
+                                            isset($filter['_DTIME_']['H'][$k.'_to']) ? $filter['_DTIME_']['H'][$k.'_to'] : '00',
+                                            isset($filter['_DTIME_']['M'][$k.'_to']) ? $filter['_DTIME_']['M'][$k.'_to'] : '00'
+                                        ),
+                                    );
                                     if(!empty($filter[$k.'_from'])&&empty($filter[$k.'_to'])){
-                                        $where[] = $tPre.$k.$this->_inner_getFilterType('bthan',$a_v[0]);
+                                        if($a_v[0] !== null){
+                                            $_str = $this->_inner_getFilterType('bthan',$a_v[0]);
+                                            if($_str !== null && $_str !== ''){ $where[] = $tPre.$k.$_str; }
+                                        }
                                     }elseif(empty($filter[$k.'_from'])&&!empty($filter[$k.'_to'])){
-                                        $where[] = $tPre.$k.$this->_inner_getFilterType('lthan',$a_v[1]);
+                                        if($a_v[1] !== null){
+                                            $_str = $this->_inner_getFilterType('lthan',$a_v[1]);
+                                            if($_str !== null && $_str !== ''){ $where[] = $tPre.$k.$_str; }
+                                        }
                                     }elseif(!empty($filter[$k.'_from'])&&!empty($filter[$k.'_to'])){
-                                        $where[] = str_replace('{field}',$tPre.$k,$this->_inner_getFilterType($filter['_'.$k.'_search'],$a_v));
+                                        if($a_v[0] !== null && $a_v[1] !== null){
+                                            $_str = $this->_inner_getFilterType($filter['_'.$k.'_search'],$a_v);
+                                            if($_str !== null && $_str !== ''){ $where[] = str_replace('{field}',$tPre.$k,$_str); }
+                                        }
                                     }
                                 }else{
-                                    $a_v = "'".$filter[$k].' '.$filter['_DTIME_']['H'][$k].':'.$filter['_DTIME_']['M'][$k].':00'."'";
-                                    $where[] = $tPre.$k.$this->_inner_getFilterType($filter['_'.$k.'_search'],$a_v);
+                                    $a_v = $this->formatTimestampFilterLiteral(
+                                        $filter[$k],
+                                        isset($filter['_DTIME_']['H'][$k]) ? $filter['_DTIME_']['H'][$k] : '00',
+                                        isset($filter['_DTIME_']['M'][$k]) ? $filter['_DTIME_']['M'][$k] : '00'
+                                    );
+                                    if($a_v !== null){
+                                        $_str = $this->_inner_getFilterType($filter['_'.$k.'_search'],$a_v);
+                                        if($_str !== null && $_str !== ''){ $where[] = $tPre.$k.$_str; }
+                                    }
                                 }
                         }elseif(!is_array($cols[$k]['type']) && ($cols[$k]['type']=='money'||$cols[$k]['type']=='number'||$cols[$k]['type']=='float'||strpos($cols[$k]['type'],'decimal')!==false) && $filter['_'.$k.'_search']){
                            if($filter['_'.$k.'_search']=='between'){

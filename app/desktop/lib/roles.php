@@ -240,6 +240,7 @@ class desktop_roles{
         $data['others'][] = ['menu_id'=>'customer_sensitive_info','menu_title'=>'客户敏感信息','permission'=>'customer_sensitive_info'];
         $data['others'][] = ['menu_id'=>'purchase_price','menu_title'=>'采购价','permission'=>'purchase_price'];
         $data['others'][] = ['menu_id'=>'cost_price','menu_title'=>'成本价','permission'=>'cost_price'];
+        $data['others'][] = ['menu_id'=>'original_price','menu_title'=>'原价','permission'=>'original_price'];
         $data['others'][] = ['menu_id'=>'sale_price','menu_title'=>'销售价','permission'=>'sale_price'];
         if($data['others']) {
             $sdf[] = ['menu_id'=>'others','menu_title'=>'其他','permissions'=>$data['others']];

@@ -55,8 +55,8 @@ class console_finder_basic_material
         if($_POST)
         {
             $oBranchPro = app::get('ome')->model('branch_product');
-            $branch_id = $_POST['branch_id'];
-            $product_ids = $_POST['product_id'];
+            $branch_id = array_map('intval', (array)$_POST['branch_id']);
+            $product_ids = array_map('intval', (array)$_POST['product_id']);
             $safe_store = $_POST['safe_store'];
             $is_locked = $_POST['is_locked'];
             for($k=0;$k<sizeof($branch_id);$k++) {
@@ -272,7 +272,7 @@ class console_finder_basic_material
 
     public function row_style($row)
     {
-        $has = app::get('ome')->model('branch_product')->dump(array('product_id'=>$row['bm_id'], 'filter_sql'=>'(safe_store+store_freeze)>(store+CAST(arrive_store AS SIGNED))'), 'product_id');
+        $has = app::get('ome')->model('branch_product')->dump(array('product_id'=>$row['bm_id'], 'filter_sql'=>'(CAST(safe_store AS SIGNED)+store_freeze)>(store+CAST(arrive_store AS SIGNED))'), 'product_id');
         if(!empty($has)){
             return 'list-warning';
         }

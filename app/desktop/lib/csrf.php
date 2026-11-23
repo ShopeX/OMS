@@ -45,11 +45,6 @@ class desktop_csrf
     /** Session fallback when cachecore is disabled (common in local dev) */
     private const SESSION_TOKEN_KEY = '_oms_csrf_key_';
 
-    /**
-     * __construct
-     * @param mixed $app app
-     * @return mixed 返回值
-     */
     public function __construct($app)
     {
     }

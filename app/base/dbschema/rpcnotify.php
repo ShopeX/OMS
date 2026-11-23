@@ -1,24 +1,13 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
+ * ShopEx licence
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * @copyright  Copyright (c) 2005-2010 ShopEx Technologies Inc. (http://www.shopex.cn)
+ * @license  http://ecos.shopex.cn/ ShopEx License
  */
-
-
-$db['rpcnotify']=array (
-    'columns' => 
-    array (
+ 
+$db['rpcnotify'] = array (
+  'columns' => array (
     'id' => 
     array (
       'type' => 'bigint unsigned',
@@ -29,7 +18,7 @@ $db['rpcnotify']=array (
       'editable' => false,
       'in_list' => true,
       'default_in_list' => true,
-      'width'=>40,
+      'width' => 90,
     ),
     'callback' => 
     array (
@@ -54,8 +43,11 @@ $db['rpcnotify']=array (
     'msg'=>array(
       'type' => 'text',
       'required' => true,
-      'width'=>200,
+      'width' => 320,
       'label' => app::get('base')->_('信息'),
+      'filtertype' => 'normal',
+      'filterdefault' => true,
+      'searchtype' => 'has',
       'in_list' =>false,
       'default_in_list' => false,
     ),
@@ -64,7 +56,9 @@ $db['rpcnotify']=array (
       'type' => 'time',
       'label' => app::get('base')->_('通知时间'),
       'required' => true,
-      'width' => 140,
+      'filtertype'    => 'time',
+      'filterdefault' => true,
+      'width' => 160,
       'in_list'=> true,
       'default_in_list'=> true,
     ),
@@ -93,10 +87,27 @@ $db['rpcnotify']=array (
     array(
       'type' => 'varchar(50)',
       'label' => app::get('base')->_('模板类型'),
-      'width' => 120,
+      'width' => 260,
       'editable' => false,
       'in_list' => true,
       'default_in_list' => true,
+    ),
+    'msg_type' => array(
+        'type' => 'varchar(30)',
+        'label' => '消息类型',
+        'default' => 'system',
+        'width' => 120,
+        'editable' => false,
+        'in_list' => true,
+        'default_in_list' => true,
+    ),
+    'shop_type' => array (
+        'type' => 'varchar(50)',
+        'required' => false,
+        'label' => '店铺类型',
+        'in_list' => true,
+        'default_in_list' => false,
+        'width' => 110,
     ),
     'shop_bn' => array (
         'type' => 'varchar(20)',
@@ -140,9 +151,21 @@ $db['rpcnotify']=array (
         0 => 'event_type',
       ),
     ),
+    'ind_msg_shop_type' => array (
+        'columns' => array (
+            0 => 'msg_type',
+            1 => 'shop_type',
+        ),
+    ),
+    'ind_org_id' => array (
+        'columns' => array (
+            0 => 'org_id',
+        ),
+    ),
   ),
     'comment' => '系统通知表',
     'engine' => 'innodb',
     'version' => '$Rev: 40912 $',
     'ignore_cache' => true,
 );
+

@@ -15,7 +15,12 @@
  * limitations under the License.
  */
 
-
+/**
+* 出入库事务
+*
+* @copyright shopex.cn 2013.4.10
+* @author 
+*/
 class console_event_receive_iostock{
 
     /**

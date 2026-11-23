@@ -14,10 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
- *	库内转储
- *
- *
+ * 库内转储
  */
 class console_event_receive_stockdump extends console_event_response{
 
@@ -46,7 +45,6 @@ class console_event_receive_stockdump extends console_event_response{
         }
 
         switch($io_status){
-           
             case 'FINISH':
                 $stockdump_bn = $data['stockdump_bn'];
                 
@@ -66,9 +64,5 @@ class console_event_receive_stockdump extends console_event_response{
         }else{
             return $this->send_error('更新失败', '', $data);
         }
-        
-        
-        
     }
-
 }

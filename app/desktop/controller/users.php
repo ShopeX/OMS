@@ -308,10 +308,6 @@ class desktop_ctl_users extends desktop_controller
             $_POST['pam_account']['account_id'] = $param_id;
             $_POST['op_no']                     = strtoupper(trim($_POST['op_no']));
             $_POST['mcp_enabled']               = $this->normalizeMcpEnabled($_POST['mcp_enabled'] ?? ($sdf_users['mcp_enabled'] ?? 1));
-
-            // 编辑用户时，将 is_hash256 设置为 1（新加密方式）
-            $_POST['pam_account']['is_hash256'] = '1';
-
             if ($sdf_users['super'] == 1) {
                 // Legacy 编辑页不传 super 字段；Vue 也不应覆盖超管标识
                 unset($_POST['super']);

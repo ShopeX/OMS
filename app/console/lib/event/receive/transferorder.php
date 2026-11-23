@@ -14,10 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /**
  *  库内转储
- *
- *
  */
 class console_event_receive_transferorder extends console_event_response{
 
@@ -35,9 +34,9 @@ class console_event_receive_transferorder extends console_event_response{
         }
         
         $need_add = false;
+        
         //验证转储单是否存在
         if(!$stockdumpObj->checkExist($data['stockdump_bn'])){
-            // return $this->send_error('转储单'.$data['stockdump_bn'].'不存在');
             if(!$stockdumpObj->checkExist($data['erp_stockdump_bn'])){
                 $need_add = true;
             }
@@ -50,9 +49,7 @@ class console_event_receive_transferorder extends console_event_response{
         }
 
         switch($io_status){
-           
             case 'FINISH':
-
                 // 新建转储单
                 if ($need_add) {
                     if($data['erp_stockdump_bn']) {
@@ -66,7 +63,7 @@ class console_event_receive_transferorder extends console_event_response{
                 $stockdump_bn = $data['stockdump_bn'];
                 
                 return kernel::single('console_receipt_stockdump')->do_save($stockdump_bn,$data);
-            break;
+                break;
             case 'FAILED':
             case 'CANCEL':
             case 'CLOSE':
@@ -76,20 +73,16 @@ class console_event_receive_transferorder extends console_event_response{
                 return $this->send_succ('未定义的转储单操作');
                 break;
         }
+        
         if ($result){
             return $this->send_succ('转储单操作成功');
         }else{
             return $this->send_error('更新失败', '', $data);
         }
-        
-        
-        
     }
-
-
+    
     // 新建转储单
     function createStockdump($data){
-
         $libBranchProduct    = kernel::single('ome_branch_product');
 
         //选择商品数量判断
@@ -109,6 +102,7 @@ class console_event_receive_transferorder extends console_event_response{
         if (!$from_branch_id) {
             return $this->send_error('出库仓库不存在', '', $data);
         }
+        
         $to_branch_id = $data['to_branch_id'] ? $data['to_branch_id'] : $this->getBranchByWmsBranchBn($data['to_branch_code']);
         if (!$to_branch_id) {
             return $this->send_error('入库仓库不存在', '', $data);
@@ -125,7 +119,6 @@ class console_event_receive_transferorder extends console_event_response{
             'use_third_party' => 1, //使用第三方的转储单号
             'from_physics_id'   => $data['from_physics_id'], 
             'to_physics_id'     => $data['to_physics_id'],
-  
         );
 
         if($data['source_from']) $options['source_from'] = $data['source_from'];
@@ -135,7 +128,6 @@ class console_event_receive_transferorder extends console_event_response{
         $branchLib->loadBranch(array('branch_id' => $from_branch_id));
         $adata = array();
         foreach ($data['items'] as $key => $value) {
-
             $product_id = $this->getBasicMaterialByBn($value['bn']);
 
             if (!$product_id) {
@@ -149,8 +141,7 @@ class console_event_receive_transferorder extends console_event_response{
             if (!is_numeric($value['appro_price']) || intval($value['appro_price'])<0) {
                 return $this->send_error($value['bn'].'行金额格式错误', '', $data);
             }
-
-
+            
             $params = array(
                 'node_type' => 'getAvailableStore',
                 'params'    => array(
@@ -160,8 +151,6 @@ class console_event_receive_transferorder extends console_event_response{
             );
             
             $usable_store = $branchLib->processBranchStore($params, $err_msg);
-           
-           
             if($usable_store < $value['num']){
                 return $this->send_error('仓库'.$value['from_branch_code'].'的'.$value['bn'].'可用库存不足', '', $data);
             }
@@ -180,20 +169,18 @@ class console_event_receive_transferorder extends console_event_response{
         $appro_data = [];
         $approResult = $oStockdump->to_savestore($adata,$options, $appro_data);
         if(!$approResult) {
-
             kernel::database()->rollBack();
             
             return $this->send_error('转储失败：'.kernel::database()->errorinfo(), '', $data);
         }
+        
         kernel::database()->commit();
+        
         return $this->send_succ('新建成功');
     }
-
-
+    
     function getBranchByWmsBranchBn($branch_bn){
-
         $branch_relationObj = app::get('wmsmgr')->model('branch_relation');
-        $branchObj = app::get('ome')->model('branch');
 
         $branch_relation    = $branch_relationObj->dump(array('wms_branch_bn'=>$branch_bn));
         $brBn = $branch_relation['sys_branch_bn'] ? : $branch_bn;
@@ -202,13 +189,10 @@ class console_event_receive_transferorder extends console_event_response{
 
         return $branch_info['branch_id'];
     }
-
-
-
+    
     function getBasicMaterialByBn($bn){
         $basicmaterialObj = app::get('material')->model('basic_material');
         $info = $basicmaterialObj->dump(array('material_bn'=>$bn));
         return $info['bm_id'];
     }
-
 }

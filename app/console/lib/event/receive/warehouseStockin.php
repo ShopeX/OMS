@@ -15,14 +15,11 @@
  * limitations under the License.
  */
 
-/*
+/**
  * 转仓入库
- * 20180529 by wangjianjun
  */
 class console_event_receive_warehouseStockin extends console_event_response{
-    
     /**
-     * 
      * 转仓入库事件处理
      * @param array $data
      */
@@ -30,7 +27,7 @@ class console_event_receive_warehouseStockin extends console_event_response{
         $stockObj = kernel::single('console_receipt_stock');
         $io_status = $data['io_status'];
         
-        #检查状态是否可操作
+        // 检查状态是否可操作
         if (!$stockObj->checkValidWarehouse($data['io_bn'],$io_status,$msg)){
             return $this->send_error($msg);
         }

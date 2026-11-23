@@ -69,6 +69,11 @@
                             checked="checked"
                             <{/if}>
                             /> 部分匹配&nbsp;&nbsp;
+                        <input type="radio" name="product_bn_match" value="2"
+                            <{if $shop_row.product_bn_match == 2 }>
+                            checked="checked"
+                            <{/if}>
+                            /> 排除商品&nbsp;&nbsp;
                         <br/><{input type="textarea" name="product_bn" style="width:240px"
                         value=$shop_row.product_bn}><{t}>（多个商品货号用英文逗号分割）<{/t}>
                     </td>

@@ -1,6 +1,22 @@
 <?php
-class console_receipt_purchase extends console_receipt_common{
+/**
+ * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
+class console_receipt_purchase extends console_receipt_common
+{
     private static $eo_status = array(
         'PARTIN'=>'2',
         'FINISH'=>'3',
@@ -12,9 +28,7 @@ class console_receipt_purchase extends console_receipt_common{
     function __construct() {
         $this->poObj = app::get('purchase')->model('po');
         $this->itemsObj = app::get('purchase')->model('po_items');
-
         $this->_branproductObj = kernel::single('ome_branch_product');
-
     }
 
     /**
@@ -23,8 +37,7 @@ class console_receipt_purchase extends console_receipt_common{
      * @param array $data 采购单数据信息
      *
      */
-    public function update(&$data,&$msg){
-
+    public function update(&$data,&$msg=null){
         $Po = $this->_po;
         $po_id = $Po['po_id'];
         $items = $data['items'];
@@ -34,12 +47,13 @@ class console_receipt_purchase extends console_receipt_common{
             'memo'=>$data['memo'],
             'operate_time'=>$data['operate_time'],
             'arrival_no'=>$data['arrival_no'],
-
         );
+        
         kernel::database()->beginTransaction();
 
         $eo_status = self::$eo_status[$io_status];
-        #检查货品否都存在
+        
+        // 检查货品否都存在
         $auto_iostock = false;
         if ($items){
             if(!$this->checkBnexist($po_id,$items)){
@@ -47,8 +61,8 @@ class console_receipt_purchase extends console_receipt_common{
                 kernel::database()->rollBack();
                 return false;
             }
+            
             $iostock_data['items'] = $this->__format_items($items,$iostock_update,$auto_iostock);
-
         }
 
         if($eo_status=='3' && $Po['eo_status']!='2' && $auto_iostock==true){
@@ -57,15 +71,16 @@ class console_receipt_purchase extends console_receipt_common{
             kernel::database()->commit();
             return true;
         }
+        
         if (count($iostock_data['items'])>0){
             if(!$this->save_eo($po_id,'normal',$iostock_data)){
-
                 $msg = '入库单保存失败';
                 kernel::database()->rollBack();
 
                 return false;
             }
         }
+        
         $wsiMdl = app::get('console')->model('wms_stockin');
         $wsiRow = $wsiMdl->db_dump(['stockin_bn'=>$Po['po_bn'], 'iso_status'=>'1'], 'id');
         if($wsiRow) {
@@ -74,12 +89,14 @@ class console_receipt_purchase extends console_receipt_common{
                 app::get('ome')->model('operation_log')->write_log('wms_stockin@console',$wsiRow['id'], '入库完成');
             }
         }
+        
         $eo_status = self::$eo_status[$io_status];
         $po_update_data = array('eo_status'=>$eo_status);
         if ($eo_status == '3'){#更新为入库完成
             $po_update_data['po_status'] = '4';
         }
-        #备注处理
+        
+        // 备注处理
         if ($data['memo']){
             $po_update_data['memo'] = $this->format_memo($data['memo']);
         }
@@ -90,12 +107,10 @@ class console_receipt_purchase extends console_receipt_common{
 
         if(!$this->poObj->update($po_update_data,array('po_id'=>$po_id))){
             $msg = '采购单更新状态失败';
-
             kernel::database()->rollBack();
-
             return false;
-
         }
+        
         kernel::database()->commit();
         $this->cleanArriveStore($iostock_data['items'],$io_status);
 
@@ -192,7 +207,7 @@ class console_receipt_purchase extends console_receipt_common{
                     'purchase_num' => $po_item['num'],
                     'nums'         => $item['normal_num'],
                     'is_new'       => $po_item['is_new'],
-                    'memo'         => $data['memo'],
+                    'memo'         => (isset($item['memo']) ? $item['memo'] : ''),
                     'product_id'   => $products_detail['product_id'],
                     'goods_id'     => $products_detail['goods_id'],
                     'unit'         => $products_detail['unit'],
@@ -201,11 +216,12 @@ class console_receipt_purchase extends console_receipt_common{
                     'sn_list'      => $return_sn_list,
                 );
             }
-            if($defective_num>0){#需要残损确认
+            
+            if($defective_num>0){
                 $iostock_update = false;
             }
-
         }
+        
         return $iostock_items;
     }
 
@@ -227,7 +243,6 @@ class console_receipt_purchase extends console_receipt_common{
      * @param array $po_bn 采购单编号
      */
     public function cancel($po_bn){
-
         $po = $this->_po;
         $po_data = array('po_status'=>'2','eo_status'=>'4');
         $result = $this->poObj->update($po_data,array('po_id'=>$po['po_id']));
@@ -235,8 +250,8 @@ class console_receipt_purchase extends console_receipt_common{
             $items = $this->_items;
             $this->cleanArriveStore($items);
         }
+        
         return $result;
-
     }
 
     /**
@@ -245,11 +260,11 @@ class console_receipt_purchase extends console_receipt_common{
      * @param array
      */
     public function checkBnexist($po_id,$items){
-
         $bn_array = array();
         foreach($items as $item){
             $bn_array[]=$item['bn'];
         }
+        
         $bn_total = count($bn_array);
 
         $bn_array = '\''.implode('\',\'',$bn_array).'\'';
@@ -259,6 +274,7 @@ class console_receipt_purchase extends console_receipt_common{
         if ($bn_total!=$po_items['count']){#比较数目是否相等
             return false;
         }
+        
         return true;
     }
 
@@ -313,6 +329,7 @@ class console_receipt_purchase extends console_receipt_common{
                 }
                 break;
         }
+        
         return true;
     }
 
@@ -323,7 +340,6 @@ class console_receipt_purchase extends console_receipt_common{
     * #为供应商与商品建立关联
     */
     function save_eo($po_id,$type,$iostock_data){
-
         $iostockObj = kernel::single('console_iostockdata');
         $iostock_instance = kernel::single('console_iostockorder');
         $Po = $this->poObj->dump($po_id,'*');
@@ -331,7 +347,6 @@ class console_receipt_purchase extends console_receipt_common{
 
         if ($type == 'normal'){//采购
             $type_id = 1;
-
         }else{//残损
             $type_id = 50;
             $damagedbranch = $iostockObj->getDamagedbranch( $Po['branch_id'] );
@@ -345,16 +360,18 @@ class console_receipt_purchase extends console_receipt_common{
             $shift_data[$item['product_id']] = $item;
             $amount+=$item['price']*$item['nums'];
         }
+        
+        // data
         $eo_data = array (
             'iostockorder_name' => date('Ymd').'入库单',
-            'supplier'          => $supplier['name'],
+            'supplier'          => (isset($Po['name']) ? $Po['name'] : ''),
             'supplier_id'       => $Po['supplier_id'],
              'supplier'         => $this->getSupplier($Po['supplier_id']),
             'branch'            => $branch_id,
             'iso_price'         => $Po['delivery_cost'],
             'memo'              => $iostock_data['memo'],
             'operate_time'      => $iostock_data['operate_time'],
-            'operator'          => $data['operator'],
+            'operator'          => (isset($Po['operator']) ? $Po['operator'] : ''),
             'products'          => $shift_data,
             'original_bn'       => $Po['po_bn'],
             'original_id'       => $po_id,
@@ -364,8 +381,7 @@ class console_receipt_purchase extends console_receipt_common{
             'orig_type_id'      =>  '1',
             'arrival_no' => $iostock_data['arrival_no'],
         );
-
-
+        
         $eo_data['eo_id'] = $iostock_instance->save_iostockorder($eo_data, $msg);
 
         $eo_data['eo_bn'] = $iostock_instance->getIoStockOrderBn();
@@ -382,6 +398,7 @@ class console_receipt_purchase extends console_receipt_common{
                 'branch_id'   => $branch_id,
             );
             app::get('purchase')->model("eo")->save($eorder_data);
+            
             if ($type_id == '1'){
                 foreach($iostock_data['items'] as $k2=>$v2){
                     $v2['supplier_id']  = $Po['supplier_id'];
@@ -393,6 +410,7 @@ class console_receipt_purchase extends console_receipt_common{
                     app::get('purchase')->model("branch_product_batch")->save($v2);
                 }
             }
+            
             return true;
         }else{
             return false;
@@ -401,17 +419,14 @@ class console_receipt_purchase extends console_receipt_common{
 
     /**
     * 扣减在途库存
-    *
     */
     function cleanArriveStore($items,$io_status=''){
         $po = $this->_po;
         $_items = $this->_items;
 
         $productIds = array();
-
         $changeItems = [];
         foreach ((array)$items as $item) {
-
             $effective_num = isset($item['effective_num']) ? $item['effective_num'] : ($item['num']-$item['in_num']-$item['out_num']);
             $num = 0;
             if ($io_status == 'FINISH' || $io_status == ''){
@@ -423,8 +438,8 @@ class console_receipt_purchase extends console_receipt_common{
             if($num>0){
                 $changeItems[] = ['product_id'=>$item['product_id'], 'num'=>$num];
             }
-
         }
+        
         if($changeItems) {
             $storeManageLib = kernel::single('ome_store_manage');
             $storeManageLib->loadBranch(array('branch_id' => $po['branch_id']));
@@ -439,6 +454,7 @@ class console_receipt_purchase extends console_receipt_common{
             $params['params']['items'] = $changeItems;
             $storeManageLib->processBranchStore($params, $err_msg);
         }
+        
         //当状态为全部入库时需将未产生过出入库记录释放在途库存
         if ($io_status == 'FINISH'){
             //取消在途
@@ -453,7 +469,6 @@ class console_receipt_purchase extends console_receipt_common{
             );
             $storeManageLib->processBranchStore($params, $err_msg);
         }
-
     }
 
     public function machineCenterPurchaseStockAdd($poInfo, $iostockData)

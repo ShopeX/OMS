@@ -239,16 +239,17 @@ SQL;
         }
 
         $dlyInvItemMdl = app::get('console')->model('dailyinventory_items');
-
-        // POS不存在的 BEGIN
-        $sql = <<<SQL
+        
+        // check
+        if(isset($dailyInv['id']) && $dailyInv['id']){
+            // POS不存在的 BEGIN
+            $sql = <<<SQL
             REPLACE INTO `sdb_console_dailyinventory_items`(`dlyinv_id`,`stock_date`,`warehouse_code`,`bm_id`,`material_bn`,`oms_stock`,`outer_stock`,`storage_code`,`diff_stock`,`diff_type`) SELECT "{$dailyInv['id']}","{$dailyInv['stock_date']}",`branch_bn`,`product_id`,`product_bn`,`stock_num`,0,`storage_code`,`stock_num`,"1" FROM `sdb_ome_dailystock` WHERE `stock_date`="{$invs['stock_date']}" AND `branch_id` ="{$invs['branch_id']}"
 SQL;
-        kernel::database()->exec($sql);
-        // POS不存在的 END
-
-
-
+            kernel::database()->exec($sql);
+            // POS不存在的 END
+        }
+        
         $offset = 0;
         $limit  = 800;
         $errmsg = [];

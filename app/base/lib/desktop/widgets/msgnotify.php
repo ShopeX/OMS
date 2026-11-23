@@ -33,31 +33,56 @@ class base_desktop_widgets_msgnotify implements desktop_interface_widget
     function get_html()
     {
         $render = $this->render;
-        $info   = array();
         
         $info = $this->fetchDataFromCache();
         if (empty($info)) {
             $noticeMdl = app::get('base')->model('rpcnotify');
-            $shopMdl   = app::get('ome')->model('shop');
-            $shopList  = $shopMdl->getList('name,node_id', array('node_id|noequal' => ''));
-            if ($shopList) {
-                $shopNodeList = array_column($shopList, null, 'node_id');
-            }
             
-            $list = $noticeMdl->getList('*', array(), 0, 6, 'notifytime DESC');
-            foreach ($list as $key => $value) {
+//            // 已经绑定的店铺列表
+//            $shopNodeList = array();
+//            $shopMdl   = app::get('ome')->model('shop');
+//            $shopList  = $shopMdl->getList('name,node_id', array('node_id|noequal' => ''));
+//            if ($shopList) {
+//                $shopNodeList = array_column($shopList, null, 'node_id');
+//            }
+
+            // 系统消息列表：按 shop_bn + shop_type + event_type 去重，保留最新，最多 8 条
+            $info = array();
+            $seen = array();
+            $list = $noticeMdl->getList('*', array('msg_type'=>'system'), 0, 200, 'notifytime DESC');
+            foreach ($list as $value)
+            {
+                if (count($info) >= 8) {
+                    break;
+                }
+                
+                $uniqKey = $value['shop_bn'] . "\0" . $value['shop_type'] . "\0" . $value['event_type'];
+                if (isset($seen[$uniqKey])) {
+                    continue;
+                }
+                
                 $notice = json_decode($value['msg'], true);
-                if (isset($notice['dead_line']) && $shopNodeList) {
-                    //店铺名称在数据保存是已拼接，店铺解绑后这里在通过node_id查不到数据
-//                    $notice['info']       = $shopNodeList[$notice['node_id']]['name'] . '-' . $notice['info'];
+                if (isset($notice['dead_line'])) {
                     $notice['notifytime'] = date('Y-m-d H:i:s', $value['notifytime']);
                     $notice['status']     = $value['status'];
                     $notice['callback']   = '';
                     $notice['id']         = $value['id'];
-                    $info[]               = $notice;
+                    
+                    // desc
+                    $notice['original_info'] = $notice['info'];
+                    
+                    // info信息截图字符长度(汉字最长为25个字符)
+                    $notice['info'] = mb_strlen($notice['info']) > 23 ? mb_substr($notice['info'], 0, 23) .'...' : $notice['info'];
+                    
+                    // 消息列表
+                    $info[] = $notice;
+                    
+                    // 记录消息
+                    $seen[$uniqKey]       = true;
                 }
             }
             
+            // 查看更多
             if ($info) {
                 $look = [
                     'info'     => '查看更多...',

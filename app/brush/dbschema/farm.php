@@ -65,7 +65,8 @@ $db['farm']=array(
         'product_bn_match'=>array(
             'type'=>array(
                 '0'=>'全部匹配',
-                '1'=>'部分匹配'
+                '1'=>'部分匹配',
+                '2'=>'排除商品'
             ),
             'label'=>'商品货号匹配',
             'editable'=>false,

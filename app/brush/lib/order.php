@@ -101,7 +101,6 @@ class brush_order
         //商品货号
         if($farm['product_bn']) {
             $retCheckBn = $this->_matchProductBn($farm['product_bn'], $farm['product_bn_match'], $sdf);
-            
             if(!$retCheckBn) {
                 return false;
             }
@@ -187,16 +186,6 @@ class brush_order
                 if (!in_array($objects['bn'], $arrBn)) {
                     return false;
                 }
-                
-                /***
-                 * erpapi_shop_response_plugins_order_ordertype中拿不到order_items订单明细
-                 * 
-                foreach ($objects['order_items'] as $items) {
-                    if (!in_array($items['bn'], $arrBn)) {
-                        return false;
-                    }
-                }
-                ***/
             }
             
             return true;
@@ -206,20 +195,21 @@ class brush_order
                 if (in_array($objects['bn'], $arrBn)) {
                     return true;
                 }
-                
-                /***
-                 * erpapi_shop_response_plugins_order_ordertype中拿不到order_items订单明细
-                 *
-                foreach ($objects['order_items'] as $items) {
-                    if (in_array($items['bn'], $arrBn)) {
-                        return true;
-                    }
-                }
-                **/
             }
             
             return false;
+        } elseif($match == 2) {
+            foreach($sdf['order_objects'] as $objects)
+            {
+                if (in_array($objects['bn'], $arrBn)) {
+                    return false;
+                }
+            }
+            
+            return true;
         }
+        
+        return false;
     }
 
     /**

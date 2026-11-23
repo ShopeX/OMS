@@ -161,6 +161,13 @@ $db['wms_reship'] = array(
         'idx_logi_no'     => array('columns' => array('logi_no')),
         'idx_at_time'     => array('columns' => array('at_time')),
         'idx_up_time'     => array('columns' => array('up_time')),
+        'idx_reship_status_time' => array(
+            'columns' => array(
+                0 => 'reship_status',
+                1 => 'at_time',
+                2 => 'wms_status',
+            ),
+        ),
     ),
     'engine'  => 'innodb',
     'version' => '$Rev:  $',

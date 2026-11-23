@@ -52,8 +52,8 @@ class console_finder_products{
         // 保存安全库存数量
         if($_POST) {
             $oBranchPro = app::get('ome')->model('branch_product');
-            $branch_id = $_POST['branch_id'];
-            $product_ids = $_POST['product_id'];
+            $branch_id = array_map('intval', (array)$_POST['branch_id']);
+            $product_ids = array_map('intval', (array)$_POST['product_id']);
             $safe_store = $_POST['safe_store'];
             $is_locked = $_POST['is_locked'];
             for($k=0;$k<sizeof($branch_id);$k++) {

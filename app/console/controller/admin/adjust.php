@@ -1,33 +1,13 @@
 <?php
 /**
- * Copyright 2012-2026 ShopeX (https://www.shopex.cn)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/**
  * ============================
  * @Author:   yaokangming
- * @Version:  1.0
+ * @Version:  1.0 
  * @DateTime: 2022/7/29 14:08:52
  * @describe: 库存调整单
  * ============================
  */
 class console_ctl_admin_adjust extends desktop_controller {
-
-    /**
-     * index
-     * @return mixed 返回值
-     */
 
     public function index() {
         $actions = array();
@@ -78,10 +58,6 @@ class console_ctl_admin_adjust extends desktop_controller {
         $this->finder('console_mdl_adjust', $params);
     }
 
-    /**
-     * exportTemplate
-     * @return mixed 返回值
-     */
     public function exportTemplate()
     {
         $row = app::get('console')->model('adjust')->getTemplateColumn();
@@ -93,10 +69,6 @@ class console_ctl_admin_adjust extends desktop_controller {
         $lib->newExportExcel($data, '库存调整单模板-'.date('Y-m-d'), 'xls', $row);
     }
 
-    /**
-     * 添加
-     * @return mixed 返回值
-     */
     public function add() {
         $branchList = app::get('ome')->model('branch')->getList('branch_id,name', [
             'b_type' => '1',
@@ -114,10 +86,6 @@ class console_ctl_admin_adjust extends desktop_controller {
         $this->singlepage('admin/adjust/add.html');
     }
 
-    /**
-     * 保存
-     * @return mixed 返回操作结果
-     */
     public function save() {
         $sn = [];
         if($_POST['sn']) {
@@ -143,10 +111,6 @@ class console_ctl_admin_adjust extends desktop_controller {
         $this->splash(($rs?'success':'error'), null, $rsData['msg']);
     }
 
-    /**
-     * confirm
-     * @return mixed 返回值
-     */
     public function confirm() {
         $ids = $_POST['id'];
         $finder_id = $_GET['finder_id'];
@@ -163,11 +127,6 @@ class console_ctl_admin_adjust extends desktop_controller {
         $this->display('admin/adjust/confirm.html');
     }
 
-    /**
-     * singleConfirm
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function singleConfirm($id) {
         $finder_id = $_GET['finder_id'];
         $adjust = app::get('console')->model('adjust')->db_dump($id, 'id, adjust_bn, bill_status,source');
@@ -202,10 +161,6 @@ class console_ctl_admin_adjust extends desktop_controller {
         parent::dialog_batch();
     }
 
-    /**
-     * doSingleConfirm
-     * @return mixed 返回值
-     */
     public function doSingleConfirm() {
         $itemIds = array_values(array_filter(array_map('intval', explode(',', (string) $_POST['primary_id']))));
 
@@ -265,11 +220,6 @@ class console_ctl_admin_adjust extends desktop_controller {
         return app::get('console')->model('adjust')->db_dump((int) $firstItem['adjust_id']);
     }
 
-    /**
-     * cancel
-     * @param mixed $id ID
-     * @return mixed 返回值
-     */
     public function cancel($id) {
         $ids = $id ? [$id] : $_POST['id'];
         if(empty($ids)) {

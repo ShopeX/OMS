@@ -44,7 +44,20 @@ class desktop_ctl_rpcnotify extends desktop_controller
         $table = app::get('base')->model('rpcnotify')->table_name(true);
         $sql = "DELETE FROM {$table} WHERE notifytime < {$threeMonthsAgo}";
         $db->exec($sql);
-
+        
+        $base_filter = [];
+        
+        //check shop permission
+        $organization_permissions = kernel::single('desktop_user')->get_organization_permission();
+        if($organization_permissions){
+            // 兼容老数据，加上默认值：0
+            if($organization_permissions && is_array($organization_permissions)){
+                $organization_permissions[] = 0;
+            }
+            
+            $base_filter['org_id'] = $organization_permissions;
+        }
+        
         $this->finder('base_mdl_rpcnotify',array(
             'title'=>app::get('desktop')->_('消息通知'),
             'actions'=>array(
@@ -53,8 +66,7 @@ class desktop_ctl_rpcnotify extends desktop_controller
                         ),
             'use_buildin_filter'  => true,
             'use_buildin_recycle' => false,
-            #'use_buildin_setcol' => false,
-            #'use_buildin_tagedit' => false,
+            'base_filter' => $base_filter,
             ));
     }
     

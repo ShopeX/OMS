@@ -26,10 +26,6 @@ class desktop_finder_builder_import extends desktop_finder_builder_prototype
     }
 
 
-    /**
-     * main
-     * @return mixed 返回值
-     */
     public function main()
     {
         $render = app::get('desktop')->render();

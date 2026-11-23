@@ -201,7 +201,7 @@ class console_ctl_admin_stockdump extends desktop_controller{
     public function do_save_operation(){
         $this->begin('index.php?app=console&ctl=admin_stockdump&act=index');
 
-        $stockdump_bn = $_POST['stock_bn'];
+        $stockdump_bn = trim($_POST['stock_bn']);
         
         $approObj = app::get('console')->model('stockdump');
         $app_detail = $approObj->getList('self_status,in_status',array('stockdump_bn'=>$stockdump_bn),0,1);

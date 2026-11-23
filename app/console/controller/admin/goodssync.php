@@ -17,13 +17,13 @@
 
 class console_ctl_admin_goodssync extends desktop_controller{
     var $workground = "console_center";
-	   function index(){
+       function index(){
         $finder_id = $_REQUEST['_finder']['finder_id'] ? : substr(md5($_SERVER['QUERY_STRING']), 5, 6);
         if(!isset($_GET['wms_id'])){
             $wms_list = kernel::single('channel_func')->getWmsChannelList();
             $_GET['wms_id'] = $wms_list[0]['wms_id'];
         }
-        $filter = array('wms_id'=>$_GET['wms_id']);
+        
         $cur_wms_id = $_GET['wms_id'];
         $pUrl='index.php?app=desktop&act=alertpages&goto='.urlencode('index.php?app=console&ctl=admin_goodssync&act=findMaterial&wms_id='.$cur_wms_id);
         $pkgUrl='index.php?app=desktop&act=alertpages&goto='.urlencode('index.php?app=material&ctl=admin_material_sales&act=findSalesMaterial&type=2');
@@ -55,27 +55,27 @@ JS
                     'href' => 'index.php?app=console&ctl=admin_goodssync&act=importTemplate&wms_id='.$_GET['wms_id'],
                     'target' => "dialog::{width:400,height:170,title:'导入商品'}",
                 ),
-
             ),
             'use_buildin_recycle'=>true,
             'use_buildin_selectrow'=>true,
             'use_bulidin_view'=>true,
             'use_buildin_filter'=>true,
         );
+        
         if($_GET['wms_id'] != '0'){
             $params['base_filter'] = array('wms_id'=>$_GET['wms_id']);
 
             // 获取node_type
             $node_type = kernel::single('channel_func')->getWmsNodeTypeById($_GET['wms_id']);
-            if ($node_type == 'qimen') {
+            if (in_array(strtolower($node_type), array('qimen', 'hufu'))) {
                 $params['actions'][0] = array(
                     'label'  => '批量同步',
                     'submit' => 'index.php?app=console&ctl=admin_goodssync&act=batchSyncDialog&p[0]='.$_GET['wms_id'],
                     'target' => 'dialog::{width:690,height:400,title:\'批量同步\'}',
                 );
             }
+            
             // 如果是保税，增加同步库存按钮
- 
             if ($node_type == 'bim') {
                 $params['actions'][] = array(
                     'label' => '同步仓储库存',
@@ -83,8 +83,8 @@ JS
                     'target'=>'dialog::{width:700,height:250,title:\'同步仓储库存\'}'
                 );
             }
+            
             if ($node_type == 'yjdf') {
-                $channel = app::get('channel')->model('channel')->dump($_GET['wms_id'],'addon');
                 $params['actions'] = array(
                     array(
                        'label' => '批量同步商品',
@@ -109,12 +109,12 @@ JS
                 );
             }
         }
+        
         //商品主数据
         $this->finder('console_mdl_foreign_sku',$params);
     }
-
+    
     function _views($flag = 'true'){
-
         $wfsObj = app::get('console')->model('foreign_sku');
         $data = kernel::single('channel_func')->getWmsChannelList();
         $show_menu = array();
@@ -130,16 +130,18 @@ JS
             $wms[] = $c_v['wms_id'];
             $show_menu[] = $result;
         }
+        
         $count = count($show_menu);
         $show_menu[$count]['label'] = '全部';
         $show_menu[$count]['optional'] = '';
         $show_menu[$count]['filter'] = array('wms_id|in'=>$wms);
         $show_menu[$count]['href'] =  $this->_views_href($count,0);
         $show_menu[$count]['addon'] = $wfsObj->count($show_menu[$count]['filter']);
-         $show_menu[$count]['addon'] =  $show_menu[$count]['addon'] ? $show_menu[$count]['addon'] :'_FILTER_POINT_';
+        $show_menu[$count]['addon'] =  $show_menu[$count]['addon'] ? $show_menu[$count]['addon'] :'_FILTER_POINT_';
         $show_menu[$count]['show'] = 'true';
+        
         return $show_menu;
-	   }
+    }
 
     function _views_href($view,$wms_id)
     {
@@ -161,11 +163,9 @@ JS
         if(empty($_REQUEST['fsid']) && $_REQUEST['isSelectedAll'] != '_ALL_') return NULL;
         $wms_id = $_POST['wms_id'] ? $_POST['wms_id'] : $_GET['wms_id'];
         $view =  $_POST['view'] ? intval($_POST['view']) : intval($_GET['view']);
-        // $this->begin('index.php?app=console&ctl=admin_goodssync&act=index&wms_id='.$wms_id.'&view='.$view);
-
-
+        
         $wfsObj = app::get('console')->model('foreign_sku');
-        $title = '货品同步';
+        
         //全部选中处理
         if($_POST['isSelectedAll'] == '_ALL_'){
             $this->splash('error', $this->url.'&act=index&wms_id='.$wms_id.'&view='.$view, '该方法不支持全量，请使用batchSyncDialog， ajaxBatchSync');
@@ -173,12 +173,10 @@ JS
             $fsids = $_REQUEST['fsid'];
             $foreign_list = $wfsObj->getlist('inner_product_id',array('fsid'=>$fsids));
             $product_ids = array_map('current',$foreign_list);
-
         }
 
         if(count($product_ids) > 100){
             $this->splash('error', $this->url.'&act=index&wms_id='.$wms_id.'&view='.$view, '选取数量过多，请使用batchSyncDialog， ajaxBatchSync');
-
         }else{
             if ($product_ids){
                 $product_sdf = array();
@@ -186,8 +184,6 @@ JS
 
                 if ($_POST['inner_type']){
                     $goodsData = app::get('material')->model('sales_material')->getList('sm_id as product_id, sales_material_bn as bn, sales_material_name as name', array('sm_id'=>$product_ids));
-                    $goods = array();
-
                     foreach($goodsData as $val) {
                         $val['type'] = 'pkg';
                         $product_sdf[$val['goods_id']] = $val;
@@ -195,19 +191,15 @@ JS
                 }else{
                     $product_sdf = kernel::single('console_goodssync')->getProductSdf($product_ids);
                     $goodsData = $basicMaterialSelect->db->select("SELECT sm_id as product_id, sales_material_bn as bn, sales_material_name as name FROM sdb_console_foreign_sku as s  LEFT JOIN sdb_material_sales_material as m ON s.inner_product_id=m.sm_id WHERE s.inner_type='1' AND m.sm_id in (".implode(',',$product_ids).")");
-
                     if ($goodsData){
                         foreach($goodsData as $val) {
                             $val['type'] = 'pkg';
                             $product_sdf[] = $val;
                         }
                     }
-
-
                 }
-
             }
-            #$product_sdf['wms_id'] = $_REQUEST['wms_id'];
+            
             // 发起商品同步
            $wms_id = $_REQUEST['wms_id'];
            $branch_bn = $_POST['branch_bn'];
@@ -259,12 +251,13 @@ JS
             'total'=>$total_page,
             'link'=>$link,
         ));
+        
         //获取自定义搜索选项
         $search = kernel::single("console_goodssync")->get_search_options();
+        
         //获取自定义搜索项下拉列表
         $search_list = kernel::single("console_goodssync")->get_search_list();
-        //echo '<pre>';
-        //print_r($data);
+        
         $this->pagedata['search'] = $search;
         $this->pagedata['count'] = $count;
         $this->pagedata['search_list'] = $search_list;
@@ -275,18 +268,18 @@ JS
         if($_GET['target'] || $_POST['search'] =='true'){
             return $this->display('admin/goodssync/index.html');
         }
+        
         $this->singlepage('admin/goodssync/index.html');
     }
 
     function do_save(){
         $wms_id = $_POST['wms_id'];
         $product_ids = $_POST['product_id'];
-
-        $finder_id = $_POST['finder_id'];
-        $wfsObj = app::get('console')->model('foreign_sku');
+        
         $db = kernel::database();
         $limit = 50;//设置多少个货品组一个sql语句
         $this->begin();
+        
         //全选时候的处理
         if($_POST['select_all'] == 'true'){
             $search_key = $_POST['search_key'];
@@ -299,12 +292,10 @@ JS
         }else{
             $data = kernel::single("console_goodssync")->get_wms_goods($product_ids);
         }
-
-
+        
         //标签为全部 表示所有wms都分配商品
         if($wms_id =='0'){
             $all = 'true';
-            //$wms = $wmsObj->getList('wms_id',array('connect_type|noequal'=>'omeselfwms'));
             $wms = kernel::single('channel_func')->getWmsChannelList();
             $sdf = array();
             foreach($wms as $wms_id){
@@ -329,14 +320,16 @@ JS
                 $update_value[] = "('".$value['inner_sku']."','".$value['inner_product_id']."','".$value['wms_id']."')";
             }
         }
+        
         $count = ceil(count($update_value) / $limit);
         $update_value_tmp = array_chunk($update_value, $limit,true);
+        
         for($i=0;$i<$count;$i++){
             //插入数据
             $update_sql = "insert into sdb_console_foreign_sku (`inner_sku`,`inner_product_id`,`wms_id`) values ".implode($update_value_tmp[$i], ',');
-
             $db->exec($update_sql);
         }
+        
         $this->end(true,'操作成功');
     }
 
@@ -360,8 +353,8 @@ JS
         header('Pragma:public');
         $oObj = $this->app->model('foreign_sku');
         $title = $oObj->exportTemplate();
+        
         echo '"'.implode('","',$title).'"';
-
     }
 
     /**
@@ -372,7 +365,6 @@ JS
     public function importTemplate(){
        $wms_id = $_GET['wms_id'];
        if ($wms_id){
-
             $wms_info = array(
                 'wms_name' => kernel::single('channel_func')->getChannelNameById($wms_id),
                 'wms_id' => $wms_id
@@ -383,6 +375,7 @@ JS
                 'wms_id' => '_ALL_'
             );
         }
+       
         $this->pagedata['wms_name'] = $wms_info['wms_name'];
         $this->pagedata['wms_id'] = $wms_info['wms_id'];
 
@@ -393,6 +386,7 @@ JS
     public function import(){
         if( $_POST ){
             $this->begin();
+            
             //所有wms 不包括自有仓储
             if($_POST['wms_id']=='0'){
                 $wms = kernel::single('channel_func')->getWmsChannelList();
@@ -447,6 +441,7 @@ JS
                 exit;
             }
         }
+        
         $this->pagedata['wms_id'] = $_GET['_params']['wms_id'];
         $this->display('admin/goodssync/create_import.html');
     }
@@ -540,6 +535,7 @@ JS
                 );
             }
         }
+        
         if($sm_id) {
             $goods = app::get('material')->model("sales_material")->getList('sm_id,sales_material_name,sales_material_bn',array('sm_id'=>$sm_id));
 

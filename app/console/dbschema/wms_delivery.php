@@ -199,8 +199,15 @@ $db['wms_delivery'] = array(
         'idx_logi_no'     => array('columns' => array('logi_no')),
         'idx_at_time'     => array('columns' => array('at_time')),
         'idx_up_time'     => array('columns' => array('up_time')),
+        'idx_delivery_status_time' => array(
+            'columns' => array(
+                0 => 'delivery_status',
+                1 => 'at_time',
+                2 => 'wms_status',
+            ),
+        ),
     ),
     'engine'  => 'innodb',
     'version' => '$Rev:  $',
-    'comment' => '第三方退货单',
+    'comment' => '第三方发货单',
 );

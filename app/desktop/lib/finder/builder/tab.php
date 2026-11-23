@@ -25,10 +25,6 @@ class desktop_finder_builder_tab extends desktop_finder_builder_prototype{
     }
 
 
-    /**
-     * main
-     * @return mixed 返回值
-     */
     public function main(){
         $finder_aliasname = $_GET['finder_aliasname']?$_GET['finder_aliasname']:$_POST['finder_aliasname'];
 

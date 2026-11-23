@@ -272,9 +272,9 @@ EOF;
         
         //检查是否有任务未完成
         if($data['task_id']){
-            $sql = "SELECT task_id FROM sdb_console_replenish_task WHERE task_id != ". $data['task_id'] ." AND task_status IN('0','1','2','3','4') AND store_type='". $data['store_type'] ."'";
+            $sql = "SELECT task_id FROM sdb_console_replenish_task WHERE task_id != ". intval($data['task_id']) ." AND task_status IN('0','1','2','3','4') AND store_type=". $reTaskObj->db->quote($data['store_type']);
         }else{
-            $sql = "SELECT task_id FROM sdb_console_replenish_task WHERE task_status IN('0','1','2','3','4') AND store_type='". $data['store_type'] ."'";
+            $sql = "SELECT task_id FROM sdb_console_replenish_task WHERE task_status IN('0','1','2','3','4') AND store_type=". $reTaskObj->db->quote($data['store_type']);
         }
         
         $checkInfo = $reTaskObj->db->selectrow($sql);
@@ -488,10 +488,11 @@ EOF;
         }
         
         if($_POST['out_branch_id']){
-            $sql = "SELECT branch_id,branch_bn,name FROM sdb_ome_branch WHERE branch_id=".$_POST['out_branch_id'];
+            $bid = intval($_POST['out_branch_id']);
+            $sql = "SELECT branch_id,branch_bn,name FROM sdb_ome_branch WHERE branch_id=".$bid;
 
             $branchs = $suggestObj->db->selectrow($sql);
-            $suggestObj->update(array('out_branch_id'=>$_POST['out_branch_id'],'out_branch_bn'=>$branchs['branch_bn']), array('sug_id'=>$sug_id));
+            $suggestObj->update(array('out_branch_id'=>$bid,'out_branch_bn'=>$branchs['branch_bn']), array('sug_id'=>$sug_id));
         }
 
         

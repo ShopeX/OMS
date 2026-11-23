@@ -145,7 +145,7 @@ class console_ctl_admin_branch_product_extend extends desktop_controller
         $branchLib = kernel::single('ome_branch');
         
         //post
-        $ids = explode(',', $_POST['primary_id']);
+        $ids = array_map('intval', explode(',', $_POST['primary_id']));
         $ids = array_filter($ids);
         if(empty($ids)){
             echo 'Error: 请先选择操作的单据;';

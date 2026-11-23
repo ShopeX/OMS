@@ -906,7 +906,7 @@ class console_ctl_admin_stock extends desktop_controller{
         
         if($_POST){
             $act = $_POST['page_act'];
-            $order_bn = $_POST['order_bn'];
+            $order_bn = trim($_POST['order_bn']);
             
             if(empty($order_bn)){
                 die("订单号不能为空");
@@ -916,7 +916,7 @@ class console_ctl_admin_stock extends desktop_controller{
             $shopObj = app::get('ome')->model('shop');
             
             //订单信息
-            $sql = "SELECT order_id,order_bn,shop_id,ship_status,process_status FROM sdb_ome_orders WHERE order_bn='". $order_bn ."' AND ship_status IN('0','2') AND status='active' 
+            $sql = "SELECT order_id,order_bn,shop_id,ship_status,process_status FROM sdb_ome_orders WHERE order_bn=". $orderObj->db->quote($order_bn) ." AND ship_status IN('0','2') AND status='active' 
                     AND process_status IN('unconfirmed','splitting','splited')";
             $orderInfo = $orderObj->db->selectrow($sql);
             if(empty($orderInfo)){

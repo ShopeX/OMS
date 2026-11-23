@@ -15,6 +15,11 @@
  * limitations under the License.
  */
 
+/**
+ * 库内转储
+ */
+class console_receipt_stockdump{
+
 
 
 /**
@@ -33,17 +38,18 @@ class console_receipt_stockdump {
     
     static $in_status = array(
         'FINISH'=>'1',
-        
     );
+    
     /**
-     *    失败信息回传
+     * 失败信息回传
      */
     public function fail($msg=''){
         $fail = array('rsp'=>'fail','msg'=>$msg);
         return $fail;
-    } 
+    }
+    
     /**
-     *    成功信息回传
+     * 成功信息回传
      */
     public function success($msg=''){
         $success = array('rsp'=>'succ','msg'=>$msg);
@@ -51,13 +57,12 @@ class console_receipt_stockdump {
     } 
     
     /**
-     *    保存
+     * 保存
      */
     public function do_save($appro_bn,$options){
         set_time_limit(0);
         $oAppro = app::get('console')->model('stockdump');
         $oAppro_items = app::get('console')->model('stockdump_items');
-        $oBranch = app::get('ome')->model("branch_product");
         
         //验证转储单是否存在
         $is_exist = $oAppro->dump(array('stockdump_bn'=>$appro_bn),'stockdump_id,stockdump_bn,in_status,self_status,memo');
@@ -68,7 +73,6 @@ class console_receipt_stockdump {
         //判断转储单号不为已入库/失败/取消
         if($is_exist['in_status'] == 1 or $is_exist['in_status'] == 2 or $is_exist['self_status'] == 0){
             return $this->success($this->error_info['STOCKDUMP_BN_IN_STATUS']);
-
         }
         
         $appro_lists = $oAppro_items->getList(
@@ -82,6 +86,7 @@ class console_receipt_stockdump {
                 unset($options['items'][$k]);
             }
         }
+        
         //格式化item
         if(count($options['items'])>0){
             foreach($options['items'] as $v){
@@ -90,6 +95,7 @@ class console_receipt_stockdump {
                 );
             }
         }
+        
         $options['items'] = null;
         unset( $options['items'] );
 
@@ -108,13 +114,14 @@ class console_receipt_stockdump {
         
         kernel::database()->commit();
         $appro_lists = $item = null;
+        
+        // unset
         unset($appro_lists,$item);
-
-
+        
         $is_stock_diffnum_bool =  $this->is_stock_diffnum($appro_bn);
-        //    error_log(var_export($is_stock_diffnum_bool,true), 3, DATA_DIR.'/stockdump.log');
 
         $tran = kernel::database()->beginTransaction();
+        
         //状态为FINISH已入库
         if($options['status'] == 'FINISH' && $is_stock_diffnum_bool == false){
             //如果无差异,更改确认状态为无需确认
@@ -123,6 +130,7 @@ class console_receipt_stockdump {
                 kernel::database()->rollBack();
                 return $this->fail($this->error_info['UPDATA_CONFIRM_TYPE_FAIL']);
             }
+            
             //执行出入库事务
             $appro_lists = $oAppro_items->getList('stockdump_id,stockdump_bn,item_id,bn,num,in_nums,defective_num,appro_price',array('stockdump_bn'=>$appro_bn, 'confirm_type'=>0));
             
@@ -145,37 +153,37 @@ class console_receipt_stockdump {
         if(!$wsoRow) {
             $wsoRow = $wsoMdl->db_dump(['erp_order_code'=>$appro_bn, 'stockdump_status'=>'1'], 'id');
         }
+        
         if($wsoRow) {
             $wsoRs = $wsoMdl->update(['stockdump_id'=>$is_exist['stockdump_id'], 'stockdump_status'=>'2'], ['id'=>$wsoRow['id'], 'stockdump_status'=>'1']);
             if(!is_bool($wsoRs)) {
                 app::get('ome')->model('operation_log')->write_log('wms_transferorder@console',$wsoRow['id'], '调拨完成');
             }
         }
+        
         //更新转储单备注
         if($options['memo']){
             $memo = $is_exist['memo']." ";
             $memo.=$options['memo'];
             $oAppro->update(array('memo'=>$memo),array('stockdump_bn'=>$appro_bn));
         }
+        
         //更新转储单状态
         $this->update_status($appro_bn,'1', $is_stock_diffnum_bool);
+        
         return $this->success();
     }
 
     /**
-     *    出入库事务
+     * 出入库事务
      */
     public function save_iostock(&$appro_lists){
-        
-         $basicMStockFreezeLib   = kernel::single('material_basic_material_stock_freeze');
+        $basicMStockFreezeLib   = kernel::single('material_basic_material_stock_freeze');
         
          $oAppro = app::get('console')->model('stockdump');
          $original_operator = $oAppro->dump(array('stockdump_id'=>$appro_lists[0]['stockdump_id']),'stockdump_id,stockdump_bn     ,operator_name,from_branch_id,to_branch_id,from_branch_name,to_branch_name,memo');
-         #$iostock = app::get('ome')->model('iostock');
-         #$iostockObj = kernel::service('ome.iostock');
          $iostock_bn =  $original_operator['stockdump_bn'];
          $oBranchProduct = app::get('ome')->model("branch_product");
-         $oBranch = app::get('ome')->model("branch");
 
          $iostockData_in = array(
             'branch_id'=> $original_operator['to_branch_id'],
@@ -191,6 +199,7 @@ class console_receipt_stockdump {
             'operator'=>$original_operator['operator_name'],
             'memo'=>$original_operator['memo'],
          );
+         
          foreach($appro_lists as $key=>$value){
              //入库数据
             $item = array(
@@ -202,7 +211,6 @@ class console_receipt_stockdump {
             $iostockData_in['items'][] = $item;
             $iostockData_out['items'][] = $item;
             
-
             //出库单 差异数量检测 判断实际库存与出库数量 防止出现负库存
             $is_branch_product_data = $oBranchProduct->getList(
                 'store,store_freeze',
@@ -223,11 +231,10 @@ class console_receipt_stockdump {
                 return $this->fail($this->error_info['SAVE_STOCKDUMP_ACTUAL_SHORTAGE']);
             }
          }
-
-        // $tran = kernel::database()->beginTransaction();
-
+         
         $iostock_result = $iostockoutresult = $res_clear_freeze = false;
         $iostockObj = kernel::single('siso_receipt_iostock_stockdumpin');
+        
         //入库
         $iostockObj->_typeId = 600;
         $iostock_result = $iostockObj->create($iostockData_in, $data, $msg);
@@ -246,23 +253,18 @@ class console_receipt_stockdump {
         }
         
         if ($iostock_result && $iostockoutresult && $res_clear_freeze){
-            // kernel::database()->commit($tran);
             return $this->success();
         }else{
-
-            // kernel::database()->rollBack();
-
             return $this->fail('出入库失败：'.$msg);
         }
-        
-        
     }
 
     /**
-     *    更新状态
+     * 更新状态
      */
     public function update_status($appro_bn,$in_status, $is_diff = false){
         $oAppro = app::get('console')->model('stockdump');
+        
         //修改调拨单的状态
         $data = array('in_status'=>$in_status);
         if ($in_status == 1) {
@@ -274,19 +276,15 @@ class console_receipt_stockdump {
         return true;
     }
     
- 
-
     /**
-     *    判断全部出入库时数量是否有差异
-     *    false 无差异 true 有差异
+     * 判断全部出入库时数量是否有差异
+     * false 无差异 true 有差异
      */
     public function is_stock_diffnum($appro_bn = ''){
         $result = false;//最终返回状态
         if($appro_bn == '') return $result;
         $sql = "SELECT COUNT(*) as _c FROM sdb_console_stockdump_items WHERE stockdump_bn = '".$appro_bn."' AND in_nums != num";
         $tmp = kernel::database()->select($sql);
-        // error_log(var_export($sql,true), 3, DATA_DIR.'/stockdump.log');
-        // error_log(var_export($tmp,true), 3, DATA_DIR.'/stockdump.log');
         if($tmp[0]['_c']>0){
             $result = true;
         }else{
@@ -296,9 +294,8 @@ class console_receipt_stockdump {
         return $result;
     }
     
-
     /**
-     *    释放出库单预占库存量
+     * 释放出库单预占库存量
      */
     public function clear_stockout_store_freeze($appro_bn, &$err_msg = '')
     {        
@@ -332,7 +329,7 @@ class console_receipt_stockdump {
 
     public function splitIostock($iostockBn = '',&$iostockData = array(),$type = '',$msg = '',$iotype = ''){
         $iostockObj = kernel::service('ome.iostock');
-        $max = 200;#每次发送条数
+        $max = 200;
         $i = 1;
         $data = array();
         
@@ -345,11 +342,12 @@ class console_receipt_stockdump {
            }else{
                $i++;
            }
-           
         }
+        
         if($i>1 && $i<=$max){
             $stock = $iostockObj->set($iostockBn,$data,$type,$msg,$iotype);
         }
+        
         $data = array();
     }
     
@@ -365,9 +363,8 @@ class console_receipt_stockdump {
     }
 
     /**
-     * 查询对应状态是否可操作
-     * 
-     */
+    * 查询对应状态是否可操作
+    */
     public function checkValid($stockdump_bn,$status,&$msg){
         $stockdump = $this->checkExist($stockdump_bn);
         $in_status = $stockdump['in_status'];
@@ -398,7 +395,7 @@ class console_receipt_stockdump {
     }
     
     /**
-     *   转储单确认事务
+     * 转储单确认事务
      */
     public function confirm_stock($stockdump_bn){
         set_time_limit(0);
@@ -438,14 +435,10 @@ class console_receipt_stockdump {
     function cancel($stockdump_bn){
         $approObj = app::get('console')->model('stockdump');
         $type = $approObj->update(array('self_status'=>'0','response_time'=>time()),array('stockdump_bn'=>$stockdump_bn));
-        
-        //$stockObj = kernel::single('console_stock');
-        
-        if ($type)
-        {
+        if ($type){
             $this->clear_stockout_store_freeze($stockdump_bn);
         }
+        
         return $type;
     }
-
 }

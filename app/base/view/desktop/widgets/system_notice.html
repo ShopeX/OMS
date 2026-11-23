@@ -47,11 +47,11 @@
         <{foreach from=$info item=item}>
         <tr style="font-weight:bold">
             <{if $item.status == 'true'}>
-            <th><a href="index.php?app=desktop&ctl=rpcnotify&act=index&action=detail&id=<{$item.id}>&finderview=detail_basic" target="dialog::{width:600,height:350,title:'消息详情'}"><{$item.info}></a></th>
+            <th><a href="index.php?app=desktop&ctl=rpcnotify&act=index&action=detail&id=<{$item.id}>&finderview=detail_basic" target="dialog::{width:600,height:350,title:'消息详情'}" title="<{$item.original_info}>"><{$item.info}></a></th>
             <{elseif $item.status == 'false'}>
-            <th><b><a style="color: red;" href="index.php?app=desktop&ctl=rpcnotify&act=index&action=detail&id=<{$item.id}>&finderview=detail_basic" target="dialog::{width:600,height:350,title:'消息详情'}"><{$item.info}></a></b></th>
+            <th><b><a style="color: red;" href="index.php?app=desktop&ctl=rpcnotify&act=index&action=detail&id=<{$item.id}>&finderview=detail_basic" target="dialog::{width:600,height:350,title:'消息详情'}" title="<{$item.original_info}>"><{$item.info}></a></b></th>
             <{else}>
-            <th><a href="<{$item.callback}>"><{$item.info}></a></th>
+            <th><a href="<{$item.callback}>" title="<{$item.original_info}>"><{$item.info}></a></th>
             <{/if}>
             <td><{$item.notifytime}></td>
         </tr>
