@@ -17,7 +17,6 @@
 
 class o2o_ctl_admin_store extends desktop_controller
 {
-
     public $name       = "门店管理";
     public $workground = "goods_manager";
     public $title      = '';
@@ -30,7 +29,7 @@ class o2o_ctl_admin_store extends desktop_controller
     public function index()
     {
         $obj_organizations_op           = kernel::single('organization_operation');
-        $this->pagedata['organization'] = $obj_organizations_op->getGropById();
+        $this->pagedata['organization'] = $this->filterOrganizationRows($obj_organizations_op->getGropById());
         $this->page('admin/organization/treeList.html');
     }
 
@@ -43,6 +42,14 @@ class o2o_ctl_admin_store extends desktop_controller
     {
         $this->title = '门店列表';
 
+        $base_filter = ['store_classify' => $store_classify];
+        
+        // 当前登录操作员可访问的门店 ID。
+        $scopedStoreIds = $this->getScopedStoreIds();
+        if ($scopedStoreIds !== null) {
+            $base_filter['store_id'] = !empty($scopedStoreIds) ? $scopedStoreIds : array('false');
+        }
+        
         $params = array(
             'title'                  => $this->title,
             'use_buildin_new_dialog' => false,
@@ -52,7 +59,7 @@ class o2o_ctl_admin_store extends desktop_controller
             'use_buildin_import'     => false,
             'use_buildin_filter'     => true,
             'use_view_tab'           => true,
-            'base_filter'            => ['store_classify' => $store_classify],
+            'base_filter'            => $base_filter,
             'actions'                => [
                 [
                     'label'  => '添加门店',
@@ -75,7 +82,6 @@ class o2o_ctl_admin_store extends desktop_controller
                     'target' => 'dialog::{width:660,height:420,title:\'覆盖区域导入\'}',
                 ],
             ],
-
         );
 
         $this->finder('o2o_mdl_store', $params);
@@ -88,8 +94,16 @@ class o2o_ctl_admin_store extends desktop_controller
      */
     public function getChildNode()
     {
+        $orgId = isset($_POST['orgId']) ? (int) $_POST['orgId'] : 0;
+        $scopedOrgIds = $this->getScopedOrgIds();
+        if ($scopedOrgIds !== null && ($orgId < 1 || !in_array($orgId, $scopedOrgIds, true))) {
+            $this->pagedata['organization'] = [];
+            $this->display('admin/organization/sub_treeList.html');
+            return;
+        }
+
         $obj_organizations_op           = kernel::single('organization_operation');
-        $this->pagedata['organization'] = $obj_organizations_op->getGropById($_POST['orgId']);
+        $this->pagedata['organization'] = $this->filterOrganizationRows($obj_organizations_op->getGropById($orgId));
         $this->display('admin/organization/sub_treeList.html');
     }
 
@@ -100,9 +114,18 @@ class o2o_ctl_admin_store extends desktop_controller
      */
     public function getAllChildNode()
     {
+        $orgId = isset($_POST['orgId']) ? (int) $_POST['orgId'] : 0;
+        $scopedOrgIds = $this->getScopedOrgIds();
+        if ($scopedOrgIds !== null && ($orgId < 1 || !in_array($orgId, $scopedOrgIds, true))) {
+            $this->pagedata['store_html'] = '';
+            $this->display('admin/organization/store_all_sub_treeList.html');
+            return;
+        }
+
         $obj_organizations_op = kernel::single('organization_operation');
         //获取所有下级组织数组
-        $dataList = $obj_organizations_op->getAllChildNode($_POST['orgId'], 2);
+        $dataList = $obj_organizations_op->getAllChildNode($orgId, 2);
+        $dataList = $this->filterOrganizationTree($dataList);
         if ($dataList) {
             //格式化为html展示
             $html                         = $obj_organizations_op->getAllChildNodeHtml_store($dataList);
@@ -157,7 +180,12 @@ class o2o_ctl_admin_store extends desktop_controller
 
     public function edit($store_id)
     {
-       
+        // 是否允许访问指定门店
+        if (!$this->canAccessStore($store_id)) {
+            echo '无权限编辑该门店';
+            exit;
+        }
+        
         // 获取服务端
         $serverList                   = app::get('o2o')->model('server')->getList('server_id,name');
         $this->pagedata['serverList'] = $serverList;
@@ -733,11 +761,18 @@ class o2o_ctl_admin_store extends desktop_controller
         $storeMdl = app::get('o2o')->model('store');
         $arrStoreId = array();
 
+        $scopedStoreIds = $this->getScopedStoreIds();
+
         // finder 全选：POST isSelectedAll=_ALL_，需按当前列表筛选条件反查 store_id
         if (!empty($_POST['isSelectedAll']) && $_POST['isSelectedAll'] == '_ALL_') {
             $baseFilter = array(
                 'store_classify' => 'offline',
             );
+            
+            if ($scopedStoreIds !== null) {
+                $baseFilter['store_id'] = !empty($scopedStoreIds) ? $scopedStoreIds : array('false');
+            }
+            
             $filter = array_merge($baseFilter, $_POST);
             unset(
                 $filter['isSelectedAll'],
@@ -762,7 +797,10 @@ class o2o_ctl_admin_store extends desktop_controller
             $arrStoreId = isset($_POST['store_id']) ? (array) $_POST['store_id'] : array();
         }
 
-        $arrStoreId = array_values(array_filter(array_unique($arrStoreId)));
+        $arrStoreId = array_values(array_filter(array_unique(array_map('intval', $arrStoreId))));
+        if ($scopedStoreIds !== null) {
+            $arrStoreId = array_values(array_intersect($arrStoreId, $scopedStoreIds));
+        }
         if (empty($arrStoreId)) {
             echo '请选择要设置的门店';
             exit;
@@ -787,6 +825,17 @@ class o2o_ctl_admin_store extends desktop_controller
         
         if (!$store_ids || !is_array($store_ids)) {
             $this->splash('error', null, '请选择要设置的门店');
+            return;
+        }
+        
+        $store_ids = array_values(array_filter(array_unique(array_map('intval', $store_ids))));
+        $scopedStoreIds = $this->getScopedStoreIds();
+        if ($scopedStoreIds !== null) {
+            $store_ids = array_values(array_intersect($store_ids, $scopedStoreIds));
+        }
+        
+        if (empty($store_ids)) {
+            $this->splash('error', null, '无权限设置所选门店');
             return;
         }
         
@@ -1128,5 +1177,118 @@ class o2o_ctl_admin_store extends desktop_controller
         }
 
         $this->end(true, '区域仓设置成功');
+    }
+
+    /**
+     * 当前登录操作员可访问的门店 ID。
+     * null = 超管不限制；array = 允许的 store_id（可能为空，fail-closed）。
+     *
+     * @return array|null
+     */
+    private function getScopedStoreIds()
+    {
+        $user = kernel::single('desktop_user');
+        if ($user->is_super()) {
+            return null;
+        }
+        
+        return kernel::single('organization_organization_permission')->getStoreIdsByOperator($user->get_id());
+    }
+
+    /**
+     * 当前登录操作员组织树可见 org_id。
+     * null = 超管不限制；array = 可见 org_id（可能为空，fail-closed）。
+     *
+     * @return array|null
+     */
+    private function getScopedOrgIds()
+    {
+        $user = kernel::single('desktop_user');
+        if ($user->is_super()) {
+            return null;
+        }
+
+        return kernel::single('organization_organization_permission')
+            ->getVisibleOrgIdsByOperator($user->get_id());
+    }
+
+    /**
+     * 按可见 org_id 过滤扁平组织行
+     *
+     * @param array $rows
+     * @return array
+     */
+    private function filterOrganizationRows($rows)
+    {
+        $scopedOrgIds = $this->getScopedOrgIds();
+        if ($scopedOrgIds === null) {
+            return $rows ?: [];
+        }
+        if (empty($scopedOrgIds) || empty($rows)) {
+            return [];
+        }
+
+        $visible = array_fill_keys(array_map('intval', $scopedOrgIds), true);
+        $filtered = [];
+        foreach ((array) $rows as $row) {
+            $orgId = (int) ($row['org_id'] ?? 0);
+            if ($orgId > 0 && isset($visible[$orgId])) {
+                $filtered[] = $row;
+            }
+        }
+
+        return $filtered;
+    }
+
+    /**
+     * 递归过滤组织树（getAllChildNode 结构）
+     *
+     * @param array $nodes
+     * @return array
+     */
+    private function filterOrganizationTree($nodes)
+    {
+        $scopedOrgIds = $this->getScopedOrgIds();
+        if ($scopedOrgIds === null) {
+            return $nodes ?: [];
+        }
+        if (empty($scopedOrgIds) || empty($nodes)) {
+            return [];
+        }
+
+        $visible = array_fill_keys(array_map('intval', $scopedOrgIds), true);
+        $filtered = [];
+        foreach ((array) $nodes as $node) {
+            $orgId = (int) ($node['org_id'] ?? 0);
+            if ($orgId < 1 || !isset($visible[$orgId])) {
+                continue;
+            }
+            if (!empty($node['items']) && is_array($node['items'])) {
+                $node['items'] = $this->filterOrganizationTree($node['items']);
+                $node['child_count'] = count($node['items']);
+            } else {
+                $node['items'] = [];
+                $node['child_count'] = 0;
+            }
+            $filtered[] = $node;
+        }
+
+        return $filtered;
+    }
+
+    /**
+     * 是否允许访问指定门店
+     *
+     * @param int|string $store_id
+     * @return bool
+     */
+    private function canAccessStore($store_id)
+    {
+        $scopedStoreIds = $this->getScopedStoreIds();
+        if ($scopedStoreIds === null) {
+            return true;
+        }
+        
+        return in_array((int) $store_id, array_map('intval', $scopedStoreIds), true);
     }
 }

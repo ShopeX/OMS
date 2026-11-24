@@ -23,12 +23,25 @@ class o2o_finder_extend_filter_store
     {
         $this->vue_mode = $vue;
     }
-
-
+    
     public function get_extend_colums()
     {
-        // 门店下拉：[编码]名称
-        $storeRows = app::get('o2o')->model('store')->getList('store_id,store_bn,name', array(), 0, -1);
+        // 门店下拉：[编码]名称（普通操作员仅展示门店组织权限范围内的门店）
+        $storeFilter = array();
+        $user = kernel::single('desktop_user');
+        if (!$user->is_super()) {
+            $scopedStoreIds = kernel::single('organization_organization_permission')->getStoreIdsByOperator($user->get_id());
+            if (empty($scopedStoreIds)) {
+                $storeRows = array();
+            } else {
+                $storeFilter['store_id'] = $scopedStoreIds;
+                
+                $storeRows = app::get('o2o')->model('store')->getList('store_id,store_bn,name', $storeFilter, 0, -1);
+            }
+        } else {
+            $storeRows = app::get('o2o')->model('store')->getList('store_id,store_bn,name', $storeFilter, 0, -1);
+        }
+        
         $storeList = array();
         foreach ($storeRows as $row) {
             $storeList[$row['store_id']] = '[' . $row['store_bn'] . ']' . $row['name'];

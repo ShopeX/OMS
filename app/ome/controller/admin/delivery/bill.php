@@ -26,7 +26,14 @@ class ome_ctl_admin_delivery_bill extends desktop_controller
     public function index()
     {
         $this->title = '包裹中心';
-
+        
+        // 基础过滤条件：有门店组织权限时按 门店shop_id + 全部电商shop_id 过滤
+        $baseFilter = [];
+        $scopedShopIds = $this->getScopedShopIdsForBill();
+        if ($scopedShopIds !== null) {
+            $baseFilter['shop_id'] = $scopedShopIds;
+        }
+        
         $params = array(
             'title'                  => $this->title,
             'use_buildin_new_dialog' => false,
@@ -37,7 +44,7 @@ class ome_ctl_admin_delivery_bill extends desktop_controller
             'use_buildin_filter'     => true,
             'use_view_tab'           => true,
             'orderBy'                => 'log_id desc',
-            'base_filter'            => [],
+            'base_filter'            => $baseFilter,
             'actions'                => [
                 [
                     'label'  => '异常查询下载',
@@ -50,20 +57,21 @@ class ome_ctl_admin_delivery_bill extends desktop_controller
                     'target' => 'dialog::{width:800,height:600,title:\'预警配置查询\'}',
                 ],
             ],
-
         );
 
         $this->finder('ome_mdl_delivery_bill', $params);
     }
-
-
-
+    
     /**
      * 包裹列表视图定义
      */
     function _views(){
         $base_filter = array();
-        
+        $scopedShopIds = $this->getScopedShopIdsForBill();
+        if ($scopedShopIds !== null) {
+            $base_filter['shop_id'] = $scopedShopIds;
+        }
+
         $sub_menu = array(
             0 => array('label'=>app::get('ome')->_('全部'),'filter'=>array(),'optional'=>false),
             1 => array('label'=>app::get('ome')->_('揽收异常'),'filter'=>array('exception_code'=>'GOT_EXCEPTION'),'optional'=>false),
@@ -91,9 +99,7 @@ class ome_ctl_admin_delivery_bill extends desktop_controller
 
         return $sub_menu;
     }
-
-
-
+    
     /**
      * 异常查询下载页面
      */
@@ -113,9 +119,7 @@ class ome_ctl_admin_delivery_bill extends desktop_controller
 
         $this->display('admin/delivery/bill/exception_query_page.html');
     }
-
-
-
+    
     /**
      * 执行异常查询下载
      */
@@ -547,4 +551,58 @@ class ome_ctl_admin_delivery_bill extends desktop_controller
         return array('errors' => $errors);
     }
 
-} 
+    /**
+     * 包裹列表 shop_id 数据范围。
+     * null = 不过滤（超管 / 未配置门店组织权限）；
+     * array = 授权门店 shop_id + 全部线上电商 shop_id。
+     *
+     * @return array|null
+     */
+    private function getScopedShopIdsForBill()
+    {
+        $user = kernel::single('desktop_user');
+        if ($user->is_super()) {
+            return null;
+        }
+        
+        $opId = (int) $user->get_id();
+        if ($opId < 1 || !app::get('organization')->is_installed()) {
+            return null;
+        }
+        
+        $userOrgs = app::get('organization')->model('organization_ops')->getUserOrganizations($opId);
+        if (empty($userOrgs)) {
+            return null;
+        }
+        
+        $shopIds = [];
+        
+        // 授权门店 shop_id
+        if (app::get('o2o')->is_installed()) {
+            $storeIds = kernel::single('organization_organization_permission')->getStoreIdsByOperator($opId);
+            if (!empty($storeIds)) {
+                $stores = app::get('o2o')->model('store')->getList('shop_id', ['store_id' => $storeIds], 0, -1);
+                foreach ((array) $stores as $store) {
+                    if (!empty($store['shop_id'])) {
+                        $shopIds[] = $store['shop_id'];
+                    }
+                }
+            }
+        }
+        
+        // 全部线上电商店铺
+        $onlineShops = app::get('ome')->model('shop')->getList('shop_id', ['s_type' => '1'], 0, -1);
+        foreach ((array) $onlineShops as $shop) {
+            if (!empty($shop['shop_id'])) {
+                $shopIds[] = $shop['shop_id'];
+            }
+        }
+        
+        $shopIds = array_values(array_unique($shopIds));
+        if (empty($shopIds)) {
+            return ['false'];
+        }
+
+        return $shopIds;
+    }
+}

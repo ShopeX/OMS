@@ -274,6 +274,168 @@ class organization_organization_permission {
     }
     
     /**
+     * 按操作员门店组织权限展开可访问的 store_id（fail-closed）
+     * 支持上级组织 / 经销商 / 门店节点；未配置组织权限时返回空数组，不返回全部门店。
+     *
+     * @param int $op_id 操作员ID
+     * @return array store_id 列表
+     */
+    public function getStoreIdsByOperator($op_id)
+    {
+        if (empty($op_id)) {
+            return [];
+        }
+
+        if (!app::get('organization')->is_installed() || !app::get('o2o')->is_installed()) {
+            return [];
+        }
+
+        $userOrgs = app::get('organization')->model('organization_ops')->getUserOrganizations($op_id);
+        $userOrgs = array_values(array_filter(array_map('intval', (array) $userOrgs)));
+        if (empty($userOrgs)) {
+            return [];
+        }
+
+        $orgMdl = app::get('organization')->model('organization');
+        $allOrgs = $orgMdl->getList('org_id,parent_id,org_type,org_no', ['del_mark' => 0], 0, -1);
+        if (empty($allOrgs)) {
+            return [];
+        }
+
+        $orgMap = [];
+        $childrenMap = [];
+        foreach ($allOrgs as $org) {
+            $orgId = (int) $org['org_id'];
+            $orgMap[$orgId] = $org;
+            $parentId = (int) $org['parent_id'];
+            if (!isset($childrenMap[$parentId])) {
+                $childrenMap[$parentId] = [];
+            }
+            $childrenMap[$parentId][] = $orgId;
+        }
+
+        $storeBnList = [];
+        $visited = [];
+        $queue = $userOrgs;
+        while (!empty($queue)) {
+            $orgId = (int) array_shift($queue);
+            if ($orgId < 1 || isset($visited[$orgId])) {
+                continue;
+            }
+            $visited[$orgId] = true;
+
+            if (!isset($orgMap[$orgId])) {
+                continue;
+            }
+
+            $org = $orgMap[$orgId];
+            if ((int) $org['org_type'] === 2 && $org['org_no'] !== '' && $org['org_no'] !== null) {
+                $storeBnList[] = $org['org_no'];
+            }
+
+            if (!empty($childrenMap[$orgId])) {
+                foreach ($childrenMap[$orgId] as $childId) {
+                    if (!isset($visited[$childId])) {
+                        $queue[] = $childId;
+                    }
+                }
+            }
+        }
+
+        $storeBnList = array_values(array_unique(array_filter($storeBnList)));
+        if (empty($storeBnList)) {
+            return [];
+        }
+
+        $stores = app::get('o2o')->model('store')->getList('store_id', ['store_bn' => $storeBnList], 0, -1);
+        if (empty($stores)) {
+            return [];
+        }
+
+        return array_values(array_unique(array_filter(array_map('intval', array_column($stores, 'store_id')))));
+    }
+
+    /**
+     * 组织树可见 org_id（fail-closed）
+     * 已选组织 + 全部下级 + 祖先路径；未配置组织权限时返回空数组。
+     *
+     * @param int $op_id 操作员ID
+     * @return array org_id 列表
+     */
+    public function getVisibleOrgIdsByOperator($op_id)
+    {
+        if (empty($op_id)) {
+            return [];
+        }
+
+        if (!app::get('organization')->is_installed()) {
+            return [];
+        }
+
+        $userOrgs = app::get('organization')->model('organization_ops')->getUserOrganizations($op_id);
+        $userOrgs = array_values(array_filter(array_map('intval', (array) $userOrgs)));
+        if (empty($userOrgs)) {
+            return [];
+        }
+
+        $orgMdl = app::get('organization')->model('organization');
+        $allOrgs = $orgMdl->getList('org_id,parent_id', ['del_mark' => 0], 0, -1);
+        if (empty($allOrgs)) {
+            return [];
+        }
+
+        $orgMap = [];
+        $childrenMap = [];
+        foreach ($allOrgs as $org) {
+            $orgId = (int) $org['org_id'];
+            $orgMap[$orgId] = $org;
+            $parentId = (int) $org['parent_id'];
+            if (!isset($childrenMap[$parentId])) {
+                $childrenMap[$parentId] = [];
+            }
+            $childrenMap[$parentId][] = $orgId;
+        }
+
+        $visible = [];
+        $visited = [];
+        $queue = $userOrgs;
+        while (!empty($queue)) {
+            $orgId = (int) array_shift($queue);
+            if ($orgId < 1 || isset($visited[$orgId])) {
+                continue;
+            }
+            $visited[$orgId] = true;
+
+            if (!isset($orgMap[$orgId])) {
+                continue;
+            }
+
+            $visible[$orgId] = true;
+
+            if (!empty($childrenMap[$orgId])) {
+                foreach ($childrenMap[$orgId] as $childId) {
+                    if (!isset($visited[$childId])) {
+                        $queue[] = $childId;
+                    }
+                }
+            }
+        }
+
+        // 祖先路径：保证深层授权时顶级树仍可展开到有权节点
+        foreach ($userOrgs as $selectedId) {
+            $currentId = (int) $selectedId;
+            $guard = 0;
+            while ($currentId > 0 && isset($orgMap[$currentId]) && $guard < 100) {
+                $visible[$currentId] = true;
+                $currentId = (int) $orgMap[$currentId]['parent_id'];
+                $guard++;
+            }
+        }
+
+        return array_map('intval', array_keys($visible));
+    }
+
+    /**
      * 获取管理员有权限查看的所有门店完整信息
      * 支持经销商权限继承
      * @param int $op_id 管理员操作员ID
