@@ -30,6 +30,13 @@ class erpapi_shop_matrix_360buy_request_invoice extends erpapi_shop_request_invo
 
     protected function getUploadParams($sdf)
     {
+        $invoiceInfo = [];
+        
+        if(isset($sdf['invoice']) && $sdf['invoice']){
+            $invoiceInfo = $sdf['invoice'];
+        }
+        
+        // params
         $params = parent::getUploadParams($sdf);
         
         // unset
@@ -49,8 +56,37 @@ class erpapi_shop_matrix_360buy_request_invoice extends erpapi_shop_request_invo
         $order_type = $plat[$this->__channelObj->channel['node_type']];
         $params['order_type'] = $order_type ? $order_type : $plat['other'];
         
-        // 版本号
-        $params['invoice_dto_version'] = 'v2';
+        // 发票类型：电子发票 or 数电发票
+        $invoiceType = '';
+        if($invoiceInfo['mode'] == '1'){
+            if($invoiceInfo['type_id'] == '1'){
+                // 数电增值税电子专用发票
+                $invoiceType = '24';
+            }else{
+                // 数电增值税电子普通发票
+                $invoiceType = '23';
+            }
+        }else{
+            if($invoiceInfo['type_id'] == '1'){
+                // 数电增值税电子专用发票
+                $invoiceType = '2';
+            }else{
+                // 数电增值税电子普通发票
+                $invoiceType = '3';
+            }
+        }
+        
+        // 发票类型: 1=普票/3=电子普票/2=增票, 23=数电普票，24=数电专票
+        $params['invoiceType'] = $invoiceType;
+        
+        // 发票渠道类型，C票是传 "CINVOICE", B票传 "BINVOICE"
+        $params['channelType'] = 'CINVOICE';
+        
+        // 发票内容类型：1明细、100大类
+        $params['invoiceContentType'] = 1;
+        
+        // 版本号v2：代表使用京东发票新结构体传参；不传则用旧结构体
+        //$params['invoice_dto_version'] = 'v2';
         
         return $params;
     }
