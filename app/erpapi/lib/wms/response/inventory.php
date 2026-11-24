@@ -42,14 +42,23 @@ class erpapi_wms_response_inventory extends erpapi_wms_response_abstract
             'wms_id'       => $this->__channelObj->wms['channel_id'],
             'autoconfirm'  => $params['autoconfirm'] == 'Y' ? 'Y' : 'N',
         );
+        
         if('true' == app::get('ome')->getConf('wms.stock.inventory.finish.auto')) {
             $data['autoconfirm'] = 'Y';
         }
+        
+        // 通过WMS第三方仓库编码获取OMS仓库列表
         $bd = kernel::single('console_receipt_stockchange')->getBranchId($this->__channelObj->wms['node_id'], $params['warehouse']);
+        
+        // 残次仓库列表
         $data['negative_cc_branch_id'] = $bd['negative_cc_branch_id'];
+        
+        // 良品仓库列表
         $data['negative_branch_id'] = $bd['negative_branch_id'];
+        
         $inventoryMode = app::get('ome')->getConf('taoguaninventory.quantity.mode');
         $data['mode'] = $params['mode'] ? : ($inventoryMode  == '1' ? '1' : '2'); #1: 全量, 2: 增量
+        
         $inventory_items = array();
         $items = $params['item'] ? json_decode($params['item'],true) : array();
         if ($items) {
@@ -62,6 +71,8 @@ class erpapi_wms_response_inventory extends erpapi_wms_response_abstract
                 $bm_id = $bc[$val['product_bn']]['bm_id'];
                 $inventory_items[$bm_id]['bm_id'] = $bm_id;
                 $inventory_items[$bm_id]['material_bn'] = $val['product_bn'];
+                
+                // 良品货品
                 if($val['normal_num'] || (!$val['normal_num'] && !$val['defective_num'] && isset($val['normal_num']))) {
                     if(empty($data['negative_branch_id'])) {
                         $this->__apilog['result']['msg'] = '缺少对应良品仓库：'.$data['branch_bn'];
@@ -70,17 +81,19 @@ class erpapi_wms_response_inventory extends erpapi_wms_response_abstract
                     $inventory_items[$bm_id]['zp']['diff_stores'] += (int)$val['normal_num'];
                     $inventory_items[$bm_id]['zp']['wms_stores'] += (int)$val['totalQty'];
                 }
+                
+                // 残次品货品
                 if($val['defective_num'] || (!$val['normal_num'] && !$val['defective_num'] && !isset($val['normal_num']))) {
                     if(empty($data['negative_cc_branch_id'])) {
                         $this->__apilog['result']['msg'] = '缺少对应残品仓库：'.$data['branch_bn'];
                         return false;
                     }
+                    
                     $inventory_items[$bm_id]['cc']['diff_stores'] += (int)$val['defective_num'];
                     $inventory_items[$bm_id]['cc']['wms_stores'] += $val['totalQty'];
                 }
-
+                
                 if($val['batch_code']){
-
                     $inventory_items[$bm_id]['batch'][] = array(
                         'purchase_code'     => $val['batch_code'],
                         'produce_code'      => $val['produceCode'],
@@ -92,8 +105,9 @@ class erpapi_wms_response_inventory extends erpapi_wms_response_abstract
                 }
             }
         }
+        
         $data['items'] = $inventory_items;
+        
         return $data;
     }
-
 }
