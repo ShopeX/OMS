@@ -61,6 +61,8 @@ class erpapi_wms_response_storeprocess extends erpapi_wms_response_abstract
             // 兼容WMS未传item结构体
             if(isset($items['item'])){
                 $productitems = $this->transfer_items($items);
+            }elseif(isset($items['items'])){
+                $productitems = isset($items['items'][0]) ? $items['items'] : [$items['items']];
             }else{
                 if(isset($items[0])){
                     $productitems = $items;
@@ -101,6 +103,8 @@ class erpapi_wms_response_storeprocess extends erpapi_wms_response_abstract
             // 兼容WMS未传item结构体
             if(isset($items['item'])){
                 $materialitems = $this->transfer_items($items);
+            }elseif(isset($items['items'])){
+                $materialitems = isset($items['items'][0]) ? $items['items'] : [$items['items']];
             }else{
                 if(isset($items[0])){
                     $materialitems = $items;
@@ -179,6 +183,8 @@ class erpapi_wms_response_storeprocess extends erpapi_wms_response_abstract
             // 兼容WMS未传item结构体
             if(isset($items['item'])){
                 $materialitems = $this->transfer_items($items);
+            }elseif(isset($items['items'])){
+                $materialitems = isset($items['items'][0]) ? $items['items'] : [$items['items']];
             }else{
                 if(isset($items[0])){
                     $materialitems = $items;
@@ -214,6 +220,8 @@ class erpapi_wms_response_storeprocess extends erpapi_wms_response_abstract
             // 兼容WMS未传item结构体
             if(isset($items['item'])){
                 $productitems = $this->transfer_items($items);
+            }elseif(isset($items['items'])){
+                $productitems = isset($items['items'][0]) ? $items['items'] : [$items['items']];
             }else{
                 if(isset($items[0])){
                     $productitems = $items;
