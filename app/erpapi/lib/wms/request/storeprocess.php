@@ -36,6 +36,7 @@ class erpapi_wms_request_storeprocess extends erpapi_wms_request_abstract
         if (!$params) {
             return $this->error('参数为空,终止同步,主档有问题');
         }
+        
         $callback = array(
             'class'  => get_class($this),
             'method' => 'storeprocess_create_callback',
@@ -112,7 +113,14 @@ class erpapi_wms_request_storeprocess extends erpapi_wms_request_abstract
             'materialitems' => json_encode($materialitems),
             'productitems' => json_encode($productitems),
         );
-
+        
+        // 货主编码
+        if (isset($sdf['owner_code'])) {
+            $params['ownerCode'] = $sdf['owner_code'];
+        }elseif(isset($sdf['main']['owner_code'])) {
+            $params['ownerCode'] = $sdf['main']['owner_code'];
+        }
+        
         return $params;   
     }
     

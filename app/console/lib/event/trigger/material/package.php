@@ -43,11 +43,24 @@ class console_event_trigger_material_package {
             $channel_id = $store_id;
         }else{
             $wms_id = kernel::single('ome_branch')->getWmsIdById($main['branch_id']);
-            $sdf['main']['branch_bn'] = kernel::single('ome_branch')->getBranchBnById($main['branch_id']);
+            
+            // 仓库信息
+            $branchInfo = kernel::single('ome_branch')->getBranchInfo($main['branch_id']);
+            
+            // branch_bn
+            $sdf['main']['branch_bn'] = $branchInfo['branch_bn'];
+            
+            // 货主编码
+            $sdf['main']['owner_code'] = $branchInfo['owner_code'];
+            
             $channel_type = 'wms';
             $channel_id = $wms_id;
         }
+        
+        // log
         app::get('ome')->model('operation_log')->write_log('material_package@console',$id,"操作同步");
+        
+        // request
         $result = kernel::single('erpapi_router_request')->set($channel_type,$channel_id)->storeprocess_create($sdf);
         if($result['rsp'] == 'fail') {
             $upData = [];
