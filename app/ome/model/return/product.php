@@ -1701,22 +1701,45 @@ class ome_mdl_return_product extends dbeav_model
         $data = array();
         $data['content'] = array();
         $data['content']['main'] = array();
+
+        $include_detail = ($has_detail == 1);
         
         // 根据选择的字段定义导出的第一行标题
         if ($curr_sheet == 1) {
-            $data['content']['main'][] = $this->getCustomExportTitle($returnListData['title']);
+            if ($include_detail) {
+                $data['content']['main'][] = $this->getCustomExportTitle($returnListData['title']);
+            } else {
+                $data['content']['main'][] = mb_convert_encoding(implode(',', array_keys($returnListData['title'])), 'GBK', 'UTF-8');
+            }
         }
         
-        $items_columns = array_values($this->returnProductItemsExportTitle());
-        
         $returnList = isset($returnListData['content']) ? $returnListData['content'] : array();
-        $return_ids = !empty($returnList) ? array_column($returnList, 'return_id') : array();
         $main_columns = array_values($returnListData['title']);
         
         // 如果没有主表数据，只返回标题行（如果是第一页）
         if (empty($returnList)) {
             return $data;
         }
+
+        // 不包含明细：一行一单，只输出主表字段
+        if (!$include_detail) {
+            foreach ($returnList as $returnRow) {
+                $exptmp_data = array();
+                foreach ($main_columns as $col) {
+                    if (isset($returnRow[$col])) {
+                        $returnRow[$col] = mb_convert_encoding($returnRow[$col], 'GBK', 'UTF-8');
+                        $exptmp_data[] = $this->escapeCsvField($returnRow[$col]);
+                    } else {
+                        $exptmp_data[] = '';
+                    }
+                }
+                $data['content']['main'][] = implode(',', $exptmp_data);
+            }
+            return $data;
+        }
+
+        $items_columns = array_values($this->returnProductItemsExportTitle());
+        $return_ids = array_column($returnList, 'return_id');
         
         // 获取所有的明细数据
         $return_items = array();
