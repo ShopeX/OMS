@@ -72,6 +72,9 @@ class erpapi_wms_response_storeprocess extends erpapi_wms_response_abstract
             }
             
             foreach($productitems as $key=>$val){
+                // quantity
+                $val['quantity'] = intval($val['quantity']);
+                
                 if($inItems[$val['itemCode']]) {
                     $inItems[$val['itemCode']]['number'] += $val['quantity'];
                 } else {
@@ -80,7 +83,7 @@ class erpapi_wms_response_storeprocess extends erpapi_wms_response_abstract
                         'number' => $val['quantity'],
                     ];
                 }
-
+                
                 if($val['batchCode']){
                     $inItems[$val['itemCode']]['batch'][] = array(
                         'bn'                => $val['itemCode'],
@@ -114,6 +117,9 @@ class erpapi_wms_response_storeprocess extends erpapi_wms_response_abstract
             }
             
             foreach($materialitems as $key=>$val){
+                // quantity
+                $val['quantity'] = intval($val['quantity']);
+                
                 if($outItems[$val['itemCode']]) {
                     $outItems[$val['itemCode']]['number'] += $val['quantity'];
                 } else {

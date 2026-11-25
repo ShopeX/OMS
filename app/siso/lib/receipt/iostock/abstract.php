@@ -105,7 +105,14 @@ abstract class siso_receipt_iostock_abstract
         
         //校验数据内容
         if (!$this->checkData($this->_io_data, $msg)) {
-            $msg = '校验数据内容失败'.$msg;
+            if(is_array($msg)){
+                $error_msg = implode(';', $msg);
+            }else{
+                $error_msg = $msg;
+            }
+            
+            $msg = '校验数据内容失败：'.$error_msg;
+            
             return false;
         }
         
