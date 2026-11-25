@@ -33,18 +33,43 @@ class erpapi_wms_response_storeprocess extends erpapi_wms_response_abstract
     public function status_update($params){
         $this->__apilog['title']       = '加工单确认';
         $this->__apilog['original_bn'] = $params['processOrderCode'];
+        
+        // productitems
+        if(is_array($params['productitems'])){
+            $params['productitems'] = json_encode($params['productitems']);
+        }
+        
+        // materialitems
+        if(is_array($params['materialitems'])){
+            $params['materialitems'] = json_encode($params['materialitems']);
+        }
+        
+        // 预先保存WMS回传结果数据
         $this->_dealWMSParams($params);
+        
+        // data
         $data = [
             'mp_bn' => $params['processOrderCode'],
             'out_mp_bn' => $params['processOrderId'],
             'complete_time' => $params['orderCompleteTime'],
         ];
+        
+        // productitems
+        $inItems = [];
         $items = isset($params['productitems']) ? json_decode($params['productitems'],true) : array();
         if($items){
-            $inItems = [];
-            foreach($this->transfer_items($items) as $key=>$val){
-
-                
+            // 兼容WMS未传item结构体
+            if(isset($items['item'])){
+                $productitems = $this->transfer_items($items);
+            }else{
+                if(isset($items[0])){
+                    $productitems = $items;
+                }else{
+                    $productitems = [$items];
+                }
+            }
+            
+            foreach($productitems as $key=>$val){
                 if($inItems[$val['itemCode']]) {
                     $inItems[$val['itemCode']]['number'] += $val['quantity'];
                 } else {
@@ -68,12 +93,23 @@ class erpapi_wms_response_storeprocess extends erpapi_wms_response_abstract
             }
         }
         $data['material_items'] = $inItems;
+        
+        // materialitems
+        $outItems = [];
         $items = isset($params['materialitems']) ? json_decode($params['materialitems'],true) : array();
         if($items){
-            $outItems = [];
-            foreach($this->transfer_items($items) as $key=>$val){
-
-
+            // 兼容WMS未传item结构体
+            if(isset($items['item'])){
+                $materialitems = $this->transfer_items($items);
+            }else{
+                if(isset($items[0])){
+                    $materialitems = $items;
+                }else{
+                    $materialitems = [$items];
+                }
+            }
+            
+            foreach($materialitems as $key=>$val){
                 if($outItems[$val['itemCode']]) {
                     $outItems[$val['itemCode']]['number'] += $val['quantity'];
                 } else {
@@ -97,6 +133,7 @@ class erpapi_wms_response_storeprocess extends erpapi_wms_response_abstract
             }
         }
         $data['product_items'] = $outItems;
+        
         return $data;
     }
 
@@ -133,10 +170,24 @@ class erpapi_wms_response_storeprocess extends erpapi_wms_response_abstract
         if(!$id) {
             return [false, ['msg'=>'主表写入失败']];
         }
+        
+        // materialitems
         $items = isset($params['materialitems']) ? json_decode($params['materialitems'],true) : array();
         if($items){
             $inItems = [];
-            foreach($this->transfer_items($items) as $key=>$val){
+            
+            // 兼容WMS未传item结构体
+            if(isset($items['item'])){
+                $materialitems = $this->transfer_items($items);
+            }else{
+                if(isset($items[0])){
+                    $materialitems = $items;
+                }else{
+                    $materialitems = [$items];
+                }
+            }
+            
+            foreach($materialitems as $key=>$val){
                 $inItems[] = [
                     'wsp_id' => $id,
                     'item_code' => $val['itemCode'],
@@ -154,10 +205,24 @@ class erpapi_wms_response_storeprocess extends erpapi_wms_response_abstract
             $sql = kernel::single('ome_func')->get_insert_sql($wriMdl, $inItems);
             $wriMdl->db->exec($sql);
         }
+        
+        // productitems
         $items = isset($params['productitems']) ? json_decode($params['productitems'],true) : array();
         if($items){
             $outItems = [];
-            foreach($this->transfer_items($items) as $key=>$val){
+            
+            // 兼容WMS未传item结构体
+            if(isset($items['item'])){
+                $productitems = $this->transfer_items($items);
+            }else{
+                if(isset($items[0])){
+                    $productitems = $items;
+                }else{
+                    $productitems = [$items];
+                }
+            }
+            
+            foreach($productitems as $key=>$val){
                 $outItems[] = [
                     'wsp_id' => $id,
                     'item_code' => $val['itemCode'],
@@ -175,7 +240,10 @@ class erpapi_wms_response_storeprocess extends erpapi_wms_response_abstract
             $sql = kernel::single('ome_func')->get_insert_sql($wriMdl, $outItems);
             $wriMdl->db->exec($sql);
         }
+        
+        // log
         app::get('ome')->model('operation_log')->write_log('wms_storeprocess@console',$id, '接收成功');
+        
         return [true, ['msg'=>'处理完成']];
     }
 }
