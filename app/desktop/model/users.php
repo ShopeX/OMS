@@ -62,7 +62,7 @@ class desktop_mdl_users extends dbeav_model
         '*:密码*'        => 'login_password',
         '*:工号'         => 'op_no',
         '*:工作角色(以|间隔)' => 'role',
-        '*:仓库编码(以|间隔)' => 'branch',
+        '*:仓库&门店编码(以|间隔)' => 'branch',
         '*:运营组织(以|间隔)' => 'org_id',
         '*:启用'         => 'status',
         '*:备注'         => 'memo',
@@ -603,25 +603,64 @@ HTML;
                 $rolesId[] = $roles;
             }
         }
-
-        $branchId          = array();
-        $selected_store_bn = '';
+        
+        $branchId     = array();
+        $storeOrgIds  = null; // null=本行未解析出门店编码，不改门店组织权限
+        $storeIds     = array();
         if ($arrData['branch']) {
-            $branchBn   = explode('|', $arrData['branch']);
-            $branchData = app::get('ome')->model('branch')->getList('branch_id,b_type,branch_bn', array('branch_bn' => $branchBn, 'check_permission' => 'false'));
-            if (empty($branchData)) {
-                $msg['warning'][] = 'Line ' . $this->nums . '：仓库未找到！';
+            $branchBn = array_values(array_filter(array_map('trim', explode('|', $arrData['branch']))));
+            $branchData = app::get('ome')->model('branch')->getList(
+                'branch_id,b_type,branch_bn',
+                array('branch_bn' => $branchBn, 'check_permission' => 'false')
+            );
+            $foundBn = $branchData ? array_column($branchData, 'branch_bn') : array();
+            $missing = array_diff($branchBn, $foundBn);
+            if ($missing) {
+                $msg['warning'][] = 'Line ' . $this->nums . '：仓库/门店编码未找到：' . implode('|', $missing);
                 return false;
             }
+
+            $storeBns = array();
             foreach ($branchData as $val) {
+                // b_type：1：仓库，2：门店
                 if ($val['b_type'] == '2') {
-                    $selected_store_bn = $val['branch_bn'];
+                    $storeBns[] = $val['branch_bn'];
                 } else {
                     $branchId[] = $val['branch_id'];
-
                 }
             }
+
+            if ($storeBns) {
+                if (!app::get('organization')->is_installed() || !app::get('o2o')->is_installed()) {
+                    $msg['warning'][] = 'Line ' . $this->nums . '：门店组织模块未安装，无法导入门店编码！';
+                    return false;
+                }
+                
+                $orgRows = app::get('organization')->model('organization')->getList('org_id,org_no', array('org_no' => $storeBns, 'org_type' => 2, 'del_mark' => 0));
+                $orgByBn = array();
+                foreach ((array) $orgRows as $org) {
+                    $orgByBn[$org['org_no']] = (int) $org['org_id'];
+                }
+                
+                $missingOrg = array();
+                foreach ($storeBns as $bn) {
+                    if (empty($orgByBn[$bn])) {
+                        $missingOrg[] = $bn;
+                    }
+                }
+                
+                if ($missingOrg) {
+                    $msg['warning'][] = 'Line ' . $this->nums . '：门店编码未找到对应组织：' . implode('|', $missingOrg);
+                    return false;
+                }
+                
+                $storeOrgIds = array_values($orgByBn);
+                
+                $storeRows = app::get('o2o')->model('store')->getList('store_id,store_bn', array('store_bn' => $storeBns), 0, -1);
+                $storeIds = array_values(array_filter(array_map('intval', array_column((array) $storeRows, 'store_id'))));
+            }
         }
+        
         $orgId = [];
         if($arrData['org_id']) {
             $orgName = explode('|', $arrData['org_id']);
@@ -632,6 +671,7 @@ HTML;
             }
             $orgId = array_column($orgData, 'org_id');
         }
+        
         $accountType = pam_account::get_account_type('desktop');
         $sdf         = array(
             'pam_account'       => array(
@@ -649,11 +689,15 @@ HTML;
             'status'            => $arrData['status'] == '否' ? '0' : '1',
             'role'              => $roleId,
             'roles'             => $rolesId,
-            'selected_store_bn' => $selected_store_bn,
             'branch'            => $branchId,
             'org_id'            => $orgId,
-
         );
+        
+        if ($storeOrgIds !== null) {
+            $sdf['store_org_ids'] = $storeOrgIds;
+            $sdf['store_id']      = $storeIds;
+        }
+        
         $this->import_data[] = $sdf;
         $mark                = 'contents';
         return true;
