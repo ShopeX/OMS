@@ -478,7 +478,7 @@ class base_application_manage{
         kernel::single('base_pget')->dl(URL_APP_FETCH_INDEX,$xmlfile);
 
         $appdb = kernel::single('base_xml')->xml2array(
-		file_get_contents($xmlfile),'base_app');
+        file_get_contents($xmlfile),'base_app');
         @unlink($xmlfile);
         app::get('base')->model('apps')->update(array('remote_ver'=>''));
         if($appdb['app']){

@@ -66,6 +66,7 @@ class desktop_ctl_dashboard extends desktop_controller{
         $group = (array)$group;
         
         //桌面挂件排序，用户自定义
+        $arr_dashboard_sort = [];
         //$user->get_conf( 'arr_dashboard_sort',$arr_dashboard_sort );
 
         foreach(kernel::servicelist('desktop.widgets') as $key => $obj){ 
@@ -202,12 +203,26 @@ class desktop_ctl_dashboard extends desktop_controller{
         $account_id = $this->user->get_id();
         $sdf = $users->dump($account_id,'*',array( ':account@pam'=>array('*'),'roles'=>array('*') ));
         $old_password = $sdf['account']['login_password'];
+        
+        $filter = [];
         $filter['account_id'] = $account_id;
         $filter['account_type'] = pam_account::get_account_type($this->app->app_id);
+        
+        // 查询账号是否hash加密
+        $is_hash256 = 1;
+        $accountInfo = app::get('pam')->model('account')->dump($filter, '*');
+        if($accountInfo){
+            $is_hash256 = intval($accountInfo['is_hash256']);
+        }
+        
+        // 查询账号是否存在
         $filter['login_password'] = pam_encrypt::get_encrypted_password(trim($_POST['old_login_password']),pam_account::get_account_type($this->app->app_id));
-         $pass_row = app::get('pam')->model('account')->getList('account_id',$filter);
+        $pass_row = app::get('pam')->model('account')->getList('account_id',$filter);
+        
         if($_POST){
             $this->begin();
+            $error_msg = '';
+            
             $loginPassword = pam_encrypt::get_encrypted_password(trim($_POST['new_login_password']),pam_account::get_account_type($this->app->app_id));
             if(!$pass_row){
                 $this->end(false, app::get('desktop')->_('原始密码不正确'));
@@ -226,6 +241,10 @@ class desktop_ctl_dashboard extends desktop_controller{
             }else{
                 $_POST['pam_account']['account_id'] = $account_id;
                 $_POST['pam_account']['login_password'] = $loginPassword;
+                
+                // 是否hash加密(固定为：1)
+                $_POST['pam_account']['is_hash256'] = '1';
+                
                 $users->save($_POST);
                 
                 $desktop_users = app::get('desktop')->model('users');

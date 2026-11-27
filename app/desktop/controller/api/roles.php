@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-
 declare(strict_types=1);
 
 use app\desktop\lib\annotation\RequirePermission;

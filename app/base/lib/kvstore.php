@@ -259,9 +259,9 @@ class base_kvstore{
         return true;
     }//End Function
 
-	public function real_delete($key) 
+    public function real_delete($key)
     {
-    	$single = base_kvstore::instance($this->__prefix);
+        $single = base_kvstore::instance($this->__prefix);
         $single->get_controller()->delete($key);
     }
     

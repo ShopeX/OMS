@@ -113,9 +113,16 @@ class desktop_ctl_users extends desktop_controller
 
                 }
                 $pwd = $_POST['pam_account']['login_password'];
+                
+                // 新添加的用户使用 MD5+SHA256 加密方式（is_hash256=1）
                 $_POST['pam_account']['login_password'] = pam_encrypt::get_encrypted_password($_POST['pam_account']['login_password'], pam_account::get_account_type($this->app->app_id));
                 $_POST['pam_account']['account_type']   = pam_account::get_account_type($this->app->app_id);
+                
+                // 设置 is_hash256 字段为 1（新加密方式）
+                $_POST['pam_account']['is_hash256'] = '1';
+                
                 $_POST['create_time']                   = $_POST['last_modify']                   = time();
+                
                 if ($users->save($_POST)) {
                     foreach (kernel::servicelist('desktop_useradd') as $key => $service) {
                         if ($service instanceof desktop_interface_useradd) {
@@ -215,12 +222,25 @@ class desktop_ctl_users extends desktop_controller
             $sdf                      = $users->dump($_POST['user_id'], '*', array(':account@pam' => array('*'), 'roles' => array('*')));
             $old_password             = $sdf['account']['login_password'];
             $super_row                = $users->getList('user_id', array('super' => '1'));
+            
+            // 查询超级管理员的 is_hash256 值，用于验证旧密码
+            $superAccount = app::get('pam')->model('account')->dump(array(
+                'account_id' => $super_row[0]['user_id'],
+                'account_type' => pam_account::get_account_type($this->app->app_id)
+            ), 'is_hash256');
+            $superIsHash256 = isset($superAccount['is_hash256']) ? intval($superAccount['is_hash256']) : 1;
+            
             $filter['account_id']     = $super_row[0]['user_id'];
             $filter['account_type']   = pam_account::get_account_type($this->app->app_id);
-            $filter['login_password'] = pam_encrypt::get_encrypted_password(trim($_POST['old_login_password']), pam_account::get_account_type($this->app->app_id));
-
+            
+            // 根据超级管理员的 is_hash256 值选择加密方式验证旧密码
+            $filter['login_password'] = pam_encrypt::get_encrypted_password(trim($_POST['old_login_password']), pam_account::get_account_type($this->app->app_id), $superIsHash256);
+            
             $pass_row      = app::get('pam')->model('account')->getList('account_id', $filter);
+            
+            // 修改密码时，使用新加密方式（is_hash256=1）
             $loginPassword = pam_encrypt::get_encrypted_password(trim($_POST['new_login_password']), pam_account::get_account_type($this->app->app_id));
+            
             if (!$pass_row) {
                 $this->end(false, app::get('desktop')->_('超级管理员密码不正确'));
             } elseif ($_POST['new_login_password'] != $_POST['pam_account']['login_password']) {
@@ -234,6 +254,10 @@ class desktop_ctl_users extends desktop_controller
             } else {
                 $_POST['pam_account']['account_id']     = $_POST['user_id'];
                 $_POST['pam_account']['login_password'] = $loginPassword;
+                
+                // 修改密码时，将 is_hash256 设置为 1（新加密方式）
+                $_POST['pam_account']['is_hash256'] = '1';
+                
                 $users->save($_POST);
                 $userLib->checkUpdatePwd($_POST['pam_account']['account_id'], true);
                 //新增插入日志
@@ -294,6 +318,10 @@ class desktop_ctl_users extends desktop_controller
             $_POST['pam_account']['account_id'] = $param_id;
             $_POST['op_no']                     = strtoupper(trim($_POST['op_no']));
             $_POST['mcp_enabled']               = $this->normalizeMcpEnabled($_POST['mcp_enabled'] ?? ($sdf_users['mcp_enabled'] ?? 1));
+            
+            // 编辑用户时，将 is_hash256 设置为 1（新加密方式）
+            $_POST['pam_account']['is_hash256'] = '1';
+            
             if ($sdf_users['super'] == 1) {
                 // Legacy 编辑页不传 super 字段；Vue 也不应覆盖超管标识
                 unset($_POST['super']);
@@ -320,6 +348,10 @@ class desktop_ctl_users extends desktop_controller
                 foreach ((array) $_POST['role'] as $roles) {
                     $_POST['roles'][] = array('role_id' => $roles);
                 }
+                
+                // 编辑用户时，将 is_hash256 设置为 1（新加密方式）
+                $_POST['pam_account']['is_hash256'] = '1';
+                
                 $users->editUser($_POST);
                 
                 // 门店组织权限处理 - 独立保存，不影响门店角色权限
